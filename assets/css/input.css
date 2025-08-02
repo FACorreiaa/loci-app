@@ -1,0 +1,168 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+    --breakpoint-3xl: 1600px;
+    --breakpoint-4xl: 2000px;
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-surface: var(--surface);
+    --color-surface-foreground: var(--surface-foreground);
+    --color-code: var(--code);
+    --color-code-foreground: var(--code-foreground);
+    --color-code-highlight: var(--code-highlight);
+    --color-code-number: var(--code-number);
+    --color-selection: var(--selection);
+    --color-selection-foreground: var(--selection-foreground);
+    --font-family-inter: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+}
+
+/* Crunchbase-inspired theme */
+:root {
+    --radius: 0.5rem;
+    --background: oklch(100% 0 0);
+    --foreground: oklch(16% 0 0);
+    --card: oklch(100% 0 0);
+    --card-foreground: oklch(16% 0 0);
+    --popover: oklch(100% 0 0);
+    --popover-foreground: oklch(16% 0 0);
+    --primary: oklch(58% 0.25 264);
+    --primary-foreground: oklch(100% 0 0);
+    --secondary: oklch(97% 0 0);
+    --secondary-foreground: oklch(16% 0 0);
+    --muted: oklch(97% 0 0);
+    --muted-foreground: oklch(45% 0 0);
+    --accent: oklch(97% 0 0);
+    --accent-foreground: oklch(16% 0 0);
+    --destructive: oklch(58% 0.15 25);
+    --border: oklch(92% 0 0);
+    --input: oklch(92% 0 0);
+    --ring: oklch(58% 0.25 264);
+    --chart-1: oklch(64% 0.22 41);
+    --chart-2: oklch(60% 0.12 185);
+    --chart-3: oklch(40% 0.07 227);
+    --chart-4: oklch(83% 0.19 84);
+    --chart-5: oklch(77% 0.19 70);
+    --sidebar: oklch(98% 0 0);
+    --sidebar-foreground: oklch(16% 0 0);
+    --sidebar-primary: oklch(58% 0.25 264);
+    --sidebar-primary-foreground: oklch(100% 0 0);
+    --sidebar-accent: oklch(97% 0 0);
+    --sidebar-accent-foreground: oklch(16% 0 0);
+    --sidebar-border: oklch(92% 0 0);
+    --sidebar-ring: oklch(58% 0.25 264);
+    --selection: oklch(58% 0.25 264);
+    --selection-foreground: oklch(100% 0 0);
+}
+
+.dark {
+    --background: oklch(11% 0 0);
+    --foreground: oklch(94% 0 0);
+    --card: oklch(14% 0 0);
+    --card-foreground: oklch(94% 0 0);
+    --popover: oklch(14% 0 0);
+    --popover-foreground: oklch(94% 0 0);
+    --primary: oklch(68% 0.25 264);
+    --primary-foreground: oklch(11% 0 0);
+    --secondary: oklch(20% 0 0);
+    --secondary-foreground: oklch(94% 0 0);
+    --muted: oklch(20% 0 0);
+    --muted-foreground: oklch(65% 0 0);
+    --accent: oklch(20% 0 0);
+    --accent-foreground: oklch(94% 0 0);
+    --destructive: oklch(68% 0.15 25);
+    --border: oklch(25% 0 0);
+    --input: oklch(25% 0 0);
+    --ring: oklch(68% 0.25 264);
+    --chart-1: oklch(48% 0.24 264);
+    --chart-2: oklch(70% 0.17 162);
+    --chart-3: oklch(77% 0.19 70);
+    --chart-4: oklch(63% 0.27 304);
+    --chart-5: oklch(65% 0.25 16);
+    --sidebar: oklch(14% 0 0);
+    --sidebar-foreground: oklch(94% 0 0);
+    --sidebar-primary: oklch(68% 0.25 264);
+    --sidebar-primary-foreground: oklch(11% 0 0);
+    --sidebar-accent: oklch(20% 0 0);
+    --sidebar-accent-foreground: oklch(94% 0 0);
+    --sidebar-border: oklch(25% 0 0);
+    --sidebar-ring: oklch(68% 0.25 264);
+    --selection: oklch(68% 0.25 264);
+    --selection-foreground: oklch(11% 0 0);
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+    ::selection {
+        @apply bg-selection text-selection-foreground;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+        font-family: var(--font-family-inter);
+        font-feature-settings:
+                "rlig" 1,
+                "calt" 1;
+    }
+}
+
+/* Additional Crunchbase-inspired styles */
+@layer utilities {
+    .font-inter {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    }
+    
+    .prose {
+        @apply text-muted-foreground;
+    }
+    
+    .prose p {
+        @apply mb-4 leading-relaxed;
+    }
+    
+    .gradient-border {
+        background: linear-gradient(135deg, rgb(59 130 246), rgb(147 51 234));
+        padding: 1px;
+        border-radius: 0.5rem;
+    }
+    
+    .gradient-border-inner {
+        @apply bg-background rounded-lg h-full w-full;
+    }
+}

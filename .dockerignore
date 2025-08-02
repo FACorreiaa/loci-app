@@ -1,0 +1,100 @@
+# Git
+.git
+.gitignore
+.gitattributes
+.gitmodules
+
+# Documentation
+README.md
+CHANGELOG.md
+LICENSE
+*.md
+
+# Development files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary directories
+tmp/
+temp/
+/tmp/
+
+# Node modules and npm files
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Go specific
+# Don't ignore go.mod and go.sum as they're needed for dependencies
+*.test
+*.out
+*.prof
+*.pprof
+coverage.txt
+coverage.html
+*.cover
+
+# Build artifacts that shouldn't be in image
+/bin/
+/dist/
+/build/
+
+# Air live reload
+.air.toml
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Log files
+*.log
+/logs/
+
+# Cache directories
+.cache/
+
+# Backup files
+*.backup
+*.bak
+
+# Docker files (avoid recursion)
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# Configuration files that might contain secrets
+*.key
+*.pem
+*.crt
+config.json
+config.yaml
+
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# CSS source files (we want the built output.css)
+/assets/css/input.css

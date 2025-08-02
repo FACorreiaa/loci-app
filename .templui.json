@@ -1,0 +1,7 @@
+{
+  "componentsDir": "app/components",
+  "utilsDir": "app/utils",
+  "moduleName": "github.com/FACorreiaa/go-templui",
+  "jsDir": "assets/js",
+  "jsPublicPath": "/assets/js"
+}

@@ -1,0 +1,11 @@
+# github.com/Oudwins/tailwind-merge-go v0.2.1
+## explicit; go 1.21.5
+github.com/Oudwins/tailwind-merge-go
+github.com/Oudwins/tailwind-merge-go/pkg/cache
+github.com/Oudwins/tailwind-merge-go/pkg/lru
+github.com/Oudwins/tailwind-merge-go/pkg/twmerge
+# github.com/a-h/templ v0.3.924
+## explicit; go 1.23.0
+github.com/a-h/templ
+github.com/a-h/templ/runtime
+github.com/a-h/templ/safehtml

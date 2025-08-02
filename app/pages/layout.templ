@@ -1,0 +1,49 @@
+package pages
+
+import (
+	"github.com/FACorreiaa/go-templui/app/models"
+	"github.com/FACorreiaa/go-templui/app/components/navbar"
+	"github.com/FACorreiaa/go-templui/app/components/footer"
+)
+
+templ LayoutPage(l models.LayoutTempl) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ l.Title } - TemplUI</title>
+			<link rel="stylesheet" href="/assets/css/output.css"/>
+			<link rel="preconnect" href="https://fonts.googleapis.com"/>
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+			<link
+				href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+				rel="stylesheet"
+			/>
+			<script src="https://unpkg.com/htmx.org@2.0.0/dist/htmx.min.js"></script>
+			<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js"></script>
+			<script>
+				// Initialize theme on page load
+				document.addEventListener('DOMContentLoaded', function() {
+					const theme = localStorage.getItem('theme') || 'light';
+					if (theme === 'dark') {
+						document.documentElement.classList.add('dark');
+					}
+				});
+			</script>
+		</head>
+		<body hx-boost="true" class="min-h-screen bg-background text-foreground font-inter antialiased">
+			<div class="flex flex-col min-h-screen">
+				@navbar.Navbar(navbar.Props{
+					Nav:       l.Nav,
+					User:      l.User,
+					ActiveNav: l.ActiveNav,
+				})
+				<main class="flex-1">
+					@l.Content
+				</main>
+				@footer.Footer(footer.Props{})
+			</div>
+		</body>
+	</html>
+}
