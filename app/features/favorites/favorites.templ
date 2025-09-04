@@ -108,7 +108,7 @@ templ FavoritesPage() {
 	</div>
 }
 
-templ FavoriteCard(category, title, location, description, emoji, cardType) {
+templ FavoriteCard(category, title, location, description, emoji, cardType string) {
 	<div class="bg-card rounded-xl shadow-sm border hover:shadow-md transition-shadow group cursor-pointer">
 		<div class="p-6">
 			<div class="flex items-start justify-between mb-4">
@@ -161,20 +161,3 @@ templ FavoriteCard(category, title, location, description, emoji, cardType) {
 		</div>
 	</div>
 }
-
-<script>
-	// Auto-scroll chat to bottom
-	function scrollChatToBottom() {
-		const chatContainer = document.getElementById('chat-messages');
-		if (chatContainer) {
-			chatContainer.scrollTop = chatContainer.scrollHeight;
-		}
-	}
-
-	// Listen for HTMX events to scroll chat
-	document.body.addEventListener('htmx:afterSwap', function(event) {
-		if (event.target.id === 'chat-messages') {
-			setTimeout(scrollChatToBottom, 100);
-		}
-	});
-</script>

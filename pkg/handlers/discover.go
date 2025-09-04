@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/FACorreiaa/go-templui/pkg/logger"
+	"github.com/FACorreiaa/go-templui/pkg/middleware"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -18,7 +19,7 @@ func NewDiscoverHandlers() *DiscoverHandlers {
 func (h *DiscoverHandlers) Search(c *gin.Context) {
 	query := strings.TrimSpace(c.PostForm("query"))
 	location := strings.TrimSpace(c.PostForm("location"))
-	user := getUserFromContext(c)
+	user := middleware.GetUserIDFromContext(c)
 	
 	logger.Log.Info("Discovery search requested",
 		zap.String("query", query),
@@ -90,7 +91,7 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 
 func (h *DiscoverHandlers) GetCategory(c *gin.Context) {
 	category := c.Param("category")
-	user := getUserFromContext(c)
+	user := middleware.GetUserIDFromContext(c)
 	
 	logger.Log.Info("Category search requested",
 		zap.String("category", category),

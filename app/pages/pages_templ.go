@@ -46,7 +46,7 @@ func Landing() templ.Component {
 			},
 			ActiveNav: "Home",
 			User:      nil, // Set to actual user when authenticated
-			Content:   features.LandingContent(),
+			Content:   features.PublicLandingPage(),
 		}).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err

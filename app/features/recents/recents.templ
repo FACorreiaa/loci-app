@@ -100,7 +100,7 @@ templ RecentsPage() {
 	</div>
 }
 
-templ RecentActivityItem(action, title, details, time, emoji, activityType) {
+templ RecentActivityItem(action, title, details, time, emoji, activityType string) {
 	<div class="flex items-start gap-4 p-4 hover:bg-accent rounded-lg transition-colors cursor-pointer">
 		<div class="flex-shrink-0">
 			<div class={ "w-12 h-12 rounded-full flex items-center justify-center",

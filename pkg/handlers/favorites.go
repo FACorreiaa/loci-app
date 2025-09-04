@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/FACorreiaa/go-templui/pkg/logger"
+	"github.com/FACorreiaa/go-templui/pkg/middleware"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -16,7 +17,7 @@ func NewFavoritesHandlers() *FavoritesHandlers {
 
 func (h *FavoritesHandlers) AddFavorite(c *gin.Context) {
 	id := c.Param("id")
-	user := getUserFromContext(c)
+	user := middleware.GetUserIDFromContext(c)
 	
 	logger.Log.Info("Adding place to favorites",
 		zap.String("place_id", id),
@@ -48,7 +49,7 @@ func (h *FavoritesHandlers) AddFavorite(c *gin.Context) {
 
 func (h *FavoritesHandlers) RemoveFavorite(c *gin.Context) {
 	id := c.Param("id")
-	user := getUserFromContext(c)
+	user := middleware.GetUserIDFromContext(c)
 	
 	logger.Log.Info("Removing place from favorites",
 		zap.String("place_id", id),
@@ -79,7 +80,7 @@ func (h *FavoritesHandlers) RemoveFavorite(c *gin.Context) {
 
 func (h *FavoritesHandlers) SearchFavorites(c *gin.Context) {
 	query := c.PostForm("query")
-	user := getUserFromContext(c)
+	user := middleware.GetUserIDFromContext(c)
 	
 	logger.Log.Info("Searching favorites",
 		zap.String("query", query),

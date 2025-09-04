@@ -1,5 +1,7 @@
 package discover
 
+import "fmt"
+
 templ DiscoverPage() {
 	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
@@ -131,7 +133,7 @@ templ DiscoverPage() {
 	</div>
 }
 
-templ CategoryCard(name, emoji, category) {
+templ CategoryCard(name, emoji, category string) {
 	<button 
 		hx-get={ "/discover/category/" + category }
 		hx-target="#discover-results"
@@ -142,10 +144,10 @@ templ CategoryCard(name, emoji, category) {
 	</button>
 }
 
-templ TrendingItem(title, searches, emoji, rank) {
+templ TrendingItem(title, searches, emoji string, rank int) {
 	<div class="flex items-center gap-3 p-3 hover:bg-accent rounded-lg cursor-pointer transition-colors">
 		<div class="flex items-center justify-center w-6 h-6 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full text-xs font-bold">
-			{ templ.ToGoHTML(rank) }
+			{ fmt.Sprintf("%d", rank) }
 		</div>
 		<span class="text-xl">{ emoji }</span>
 		<div class="flex-1">
@@ -158,7 +160,7 @@ templ TrendingItem(title, searches, emoji, rank) {
 	</div>
 }
 
-templ FeaturedItem(title, count, emoji) {
+templ FeaturedItem(title, count, emoji string) {
 	<div class="flex items-center gap-3 p-3 hover:bg-accent rounded-lg cursor-pointer transition-colors">
 		<span class="text-lg">{ emoji }</span>
 		<div>
@@ -168,7 +170,7 @@ templ FeaturedItem(title, count, emoji) {
 	</div>
 }
 
-templ DiscoveryCard(category, title, location, description, emoji, badge, rating) {
+templ DiscoveryCard(category, title, location, description, emoji, badge, rating string) {
 	<div class="bg-card rounded-xl shadow-sm border hover:shadow-md transition-shadow group cursor-pointer">
 		<div class="p-6">
 			<div class="flex items-start justify-between mb-4">

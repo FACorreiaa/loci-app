@@ -150,7 +150,7 @@ templ ProfilePage() {
 	</div>
 }
 
-templ ActivityItem(action, place, details, time, iconType) {
+templ ActivityItem(action, place, details, time, iconType string) {
 	<div class="flex items-start gap-3">
 		<div class={ "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
 			templ.KV("bg-orange-100 dark:bg-orange-900/30", iconType == "restaurant"),
@@ -189,7 +189,7 @@ templ ActivityItem(action, place, details, time, iconType) {
 	</div>
 }
 
-templ QuickListItem(title, count, emoji) {
+templ QuickListItem(title, count, emoji string) {
 	<div class="flex items-center justify-between p-3 hover:bg-accent rounded-lg cursor-pointer transition-colors">
 		<div class="flex items-center gap-3">
 			<span class="text-lg">{ emoji }</span>
@@ -204,7 +204,7 @@ templ QuickListItem(title, count, emoji) {
 	</div>
 }
 
-templ AchievementBadge(title, description, emoji, earned) {
+templ AchievementBadge(title, description, emoji string, earned bool) {
 	<div class={ "text-center p-4 rounded-lg border",
 		templ.KV("bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200 dark:from-yellow-900/20 dark:to-amber-900/20 dark:border-yellow-800", earned),
 		templ.KV("bg-accent border-border opacity-50", !earned) }>

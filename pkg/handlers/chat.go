@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/FACorreiaa/go-templui/pkg/logger"
+	"github.com/FACorreiaa/go-templui/pkg/middleware"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -16,7 +17,7 @@ func NewChatHandlers() *ChatHandlers {
 
 func (h *ChatHandlers) SendMessage(c *gin.Context) {
 	logger.Log.Info("Chat message received",
-		zap.String("user", getUserFromContext(c)),
+		zap.String("user", middleware.GetUserIDFromContext(c)),
 		zap.String("ip", c.ClientIP()),
 	)
 
@@ -29,7 +30,7 @@ func (h *ChatHandlers) SendMessage(c *gin.Context) {
 
 	logger.Log.Info("Processing chat message",
 		zap.String("message", message),
-		zap.String("user", getUserFromContext(c)),
+		zap.String("user", middleware.GetUserIDFromContext(c)),
 	)
 
 	// Simulate AI response (in real app, this would call your AI service)
@@ -64,13 +65,6 @@ func (h *ChatHandlers) SendMessage(c *gin.Context) {
 	`)
 
 	logger.Log.Info("Chat message processed successfully",
-		zap.String("user", getUserFromContext(c)),
+		zap.String("user", middleware.GetUserIDFromContext(c)),
 	)
-}
-
-func getUserFromContext(c *gin.Context) string {
-	if userID, exists := c.Get("user_id"); exists {
-		return userID.(string)
-	}
-	return "anonymous"
 }
