@@ -1,0 +1,193 @@
+services:
+  # === Infrastructure Services ===
+
+  # Envoy Proxy for grpc-web
+  envoy:
+    image: envoyproxy/envoy:v1.28-latest
+    container_name: envoy-grpc-web
+    ports:
+      - "8080:8080"  # grpc-web port
+      - "9901:9901"  # Envoy admin port
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
+    networks:
+      - microservices-net
+    restart: unless-stopped
+    depends_on:
+      - go-ai-poi-server
+
+  # Main Go Application
+  go-ai-poi-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: go-ai-poi-server
+    env_file:
+      - .env
+    ports:
+      - "8081:8080"  # HTTP port (offset to avoid conflict with Envoy)
+      - "9000:9000"  # gRPC port
+    networks:
+      - microservices-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - GRPC_PORT=9000
+      - HTTP_PORT=8080
+
+  # PostgreSQL Database
+  postgres:
+    platform: linux/amd64
+    container_name: postgres
+    build:
+      context: . 
+      dockerfile: postgres.Dockerfile
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-loci}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-loci123}
+      POSTGRES_DB: ${POSTGRES_DB:-loci}
+    ports:
+      - "5454:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/postgres/init:/docker-entrypoint-initdb.d
+    networks:
+      - microservices-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-loci} -d ${POSTGRES_DB:-loci}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # === Observability Stack ===
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8889:8889"   # Prometheus metrics endpoint
+    volumes:
+      - ./app/observability/otel-collector-config.yaml:/etc/otelcol-contrib/otel-collector-config.yaml:ro
+    command:
+      - '--config=/etc/otelcol-contrib/otel-collector-config.yaml'
+    networks:
+      - microservices-net
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+      - tempo
+      - loki
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./app/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    networks:
+      - microservices-net
+    restart: unless-stopped
+
+  # Tempo for distributed tracing
+  tempo:
+    image: grafana/tempo:latest
+    container_name: tempo
+    ports:
+      - "3200:3200"   # Tempo HTTP API
+      - "4317"        # OTLP gRPC receiver (internal)
+      - "4318"        # OTLP HTTP receiver (internal)
+    volumes:
+      - ./app/observability/tempo-config.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    command:
+      - '-config.file=/etc/tempo/tempo.yaml'
+    networks:
+      - microservices-net
+    restart: unless-stopped
+
+  # Loki for log aggregation
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./app/observability/loki-config.yaml:/etc/loki/loki.yaml:ro
+      - loki-data:/var/loki
+    command:
+      - '-config.file=/etc/loki/loki.yaml'
+    networks:
+      - microservices-net
+    restart: unless-stopped
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./app/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./app/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    networks:
+      - microservices-net
+    restart: unless-stopped
+
+  # Promtail for log collection
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    volumes:
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./app/observability/promtail.yml:/etc/promtail/promtail.yml:ro
+    command:
+      - '-config.file=/etc/promtail/promtail.yml'
+    networks:
+      - microservices-net
+    restart: unless-stopped
+    depends_on:
+      - loki
+
+volumes:
+  postgres-data:
+  #redis-data:
+  #go-mod-cache:
+  prometheus-data:
+  grafana-data:
+  tempo-data:
+  loki-data:
+
+networks:
+  microservices-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
