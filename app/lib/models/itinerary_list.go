@@ -42,6 +42,7 @@ type POI struct {
 }
 
 type List struct {
+	Base
 	ID           uuid.UUID
 	UserID       uuid.UUID
 	Name         string
@@ -50,7 +51,8 @@ type List struct {
 	IsPublic     bool
 	IsItinerary  bool
 	ParentListID *uuid.UUID // Nullable, as per schema
-	CityID       uuid.UUID
+	CityID       *uuid.UUID
+	ItemCount    int
 	ViewCount    int
 	SaveCount    int
 	CreatedAt    time.Time

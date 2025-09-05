@@ -1,3 +1,19 @@
+migrate-db:
+	migrate -database "postgresql://postgres:postgres@localhost:5454/loci-dev?sslmode=disable" -path ./app/db/migrations up
+
+testifylint:
+	testifylint ./...
+
+testifylint-fix:
+	testifylint -fix ./...
+
+static:
+	staticcheck ./...
+
+lint: ## Runs linter for .go files
+	golangci-lint run --config .golangci.yml
+	@echo "Go lint passed successfully"
+
 # Run templ generation in watch mode
 templ:
 	templ generate --watch --proxy="http://localhost:8090" --open-browser=false

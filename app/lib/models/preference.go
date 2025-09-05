@@ -7,12 +7,12 @@ import (
 )
 
 // Interest represents a predefined interest/tag that users can select
-type Interest struct {
-	ID          uuid.UUID `json:"id" db:"id"`
-	Name        string    `json:"name" db:"name"`
-	Description string    `json:"description" db:"description"`
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
-}
+//type Interest struct {
+//	ID          uuid.UUID `json:"id" db:"id"`
+//	Name        string    `json:"name" db:"name"`
+//	Description string    `json:"description" db:"description"`
+//	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+//}
 
 // interests represents a many-to-many relationship between users and interests
 type interests struct {
@@ -33,7 +33,7 @@ func NewInterest(name, description string) *Interest {
 	return &Interest{
 		ID:          uuid.New(),
 		Name:        name,
-		Description: description,
+		Description: &description,
 		CreatedAt:   time.Now(),
 	}
 }
