@@ -19,6 +19,6 @@ services:
       - GF_INSTALL_PLUGINS=grafana-piechart-panel
     # Uncomment for config hot reloading during development
     # volumes:
-    #   - grafana-data:/var/lib/grafana
+    #   - grafana-data:/var/internal/grafana
     #   - ./app/observability/grafana/provisioning:/etc/grafana/provisioning:ro
-    #   - ./app/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    #   - ./app/observability/grafana/dashboards:/var/internal/grafana/dashboards:ro

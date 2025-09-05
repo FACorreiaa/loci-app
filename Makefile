@@ -17,6 +17,16 @@ server:
 tailwind:
 	tailwindcss -i ./assets/css/input.css -o ./assets/css/output.css --watch
 
+#db up
+db-up:
+	docker compose up --build
+
+db-down:
+	docker compose down
+
+db-delete:
+	docker compose down -v
+
 # Start development server with all watchers
 dev:
-	make -j3 tailwind templ server
+	make -j3 db-up tailwind templ server

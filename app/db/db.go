@@ -17,7 +17,7 @@ import (
 	uuid "github.com/vgarvardt/pgx-google-uuid/v5"
 	"go.uber.org/zap"
 
-	"github.com/FACorreiaa/go-templui/pkg/config"
+	"github.com/FACorreiaa/go-templui/app/pkg/config"
 )
 
 //go:embed migrations

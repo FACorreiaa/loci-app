@@ -1,186 +1,136 @@
-That's an excellent question that gets to the heart of modern observability stacks. Both Jaeger and Grafana Tempo are powerful distributed tracing backends, but they were designed with fundamentally different philosophies and trade-offs.
+# Loci TemplUI - HTTP-Only Observability Stack
 
-The biggest difference boils down to **indexing vs. object storage**.
+## Overview
+Complete observability stack using HTTP-only protocols with OpenTelemetry, Prometheus, Grafana, Loki, and Tempo.
 
----
+## Architecture
 
-### The Core Philosophical Difference
+```
+┌─────────────────┐    HTTP/4318     ┌──────────────────┐
+│  Loci TemplUI  │ ───────────────> │ OTEL Collector  │
+│     App         │                  │                  │
+└─────────────────┘                  └──────────────────┘
+                                               │
+                                               │ HTTP
+                                               ▼
+┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
+│ Prometheus  │  │    Loki     │  │   Tempo     │  │   Grafana   │
+│   :9090     │  │   :3100     │  │   :3200     │  │   :3000     │
+└─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘
+```
 
-*   **Jaeger (Index-Heavy, Search-Focused):**
-    *   **Philosophy:** "Let's index everything." Jaeger was designed like a traditional search engine for traces. It ingests trace data and builds a complex, searchable index (often using Elasticsearch or Cassandra) on various tags and attributes (service name, operation, duration, HTTP status, custom tags, etc.).
-    *   **Core Strength:** **Powerful, complex search and discovery.** You can ask detailed questions like:
-        *   "Show me all traces for the `users-service` with the `http.method=POST` tag, an `error=true` tag, and a duration longer than 500ms that happened yesterday."
-        *   "Find all traces that have a `user.id=123` tag."
-    *   **Primary Trade-off:** **High operational cost and complexity.** Maintaining a large-scale indexing backend like Elasticsearch is expensive in terms of storage, compute, and maintenance overhead. The cost scales with the amount of data and the number of tags you index.
+## Components
 
-*   **Grafana Tempo (Index-Light, ID-Focused):**
-    *   **Philosophy:** "Indexes are expensive; let's get rid of them." Tempo was designed to solve the cost problem of Jaeger. It makes a radical trade-off: it does **not** index the tags within a trace. Instead, it only indexes the **trace ID**.
-    *   **Core Strength:** **Massive scalability at a very low cost.** Tempo stores all trace data in cheap object storage (like Google Cloud Storage, Amazon S3, or MinIO). Since it's only indexing the trace ID, its index is tiny and cheap to operate. It can handle petabytes of trace data without breaking the bank.
-    *   **Primary Trade-off:** **Limited discovery.** You cannot perform complex searches on tags directly within Tempo. The primary way to find a trace is if you **already know its ID**.
+### 1. Application (Loci TemplUI)
+- **Port**: 8091
+- **Metrics endpoint**: `/metrics` 
+- **OTEL Middleware**: Gin integration with automatic tracing
+- **Configuration**: Environment variables for OTEL
 
-### How Do You Find Traces in Tempo Then?
+### 2. OTEL Collector  
+- **Port**: 4318 (HTTP OTLP receiver)
+- **Metrics**: 8889 (Prometheus format)
+- **Protocol**: HTTP only (no gRPC)
+- **Exports to**: Prometheus, Tempo, Loki
 
-This is the key to understanding the Tempo ecosystem. You don't search for traces in Tempo; you **link to them** from other observability signals (logs and metrics). This is often called "trace-as-lookup."
+### 3. Prometheus
+- **Port**: 9090
+- **Scrapes**: App metrics (8091), OTEL Collector (8889)
+- **Config**: Fixed scrape intervals and timeouts
 
-**The Modern Observability Workflow (The "Three Pillars"):**
-1.  **Metrics (Prometheus/Mimir):** You see a spike in the error rate for your `pois-service` on a Grafana dashboard.
-2.  **Logs (Loki):** You pivot from the metric spike to the logs for that service during that time window. In your logs, you find a specific error message that includes a `traceID`.
-    *   Example Log Line: `level=error msg="failed to connect to database" service=pois-service traceID=a1b2c3d4e5f6`
-3.  **Traces (Tempo):** You click on the `traceID` in your logs. Grafana automatically uses this ID to query Tempo and instantly pulls up the full, detailed distributed trace for that specific failed request.
+### 4. Grafana
+- **Port**: 3000  
+- **Credentials**: admin/admin
+- **Data sources**: Prometheus, Loki, Tempo
 
+### 5. Loki (Logs)
+- **Port**: 3100
+- **Schema**: v13 with tsdb
+- **Storage**: Local filesystem
 
+### 6. Tempo (Traces)  
+- **Port**: 3200
+- **Protocol**: HTTP OTLP receiver
+- **Storage**: Local filesystem
 
-This workflow is incredibly powerful and efficient. You use metrics for high-level alerts, logs for specific error context, and traces for deep-dive debugging of a single request.
+## Environment Variables
 
-### Summary Table: Jaeger vs. Tempo
+Required environment variables in `.env`:
 
-| Feature | Jaeger | Grafana Tempo |
-| :--- | :--- | :--- |
-| **Core Idea** | Index everything, powerful search | Index only the trace ID, link from logs/metrics |
-| **Primary Strength** | **Discovery:** Complex tag-based searches | **Cost & Scale:** Handles massive volume cheaply |
-| **Primary Weakness**| **High Cost:** Expensive indexing backend | **Limited Search:** Need trace ID from another source |
-| **Storage Backend** | Elasticsearch, Cassandra, memory (expensive) | Object Storage (GCS, S3, MinIO) (cheap) |
-| **Best Use Case** | Smaller-scale systems or when you absolutely need to search for traces by arbitrary tags without context. | Large-scale systems, part of the Grafana observability stack (Loki, Prometheus). The modern standard. |
-| **Analogy**| A library with a massive, detailed card catalog for every word in every book. | A massive warehouse of books organized only by a serial number. You need to use a separate index (logs) to find the serial number first. |
-
----
-
-### How to Set Up Both for a gRPC Server in Go
-
-The good news is that from your application's perspective, the setup is **almost identical**. Both Jaeger and Tempo use the OpenTelemetry (OTEL) protocol for receiving trace data. You instrument your application once with the OTEL SDK, and you can switch the backend by simply changing a configuration variable.
-
-Here's a high-level overview of the Go code.
-
-**Step 1: Add OpenTelemetry Dependencies**
-
-In your `go.mod` file for each service:
 ```bash
-go get go.opentelemetry.io/otel \
-    go.opentelemetry.io/otel/trace \
-    go.opentelemetry.io/otel/sdk \
-    go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc \
-    go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc \
-    google.golang.org/grpc
+# OpenTelemetry Configuration  
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+OTEL_SERVICE_NAME=loci-templui
+OTEL_RESOURCE_ATTRIBUTES=service.name=loci-templui,service.version=1.0.0
+OTEL_LOG_LEVEL=info
+OTEL_SDK_DISABLED=false
+
+# Server
+SERVER_PORT=8091
+METRICS_PORT=9090
 ```
 
-**Step 2: Create a Tracer Provider Function**
+## Usage
 
-Create a helper function that sets up the OpenTelemetry pipeline. This function will be the only place you need to change when switching between Jaeger and Tempo.
+### Start Observability Stack
+```bash
+docker-compose up -d
+```
+
+### Start Application
+```bash
+# Loads .env automatically
+./bin/loci-app
+```
+
+### Test Observability
+```bash
+./scripts/test-observability.sh
+```
+
+### Access Points
+- **Grafana Dashboard**: http://localhost:3000 (admin/admin)
+- **Prometheus**: http://localhost:9090  
+- **Application**: http://localhost:8091
+- **App Metrics**: http://localhost:8091/metrics
+- **OTEL Internal Metrics**: http://localhost:9092/metrics
+- **OTEL Collector**: http://localhost:8889/metrics
+
+## Gin OTEL Middleware
+
+The application uses official OpenTelemetry Gin middleware:
 
 ```go
-// in a shared package, e.g., internal/tracing/tracing.go
+// In main.go
+r.Use(middleware.OTELGinMiddleware("loci-templui"))
 
-package tracing
-
-import (
-	"context"
-	"os"
-
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
-	"google.golang.org/grpc"
-)
-
-// InitTracerProvider initializes an OpenTelemetry tracer provider.
-func InitTracerProvider(serviceName string) (*sdktrace.TracerProvider, error) {
-	ctx := context.Background()
-
-	// This is the only line you change. Get the endpoint from an environment variable.
-    // For Jaeger (local Docker): "jaeger:4317"
-    // For Tempo (local Docker): "tempo:4317"
-    // For a cloud provider: the specific OTLP endpoint URL
-	otelAgentAddr := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-	if otelAgentAddr == "" {
-		otelAgentAddr = "localhost:4317" // Default for local dev
-	}
-
-	traceExporter, err := otlptracegrpc.New(ctx,
-		otlptracegrpc.WithInsecure(), // Use WithTLSCredentials in production
-		otlptracegrpc.WithEndpoint(otelAgentAddr),
-		otlptracegrpc.WithDialOption(grpc.WithBlock()),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := resource.New(ctx,
-		resource.WithAttributes(
-			// The service name used to display traces in Jaeger/Grafana
-			semconv.ServiceNameKey.String(serviceName),
-		),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create a new tracer provider with a batch span processor
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithResource(res),
-		sdktrace.WithBatcher(traceExporter),
-	)
-
-	// Set the global TracerProvider
-	otel.SetTracerProvider(tp)
-	// Set the global Propagator to trace context across service boundaries
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
-
-	return tp, nil
+// In app/pkg/middleware/otel.go  
+func OTELGinMiddleware(serviceName string) gin.HandlerFunc {
+    return otelgin.Middleware(serviceName)
 }
 ```
 
-**Step 3: Instrument Your gRPC Server**
+This automatically:
+- Creates spans for each HTTP request
+- Adds tracing headers
+- Records HTTP metrics  
+- Integrates with OpenTelemetry context propagation
 
-In your `main.go` where you create your gRPC server, add the OpenTelemetry interceptors. These interceptors automatically create spans for each incoming gRPC call.
+## Fixed Issues
 
-```go
-// in your service's main.go
+1. **OTEL Collector**: Added missing `check_interval` for memory_limiter
+2. **Prometheus**: Fixed scrape timeout/interval mismatch  
+3. **Loki**: Updated to v13 schema with tsdb, removed deprecated `shared_store`
+4. **Docker Volumes**: Fixed mount paths for all services
+5. **Gin Integration**: Proper OTEL middleware instead of custom implementation
+6. **Schema Conflict**: Fixed OpenTelemetry schema version conflict by updating semconv to v1.37.0 and simplifying resource creation
 
-import (
-	"log"
-	"net"
-	"os"
+## Benefits
 
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"google.golang.org/grpc"
-	"my-project/internal/tracing" // Your new tracing package
-)
-
-func main() {
-	// Initialize the tracer provider
-	tp, err := tracing.InitTracerProvider("users-service") // Use the correct service name
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer func() {
-		if err := tp.Shutdown(context.Background()); err != nil {
-			log.Printf("Error shutting down tracer provider: %v", err)
-		}
-	}()
-
-	lis, err := net.Listen("tcp", ":8081")
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
-
-	// Create a new gRPC server with the OTEL interceptors
-	s := grpc.NewServer(
-		grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
-		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()),
-	)
-	
-	// Register your gRPC service implementation...
-	// pb.RegisterUsersServer(s, &server{})
-
-	log.Printf("server listening at %v", lis.Addr())
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
-	}
-}
-```
-
-By following this pattern, your Go application is fully instrumented. To switch from Jaeger to Tempo, you just need to change the `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable and restart your application. No code changes are needed.
+- ✅ **HTTP-Only**: No gRPC dependencies, simpler network setup
+- ✅ **Automatic Tracing**: Every HTTP request traced automatically
+- ✅ **Comprehensive Metrics**: HTTP requests, database queries, custom app metrics
+- ✅ **Centralized Logs**: All logs aggregated in Loki
+- ✅ **Unified Dashboard**: Single Grafana interface for all observability data
+- ✅ **Production Ready**: Proper error handling and configuration

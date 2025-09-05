@@ -91,3 +91,4 @@ config.yaml
 *.db
 *.sqlite
 *.sqlite3
+go-templui
