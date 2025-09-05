@@ -23,13 +23,13 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-type AuthService struct{}
+type JWTService struct{}
 
-func NewAuthService() *AuthService {
-	return &AuthService{}
+func NewJWTService() *JWTService {
+	return &JWTService{}
 }
 
-func (a *AuthService) GenerateToken(userID, email, name string) (string, error) {
+func (a *JWTService) GenerateToken(userID, email, name string) (string, error) {
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
 		UserID: userID,
@@ -53,7 +53,7 @@ func (a *AuthService) GenerateToken(userID, email, name string) (string, error) 
 	return tokenString, nil
 }
 
-func (a *AuthService) ValidateToken(tokenString string) (*Claims, error) {
+func (a *JWTService) ValidateToken(tokenString string) (*Claims, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -73,7 +73,7 @@ func (a *AuthService) ValidateToken(tokenString string) (*Claims, error) {
 	return claims, nil
 }
 
-func (a *AuthService) HashPassword(password string) (string, error) {
+func (a *JWTService) HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		logger.Log.Error("Failed to hash password",
@@ -84,7 +84,7 @@ func (a *AuthService) HashPassword(password string) (string, error) {
 	return string(bytes), nil
 }
 
-func (a *AuthService) CheckPassword(hashedPassword, password string) bool {
+func (a *JWTService) CheckPassword(hashedPassword, password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	return err == nil
 }
@@ -113,8 +113,8 @@ func JWTMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		auth := NewAuthService()
-		claims, err := auth.ValidateToken(tokenString)
+		jwtService := NewJWTService()
+		claims, err := jwtService.ValidateToken(tokenString)
 		if err != nil {
 			logger.Log.Warn("Invalid JWT token",
 				zap.Error(err),

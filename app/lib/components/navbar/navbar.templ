@@ -213,7 +213,7 @@ templ Navbar(props Props) {
 						</a>
 					</div>
 				} else {
-					<div class="hidden md:flex items-center space-x-3 relative" x-data="{ showUserMenu: false }">
+					<div class="hidden md:flex items-center space-x-3 relative" x-data="{ showUserMenu: false }" @click.away="showUserMenu = false">
 						<!-- Theme toggle -->
 						<button 
 							id="theme-toggle"
@@ -240,7 +240,6 @@ templ Navbar(props Props) {
 						<button
 							class="flex items-center gap-2 p-2"
 							@click="showUserMenu = !showUserMenu"
-							@click.away="showUserMenu = false"
 						>
 							<div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
 								if props.User.Name != "" {
@@ -260,6 +259,7 @@ templ Navbar(props Props) {
 
 						<!-- User Dropdown Menu -->
 						<div x-show="showUserMenu" 
+							x-cloak
 							x-transition:enter="transition ease-out duration-100"
 							x-transition:enter-start="transform opacity-0 scale-95"
 							x-transition:enter-end="transform opacity-100 scale-100"

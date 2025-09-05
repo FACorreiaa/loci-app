@@ -13,6 +13,8 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/FACorreiaa/go-templui/app/lib/models"
+	"github.com/FACorreiaa/go-templui/app/pkg/domain/interests"
+	"github.com/FACorreiaa/go-templui/app/pkg/domain/tags"
 )
 
 // Ensure implementation satisfies the interface

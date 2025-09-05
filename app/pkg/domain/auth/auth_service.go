@@ -15,6 +15,9 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/FACorreiaa/go-templui/app/lib/models"
+	"github.com/FACorreiaa/go-templui/app/pkg/config"
 )
 
 // Ensure implementation satisfies the interface
@@ -33,6 +36,12 @@ type AuthService interface {
 	VerifyPassword(ctx context.Context, userID, password string) error
 	GenerateTokens(ctx context.Context, user *models.UserAuth, sub *models.Subscription) (accessToken string, refreshToken string, err error)
 	GetOrCreateUserFromProvider(ctx context.Context, provider string, providerUser goth.User) (*models.UserAuth, error)
+	
+	// Token and utility methods
+	GenerateToken(userID, email, name string) (string, error)
+	ValidateToken(tokenString string) (*jwt.MapClaims, error)
+	HashPassword(password string) (string, error)
+	CheckPassword(hashedPassword, password string) bool
 }
 
 // AuthServiceImpl provides the implementation for AuthService.
@@ -392,4 +401,42 @@ func (s *AuthServiceImpl) GetOrCreateUserFromProvider(ctx context.Context, provi
 	}
 
 	return newUser, nil
+}
+
+// --- Token and utility methods implementation ---
+
+func (s *AuthServiceImpl) GenerateToken(userID, email, name string) (string, error) {
+	jwtService := NewJWTService()
+	return jwtService.GenerateToken(userID, email, name)
+}
+
+func (s *AuthServiceImpl) ValidateToken(tokenString string) (*jwt.MapClaims, error) {
+	jwtService := NewJWTService()
+	claims, err := jwtService.ValidateToken(tokenString)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Convert Claims to jwt.MapClaims
+	mapClaims := jwt.MapClaims{
+		"user_id": claims.UserID,
+		"email":   claims.Email,
+		"name":    claims.Name,
+		"exp":     claims.ExpiresAt.Unix(),
+		"iat":     claims.IssuedAt.Unix(),
+		"iss":     claims.Issuer,
+		"aud":     claims.Audience,
+	}
+	
+	return &mapClaims, nil
+}
+
+func (s *AuthServiceImpl) HashPassword(password string) (string, error) {
+	jwtService := NewJWTService()
+	return jwtService.HashPassword(password)
+}
+
+func (s *AuthServiceImpl) CheckPassword(hashedPassword, password string) bool {
+	jwtService := NewJWTService()
+	return jwtService.CheckPassword(hashedPassword, password)
 }

@@ -86,7 +86,7 @@ func (s *ServiceImpl) CreateTopLevelList(ctx context.Context, userID uuid.UUID, 
 
 	// Set CityID if provided
 	if cityID != nil {
-		list.CityID = *cityID
+		list.CityID = cityID
 	}
 
 	err := s.listRepository.CreateList(ctx, list)
@@ -257,7 +257,7 @@ func (s *ServiceImpl) UpdateListDetails(ctx context.Context, listID, userID uuid
 		list.IsPublic = *params.IsPublic
 	}
 	if params.CityID != nil {
-		list.CityID = *params.CityID
+		list.CityID = params.CityID
 	}
 	list.UpdatedAt = time.Now()
 

@@ -140,12 +140,13 @@ func SecurityMiddleware() gin.HandlerFunc {
 		c.Writer.Header().Set("X-XSS-Protection", "1; mode=block")
 		c.Writer.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 
-		// Content Security Policy for HTMX
+		// Content Security Policy for HTMX and external resources
 		csp := "default-src 'self'; " +
-			"script-src 'self' 'unsafe-inline' https://unpkg.com; " +
-			"style-src 'self' 'unsafe-inline'; " +
+			"script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; " +
+			"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+			"font-src 'self' https://fonts.gstatic.com; " +
 			"img-src 'self' data: https:; " +
-			"connect-src 'self'"
+			"connect-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com"
 		c.Writer.Header().Set("Content-Security-Policy", csp)
 
 		c.Next()
@@ -169,6 +170,20 @@ func GetUserFromContext(c *gin.Context) (string, string, string) {
 	}
 
 	return userID, userEmail, userName
+}
+
+// OptionalAuthMiddleware sets user context if token exists, but doesn't require auth
+func OptionalAuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token, err := c.Cookie("auth_token")
+		if err == nil && token != "" {
+			// Set user context (simplified - in real app, decode JWT)
+			c.Set("user_id", "demo-user")
+			c.Set("user_email", "demo@loci.app") 
+			c.Set("user_name", "Demo User")
+		}
+		c.Next()
+	}
 }
 
 // GetUserIDFromContext extracts just the user ID from context

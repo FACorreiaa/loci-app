@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 )
 
 type PostgresConfig struct {
@@ -16,6 +17,14 @@ type PostgresConfig struct {
 	MinConns int32
 }
 
+type JWTConfig struct {
+	SecretKey       string
+	Issuer          string
+	Audience        string
+	AccessTokenTTL  time.Duration
+	RefreshTokenTTL time.Duration
+}
+
 type RepositoriesConfig struct {
 	Postgres PostgresConfig
 }
@@ -23,6 +32,7 @@ type RepositoriesConfig struct {
 type Config struct {
 	Repositories RepositoriesConfig
 	ServerPort   string
+	JWT          JWTConfig
 }
 
 func Load() (*Config, error) {
@@ -44,6 +54,29 @@ func Load() (*Config, error) {
 
 	if cfg.Repositories.Postgres.Password == "" {
 		return nil, fmt.Errorf("POSTGRES_PASSWORD environment variable is required")
+	}
+
+	// Load JWT configuration
+	accessTTL, err := time.ParseDuration(getEnvOrDefault("JWT_ACCESS_TOKEN_TTL", "15m"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid JWT_ACCESS_TOKEN_TTL: %v", err)
+	}
+	
+	refreshTTL, err := time.ParseDuration(getEnvOrDefault("JWT_REFRESH_TOKEN_TTL", "168h"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid JWT_REFRESH_TOKEN_TTL: %v", err)
+	}
+
+	cfg.JWT = JWTConfig{
+		SecretKey:       getEnvOrDefault("JWT_SECRET_KEY", ""),
+		Issuer:          getEnvOrDefault("JWT_ISSUER", "loci"),
+		Audience:        getEnvOrDefault("JWT_AUDIENCE", "loci-app"),
+		AccessTokenTTL:  accessTTL,
+		RefreshTokenTTL: refreshTTL,
+	}
+
+	if cfg.JWT.SecretKey == "" {
+		return nil, fmt.Errorf("JWT_SECRET_KEY environment variable is required")
 	}
 
 	return cfg, nil

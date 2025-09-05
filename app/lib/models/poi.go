@@ -7,6 +7,23 @@ import (
 	"github.com/google/uuid"
 )
 
+// POI represents a simplified Point of Interest for UI display
+type POI struct {
+	ID          string  `json:"id"`
+	Name        string  `json:"name"`
+	Category    string  `json:"category"`
+	Address     string  `json:"address"`
+	Rating      float64 `json:"rating"`
+	PriceLevel  int     `json:"price_level"`
+	Distance    float64 `json:"distance"`
+	Latitude    float64 `json:"latitude"`
+	Longitude   float64 `json:"longitude"`
+	ImageURL    string  `json:"image_url"`
+	Website     string  `json:"website"`
+	PhoneNumber string  `json:"phone_number"`
+	IsOpen      bool    `json:"is_open"`
+}
+
 // POIFilters represents filters for POI queries
 type POIFilters struct {
 	City       string `json:"city,omitempty"`

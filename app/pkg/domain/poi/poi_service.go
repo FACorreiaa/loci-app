@@ -22,6 +22,7 @@ import (
 	generativeAI "github.com/FACorreiaa/go-genai-sdk/lib"
 
 	"github.com/FACorreiaa/go-templui/app/lib/models"
+	"github.com/FACorreiaa/go-templui/app/pkg/domain/city"
 )
 
 var _ Service = (*ServiceImpl)(nil)

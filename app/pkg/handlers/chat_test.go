@@ -1,4 +1,3 @@
-
 package handlers
 
 import (
@@ -8,11 +7,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 )
 
 func TestMain(m *testing.M) {
@@ -33,6 +33,8 @@ func TestChatHandlers_SendMessage(t *testing.T) {
 
 	// Setup the router
 	r := gin.Default()
+	r.Static("/static", "./assets/static")
+	r.StaticFile("/sw.js", "./static/sw.js")
 	r.Use(func(c *gin.Context) {
 		// Mock the user ID in the context
 		c.Set("user_id", "test-user-id")

@@ -1,11 +1,13 @@
 package auth
 
 import (
+	"log/slog"
 	"net/http"
 	"time"
 
 	"go.uber.org/zap"
 
+	"github.com/FACorreiaa/go-templui/app/pkg/config"
 	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 )
 
@@ -31,12 +33,12 @@ type ChangePasswordRequest struct {
 }
 
 type AuthHandlers struct {
-	authService *AuthService
+	authService AuthService
 }
 
-func NewAuthHandlers() *AuthHandlers {
+func NewAuthHandlers(repo AuthRepo, cfg *config.Config, logger *slog.Logger) *AuthHandlers {
 	return &AuthHandlers{
-		authService: NewAuthService(),
+		authService: NewAuthService(repo, cfg, logger),
 	}
 }
 
@@ -93,7 +95,7 @@ func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			zap.String("email", email),
 		)
 
-		w.Header().Set("HX-Redirect", "/")
+		w.Header().Set("HX-Redirect", "/dashboard")
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -124,11 +126,11 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	firstName := r.FormValue("first-name")
-	lastName := r.FormValue("last-name")
+	firstName := r.FormValue("firstname")
+	lastName := r.FormValue("lastname")
 	email := r.FormValue("email")
 	password := r.FormValue("password")
-	confirmPassword := r.FormValue("confirm-password")
+	confirmPassword := r.FormValue("confirm_password")
 
 	if firstName == "" || lastName == "" || email == "" || password == "" {
 		w.Header().Set("HX-Retarget", "#register-form")
@@ -178,7 +180,7 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		zap.String("hashed_password", hashedPassword), // Note: Don't log this in production
 	)
 
-	w.Header().Set("HX-Redirect", "/")
+	w.Header().Set("HX-Redirect", "/dashboard")
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -247,4 +249,69 @@ func (h *AuthHandlers) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	})
 
 	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+func (h *AuthHandlers) ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	logger.Log.Info("Password reset request",
+		zap.String("method", r.Method),
+		zap.String("remote_addr", r.RemoteAddr),
+	)
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	err := r.ParseForm()
+	if err != nil {
+		logger.Log.Error("Failed to parse form", zap.Error(err))
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	email := r.FormValue("email")
+	if email == "" {
+		w.Header().Set("HX-Retarget", "#forgot-password-form")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Email is required</div>`))
+		return
+	}
+
+	// Always show success message for security (don't reveal if email exists)
+	logger.Log.Info("Password reset requested", zap.String("email", email))
+	w.Header().Set("HX-Retarget", "#forgot-password-form")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`<div class="text-green-500 text-sm mb-4">If this email is registered, you will receive password reset instructions</div>`))
+}
+
+func (h *AuthHandlers) CheckUsernameHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	err := r.ParseForm()
+	if err != nil {
+		logger.Log.Error("Failed to parse form", zap.Error(err))
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	username := r.FormValue("username")
+	if username == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`<span class="text-red-500 text-sm">Username is required</span>`))
+		return
+	}
+
+	// Simple validation for demo - in production, check against database
+	if len(username) < 3 {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`<span class="text-red-500 text-sm">Username must be at least 3 characters</span>`))
+		return
+	}
+
+	// For demo, assume username is available
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`<span class="text-green-500 text-sm">Username is available</span>`))
 }

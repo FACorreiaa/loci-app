@@ -16,10 +16,16 @@ templ LayoutPage(l models.LayoutTempl) {
 			<link rel="stylesheet" href="/assets/css/output.css"/>
 			<link rel="preconnect" href="https://fonts.googleapis.com"/>
 			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+			<link rel="manifest" href="/assets/static/manifest.json">
+            <meta name="theme-color" content="#007bff">
+            <link rel="apple-touch-icon" href="/assets/static/icons/icon-192x192.png">
 			<link
 				href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
 				rel="stylesheet"
 			/>
+			<style>
+				[x-cloak] { display: none !important; }
+			</style>
 			<script src="https://unpkg.com/htmx.org@2.0.0/dist/htmx.min.js"></script>
 			<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js"></script>
 			<script>
@@ -31,6 +37,15 @@ templ LayoutPage(l models.LayoutTempl) {
 					}
 				});
 			</script>
+			<script>
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                  navigator.serviceWorker.register('/assets/static/sw.js')
+                    .then(reg => console.log('Service Worker registered:', reg))
+                    .catch(err => console.error('Service Worker registration failed:', err));
+                });
+              }
+            </script>
 		</head>
 		<body hx-boost="true" class="min-h-screen bg-background text-foreground font-inter antialiased">
 			<div class="flex flex-col min-h-screen">

@@ -205,7 +205,7 @@ func TestServiceImpl_CreateItineraryForList(t *testing.T) {
 		ID:          parentListID,
 		UserID:      userID,
 		Name:        "Parent List",
-		CityID:      cityID,
+		CityID:      &cityID,
 		IsItinerary: false,
 		IsPublic:    true,
 	}
@@ -241,7 +241,7 @@ func TestServiceImpl_CreateItineraryForList(t *testing.T) {
 			ID:          parentListID,
 			UserID:      uuid.New(), // Different user
 			Name:        "Parent List",
-			CityID:      cityID,
+			CityID:      &cityID,
 			IsItinerary: false,
 			IsPublic:    true,
 		}

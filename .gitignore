@@ -92,3 +92,5 @@ config.yaml
 *.sqlite
 *.sqlite3
 go-templui
+main
+fly.toml

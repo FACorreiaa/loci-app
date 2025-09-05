@@ -1,12 +1,15 @@
 package routes
 
 import (
+	"log/slog"
 	"net/http"
 
+	"github.com/a-h/templ"
 	"github.com/FACorreiaa/go-templui/app/lib/models"
 	"github.com/FACorreiaa/go-templui/app/lib/renderer"
 	authPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/auth"
 	handlers2 "github.com/FACorreiaa/go-templui/app/pkg/handlers"
+	"github.com/FACorreiaa/go-templui/app/pkg/config"
 	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
 
@@ -54,24 +57,41 @@ func Setup(r *gin.Engine) {
 
 	// Assets
 	r.Static("/assets", "./assets")
+	r.Static("/static", "./assets/static")
+	r.StaticFile("/sw.js", "./assets/static/sw.js")
+	r.StaticFile("/manifest.json", "./assets/static/manifest.json")
 
 	// Initialize handlers
-	authHandlers := authPkg.NewAuthHandlers()
+	cfg, _ := config.Load()
+	
+	// For now, create a minimal auth handler that can work without full database setup
+	// The handlers will handle missing database gracefully for basic functionality
+	authRepo := authPkg.NewPostgresAuthRepo(nil, slog.Default())
+	authHandlers := authPkg.NewAuthHandlers(authRepo, cfg, slog.Default())
 	chatHandlers := handlers2.NewChatHandlers()
 	favoritesHandlers := handlers2.NewFavoritesHandlers()
 	bookmarksHandlers := handlers2.NewBookmarksHandlers()
 	discoverHandlers := handlers2.NewDiscoverHandlers()
 	settingsHandlers := handlers2.NewSettingsHandlers()
 
-	// Public routes
-	r.GET("/", func(c *gin.Context) {
+	// Public routes (with optional auth)
+	r.GET("/", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
 		logger.Log.Info("Landing page accessed",
 			zap.String("ip", c.ClientIP()),
 			zap.String("user_agent", c.GetHeader("User-Agent")),
 		)
+		
+		user := getUserFromContext(c)
+		var content templ.Component
+		if user != nil {
+			content = features.LoggedInDashboard()
+		} else {
+			content = features.PublicLandingPage()
+		}
+		
 		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 			Title:   "Loci - Discover Amazing Places",
-			Content: features.PublicLandingPage(),
+			Content: content,
 			Nav: models.Navigation{
 				Items: []models.NavItem{
 					{Name: "Home", URL: "/"},
@@ -80,12 +100,12 @@ func Setup(r *gin.Engine) {
 				},
 			},
 			ActiveNav: "Home",
-			User:      nil,
+			User:      user,
 		}))
 	})
 
 	// Discover (public but enhanced when authenticated)
-	r.GET("/discover", func(c *gin.Context) {
+	r.GET("/discover", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
 		logger.Log.Info("Discover page accessed", zap.String("ip", c.ClientIP()))
 		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 			Title:   "Discover - Loci",
@@ -98,7 +118,7 @@ func Setup(r *gin.Engine) {
 				},
 			},
 			ActiveNav: "Discover",
-			User:      nil,
+			User:      getUserFromContext(c),
 		}))
 	})
 
@@ -156,7 +176,9 @@ func Setup(r *gin.Engine) {
 		authGroup.POST("/signin", gin.WrapF(authHandlers.LoginHandler))
 		authGroup.POST("/signup", gin.WrapF(authHandlers.RegisterHandler))
 		authGroup.POST("/logout", gin.WrapF(authHandlers.LogoutHandler))
+		authGroup.POST("/forgot-password", gin.WrapF(authHandlers.ForgotPasswordHandler))
 		authGroup.POST("/change-password", gin.WrapF(authHandlers.ChangePasswordHandler))
+		authGroup.POST("/check-username", gin.WrapF(authHandlers.CheckUsernameHandler))
 	}
 
 	// Protected routes
