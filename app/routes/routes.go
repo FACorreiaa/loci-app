@@ -5,7 +5,7 @@ import (
 
 	"github.com/FACorreiaa/go-templui/app/lib/models"
 	"github.com/FACorreiaa/go-templui/app/lib/renderer"
-	authPkg "github.com/FACorreiaa/go-templui/app/pkg/auth"
+	authPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/auth"
 	handlers2 "github.com/FACorreiaa/go-templui/app/pkg/handlers"
 	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 	"github.com/FACorreiaa/go-templui/app/pkg/middleware"

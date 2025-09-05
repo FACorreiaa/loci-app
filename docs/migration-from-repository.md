@@ -64,7 +64,7 @@ Go Workspaces were introduced in Go 1.18 specifically to solve this problem. A w
     │       └── go.mod      <-- module my-project/pois
     └── internal/
         └── shared-lib/     <-- A shared library (e.g., for types, db connections)
-            ├── types.go
+            ├── models.go
             └── go.mod      <-- module my-project/internal/shared-lib
     ```
 
@@ -132,7 +132,7 @@ If you prefer to have all your code and all its dependencies checked into a sing
     │       └── main.go     <-- package main
     └── internal/
         └── shared/         <-- Your shared library code (e.g., package shared)
-            └── types.go
+            └── models.go
     ```
     Your root `go.mod` would define the module path: `module my-project`.
 

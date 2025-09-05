@@ -25,7 +25,7 @@ func (h *ChatHandlers) SendMessage(c *gin.Context) {
 	message := c.PostForm("message")
 	if message == "" {
 		logger.Log.Warn("Empty chat message received")
-		c.HTML(http.StatusBadRequest, "", `<div class="text-red-500">Message cannot be empty</div>`)
+		c.String(http.StatusBadRequest, `<div class="text-red-500">Message cannot be empty</div>`)
 		return
 	}
 
@@ -38,7 +38,7 @@ func (h *ChatHandlers) SendMessage(c *gin.Context) {
 	response := "Thanks for your message! I'm here to help you discover amazing places. What would you like to explore?"
 
 	// Return HTMX response with user message and AI response
-	c.HTML(http.StatusOK, "", `
+	c.String(http.StatusOK, `
 		<!-- User Message -->
 		<div class="flex justify-end mb-4">
 			<div class="max-w-xs sm:max-w-lg">
