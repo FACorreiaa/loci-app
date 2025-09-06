@@ -2,8 +2,8 @@ package nearby
 
 import (
 	"fmt"
-	"github.com/FACorreiaa/go-templui/app/lib/models"
 	mapcomponents "github.com/FACorreiaa/go-templui/app/lib/components/map"
+	"github.com/FACorreiaa/go-templui/app/lib/models"
 )
 
 templ NearbyPage() {
@@ -20,18 +20,16 @@ templ NearbyPage() {
 						</button>
 					</div>
 				</div>
-				
 				<!-- Location Display -->
 				<div id="current-location" class="text-gray-600 text-sm mb-4">
 					<i class="fas fa-map-marker-alt mr-1"></i>
 					<span id="location-text">Click "Use My Location" to get nearby recommendations</span>
 				</div>
-				
 				<!-- Search Bar -->
 				<div class="relative">
-					<input 
-						type="text" 
-						id="search-input" 
+					<input
+						type="text"
+						id="search-input"
 						placeholder="Search for places, restaurants, activities..."
 						class="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 						hx-post="/nearby/search"
@@ -42,12 +40,11 @@ templ NearbyPage() {
 					<i class="fas fa-search absolute left-3 top-3.5 text-gray-400"></i>
 				</div>
 			</div>
-
 			<!-- Tabs -->
 			<div class="border-b border-gray-200">
 				<nav class="flex space-x-8 px-6" id="category-tabs">
-					<button 
-						class="py-4 px-1 border-b-2 border-blue-600 text-blue-600 font-medium text-sm tab-active" 
+					<button
+						class="py-4 px-1 border-b-2 border-blue-600 text-blue-600 font-medium text-sm tab-active"
 						data-category="general"
 						hx-post="/nearby/category/general"
 						hx-target="#poi-results"
@@ -55,8 +52,8 @@ templ NearbyPage() {
 					>
 						General
 					</button>
-					<button 
-						class="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm" 
+					<button
+						class="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm"
 						data-category="restaurants"
 						hx-post="/nearby/category/restaurants"
 						hx-target="#poi-results"
@@ -64,8 +61,8 @@ templ NearbyPage() {
 					>
 						Restaurants
 					</button>
-					<button 
-						class="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm" 
+					<button
+						class="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm"
 						data-category="activities"
 						hx-post="/nearby/category/activities"
 						hx-target="#poi-results"
@@ -73,8 +70,8 @@ templ NearbyPage() {
 					>
 						Activities
 					</button>
-					<button 
-						class="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm" 
+					<button
+						class="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm"
 						data-category="hotels"
 						hx-post="/nearby/category/hotels"
 						hx-target="#poi-results"
@@ -82,8 +79,8 @@ templ NearbyPage() {
 					>
 						Hotels
 					</button>
-					<button 
-						class="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm" 
+					<button
+						class="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm"
 						data-category="attractions"
 						hx-post="/nearby/category/attractions"
 						hx-target="#poi-results"
@@ -93,19 +90,17 @@ templ NearbyPage() {
 					</button>
 				</nav>
 			</div>
-
 			<!-- Filters -->
 			<div class="p-6 bg-gray-50 border-b border-gray-200">
 				<form id="filters-form" class="flex flex-wrap items-center gap-4">
-					<input type="hidden" name="latitude" id="latitude" value="" />
-					<input type="hidden" name="longitude" id="longitude" value="" />
-					<input type="hidden" name="category" id="current-category" value="general" />
-					
+					<input type="hidden" name="latitude" id="latitude" value=""/>
+					<input type="hidden" name="longitude" id="longitude" value=""/>
+					<input type="hidden" name="category" id="current-category" value="general"/>
 					<!-- Distance Filter -->
 					<div class="flex items-center space-x-2">
 						<label class="text-sm font-medium text-gray-700">Distance:</label>
-						<select 
-							name="distance" 
+						<select
+							name="distance"
 							class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500"
 							hx-post="/nearby/filter"
 							hx-target="#poi-results"
@@ -118,12 +113,11 @@ templ NearbyPage() {
 							<option value="25">25 km</option>
 						</select>
 					</div>
-
 					<!-- Rating Filter -->
 					<div class="flex items-center space-x-2">
 						<label class="text-sm font-medium text-gray-700">Min Rating:</label>
-						<select 
-							name="rating" 
+						<select
+							name="rating"
 							class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500"
 							hx-post="/nearby/filter"
 							hx-target="#poi-results"
@@ -136,12 +130,11 @@ templ NearbyPage() {
 							<option value="4.5">4.5+ Stars</option>
 						</select>
 					</div>
-
 					<!-- Price Filter -->
 					<div class="flex items-center space-x-2">
 						<label class="text-sm font-medium text-gray-700">Price:</label>
-						<select 
-							name="price" 
+						<select
+							name="price"
 							class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500"
 							hx-post="/nearby/filter"
 							hx-target="#poi-results"
@@ -155,30 +148,29 @@ templ NearbyPage() {
 							<option value="4">$$$$ - Very Expensive</option>
 						</select>
 					</div>
-
 					<!-- View Toggle -->
 					<div class="ml-auto flex items-center space-x-2">
 						<label class="text-sm font-medium text-gray-700">View:</label>
 						<div class="flex border border-gray-300 rounded-md overflow-hidden">
-							<button 
-								type="button" 
-								id="view-cards" 
+							<button
+								type="button"
+								id="view-cards"
 								class="px-3 py-1 text-sm bg-blue-600 text-white hover:bg-blue-700 view-toggle active"
 								data-view="cards"
 							>
 								<i class="fas fa-th-large"></i>
 							</button>
-							<button 
-								type="button" 
-								id="view-map" 
+							<button
+								type="button"
+								id="view-map"
 								class="px-3 py-1 text-sm bg-white text-gray-700 hover:bg-gray-100 border-l view-toggle"
 								data-view="map"
 							>
 								<i class="fas fa-map"></i>
 							</button>
-							<button 
-								type="button" 
-								id="view-split" 
+							<button
+								type="button"
+								id="view-split"
 								class="px-3 py-1 text-sm bg-white text-gray-700 hover:bg-gray-100 border-l view-toggle"
 								data-view="split"
 							>
@@ -188,7 +180,6 @@ templ NearbyPage() {
 					</div>
 				</form>
 			</div>
-
 			<!-- Content Area -->
 			<div class="relative">
 				<!-- Cards View -->
@@ -197,12 +188,10 @@ templ NearbyPage() {
 						@NearbyLoadingState()
 					</div>
 				</div>
-
 				<!-- Map View -->
 				<div id="map-view" class="hidden" style="height: 600px;">
 					@mapcomponents.MapboxContainer("nearby-map", "100%")
 				</div>
-
 				<!-- Split View -->
 				<div id="split-view" class="hidden flex h-[600px]">
 					<div class="w-1/2 p-6 overflow-y-auto border-r border-gray-200">
@@ -214,7 +203,6 @@ templ NearbyPage() {
 						@mapcomponents.MapboxContainer("nearby-map-split", "100%")
 					</div>
 				</div>
-
 				<!-- Search Results Overlay -->
 				<div id="search-results" class="absolute top-0 left-0 right-0 bg-white shadow-lg border-b z-10 hidden">
 					<!-- Search results will be loaded here -->
@@ -222,7 +210,6 @@ templ NearbyPage() {
 			</div>
 		</div>
 	</div>
-
 	<script>
 		document.addEventListener('DOMContentLoaded', function() {
 			// Tab switching
@@ -418,12 +405,14 @@ templ NearbySearchResults(pois []models.NearbyPOI) {
 	} else {
 		<div class="max-h-64 overflow-y-auto">
 			for _, poi := range pois {
-				<div class="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0" 
-					 onclick="selectSearchResult('{poi.ID}', '{poi.Name}', {poi.Latitude}, {poi.Longitude})">
+				<div
+					class="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+					onclick="selectSearchResult('{poi.ID}', '{poi.Name}', {poi.Latitude}, {poi.Longitude})"
+				>
 					<div class="flex items-center space-x-3">
 						<div class="w-12 h-12 bg-gray-200 rounded-lg flex-shrink-0">
 							if poi.ImageURL != "" {
-								<img src={poi.ImageURL} alt={poi.Name} class="w-full h-full object-cover rounded-lg"/>
+								<img src={ poi.ImageURL } alt={ poi.Name } class="w-full h-full object-cover rounded-lg"/>
 							} else {
 								<div class="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg flex items-center justify-center">
 									<i class="fas fa-map-marker-alt text-white text-sm"></i>
@@ -431,19 +420,19 @@ templ NearbySearchResults(pois []models.NearbyPOI) {
 							}
 						</div>
 						<div class="flex-1">
-							<h4 class="font-medium text-gray-900">{poi.Name}</h4>
-							<p class="text-sm text-gray-600">{poi.Category}</p>
+							<h4 class="font-medium text-gray-900">{ poi.Name }</h4>
+							<p class="text-sm text-gray-600">{ poi.Category }</p>
 							<div class="flex items-center mt-1">
 								<div class="flex items-center">
 									for i := 0; i < int(poi.Rating); i++ {
 										<i class="fas fa-star text-yellow-400 text-xs"></i>
 									}
 								</div>
-								<span class="ml-1 text-xs text-gray-500">({poi.Rating})</span>
+								<span class="ml-1 text-xs text-gray-500">({ poi.Rating })</span>
 							</div>
 						</div>
 						<div class="text-right">
-							<p class="text-sm text-gray-600">{fmt.Sprintf("%.1f km", poi.Distance)}</p>
+							<p class="text-sm text-gray-600">{ fmt.Sprintf("%.1f km", poi.Distance) }</p>
 						</div>
 					</div>
 				</div>
@@ -467,7 +456,7 @@ templ NearbyNoLocation() {
 		<i class="fas fa-location-arrow text-4xl text-gray-400 mb-4"></i>
 		<h3 class="text-lg font-medium text-gray-900 mb-2">Location Required</h3>
 		<p class="text-gray-600 mb-4">Click "Use My Location" to discover amazing places nearby.</p>
-		<button 
+		<button
 			class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
 			onclick="document.getElementById('location-btn').click()"
 		>
@@ -492,26 +481,24 @@ templ NearbyPOICard(poi models.NearbyPOI) {
 	<div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden">
 		<div class="relative">
 			if poi.ImageURL != "" {
-				<img src={poi.ImageURL} alt={poi.Name} class="w-full h-48 object-cover"/>
+				<img src={ poi.ImageURL } alt={ poi.Name } class="w-full h-48 object-cover"/>
 			} else {
 				<div class="w-full h-48 bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
 					<i class="fas fa-map-marker-alt text-white text-3xl"></i>
 				</div>
 			}
-			<button 
+			<button
 				class="absolute top-3 right-3 bg-white rounded-full p-2 shadow-md hover:bg-gray-100 transition-colors"
-				hx-post={"/favorites/add/" + poi.ID}
+				hx-post={ "/favorites/add/" + poi.ID }
 				hx-target="this"
 				hx-swap="outerHTML"
 			>
 				<i class="far fa-heart text-gray-600"></i>
 			</button>
 		</div>
-		
 		<div class="p-4">
-			<h3 class="font-semibold text-lg text-gray-900 mb-1">{poi.Name}</h3>
-			<p class="text-gray-600 text-sm mb-2">{poi.Category}</p>
-			
+			<h3 class="font-semibold text-lg text-gray-900 mb-1">{ poi.Name }</h3>
+			<p class="text-gray-600 text-sm mb-2">{ poi.Category }</p>
 			<div class="flex items-center mb-2">
 				<div class="flex items-center">
 					for i := 0; i < 5; i++ {
@@ -522,23 +509,20 @@ templ NearbyPOICard(poi models.NearbyPOI) {
 						}
 					}
 				</div>
-				<span class="ml-2 text-sm text-gray-600">({poi.Rating})</span>
+				<span class="ml-2 text-sm text-gray-600">({ poi.Rating })</span>
 			</div>
-			
 			if poi.Address != "" {
 				<p class="text-gray-600 text-sm mb-2">
 					<i class="fas fa-map-marker-alt mr-1"></i>
-					{poi.Address}
+					{ poi.Address }
 				</p>
 			}
-			
 			if poi.Distance > 0 {
 				<p class="text-gray-600 text-sm mb-3">
 					<i class="fas fa-walking mr-1"></i>
-					{fmt.Sprintf("%.1f km away", poi.Distance)}
+					{ fmt.Sprintf("%.1f km away", poi.Distance) }
 				</p>
 			}
-			
 			if poi.PriceLevel > 0 {
 				<div class="flex items-center mb-3">
 					<span class="text-gray-600 text-sm mr-2">Price:</span>
@@ -550,14 +534,13 @@ templ NearbyPOICard(poi models.NearbyPOI) {
 					}
 				</div>
 			}
-			
 			<div class="flex space-x-2">
 				<button class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 transition-colors">
 					View Details
 				</button>
-				<button 
+				<button
 					class="bg-gray-100 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-200 transition-colors"
-					hx-post={"/bookmarks/add/" + poi.ID}
+					hx-post={ "/bookmarks/add/" + poi.ID }
 					hx-target="this"
 					hx-swap="outerHTML"
 				>

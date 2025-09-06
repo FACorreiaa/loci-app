@@ -18,6 +18,9 @@ lint: ## Runs linter for .go files
 templ:
 	templ generate --watch --proxy="http://localhost:8090" --open-browser=false
 
+t-fmt:
+	templ fmt .
+
 # Run air for Go hot reload
 server:
 	air \

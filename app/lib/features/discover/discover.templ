@@ -5,7 +5,6 @@ import "fmt"
 templ DiscoverPage() {
 	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
-			
 			<!-- Header -->
 			<div class="mb-8">
 				<div class="flex items-center gap-3 mb-6">
@@ -19,7 +18,6 @@ templ DiscoverPage() {
 						<p class="text-muted-foreground">Find amazing places and hidden gems</p>
 					</div>
 				</div>
-
 				<!-- Enhanced Search Bar -->
 				<div class="bg-card rounded-xl shadow-lg border p-6">
 					<form hx-post="/discover/search" hx-target="#discover-results" hx-indicator="#search-loading">
@@ -57,7 +55,6 @@ templ DiscoverPage() {
 					</form>
 				</div>
 			</div>
-
 			<!-- Quick Categories -->
 			<div class="mb-8">
 				<h2 class="text-lg font-semibold text-foreground mb-4">Quick Categories</h2>
@@ -76,10 +73,8 @@ templ DiscoverPage() {
 					@CategoryCard("Markets", "🏪", "market")
 				</div>
 			</div>
-
 			<!-- Trending & Featured -->
 			<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-				
 				<!-- Trending Now -->
 				<div class="lg:col-span-2">
 					<h2 class="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
@@ -96,7 +91,6 @@ templ DiscoverPage() {
 						@TrendingItem("Rome Food Markets", "21 searches today", "🍅", 5)
 					</div>
 				</div>
-
 				<!-- Featured Collections -->
 				<div>
 					<h2 class="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
@@ -113,7 +107,6 @@ templ DiscoverPage() {
 					</div>
 				</div>
 			</div>
-
 			<!-- Search Results Container -->
 			<div id="discover-results" class="space-y-6">
 				<!-- Recent Discoveries (Default Content) -->
@@ -134,7 +127,7 @@ templ DiscoverPage() {
 }
 
 templ CategoryCard(name string, emoji string, category string) {
-	<button 
+	<button
 		hx-get={ "/discover/category/" + category }
 		hx-target="#discover-results"
 		class="p-4 bg-card rounded-xl border hover:shadow-md hover:border-blue-300 transition-all group text-center"
@@ -177,11 +170,13 @@ templ DiscoveryCard(category string, title string, location string, description 
 				<div class="flex items-center gap-3">
 					<span class="text-3xl">{ emoji }</span>
 					<div class="flex flex-col gap-1">
-						<span class={ "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium",
+						<span
+							class={ "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium",
 							templ.KV("bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300", category == "Restaurant"),
 							templ.KV("bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300", category == "Activity"),
 							templ.KV("bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300", category == "Hotel"),
-							templ.KV("bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300", category == "Attraction") }>
+							templ.KV("bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300", category == "Attraction") }
+						>
 							{ category }
 						</span>
 						if badge == "michelin" {
@@ -208,7 +203,7 @@ templ DiscoveryCard(category string, title string, location string, description 
 					</div>
 				</div>
 				<div class="flex items-center gap-1">
-					<button 
+					<button
 						hx-post={ "/favorites/add/" + title }
 						hx-target="this"
 						hx-swap="outerHTML"
@@ -220,7 +215,6 @@ templ DiscoveryCard(category string, title string, location string, description 
 					</button>
 				</div>
 			</div>
-			
 			<div class="space-y-3">
 				<h3 class="font-semibold text-card-foreground group-hover:text-blue-600 transition-colors">
 					{ title }
@@ -244,13 +238,12 @@ templ DiscoveryCard(category string, title string, location string, description 
 					</div>
 				</div>
 			</div>
-
 			<div class="flex items-center justify-between mt-4 pt-4 border-t border-border">
 				<button class="text-blue-600 hover:text-blue-700 text-sm font-medium">
 					Learn More
 				</button>
 				<div class="flex items-center gap-2">
-					<button 
+					<button
 						hx-post={ "/bookmarks/add/" + title }
 						class="text-muted-foreground hover:text-foreground text-sm"
 					>

@@ -3,7 +3,6 @@ package recents
 templ RecentsPage() {
 	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
-			
 			<!-- Header -->
 			<div class="mb-8">
 				<div class="flex items-center justify-between mb-6">
@@ -18,7 +17,6 @@ templ RecentsPage() {
 							<p class="text-muted-foreground">Your travel history and recent discoveries</p>
 						</div>
 					</div>
-					
 					<div class="flex items-center gap-3">
 						<!-- Time Filter -->
 						<select class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background text-sm">
@@ -28,7 +26,6 @@ templ RecentsPage() {
 							<option value="year">This Year</option>
 							<option value="all">All Time</option>
 						</select>
-						
 						<button class="px-4 py-2 border rounded-lg hover:bg-accent transition-colors text-sm">
 							<svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -38,10 +35,8 @@ templ RecentsPage() {
 					</div>
 				</div>
 			</div>
-
 			<!-- Activity Timeline -->
 			<div class="space-y-6">
-				
 				<!-- Today -->
 				<div class="bg-card rounded-xl shadow-sm border p-6">
 					<h3 class="text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2">
@@ -54,7 +49,6 @@ templ RecentsPage() {
 						@RecentActivityItem("Viewed details", "Central Park", "Activity • New York, NY", "6 hours ago", "🌳", "view")
 					</div>
 				</div>
-
 				<!-- Yesterday -->
 				<div class="bg-card rounded-xl shadow-sm border p-6">
 					<h3 class="text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2">
@@ -67,7 +61,6 @@ templ RecentsPage() {
 						@RecentActivityItem("Shared list", "Weekend in Paris", "Shared with 3 friends", "Yesterday, 9:20 AM", "🗼", "share")
 					</div>
 				</div>
-
 				<!-- This Week -->
 				<div class="bg-card rounded-xl shadow-sm border p-6">
 					<h3 class="text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2">
@@ -82,10 +75,9 @@ templ RecentsPage() {
 						@RecentActivityItem("Searched for", "Rooftop bars Manhattan", "Search query", "6 days ago", "🔍", "search")
 					</div>
 				</div>
-
 				<!-- Load More -->
 				<div class="text-center">
-					<button 
+					<button
 						hx-get="/recents/load-more"
 						hx-target="#load-more-container"
 						hx-swap="outerHTML"
@@ -103,12 +95,14 @@ templ RecentsPage() {
 templ RecentActivityItem(action string, title string, details string, time string, emoji string, activityType string) {
 	<div class="flex items-start gap-4 p-4 hover:bg-accent rounded-lg transition-colors cursor-pointer">
 		<div class="flex-shrink-0">
-			<div class={ "w-12 h-12 rounded-full flex items-center justify-center",
+			<div
+				class={ "w-12 h-12 rounded-full flex items-center justify-center",
 				templ.KV("bg-green-100 dark:bg-green-900/30", activityType == "add" || activityType == "visit"),
 				templ.KV("bg-blue-100 dark:bg-blue-900/30", activityType == "view" || activityType == "search" || activityType == "book"),
 				templ.KV("bg-purple-100 dark:bg-purple-900/30", activityType == "create" || activityType == "share"),
 				templ.KV("bg-orange-100 dark:bg-orange-900/30", activityType == "review" || activityType == "update"),
-				templ.KV("bg-gray-100 dark:bg-gray-900/30", activityType == "discover") }>
+				templ.KV("bg-gray-100 dark:bg-gray-900/30", activityType == "discover") }
+			>
 				<span class="text-xl">{ emoji }</span>
 			</div>
 		</div>

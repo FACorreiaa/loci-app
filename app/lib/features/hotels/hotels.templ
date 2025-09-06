@@ -12,7 +12,6 @@ templ HotelsPage() {
 					Find the perfect place to stay from luxury hotels to boutique accommodations
 				</p>
 			</div>
-
 			<!-- Search and Booking Section -->
 			<div class="bg-card rounded-xl shadow-sm border p-6 mb-8">
 				<div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
@@ -31,7 +30,6 @@ templ HotelsPage() {
 							</svg>
 						</div>
 					</div>
-					
 					<div>
 						<label class="block text-sm font-medium mb-2">Check-in</label>
 						<input
@@ -39,7 +37,6 @@ templ HotelsPage() {
 							class="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
 						/>
 					</div>
-					
 					<div>
 						<label class="block text-sm font-medium mb-2">Check-out</label>
 						<input
@@ -47,7 +44,6 @@ templ HotelsPage() {
 							class="w-full p-3 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
 						/>
 					</div>
-					
 					<div class="flex gap-2">
 						<div class="flex-1">
 							<label class="block text-sm font-medium mb-2">Guests</label>
@@ -60,9 +56,8 @@ templ HotelsPage() {
 						</div>
 					</div>
 				</div>
-				
 				<div class="mt-4 flex flex-wrap gap-3">
-					<button 
+					<button
 						class="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
 						hx-post="/hotels/search"
 						hx-include="closest form"
@@ -70,9 +65,8 @@ templ HotelsPage() {
 					>
 						Search Hotels
 					</button>
-					
 					<div class="flex flex-wrap gap-2" x-data="{ showFilters: false }">
-						<button 
+						<button
 							@click="showFilters = !showFilters"
 							class="flex items-center gap-2 px-4 py-2 border border-input rounded-lg hover:bg-accent transition-colors"
 						>
@@ -81,7 +75,6 @@ templ HotelsPage() {
 							</svg>
 							Filters
 						</button>
-						
 						<!-- Filter Panel -->
 						<div x-show="showFilters" x-transition class="absolute top-full left-0 right-0 mt-2 bg-card border rounded-lg shadow-lg p-4 z-10">
 							<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -118,15 +111,15 @@ templ HotelsPage() {
 									<label class="block text-sm font-medium mb-2">Amenities</label>
 									<div class="space-y-1">
 										<label class="flex items-center text-sm">
-											<input type="checkbox" class="mr-2">
+											<input type="checkbox" class="mr-2"/>
 											Pool
 										</label>
 										<label class="flex items-center text-sm">
-											<input type="checkbox" class="mr-2">
+											<input type="checkbox" class="mr-2"/>
 											Spa
 										</label>
 										<label class="flex items-center text-sm">
-											<input type="checkbox" class="mr-2">
+											<input type="checkbox" class="mr-2"/>
 											Restaurant
 										</label>
 									</div>
@@ -136,15 +129,13 @@ templ HotelsPage() {
 					</div>
 				</div>
 			</div>
-
 			<!-- Hotels Grid -->
 			<div id="hotels-results">
 				@HotelsGrid()
 			</div>
-
 			<!-- Load More Button -->
 			<div class="text-center mt-8">
-				<button 
+				<button
 					class="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
 					hx-get="/hotels/load-more"
 					hx-target="#hotels-results"
@@ -190,7 +181,6 @@ templ HotelCard(name, category, description, rating, price, amenities string) {
 				</button>
 			</div>
 		</div>
-		
 		<div class="p-6">
 			<div class="flex items-start justify-between mb-3">
 				<h3 class="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
@@ -203,11 +193,9 @@ templ HotelCard(name, category, description, rating, price, amenities string) {
 					<span class="font-medium">{ rating }</span>
 				</div>
 			</div>
-			
 			<p class="text-muted-foreground text-sm mb-4 line-clamp-2">
 				{ description }
 			</p>
-			
 			<div class="flex items-center gap-2 mb-4">
 				<div class="flex flex-wrap gap-1">
 					<span class="px-2 py-1 bg-accent text-accent-foreground text-xs rounded-full">
@@ -221,7 +209,6 @@ templ HotelCard(name, category, description, rating, price, amenities string) {
 					</span>
 				</div>
 			</div>
-			
 			<div class="flex items-center justify-between">
 				<div class="flex flex-col gap-1">
 					<div class="flex items-center gap-2 text-sm font-medium">
@@ -232,12 +219,11 @@ templ HotelCard(name, category, description, rating, price, amenities string) {
 						Free cancellation
 					</div>
 				</div>
-				
 				<div class="flex gap-2">
 					<button class="px-3 py-2 border border-input rounded-lg hover:bg-accent transition-colors text-sm">
 						Compare
 					</button>
-					<button 
+					<button
 						class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm"
 						hx-get={ "/hotels/" + name }
 						hx-target="#modal-content"

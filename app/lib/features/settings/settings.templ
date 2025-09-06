@@ -8,13 +8,12 @@ templ SettingsPage() {
 				<h1 class="text-3xl font-bold text-foreground mb-2">Account Settings</h1>
 				<p class="text-muted-foreground">Manage your account preferences and personal information</p>
 			</div>
-
 			<div class="flex flex-col lg:flex-row gap-6" x-data="{ activeTab: 'account' }">
 				<!-- Mobile Tab Navigation -->
 				<div class="lg:hidden">
 					<div class="bg-card rounded-lg border p-2 mb-6">
 						<div class="flex overflow-x-auto space-x-1">
-							<button 
+							<button
 								@click="activeTab = 'account'"
 								:class="activeTab === 'account' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'"
 								class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap"
@@ -24,7 +23,7 @@ templ SettingsPage() {
 								</svg>
 								Account
 							</button>
-							<button 
+							<button
 								@click="activeTab = 'preferences'"
 								:class="activeTab === 'preferences' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'"
 								class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap"
@@ -34,7 +33,7 @@ templ SettingsPage() {
 								</svg>
 								Preferences
 							</button>
-							<button 
+							<button
 								@click="activeTab = 'privacy'"
 								:class="activeTab === 'privacy' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'"
 								class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap"
@@ -44,7 +43,7 @@ templ SettingsPage() {
 								</svg>
 								Privacy
 							</button>
-							<button 
+							<button
 								@click="activeTab = 'notifications'"
 								:class="activeTab === 'notifications' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'"
 								class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap"
@@ -57,12 +56,11 @@ templ SettingsPage() {
 						</div>
 					</div>
 				</div>
-
 				<!-- Desktop Sidebar Navigation -->
 				<div class="hidden lg:block w-64 flex-shrink-0">
 					<div class="bg-card rounded-lg border p-2 sticky top-8">
 						<nav class="space-y-1">
-							<button 
+							<button
 								@click="activeTab = 'account'"
 								:class="activeTab === 'account' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'"
 								class="w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-all duration-200 font-medium"
@@ -72,7 +70,7 @@ templ SettingsPage() {
 								</svg>
 								Account Settings
 							</button>
-							<button 
+							<button
 								@click="activeTab = 'preferences'"
 								:class="activeTab === 'preferences' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'"
 								class="w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-all duration-200 font-medium"
@@ -82,7 +80,7 @@ templ SettingsPage() {
 								</svg>
 								Travel Preferences
 							</button>
-							<button 
+							<button
 								@click="activeTab = 'privacy'"
 								:class="activeTab === 'privacy' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'"
 								class="w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-all duration-200 font-medium"
@@ -92,7 +90,7 @@ templ SettingsPage() {
 								</svg>
 								Privacy & Security
 							</button>
-							<button 
+							<button
 								@click="activeTab = 'notifications'"
 								:class="activeTab === 'notifications' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'"
 								class="w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-all duration-200 font-medium"
@@ -105,24 +103,20 @@ templ SettingsPage() {
 						</nav>
 					</div>
 				</div>
-
 				<!-- Main Content -->
 				<div class="flex-1">
 					<!-- Account Settings Tab -->
 					<div x-show="activeTab === 'account'" class="space-y-6">
 						@AccountSettingsContent()
 					</div>
-
 					<!-- Travel Preferences Tab -->
 					<div x-show="activeTab === 'preferences'" class="space-y-6">
 						@TravelPreferencesContent()
 					</div>
-
 					<!-- Privacy & Security Tab -->
 					<div x-show="activeTab === 'privacy'" class="space-y-6">
 						@PrivacySecurityContent()
 					</div>
-
 					<!-- Notifications Tab -->
 					<div x-show="activeTab === 'notifications'" class="space-y-6">
 						@NotificationsContent()
@@ -136,7 +130,6 @@ templ SettingsPage() {
 templ AccountSettingsContent() {
 	<div class="space-y-6">
 		<h2 class="text-2xl font-bold text-foreground">Account Settings</h2>
-
 		<!-- Profile Picture -->
 		<div class="bg-card rounded-lg border p-6">
 			<div class="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
@@ -168,7 +161,6 @@ templ AccountSettingsContent() {
 				</div>
 			</div>
 		</div>
-
 		<!-- Personal Information -->
 		<div class="bg-card rounded-lg border p-6">
 			<h3 class="text-lg font-semibold text-foreground mb-4">Personal Information</h3>
@@ -177,8 +169,8 @@ templ AccountSettingsContent() {
 				<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 					<div>
 						<label class="block text-sm font-medium text-foreground mb-2">First Name</label>
-						<input 
-							type="text" 
+						<input
+							type="text"
 							name="first_name"
 							value="John"
 							class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -186,8 +178,8 @@ templ AccountSettingsContent() {
 					</div>
 					<div>
 						<label class="block text-sm font-medium text-foreground mb-2">Last Name</label>
-						<input 
-							type="text" 
+						<input
+							type="text"
 							name="last_name"
 							value="Doe"
 							class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -200,8 +192,8 @@ templ AccountSettingsContent() {
 						<svg class="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"></path>
 						</svg>
-						<input 
-							type="email" 
+						<input
+							type="email"
 							name="email"
 							value="john.doe@example.com"
 							class="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -216,8 +208,8 @@ templ AccountSettingsContent() {
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
 							</svg>
-							<input 
-								type="text" 
+							<input
+								type="text"
 								name="city"
 								value="New York"
 								placeholder="Enter your city"
@@ -227,8 +219,8 @@ templ AccountSettingsContent() {
 					</div>
 					<div>
 						<label class="block text-sm font-medium text-foreground mb-2">Country</label>
-						<input 
-							type="text" 
+						<input
+							type="text"
 							name="country"
 							value="United States"
 							placeholder="Enter your country"
@@ -238,7 +230,7 @@ templ AccountSettingsContent() {
 				</div>
 				<div>
 					<label class="block text-sm font-medium text-foreground mb-2">Bio</label>
-					<textarea 
+					<textarea
 						name="bio"
 						rows="3"
 						placeholder="Tell us about your travel interests..."
@@ -261,7 +253,6 @@ templ AccountSettingsContent() {
 templ TravelPreferencesContent() {
 	<div class="space-y-6">
 		<h2 class="text-2xl font-bold text-foreground">Travel Preferences</h2>
-
 		<!-- Interests -->
 		<div class="bg-card rounded-lg border p-6">
 			<h3 class="text-lg font-semibold text-foreground mb-4">Travel Interests</h3>
@@ -278,7 +269,6 @@ templ TravelPreferencesContent() {
 				@InterestToggle("Local Culture", "🎭", false)
 			</div>
 		</div>
-
 		<!-- Travel Style -->
 		<div class="bg-card rounded-lg border p-6">
 			<h3 class="text-lg font-semibold text-foreground mb-4">Travel Style</h3>
@@ -311,25 +301,24 @@ templ TravelPreferencesContent() {
 				</div>
 			</div>
 		</div>
-
 		<!-- Accessibility -->
 		<div class="bg-card rounded-lg border p-6">
 			<h3 class="text-lg font-semibold text-foreground mb-4">Accessibility Needs</h3>
 			<div class="space-y-3">
 				<label class="flex items-center gap-3">
-					<input type="checkbox" class="w-4 h-4 text-blue-600 bg-background border-border rounded focus:ring-blue-500" />
+					<input type="checkbox" class="w-4 h-4 text-blue-600 bg-background border-border rounded focus:ring-blue-500"/>
 					<span class="text-foreground">Wheelchair accessible venues</span>
 				</label>
 				<label class="flex items-center gap-3">
-					<input type="checkbox" class="w-4 h-4 text-blue-600 bg-background border-border rounded focus:ring-blue-500" />
+					<input type="checkbox" class="w-4 h-4 text-blue-600 bg-background border-border rounded focus:ring-blue-500"/>
 					<span class="text-foreground">Audio descriptions available</span>
 				</label>
 				<label class="flex items-center gap-3">
-					<input type="checkbox" class="w-4 h-4 text-blue-600 bg-background border-border rounded focus:ring-blue-500" />
+					<input type="checkbox" class="w-4 h-4 text-blue-600 bg-background border-border rounded focus:ring-blue-500"/>
 					<span class="text-foreground">Visual accessibility features</span>
 				</label>
 				<label class="flex items-center gap-3">
-					<input type="checkbox" class="w-4 h-4 text-blue-600 bg-background border-border rounded focus:ring-blue-500" />
+					<input type="checkbox" class="w-4 h-4 text-blue-600 bg-background border-border rounded focus:ring-blue-500"/>
 					<span class="text-foreground">Pet-friendly locations</span>
 				</label>
 			</div>
@@ -340,31 +329,30 @@ templ TravelPreferencesContent() {
 templ PrivacySecurityContent() {
 	<div class="space-y-6">
 		<h2 class="text-2xl font-bold text-foreground">Privacy & Security</h2>
-
 		<!-- Password -->
 		<div class="bg-card rounded-lg border p-6">
 			<h3 class="text-lg font-semibold text-foreground mb-4">Password & Authentication</h3>
 			<form hx-put="/settings/password" hx-trigger="submit" class="space-y-4">
 				<div>
 					<label class="block text-sm font-medium text-foreground mb-2">Current Password</label>
-					<input 
-						type="password" 
+					<input
+						type="password"
 						name="current_password"
 						class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 					/>
 				</div>
 				<div>
 					<label class="block text-sm font-medium text-foreground mb-2">New Password</label>
-					<input 
-						type="password" 
+					<input
+						type="password"
 						name="new_password"
 						class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 					/>
 				</div>
 				<div>
 					<label class="block text-sm font-medium text-foreground mb-2">Confirm New Password</label>
-					<input 
-						type="password" 
+					<input
+						type="password"
 						name="confirm_password"
 						class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 					/>
@@ -374,7 +362,6 @@ templ PrivacySecurityContent() {
 				</button>
 			</form>
 		</div>
-
 		<!-- Privacy Settings -->
 		<div class="bg-card rounded-lg border p-6">
 			<h3 class="text-lg font-semibold text-foreground mb-4">Privacy Settings</h3>
@@ -396,7 +383,7 @@ templ PrivacySecurityContent() {
 						<p class="text-sm text-muted-foreground">Show when you're active</p>
 					</div>
 					<label class="relative inline-flex items-center cursor-pointer">
-						<input type="checkbox" class="sr-only peer" checked />
+						<input type="checkbox" class="sr-only peer" checked/>
 						<div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
 					</label>
 				</div>
@@ -406,13 +393,12 @@ templ PrivacySecurityContent() {
 						<p class="text-sm text-muted-foreground">Allow data collection for personalized recommendations</p>
 					</div>
 					<label class="relative inline-flex items-center cursor-pointer">
-						<input type="checkbox" class="sr-only peer" checked />
+						<input type="checkbox" class="sr-only peer" checked/>
 						<div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
 					</label>
 				</div>
 			</div>
 		</div>
-
 		<!-- Data Management -->
 		<div class="bg-card rounded-lg border p-6">
 			<h3 class="text-lg font-semibold text-foreground mb-4">Data Management</h3>
@@ -422,8 +408,8 @@ templ PrivacySecurityContent() {
 						<h4 class="font-medium text-blue-800 dark:text-blue-200">Export Data</h4>
 						<p class="text-sm text-blue-600 dark:text-blue-300">Download a copy of your data</p>
 					</div>
-					<button 
-						hx-get="/settings/export" 
+					<button
+						hx-get="/settings/export"
 						class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
 					>
 						Export
@@ -434,8 +420,8 @@ templ PrivacySecurityContent() {
 						<h4 class="font-medium text-red-800 dark:text-red-200">Delete Account</h4>
 						<p class="text-sm text-red-600 dark:text-red-300">Permanently delete your account and data</p>
 					</div>
-					<button 
-						hx-delete="/settings/account" 
+					<button
+						hx-delete="/settings/account"
 						hx-confirm="Are you sure you want to delete your account? This action cannot be undone."
 						class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
 					>
@@ -450,7 +436,6 @@ templ PrivacySecurityContent() {
 templ NotificationsContent() {
 	<div class="space-y-6">
 		<h2 class="text-2xl font-bold text-foreground">Notification Preferences</h2>
-
 		<!-- Email Notifications -->
 		<div class="bg-card rounded-lg border p-6">
 			<h3 class="text-lg font-semibold text-foreground mb-4">Email Notifications</h3>
@@ -461,7 +446,6 @@ templ NotificationsContent() {
 				@NotificationToggle("Marketing emails", "Promotional offers and updates", false)
 			</div>
 		</div>
-
 		<!-- Push Notifications -->
 		<div class="bg-card rounded-lg border p-6">
 			<h3 class="text-lg font-semibold text-foreground mb-4">Push Notifications</h3>
@@ -471,7 +455,6 @@ templ NotificationsContent() {
 				@NotificationToggle("App updates", "Information about new features and updates", false)
 			</div>
 		</div>
-
 		<!-- SMS Notifications -->
 		<div class="bg-card rounded-lg border p-6">
 			<h3 class="text-lg font-semibold text-foreground mb-4">SMS Notifications</h3>
@@ -480,13 +463,13 @@ templ NotificationsContent() {
 					<svg class="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
 					</svg>
-					<input 
-						type="tel" 
+					<input
+						type="tel"
 						name="phone"
 						placeholder="+1 (555) 123-4567"
 						class="flex-1 px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 					/>
-					<button 
+					<button
 						hx-post="/settings/verify-phone"
 						class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
 					>
@@ -502,12 +485,14 @@ templ NotificationsContent() {
 
 templ InterestToggle(name string, emoji string, active bool) {
 	<label class="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-accent transition-colors">
-		<input 
-			type="checkbox" 
+		<input
+			type="checkbox"
 			name="interests"
 			value={ name }
 			class="w-4 h-4 text-blue-600 bg-background border-border rounded focus:ring-blue-500"
-			if active { checked }
+			if active {
+				checked
+			}
 		/>
 		<span class="text-lg">{ emoji }</span>
 		<span class="text-foreground font-medium">{ name }</span>
@@ -521,10 +506,12 @@ templ NotificationToggle(title string, description string, active bool) {
 			<p class="text-sm text-muted-foreground">{ description }</p>
 		</div>
 		<label class="relative inline-flex items-center cursor-pointer ml-4">
-			<input 
-				type="checkbox" 
-				class="sr-only peer" 
-				if active { checked }
+			<input
+				type="checkbox"
+				class="sr-only peer"
+				if active {
+					checked
+				}
 			/>
 			<div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
 		</label>

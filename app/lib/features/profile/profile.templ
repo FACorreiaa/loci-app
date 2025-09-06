@@ -3,13 +3,12 @@ package profile
 templ ProfilePage() {
 	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
 		<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
-			
 			<!-- Profile Header -->
 			<div class="bg-card rounded-xl shadow-lg border p-6 mb-8">
 				<div class="flex flex-col md:flex-row md:items-center gap-6">
 					<div class="flex items-center gap-4">
 						<div class="relative">
-							<img 
+							<img
 								src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
 								alt="Profile"
 								class="w-20 h-20 rounded-full object-cover border-4 border-white dark:border-gray-800 shadow-lg"
@@ -48,7 +47,6 @@ templ ProfilePage() {
 					</div>
 				</div>
 			</div>
-
 			<!-- Stats Grid -->
 			<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
 				<div class="bg-card rounded-xl p-4 border text-center">
@@ -88,10 +86,8 @@ templ ProfilePage() {
 					<p class="text-xs text-muted-foreground">Lists</p>
 				</div>
 			</div>
-
 			<!-- Activity & Recent Lists -->
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-				
 				<!-- Recent Activity -->
 				<div class="bg-card rounded-xl shadow-lg border p-6">
 					<h2 class="text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2">
@@ -108,7 +104,6 @@ templ ProfilePage() {
 						@ActivityItem("Shared", "Tokyo Food Adventure", "with 3 friends", "5 days ago", "share")
 					</div>
 				</div>
-
 				<!-- Favorite Lists -->
 				<div class="bg-card rounded-xl shadow-lg border p-6">
 					<h2 class="text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2">
@@ -128,7 +123,6 @@ templ ProfilePage() {
 					</button>
 				</div>
 			</div>
-
 			<!-- Achievement Badges (Optional Section) -->
 			<div class="mt-8 bg-card rounded-xl shadow-lg border p-6">
 				<h2 class="text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2">
@@ -152,12 +146,14 @@ templ ProfilePage() {
 
 templ ActivityItem(action string, place string, details string, time string, iconType string) {
 	<div class="flex items-start gap-3">
-		<div class={ "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
+		<div
+			class={ "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
 			templ.KV("bg-orange-100 dark:bg-orange-900/30", iconType == "restaurant"),
 			templ.KV("bg-green-100 dark:bg-green-900/30", iconType == "activity"),
 			templ.KV("bg-blue-100 dark:bg-blue-900/30", iconType == "attraction"),
 			templ.KV("bg-purple-100 dark:bg-purple-900/30", iconType == "list"),
-			templ.KV("bg-gray-100 dark:bg-gray-900/30", iconType == "share") }>
+			templ.KV("bg-gray-100 dark:bg-gray-900/30", iconType == "share") }
+		>
 			if iconType == "restaurant" {
 				<svg class="w-4 h-4 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"></path>
@@ -205,9 +201,11 @@ templ QuickListItem(title string, count string, emoji string) {
 }
 
 templ AchievementBadge(title string, description string, emoji string, earned bool) {
-	<div class={ "text-center p-4 rounded-lg border",
+	<div
+		class={ "text-center p-4 rounded-lg border",
 		templ.KV("bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200 dark:from-yellow-900/20 dark:to-amber-900/20 dark:border-yellow-800", earned),
-		templ.KV("bg-accent border-border opacity-50", !earned) }>
+		templ.KV("bg-accent border-border opacity-50", !earned) }
+	>
 		<div class="text-3xl mb-2">{ emoji }</div>
 		<h4 class="font-semibold text-sm text-card-foreground">{ title }</h4>
 		<p class="text-xs text-muted-foreground mt-1">{ description }</p>

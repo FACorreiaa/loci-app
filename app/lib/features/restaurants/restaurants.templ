@@ -12,7 +12,6 @@ templ RestaurantsPage() {
 					Discover exceptional dining experiences from traditional Portuguese cuisine to international flavors
 				</p>
 			</div>
-
 			<!-- Search and Filter Section -->
 			<div class="bg-card rounded-xl shadow-sm border p-6 mb-8">
 				<div class="flex flex-col lg:flex-row gap-4 items-center justify-between mb-4">
@@ -32,7 +31,6 @@ templ RestaurantsPage() {
 							</svg>
 						</div>
 					</div>
-					
 					<div class="flex flex-wrap gap-3">
 						<select name="cuisine" class="px-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-primary">
 							<option value="">All Cuisines</option>
@@ -42,7 +40,6 @@ templ RestaurantsPage() {
 							<option value="vegetarian">Vegetarian</option>
 							<option value="fine-dining">Fine Dining</option>
 						</select>
-						
 						<select name="price" class="px-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-primary">
 							<option value="">Any Price</option>
 							<option value="budget">€ (Budget)</option>
@@ -52,7 +49,6 @@ templ RestaurantsPage() {
 						</select>
 					</div>
 				</div>
-				
 				<div class="flex flex-wrap gap-2">
 					<button class="px-4 py-2 bg-accent text-accent-foreground rounded-full text-sm hover:bg-accent/80 transition-colors">
 						Open Now
@@ -68,7 +64,6 @@ templ RestaurantsPage() {
 					</button>
 				</div>
 			</div>
-
 			<!-- Featured Section -->
 			<div class="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950 rounded-xl p-6 mb-8">
 				<h2 class="text-2xl font-bold text-foreground mb-4">🏆 Today's Featured Restaurants</h2>
@@ -77,15 +72,13 @@ templ RestaurantsPage() {
 					@FeaturedRestaurantCard("Taberna do Real Fado", "Traditional Portuguese", "Authentic Portuguese cuisine with live Fado performances in an intimate historic setting.", "4.8", "€€€")
 				</div>
 			</div>
-
 			<!-- Restaurants Grid -->
 			<div id="restaurants-results">
 				@RestaurantsGrid()
 			</div>
-
 			<!-- Load More Button -->
 			<div class="text-center mt-8">
-				<button 
+				<button
 					class="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
 					hx-get="/restaurants/load-more"
 					hx-target="#restaurants-results"
@@ -160,7 +153,6 @@ templ RestaurantCard(name, cuisine, description, rating, price, tags string) {
 				</button>
 			</div>
 		</div>
-		
 		<div class="p-6">
 			<div class="flex items-start justify-between mb-3">
 				<h3 class="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
@@ -173,11 +165,9 @@ templ RestaurantCard(name, cuisine, description, rating, price, tags string) {
 					<span class="font-medium">{ rating }</span>
 				</div>
 			</div>
-			
 			<p class="text-muted-foreground text-sm mb-4 line-clamp-2">
 				{ description }
 			</p>
-			
 			<div class="flex flex-wrap gap-1 mb-4">
 				<span class="px-2 py-1 bg-accent text-accent-foreground text-xs rounded-full">
 					Traditional
@@ -189,7 +179,6 @@ templ RestaurantCard(name, cuisine, description, rating, price, tags string) {
 					Outdoor
 				</span>
 			</div>
-			
 			<div class="flex items-center justify-between">
 				<div class="flex flex-col gap-1">
 					<div class="flex items-center gap-2 text-sm font-medium">
@@ -200,12 +189,11 @@ templ RestaurantCard(name, cuisine, description, rating, price, tags string) {
 						Open until 11 PM
 					</div>
 				</div>
-				
 				<div class="flex gap-2">
 					<button class="px-3 py-2 border border-input rounded-lg hover:bg-accent transition-colors text-sm">
 						Reserve
 					</button>
-					<button 
+					<button
 						class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm"
 						hx-get={ "/restaurants/" + name }
 						hx-target="#modal-content"

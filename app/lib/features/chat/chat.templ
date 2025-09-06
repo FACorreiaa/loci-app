@@ -3,7 +3,6 @@ package chat
 templ ChatPage() {
 	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
 		<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
-			
 			<!-- Header -->
 			<div class="mb-8">
 				<div class="flex items-center gap-3 mb-6">
@@ -18,10 +17,8 @@ templ ChatPage() {
 					</div>
 				</div>
 			</div>
-
 			<!-- Chat Container -->
 			<div class="bg-card rounded-xl shadow-lg border h-[600px] flex flex-col">
-				
 				<!-- Chat Header -->
 				<div class="flex items-center justify-between p-4 border-b border-border">
 					<div class="flex items-center gap-3">
@@ -45,7 +42,6 @@ templ ChatPage() {
 						</svg>
 					</button>
 				</div>
-
 				<!-- Chat Messages -->
 				<div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4">
 					<!-- Welcome Message -->
@@ -64,22 +60,21 @@ templ ChatPage() {
 							<p class="text-xs text-muted-foreground mt-1 ml-1">Loci AI • now</p>
 						</div>
 					</div>
-
 					<!-- Suggested Questions -->
 					<div class="flex flex-wrap gap-2 ml-11">
-						<button 
+						<button
 							onclick="sendSuggestedMessage('Show me hidden gems in Paris')"
 							class="px-3 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full text-sm hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
 						>
 							Hidden gems in Paris
 						</button>
-						<button 
+						<button
 							onclick="sendSuggestedMessage('Best food markets in Italy')"
 							class="px-3 py-2 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-full text-sm hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
 						>
 							Food markets in Italy
 						</button>
-						<button 
+						<button
 							onclick="sendSuggestedMessage('Plan a weekend in Barcelona')"
 							class="px-3 py-2 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded-full text-sm hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
 						>
@@ -87,13 +82,12 @@ templ ChatPage() {
 						</button>
 					</div>
 				</div>
-
 				<!-- Chat Input -->
 				<div class="border-t border-border p-4">
-					<form 
-						hx-post="/chat/message" 
-						hx-trigger="submit" 
-						hx-target="#chat-messages" 
+					<form
+						hx-post="/chat/message"
+						hx-trigger="submit"
+						hx-target="#chat-messages"
 						hx-swap="beforeend"
 						hx-indicator="#chat-loading"
 						onsubmit="clearInput()"
@@ -125,7 +119,6 @@ templ ChatPage() {
 			</div>
 		</div>
 	</div>
-
 	<script>
 		function sendSuggestedMessage(message) {
 			const input = document.getElementById('chat-input');

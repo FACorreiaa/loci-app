@@ -4,7 +4,6 @@ templ PublicLandingPage() {
 	<div class="min-h-screen bg-gradient-to-b from-blue-50 via-purple-50 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 relative overflow-hidden">
 		<!-- Background gradient effects -->
 		<div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-100/20 via-transparent to-transparent pointer-events-none"></div>
-
 		<div class="relative">
 			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 text-center">
 				<div class="space-y-8">
@@ -20,7 +19,6 @@ templ PublicLandingPage() {
 							to your time, location, and interests.
 						</p>
 					</div>
-
 					<!-- Main search interface -->
 					<div class="max-w-2xl mx-auto mb-8">
 						<div class="flex items-end gap-3 bg-card rounded-2xl p-4 shadow-lg border">
@@ -56,7 +54,6 @@ templ PublicLandingPage() {
 						</div>
 						<div id="search-results"></div>
 					</div>
-
 					<!-- Quick suggestion buttons -->
 					<div class="max-w-4xl mx-auto mt-12">
 						<p class="text-muted-foreground mb-6 font-medium">
@@ -79,7 +76,6 @@ templ PublicLandingPage() {
 									</div>
 								</div>
 							</button>
-
 							<button
 								onclick="document.getElementById('search-input').value='Best food markets in Italy'; document.getElementById('search-btn').click()"
 								class="bg-card rounded-xl p-4 shadow-sm border hover:shadow-md hover:border-blue-300 transition-all group text-left"
@@ -96,7 +92,6 @@ templ PublicLandingPage() {
 									</div>
 								</div>
 							</button>
-
 							<button
 								onclick="document.getElementById('search-input').value='3-day cultural tour of Rome'; document.getElementById('search-btn').click()"
 								class="bg-card rounded-xl p-4 shadow-sm border hover:shadow-md hover:border-blue-300 transition-all group text-left"
@@ -113,7 +108,6 @@ templ PublicLandingPage() {
 									</div>
 								</div>
 							</button>
-
 							<button
 								onclick="document.getElementById('search-input').value='Weekend nightlife in Barcelona'; document.getElementById('search-btn').click()"
 								class="bg-card rounded-xl p-4 shadow-sm border hover:shadow-md hover:border-blue-300 transition-all group text-left"
@@ -135,7 +129,6 @@ templ PublicLandingPage() {
 				</div>
 			</div>
 		</div>
-
 		@RealTimeStats()
 		@ContentGrid()
 		@MobileAppAnnouncement()
@@ -151,7 +144,6 @@ templ RealTimeStats() {
 					<div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
 					This month on Loci
 				</div>
-				
 				<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
 					<div class="space-y-2">
 						<div class="text-3xl sm:text-4xl font-bold text-card-foreground">69,420</div>
@@ -182,7 +174,6 @@ templ ContentGrid() {
 					See what our AI has discovered for travelers like you.
 				</p>
 			</div>
-
 			<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
 				<div class="bg-card rounded-xl overflow-hidden shadow-lg border hover:shadow-xl transition-shadow">
 					<div class="p-6">
@@ -200,7 +191,6 @@ templ ContentGrid() {
 						</p>
 					</div>
 				</div>
-
 				<div class="bg-card rounded-xl overflow-hidden shadow-lg border hover:shadow-xl transition-shadow">
 					<div class="p-6">
 						<div class="flex items-center gap-3 mb-4">
@@ -217,7 +207,6 @@ templ ContentGrid() {
 						</p>
 					</div>
 				</div>
-
 				<div class="bg-card rounded-xl overflow-hidden shadow-lg border hover:shadow-xl transition-shadow">
 					<div class="p-6">
 						<div class="flex items-center gap-3 mb-4">
@@ -250,9 +239,8 @@ templ MobileAppAnnouncement() {
 							Install our PWA for the best mobile experience and offline access to your saved places.
 						</p>
 					</div>
-					
-					<button 
-						id="pwa-install-btn" 
+					<button
+						id="pwa-install-btn"
 						class="bg-white/20 hover:bg-white/30 border border-white/30 text-white px-6 py-3 rounded-lg font-medium transition-colors"
 						style="display: none;"
 					>
@@ -262,7 +250,6 @@ templ MobileAppAnnouncement() {
 			</div>
 		</div>
 	</section>
-
 	<script>
 		// PWA install functionality
 		let deferredPrompt;
@@ -298,10 +285,9 @@ templ CTA() {
 						Join thousands of travelers discovering hidden gems with AI-powered recommendations.
 					</p>
 				</div>
-				
 				<div class="flex flex-col sm:flex-row gap-4 justify-center">
-					<a 
-						href="/auth/signup" 
+					<a
+						href="/auth/signup"
 						class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-colors inline-flex items-center justify-center"
 					>
 						Get Started Free
@@ -309,8 +295,8 @@ templ CTA() {
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
 						</svg>
 					</a>
-					<a 
-						href="/about" 
+					<a
+						href="/about"
 						class="border hover:bg-accent text-foreground px-8 py-3 rounded-lg font-medium transition-colors inline-flex items-center justify-center"
 					>
 						Learn More
@@ -324,7 +310,6 @@ templ CTA() {
 templ LoggedInDashboard() {
 	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
-			
 			<!-- Welcome Header -->
 			<div class="mb-8">
 				<div class="flex items-center justify-between mb-6">
@@ -337,7 +322,7 @@ templ LoggedInDashboard() {
 						</p>
 					</div>
 					<div class="flex items-center gap-3">
-						<button 
+						<button
 							class="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-accent transition-colors"
 							title="Quick Settings"
 						>
@@ -348,7 +333,6 @@ templ LoggedInDashboard() {
 						</button>
 					</div>
 				</div>
-
 				<!-- Quick Stats -->
 				<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
 					<div class="bg-card rounded-xl p-4 shadow-sm border">
@@ -397,7 +381,6 @@ templ LoggedInDashboard() {
 					</div>
 				</div>
 			</div>
-
 			<!-- Main Search -->
 			<div class="mb-8">
 				<div class="bg-card rounded-2xl p-6 shadow-lg border">
@@ -407,7 +390,6 @@ templ LoggedInDashboard() {
 						</svg>
 						What would you like to discover?
 					</h2>
-					
 					<div class="flex items-end gap-3">
 						<div class="flex-1">
 							<textarea
@@ -432,7 +414,6 @@ templ LoggedInDashboard() {
 					<div id="dashboard-results" class="mt-4"></div>
 				</div>
 			</div>
-
 			@QuickActions()
 		</div>
 	</div>
@@ -440,7 +421,6 @@ templ LoggedInDashboard() {
 
 templ QuickActions() {
 	<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-		
 		<!-- Quick Actions -->
 		<div class="lg:col-span-2">
 			<h2 class="text-xl font-semibold text-foreground mb-4">Quick Discoveries</h2>
@@ -461,7 +441,6 @@ templ QuickActions() {
 					<h3 class="font-semibold text-lg mb-1">Discover Nearby</h3>
 					<p class="text-white/80 text-sm">Find hidden gems around you</p>
 				</button>
-
 				<button
 					onclick="document.getElementById('dashboard-search').value='Find the best local restaurants and food experiences near me'; document.getElementById('dashboard-search').closest('div').querySelector('button').click()"
 					class="bg-gradient-to-r from-orange-500 to-red-500 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 text-left group"
@@ -478,7 +457,6 @@ templ QuickActions() {
 					<h3 class="font-semibold text-lg mb-1">Food Adventure</h3>
 					<p class="text-white/80 text-sm">Culinary discoveries await</p>
 				</button>
-
 				<button
 					onclick="document.getElementById('dashboard-search').value='Create a cultural itinerary with museums and historical sites'; document.getElementById('dashboard-search').closest('div').querySelector('button').click()"
 					class="bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 text-left group"
@@ -495,7 +473,6 @@ templ QuickActions() {
 					<h3 class="font-semibold text-lg mb-1">Cultural Tour</h3>
 					<p class="text-white/80 text-sm">Museums, art, and history</p>
 				</button>
-
 				<button
 					onclick="document.getElementById('dashboard-search').value='Plan a perfect weekend itinerary for this city'; document.getElementById('dashboard-search').closest('div').querySelector('button').click()"
 					class="bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 text-left group"
@@ -512,10 +489,8 @@ templ QuickActions() {
 					<p class="text-white/80 text-sm">Perfect 2-day getaway</p>
 				</button>
 			</div>
-
 			@PersonalizedSuggestions()
 		</div>
-
 		@RecentActivity()
 	</div>
 }
@@ -546,7 +521,6 @@ templ PersonalizedSuggestions() {
 					Explore Now
 				</button>
 			</div>
-
 			<div class="flex items-center justify-between p-4 rounded-lg border hover:bg-accent transition-colors group cursor-pointer">
 				<div class="flex items-center gap-3">
 					<span class="text-2xl">🍷</span>
@@ -563,7 +537,6 @@ templ PersonalizedSuggestions() {
 					Book Now
 				</button>
 			</div>
-
 			<div class="flex items-center justify-between p-4 rounded-lg border hover:bg-accent transition-colors group cursor-pointer">
 				<div class="flex items-center gap-3">
 					<span class="text-2xl">🏛️</span>
@@ -587,7 +560,6 @@ templ PersonalizedSuggestions() {
 templ RecentActivity() {
 	<!-- Sidebar -->
 	<div class="space-y-6">
-		
 		<!-- Recent Activity -->
 		<div class="bg-card rounded-xl p-6 shadow-sm border">
 			<div class="flex items-center justify-between mb-4">
@@ -618,7 +590,6 @@ templ RecentActivity() {
 						<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
 					</svg>
 				</div>
-
 				<div class="flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors cursor-pointer group">
 					<div class="flex-shrink-0 w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
 						<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -640,7 +611,6 @@ templ RecentActivity() {
 						<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
 					</svg>
 				</div>
-
 				<div class="flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors cursor-pointer group">
 					<div class="flex-shrink-0 w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
 						<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -661,12 +631,11 @@ templ RecentActivity() {
 				</div>
 			</div>
 		</div>
-
 		<!-- Quick Actions Sidebar -->
 		<div class="bg-card rounded-xl p-6 shadow-sm border">
 			<h3 class="text-lg font-semibold text-card-foreground mb-4">Quick Actions</h3>
 			<div class="space-y-3">
-				<button 
+				<button
 					onclick="window.location.href='/chat'"
 					class="w-full flex items-center gap-3 p-3 text-left rounded-lg hover:bg-accent transition-colors group"
 				>
@@ -684,8 +653,7 @@ templ RecentActivity() {
 						</p>
 					</div>
 				</button>
-				
-				<button 
+				<button
 					onclick="window.location.href='/itinerary'"
 					class="w-full flex items-center gap-3 p-3 text-left rounded-lg hover:bg-accent transition-colors group"
 				>
@@ -703,8 +671,7 @@ templ RecentActivity() {
 						</p>
 					</div>
 				</button>
-
-				<button 
+				<button
 					onclick="window.location.href='/favorites'"
 					class="w-full flex items-center gap-3 p-3 text-left rounded-lg hover:bg-accent transition-colors group"
 				>

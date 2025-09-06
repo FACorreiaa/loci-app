@@ -3,7 +3,6 @@ package favorites
 templ FavoritesPage() {
 	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
-			
 			<!-- Header -->
 			<div class="mb-8">
 				<div class="flex items-center justify-between mb-6">
@@ -18,7 +17,6 @@ templ FavoritesPage() {
 							<p class="text-muted-foreground">Places you've loved and want to remember</p>
 						</div>
 					</div>
-					
 					<div class="flex items-center gap-3">
 						<!-- Search -->
 						<div class="relative">
@@ -34,7 +32,6 @@ templ FavoritesPage() {
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
 							</svg>
 						</div>
-						
 						<!-- Filter -->
 						<select class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background">
 							<option value="">All Types</option>
@@ -45,7 +42,6 @@ templ FavoritesPage() {
 						</select>
 					</div>
 				</div>
-
 				<!-- Stats -->
 				<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
 					<div class="bg-card rounded-xl p-4 border">
@@ -94,7 +90,6 @@ templ FavoritesPage() {
 					</div>
 				</div>
 			</div>
-
 			<!-- Favorites Grid -->
 			<div id="favorites-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 				@FavoriteCard("Restaurant", "Pastéis de Belém", "Belém, Lisbon", "Authentic Portuguese pastries in a historic setting", "🍰", "restaurant")
@@ -114,14 +109,16 @@ templ FavoriteCard(category string, title string, location string, description s
 			<div class="flex items-start justify-between mb-4">
 				<div class="flex items-center gap-3">
 					<span class="text-3xl">{ emoji }</span>
-					<span class={ "inline-flex items-center px-3 py-1 rounded-full text-sm font-medium",
+					<span
+						class={ "inline-flex items-center px-3 py-1 rounded-full text-sm font-medium",
 						templ.KV("bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300", cardType == "restaurant"),
 						templ.KV("bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300", cardType == "activity"),
-						templ.KV("bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300", cardType == "hotel") }>
+						templ.KV("bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300", cardType == "hotel") }
+					>
 						{ category }
 					</span>
 				</div>
-				<button 
+				<button
 					hx-delete={ "/favorites/" + title }
 					hx-confirm="Remove from favorites?"
 					hx-target="closest .bg-card"
@@ -133,7 +130,6 @@ templ FavoriteCard(category string, title string, location string, description s
 					</svg>
 				</button>
 			</div>
-			
 			<div class="space-y-3">
 				<h3 class="font-semibold text-card-foreground group-hover:text-blue-600 transition-colors">
 					{ title }
@@ -149,7 +145,6 @@ templ FavoriteCard(category string, title string, location string, description s
 					{ description }
 				</p>
 			</div>
-
 			<div class="flex items-center justify-between mt-4 pt-4 border-t border-border">
 				<button class="text-blue-600 hover:text-blue-700 text-sm font-medium">
 					View Details

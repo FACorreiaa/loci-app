@@ -19,7 +19,7 @@ templ MapboxConfigScript() {
 }
 
 templ MapboxContainer(mapId string, height string) {
-	<div id={mapId} style={templ.SafeCSS("height: " + height)}></div>
+	<div id={ mapId } style={ templ.SafeCSS("height: " + height) }></div>
 }
 
 script MapboxInit(mapId, accessToken string, center []float64, zoom float64) {

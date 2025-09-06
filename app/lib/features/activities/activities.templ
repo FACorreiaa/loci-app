@@ -12,7 +12,6 @@ templ ActivitiesPage() {
 					Discover amazing experiences, cultural attractions, and outdoor adventures tailored to your interests
 				</p>
 			</div>
-
 			<!-- Search and Filter Section -->
 			<div class="bg-card rounded-xl shadow-sm border p-6 mb-8">
 				<div class="flex flex-col lg:flex-row gap-4 items-center justify-between">
@@ -32,9 +31,8 @@ templ ActivitiesPage() {
 							</svg>
 						</div>
 					</div>
-					
 					<div class="flex flex-wrap gap-3" x-data="{ showFilters: false }">
-						<button 
+						<button
 							@click="showFilters = !showFilters"
 							class="flex items-center gap-2 px-4 py-2 border border-input rounded-lg hover:bg-accent transition-colors"
 						>
@@ -43,7 +41,6 @@ templ ActivitiesPage() {
 							</svg>
 							Filters
 						</button>
-						
 						<!-- Filter Dropdowns -->
 						<div x-show="showFilters" x-transition class="absolute top-full left-0 right-0 mt-2 bg-card border rounded-lg shadow-lg p-4 z-10">
 							<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -82,15 +79,13 @@ templ ActivitiesPage() {
 					</div>
 				</div>
 			</div>
-
 			<!-- Activities Grid -->
 			<div id="activities-results">
 				@ActivitiesGrid()
 			</div>
-
 			<!-- Load More Button -->
 			<div class="text-center mt-8">
-				<button 
+				<button
 					class="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
 					hx-get="/activities/load-more"
 					hx-target="#activities-results"
@@ -131,7 +126,6 @@ templ ActivityCard(name, category, description, rating, price, duration string) 
 				</button>
 			</div>
 		</div>
-		
 		<div class="p-6">
 			<div class="flex items-start justify-between mb-3">
 				<h3 class="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
@@ -144,11 +138,9 @@ templ ActivityCard(name, category, description, rating, price, duration string) 
 					<span class="font-medium">{ rating }</span>
 				</div>
 			</div>
-			
 			<p class="text-muted-foreground text-sm mb-4 line-clamp-2">
 				{ description }
 			</p>
-			
 			<div class="flex items-center justify-between">
 				<div class="flex flex-col gap-1">
 					<div class="flex items-center gap-2 text-sm">
@@ -164,8 +156,7 @@ templ ActivityCard(name, category, description, rating, price, duration string) 
 						<span>{ duration }</span>
 					</div>
 				</div>
-				
-				<button 
+				<button
 					class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
 					hx-get={ "/activities/" + name }
 					hx-target="#modal-content"

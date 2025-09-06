@@ -1,10 +1,10 @@
 package pages
 
 import (
-	"github.com/FACorreiaa/go-templui/app/lib/models"
-	"github.com/FACorreiaa/go-templui/app/lib/components/navbar"
 	"github.com/FACorreiaa/go-templui/app/lib/components/footer"
 	mapcomponents "github.com/FACorreiaa/go-templui/app/lib/components/map"
+	"github.com/FACorreiaa/go-templui/app/lib/components/navbar"
+	"github.com/FACorreiaa/go-templui/app/lib/models"
 )
 
 templ LayoutPage(l models.LayoutTempl) {
@@ -18,17 +18,17 @@ templ LayoutPage(l models.LayoutTempl) {
 			<link rel="stylesheet" href="/assets/css/output.css"/>
 			<link rel="preconnect" href="https://fonts.googleapis.com"/>
 			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-			<link rel="manifest" href="/static/manifest.json">
-            <meta name="theme-color" content="#2563eb">
-            <link rel="apple-touch-icon" href="/static/images/icons/icon-192x192.png">
-            <link rel="icon" type="image/png" sizes="144x144" href="/static/images/icons/icon-144x144.png">
-            <link rel="icon" type="image/png" sizes="192x192" href="/static/images/icons/icon-192x192.png">
-            <link rel="icon" type="image/png" sizes="512x512" href="/static/images/icons/icon-512x512.png">
-            <meta name="apple-mobile-web-app-capable" content="yes">
-            <meta name="apple-mobile-web-app-status-bar-style" content="default">
-            <meta name="apple-mobile-web-app-title" content="Loci">
-            <meta name="mobile-web-app-capable" content="yes">
-            <meta name="application-name" content="Loci">
+			<link rel="manifest" href="/static/manifest.json"/>
+			<meta name="theme-color" content="#2563eb"/>
+			<link rel="apple-touch-icon" href="/static/images/icons/icon-192x192.png"/>
+			<link rel="icon" type="image/png" sizes="144x144" href="/static/images/icons/icon-144x144.png"/>
+			<link rel="icon" type="image/png" sizes="192x192" href="/static/images/icons/icon-192x192.png"/>
+			<link rel="icon" type="image/png" sizes="512x512" href="/static/images/icons/icon-512x512.png"/>
+			<meta name="apple-mobile-web-app-capable" content="yes"/>
+			<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+			<meta name="apple-mobile-web-app-title" content="Loci"/>
+			<meta name="mobile-web-app-capable" content="yes"/>
+			<meta name="application-name" content="Loci"/>
 			<link
 				href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
 				rel="stylesheet"
@@ -49,11 +49,9 @@ templ LayoutPage(l models.LayoutTempl) {
 					}
 				});
 			</script>
-
-
 		</head>
 		<body hx-boost="true" class="min-h-screen bg-background text-foreground font-inter antialiased">
-		    <script type="module">
+			<script type="module">
                           function registerServiceWorkers() {
                             // check if the browser supports service workers, otherwise abort.
                             if (!("serviceWorker" in navigator)) {
