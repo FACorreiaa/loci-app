@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
@@ -24,7 +23,7 @@ func NewNearbyHandlers() *NearbyHandlers {
 func (h *NearbyHandlers) SearchPOIs(c *gin.Context) {
 	query := c.PostForm("search-input")
 	if query == "" {
-		c.HTML(http.StatusOK, "", nearby.NearbySearchResults([]models.POI{}))
+		c.HTML(http.StatusOK, "", nearby.NearbySearchResults([]models.NearbyPOI{}))
 		return
 	}
 
@@ -141,9 +140,9 @@ func (h *NearbyHandlers) GetMapData(c *gin.Context) {
 }
 
 // Mock POI data generator for development
-func (h *NearbyHandlers) getMockPOIs(lat, lng float64, query, category string) []models.POI {
+func (h *NearbyHandlers) getMockPOIs(lat, lng float64, query, category string) []models.NearbyPOI {
 	// Generate mock POIs based on location and category
-	pois := []models.POI{}
+	pois := []models.NearbyPOI{}
 	
 	categories := []string{}
 	switch category {
@@ -198,7 +197,7 @@ func (h *NearbyHandlers) getMockPOIs(lat, lng float64, query, category string) [
 		// Calculate distance
 		distance := h.calculateDistance(lat, lng, poiLat, poiLng)
 		
-		poi := models.POI{
+		poi := models.NearbyPOI{
 			ID:         fmt.Sprintf("poi_%d", i+1),
 			Name:       name,
 			Category:   strings.Title(strings.ReplaceAll(cat, "_", " ")),
@@ -220,8 +219,8 @@ func (h *NearbyHandlers) getMockPOIs(lat, lng float64, query, category string) [
 	return pois
 }
 
-func (h *NearbyHandlers) applyFilters(pois []models.POI, maxDistance, minRating float64, priceLevel string) []models.POI {
-	filtered := []models.POI{}
+func (h *NearbyHandlers) applyFilters(pois []models.NearbyPOI, maxDistance, minRating float64, priceLevel string) []models.NearbyPOI {
+	filtered := []models.NearbyPOI{}
 	
 	for _, poi := range pois {
 		// Distance filter

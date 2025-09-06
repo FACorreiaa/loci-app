@@ -1,0 +1,16 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="LGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a1a"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Ultra clean L shape -->
+  <path d="M70 60 L70 140 L150 140 L150 120 L90 120 L90 60 Z" 
+        fill="url(#LGradient)" 
+        rx="4"/>
+  
+  <!-- Small location dot accent -->
+  <circle cx="130" cy="100" r="4" fill="#00d4aa"/>
+</svg>

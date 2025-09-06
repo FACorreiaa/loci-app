@@ -154,9 +154,10 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate token for new user
+	// Generate token for new user (using email as user ID for demo)
 	fullName := firstName + " " + lastName
-	token, err := h.authService.GenerateToken("new-user-id", email, fullName)
+	userID := email // Use email as unique identifier for demo purposes
+	token, err := h.authService.GenerateToken(userID, email, fullName)
 	if err != nil {
 		logger.Log.Error("Failed to generate token", zap.Error(err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -248,7 +249,9 @@ func (h *AuthHandlers) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 	})
 
-	http.Redirect(w, r, "/", http.StatusFound)
+	// For HTMX requests, redirect to home page
+	w.Header().Set("HX-Redirect", "/")
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *AuthHandlers) ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {

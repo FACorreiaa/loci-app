@@ -83,6 +83,22 @@ templ Navbar(props Props) {
 							</span>
 						</a>
 
+						<a href="/nearby"
+							class={ utils.TwMerge(
+								"flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm",
+								utils.IfElse(
+									props.ActiveNav == "nearby",
+									"bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300",
+									"text-muted-foreground hover:text-blue-600 hover:bg-accent",
+								),
+							) }>
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+							</svg>
+							Nearby
+						</a>
+
 						<a href="/recents"
 							class={ utils.TwMerge(
 								"flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm",
@@ -357,6 +373,13 @@ templ Navbar(props Props) {
 							<span class="bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 text-xs px-1.5 py-0.5 rounded-full font-medium">
 								Experimental
 							</span>
+						</a>
+						<a href="/nearby" class="flex items-center gap-3 px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-lg transition-colors" onclick="closeMobileMenu()">
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+							</svg>
+							Nearby
 						</a>
 						<a href="/recents" class="flex items-center gap-3 px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-lg transition-colors" onclick="closeMobileMenu()">
 							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

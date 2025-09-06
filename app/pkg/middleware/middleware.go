@@ -140,13 +140,14 @@ func SecurityMiddleware() gin.HandlerFunc {
 		c.Writer.Header().Set("X-XSS-Protection", "1; mode=block")
 		c.Writer.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 
-		// Content Security Policy for HTMX and external resources
+		// Content Security Policy for HTMX, Mapbox and external resources
 		csp := "default-src 'self'; " +
-			"script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; " +
-			"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-			"font-src 'self' https://fonts.gstatic.com; " +
-			"img-src 'self' data: https:; " +
-			"connect-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com"
+			"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net https://api.mapbox.com; " +
+			"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.mapbox.com https://cdnjs.cloudflare.com; " +
+			"font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
+			"img-src 'self' data: https: blob:; " +
+			"connect-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com https://api.mapbox.com https://*.tiles.mapbox.com https://events.mapbox.com; " +
+			"worker-src 'self' blob:"
 		c.Writer.Header().Set("Content-Security-Policy", csp)
 
 		c.Next()

@@ -155,11 +155,11 @@ type BookmarkRequest struct {
 }
 
 type ChatMessage struct {
-	ID        uuid.UUID
-	UserID    uuid.UUID
-	Timestamp time.Time
-	Role      string
-	Content   string
+	ID        uuid.UUID `json:"id"`
+	UserID    uuid.UUID `json:"user_id"`
+	Timestamp string    `json:"timestamp"` // Changed to string for UI display
+	Role      string    `json:"role"`
+	Content   string    `json:"content"`
 }
 
 type POIDetailrequest struct {

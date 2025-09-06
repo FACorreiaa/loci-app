@@ -3,6 +3,7 @@ package nearby
 import (
 	"fmt"
 	"github.com/FACorreiaa/go-templui/app/lib/models"
+	mapcomponents "github.com/FACorreiaa/go-templui/app/lib/components/map"
 )
 
 templ NearbyPage() {
@@ -199,7 +200,7 @@ templ NearbyPage() {
 
 				<!-- Map View -->
 				<div id="map-view" class="hidden" style="height: 600px;">
-					<div id="nearby-map" class="w-full h-full rounded-lg"></div>
+					@mapcomponents.MapboxContainer("nearby-map", "100%")
 				</div>
 
 				<!-- Split View -->
@@ -210,7 +211,7 @@ templ NearbyPage() {
 						</div>
 					</div>
 					<div class="w-1/2">
-						<div id="nearby-map-split" class="w-full h-full"></div>
+						@mapcomponents.MapboxContainer("nearby-map-split", "100%")
 					</div>
 				</div>
 
@@ -327,10 +328,153 @@ templ NearbyPage() {
 		});
 
 		function initializeMap(view) {
-			// Map initialization will be implemented with the actual map service
-			console.log('Initializing map for view:', view);
+			// Get access token from server endpoint
+			const accessToken = window.MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoieW91cm11c2VybmFtZSIsImEiOiJjbHl6eHl6eHl6eHl6In0.your_access_token_here';
+			
+			if (view === 'map') {
+				const lat = parseFloat(document.getElementById('latitude').value) || 40.7128;
+				const lng = parseFloat(document.getElementById('longitude').value) || -74.0060;
+				
+				// Initialize map
+				const map = mapcomponents.MapboxInit('nearby-map', accessToken, [lng, lat], 12);
+				
+				// Load POI markers
+				loadMapMarkers('nearby-map');
+			} else if (view === 'split') {
+				const lat = parseFloat(document.getElementById('latitude').value) || 40.7128;
+				const lng = parseFloat(document.getElementById('longitude').value) || -74.0060;
+				
+				// Initialize split view map
+				const map = mapcomponents.MapboxInit('nearby-map-split', accessToken, [lng, lat], 12);
+				
+				// Load POI markers
+				loadMapMarkers('nearby-map-split');
+			}
+		}
+		
+		function loadMapMarkers(mapId) {
+			const latitude = document.getElementById('latitude').value;
+			const longitude = document.getElementById('longitude').value;
+			const category = document.getElementById('current-category').value;
+			
+			if (!latitude || !longitude) return;
+			
+			// Fetch map data from server
+			fetch(`/nearby/map?lat=${latitude}&lng=${longitude}&category=${category}`)
+				.then(response => response.json())
+				.then(data => {
+					if (data.markers) {
+						mapcomponents.AddMapMarkers(mapId, data.markers);
+					}
+				})
+				.catch(error => {
+					console.error('Error loading map markers:', error);
+				});
+		}
+		
+		// Global functions for map interactions
+		function addToFavorites(poiId) {
+			htmx.ajax('POST', `/favorites/add/${poiId}`, {
+				target: 'body',
+				swap: 'none'
+			});
+			
+			// Show success notification
+			showNotification('Added to favorites!', 'success');
+		}
+		
+		function addToItinerary(poiId) {
+			htmx.ajax('POST', `/itinerary/add/${poiId}`, {
+				target: 'body', 
+				swap: 'none'
+			});
+			
+			// Show success notification
+			showNotification('Added to itinerary!', 'success');
+		}
+		
+		function showNotification(message, type) {
+			// Simple notification - could be enhanced with a proper notification system
+			const notification = document.createElement('div');
+			notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg text-white z-50 ${
+				type === 'success' ? 'bg-green-600' : 'bg-red-600'
+			}`;
+			notification.textContent = message;
+			document.body.appendChild(notification);
+			
+			setTimeout(() => {
+				notification.remove();
+			}, 3000);
 		}
 	</script>
+}
+
+templ NearbySearchResults(pois []models.NearbyPOI) {
+	if len(pois) == 0 {
+		<div class="p-4 text-center text-gray-500">
+			<i class="fas fa-search text-2xl mb-2"></i>
+			<p>No results found. Try a different search term.</p>
+		</div>
+	} else {
+		<div class="max-h-64 overflow-y-auto">
+			for _, poi := range pois {
+				<div class="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0" 
+					 onclick="selectSearchResult('{poi.ID}', '{poi.Name}', {poi.Latitude}, {poi.Longitude})">
+					<div class="flex items-center space-x-3">
+						<div class="w-12 h-12 bg-gray-200 rounded-lg flex-shrink-0">
+							if poi.ImageURL != "" {
+								<img src={poi.ImageURL} alt={poi.Name} class="w-full h-full object-cover rounded-lg"/>
+							} else {
+								<div class="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg flex items-center justify-center">
+									<i class="fas fa-map-marker-alt text-white text-sm"></i>
+								</div>
+							}
+						</div>
+						<div class="flex-1">
+							<h4 class="font-medium text-gray-900">{poi.Name}</h4>
+							<p class="text-sm text-gray-600">{poi.Category}</p>
+							<div class="flex items-center mt-1">
+								<div class="flex items-center">
+									for i := 0; i < int(poi.Rating); i++ {
+										<i class="fas fa-star text-yellow-400 text-xs"></i>
+									}
+								</div>
+								<span class="ml-1 text-xs text-gray-500">({poi.Rating})</span>
+							</div>
+						</div>
+						<div class="text-right">
+							<p class="text-sm text-gray-600">{fmt.Sprintf("%.1f km", poi.Distance)}</p>
+						</div>
+					</div>
+				</div>
+			}
+		</div>
+	}
+}
+
+templ NearbyPOIResults(pois []models.NearbyPOI) {
+	if len(pois) == 0 {
+		@NearbyNoLocation()
+	} else {
+		for _, poi := range pois {
+			@NearbyPOICard(poi)
+		}
+	}
+}
+
+templ NearbyNoLocation() {
+	<div class="col-span-full text-center py-12">
+		<i class="fas fa-location-arrow text-4xl text-gray-400 mb-4"></i>
+		<h3 class="text-lg font-medium text-gray-900 mb-2">Location Required</h3>
+		<p class="text-gray-600 mb-4">Click "Use My Location" to discover amazing places nearby.</p>
+		<button 
+			class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+			onclick="document.getElementById('location-btn').click()"
+		>
+			<i class="fas fa-location-arrow mr-2"></i>
+			Get My Location
+		</button>
+	</div>
 }
 
 templ NearbyLoadingState() {
@@ -344,7 +488,7 @@ templ NearbyLoadingState() {
 	}
 }
 
-templ NearbyPOICard(poi models.POI) {
+templ NearbyPOICard(poi models.NearbyPOI) {
 	<div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden">
 		<div class="relative">
 			if poi.ImageURL != "" {

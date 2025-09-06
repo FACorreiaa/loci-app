@@ -1,0 +1,17 @@
+<svg width="192" height="192" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="symbolGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d4aa"/>
+      <stop offset="50%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Abstract L shape inspired by location pin -->
+  <path d="M70 50 L70 130 L150 130 L150 150 L50 150 L50 50 Z" 
+        fill="url(#symbolGradient)" 
+        rx="8"/>
+  
+  <!-- Modern dot accent -->
+  <circle cx="130" cy="70" r="8" fill="white" opacity="0.9"/>
+</svg>

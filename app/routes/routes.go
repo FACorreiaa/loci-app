@@ -19,10 +19,19 @@ import (
 	"github.com/FACorreiaa/go-templui/app/lib/features/chat"
 	"github.com/FACorreiaa/go-templui/app/lib/features/discover"
 	"github.com/FACorreiaa/go-templui/app/lib/features/favorites"
+	"github.com/FACorreiaa/go-templui/app/lib/features/nearby"
+	"github.com/FACorreiaa/go-templui/app/lib/features/itinerary"
 	"github.com/FACorreiaa/go-templui/app/lib/features/lists"
 	"github.com/FACorreiaa/go-templui/app/lib/features/profile"
 	"github.com/FACorreiaa/go-templui/app/lib/features/recents"
 	"github.com/FACorreiaa/go-templui/app/lib/features/settings"
+	"github.com/FACorreiaa/go-templui/app/lib/features/pricing"
+	"github.com/FACorreiaa/go-templui/app/lib/features/billing"
+	"github.com/FACorreiaa/go-templui/app/lib/features/activities"
+	"github.com/FACorreiaa/go-templui/app/lib/features/hotels"
+	"github.com/FACorreiaa/go-templui/app/lib/features/restaurants"
+	"github.com/FACorreiaa/go-templui/app/lib/features/about"
+	"github.com/FACorreiaa/go-templui/app/lib/features/reviews"
 	"github.com/FACorreiaa/go-templui/app/lib/pages"
 
 	"github.com/gin-gonic/gin"
@@ -72,6 +81,8 @@ func Setup(r *gin.Engine) {
 	favoritesHandlers := handlers2.NewFavoritesHandlers()
 	bookmarksHandlers := handlers2.NewBookmarksHandlers()
 	discoverHandlers := handlers2.NewDiscoverHandlers()
+	nearbyHandlers := handlers2.NewNearbyHandlers()
+	itineraryHandlers := handlers2.NewItineraryHandlers()
 	settingsHandlers := handlers2.NewSettingsHandlers()
 
 	// Public routes (with optional auth)
@@ -101,6 +112,104 @@ func Setup(r *gin.Engine) {
 			},
 			ActiveNav: "Home",
 			User:      user,
+		}))
+	})
+
+	// Pricing (public)
+	r.GET("/pricing", func(c *gin.Context) {
+		logger.Log.Info("Pricing page accessed", zap.String("ip", c.ClientIP()))
+		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			Title:   "Pricing - Loci",
+			Content: pricing.PricingPage(),
+			Nav: models.Navigation{
+				Items: []models.NavItem{
+					{Name: "Home", URL: "/"},
+					{Name: "Discover", URL: "/discover"},
+					{Name: "Pricing", URL: "/pricing"},
+					{Name: "About", URL: "/about"},
+				},
+			},
+			ActiveNav: "Pricing",
+			User:      getUserFromContext(c),
+		}))
+	})
+
+	// About (public)
+	r.GET("/about", func(c *gin.Context) {
+		logger.Log.Info("About page accessed", zap.String("ip", c.ClientIP()))
+		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			Title:   "About - Loci",
+			Content: about.AboutPage(),
+			Nav: models.Navigation{
+				Items: []models.NavItem{
+					{Name: "Home", URL: "/"},
+					{Name: "Discover", URL: "/discover"},
+					{Name: "Pricing", URL: "/pricing"},
+					{Name: "About", URL: "/about"},
+				},
+			},
+			ActiveNav: "About",
+			User:      getUserFromContext(c),
+		}))
+	})
+
+	// Activities (public but enhanced when authenticated)
+	r.GET("/activities", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
+		logger.Log.Info("Activities page accessed", zap.String("ip", c.ClientIP()))
+		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			Title:   "Activities - Loci",
+			Content: activities.ActivitiesPage(),
+			Nav: models.Navigation{
+				Items: []models.NavItem{
+					{Name: "Home", URL: "/"},
+					{Name: "Discover", URL: "/discover"},
+					{Name: "Activities", URL: "/activities"},
+					{Name: "Hotels", URL: "/hotels"},
+					{Name: "Restaurants", URL: "/restaurants"},
+				},
+			},
+			ActiveNav: "Activities",
+			User:      getUserFromContext(c),
+		}))
+	})
+
+	// Hotels (public but enhanced when authenticated)
+	r.GET("/hotels", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
+		logger.Log.Info("Hotels page accessed", zap.String("ip", c.ClientIP()))
+		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			Title:   "Hotels - Loci",
+			Content: hotels.HotelsPage(),
+			Nav: models.Navigation{
+				Items: []models.NavItem{
+					{Name: "Home", URL: "/"},
+					{Name: "Discover", URL: "/discover"},
+					{Name: "Activities", URL: "/activities"},
+					{Name: "Hotels", URL: "/hotels"},
+					{Name: "Restaurants", URL: "/restaurants"},
+				},
+			},
+			ActiveNav: "Hotels",
+			User:      getUserFromContext(c),
+		}))
+	})
+
+	// Restaurants (public but enhanced when authenticated)
+	r.GET("/restaurants", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
+		logger.Log.Info("Restaurants page accessed", zap.String("ip", c.ClientIP()))
+		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			Title:   "Restaurants - Loci",
+			Content: restaurants.RestaurantsPage(),
+			Nav: models.Navigation{
+				Items: []models.NavItem{
+					{Name: "Home", URL: "/"},
+					{Name: "Discover", URL: "/discover"},
+					{Name: "Activities", URL: "/activities"},
+					{Name: "Hotels", URL: "/hotels"},
+					{Name: "Restaurants", URL: "/restaurants"},
+				},
+			},
+			ActiveNav: "Restaurants",
+			User:      getUserFromContext(c),
 		}))
 	})
 
@@ -195,6 +304,7 @@ func Setup(r *gin.Engine) {
 					Items: []models.NavItem{
 						{Name: "Dashboard", URL: "/dashboard"},
 						{Name: "Discover", URL: "/discover"},
+						{Name: "Nearby", URL: "/nearby"},
 						{Name: "Chat", URL: "/chat"},
 						{Name: "Favorites", URL: "/favorites"},
 					},
@@ -214,11 +324,54 @@ func Setup(r *gin.Engine) {
 					Items: []models.NavItem{
 						{Name: "Dashboard", URL: "/dashboard"},
 						{Name: "Discover", URL: "/discover"},
+						{Name: "Nearby", URL: "/nearby"},
 						{Name: "Chat", URL: "/chat"},
 						{Name: "Favorites", URL: "/favorites"},
 					},
 				},
 				ActiveNav: "Chat",
+				User:      getUserFromContext(c),
+			}))
+		})
+
+		// Nearby
+		protected.GET("/nearby", func(c *gin.Context) {
+			logger.Log.Info("Nearby page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
+			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+				Title:   "Nearby Places - Loci",
+				Content: nearby.NearbyPage(),
+				Nav: models.Navigation{
+					Items: []models.NavItem{
+						{Name: "Dashboard", URL: "/dashboard"},
+						{Name: "Discover", URL: "/discover"},
+						{Name: "Nearby", URL: "/nearby"},
+						{Name: "Itinerary", URL: "/itinerary"},
+						{Name: "Chat", URL: "/chat"},
+						{Name: "Favorites", URL: "/favorites"},
+					},
+				},
+				ActiveNav: "Nearby",
+				User:      getUserFromContext(c),
+			}))
+		})
+
+		// Itinerary 
+		protected.GET("/itinerary", func(c *gin.Context) {
+			logger.Log.Info("Itinerary page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
+			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+				Title:   "Travel Planner - Loci",
+				Content: itinerary.ItineraryPage(),
+				Nav: models.Navigation{
+					Items: []models.NavItem{
+						{Name: "Dashboard", URL: "/dashboard"},
+						{Name: "Discover", URL: "/discover"},
+						{Name: "Nearby", URL: "/nearby"},
+						{Name: "Itinerary", URL: "/itinerary"},
+						{Name: "Chat", URL: "/chat"},
+						{Name: "Favorites", URL: "/favorites"},
+					},
+				},
+				ActiveNav: "Itinerary",
 				User:      getUserFromContext(c),
 			}))
 		})
@@ -233,6 +386,7 @@ func Setup(r *gin.Engine) {
 					Items: []models.NavItem{
 						{Name: "Dashboard", URL: "/dashboard"},
 						{Name: "Discover", URL: "/discover"},
+						{Name: "Nearby", URL: "/nearby"},
 						{Name: "Chat", URL: "/chat"},
 						{Name: "Favorites", URL: "/favorites"},
 					},
@@ -252,6 +406,7 @@ func Setup(r *gin.Engine) {
 					Items: []models.NavItem{
 						{Name: "Dashboard", URL: "/dashboard"},
 						{Name: "Discover", URL: "/discover"},
+						{Name: "Nearby", URL: "/nearby"},
 						{Name: "Chat", URL: "/chat"},
 						{Name: "Favorites", URL: "/favorites"},
 					},
@@ -271,6 +426,7 @@ func Setup(r *gin.Engine) {
 					Items: []models.NavItem{
 						{Name: "Dashboard", URL: "/dashboard"},
 						{Name: "Discover", URL: "/discover"},
+						{Name: "Nearby", URL: "/nearby"},
 						{Name: "Chat", URL: "/chat"},
 						{Name: "Lists", URL: "/lists"},
 					},
@@ -334,6 +490,43 @@ func Setup(r *gin.Engine) {
 				User:      getUserFromContext(c),
 			}))
 		})
+
+		// Reviews
+		protected.GET("/reviews", func(c *gin.Context) {
+			logger.Log.Info("Reviews page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
+			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+				Title:   "My Reviews - Loci",
+				Content: reviews.ReviewsPage(),
+				Nav: models.Navigation{
+					Items: []models.NavItem{
+						{Name: "Dashboard", URL: "/dashboard"},
+						{Name: "Profile", URL: "/profile"},
+						{Name: "Reviews", URL: "/reviews"},
+						{Name: "Settings", URL: "/settings"},
+					},
+				},
+				ActiveNav: "Reviews",
+				User:      getUserFromContext(c),
+			}))
+		})
+
+		// Billing
+		protected.GET("/billing", func(c *gin.Context) {
+			logger.Log.Info("Billing page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
+			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+				Title:   "Billing & Subscription - Loci",
+				Content: billing.BillingPage(),
+				Nav: models.Navigation{
+					Items: []models.NavItem{
+						{Name: "Dashboard", URL: "/dashboard"},
+						{Name: "Profile", URL: "/profile"},
+						{Name: "Settings", URL: "/settings"},
+					},
+				},
+				ActiveNav: "Settings",
+				User:      getUserFromContext(c),
+			}))
+		})
 	}
 
 	// HTMX API routes
@@ -356,6 +549,19 @@ func Setup(r *gin.Engine) {
 		htmxGroup.POST("/discover/search", discoverHandlers.Search)
 		htmxGroup.GET("/discover/category/:category", discoverHandlers.GetCategory)
 
+		// Nearby endpoints
+		htmxGroup.POST("/nearby/search", nearbyHandlers.SearchPOIs)
+		htmxGroup.POST("/nearby/category/:category", nearbyHandlers.GetPOIsByCategory)
+		htmxGroup.POST("/nearby/filter", nearbyHandlers.FilterPOIs)
+		htmxGroup.GET("/nearby/map", nearbyHandlers.GetMapData)
+
+		// Itinerary endpoints
+		htmxGroup.POST("/itinerary/destination", itineraryHandlers.HandleDestination)
+		htmxGroup.POST("/itinerary/chat", itineraryHandlers.HandleChat)
+		htmxGroup.POST("/itinerary/add/:id", itineraryHandlers.AddPOI)
+		htmxGroup.DELETE("/itinerary/remove/:id", itineraryHandlers.RemovePOI)
+		htmxGroup.GET("/itinerary/summary", itineraryHandlers.GetItinerarySummary)
+
 		// Settings endpoints (protected)
 		settingsGroup := htmxGroup.Group("/settings")
 		settingsGroup.Use(middleware.AuthMiddleware())
@@ -367,4 +573,27 @@ func Setup(r *gin.Engine) {
 			settingsGroup.POST("/export", settingsHandlers.ExportData)
 		}
 	}
+
+	// 404 handler - must be last
+	r.NoRoute(func(c *gin.Context) {
+		logger.Log.Info("404 - Page not found", 
+			zap.String("path", c.Request.URL.Path),
+			zap.String("method", c.Request.Method),
+			zap.String("ip", c.ClientIP()),
+		)
+		
+		user := getUserFromContext(c)
+		c.HTML(http.StatusNotFound, "", pages.LayoutPage(models.LayoutTempl{
+			Title:   "Page Not Found - Loci",
+			Content: pages.NotFoundPage(),
+			Nav: models.Navigation{
+				Items: []models.NavItem{
+					{Name: "Home", URL: "/"},
+					{Name: "Discover", URL: "/discover"},
+				},
+			},
+			ActiveNav: "",
+			User:      user,
+		}))
+	})
 }

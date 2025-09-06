@@ -7,8 +7,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// POI represents a simplified Point of Interest for UI display
-type POI struct {
+// NearbyPOI represents a simplified Point of Interest for UI display
+type NearbyPOI struct {
 	ID          string  `json:"id"`
 	Name        string  `json:"name"`
 	Category    string  `json:"category"`

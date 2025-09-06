@@ -1,0 +1,179 @@
+package activities
+
+templ ActivitiesPage() {
+	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+			<!-- Header -->
+			<div class="text-center mb-8">
+				<h1 class="text-3xl lg:text-4xl font-bold text-foreground mb-4">
+					Activities & Attractions
+				</h1>
+				<p class="text-lg text-muted-foreground max-w-3xl mx-auto">
+					Discover amazing experiences, cultural attractions, and outdoor adventures tailored to your interests
+				</p>
+			</div>
+
+			<!-- Search and Filter Section -->
+			<div class="bg-card rounded-xl shadow-sm border p-6 mb-8">
+				<div class="flex flex-col lg:flex-row gap-4 items-center justify-between">
+					<div class="flex-1 w-full lg:max-w-md">
+						<div class="relative">
+							<input
+								type="text"
+								placeholder="Search activities..."
+								class="w-full pl-10 pr-4 py-3 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+								hx-post="/activities/search"
+								hx-trigger="keyup changed delay:300ms"
+								hx-target="#activities-results"
+								hx-include="[name='filters']"
+							/>
+							<svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+							</svg>
+						</div>
+					</div>
+					
+					<div class="flex flex-wrap gap-3" x-data="{ showFilters: false }">
+						<button 
+							@click="showFilters = !showFilters"
+							class="flex items-center gap-2 px-4 py-2 border border-input rounded-lg hover:bg-accent transition-colors"
+						>
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.707A1 1 0 013 7V4z"></path>
+							</svg>
+							Filters
+						</button>
+						
+						<!-- Filter Dropdowns -->
+						<div x-show="showFilters" x-transition class="absolute top-full left-0 right-0 mt-2 bg-card border rounded-lg shadow-lg p-4 z-10">
+							<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+								<div>
+									<label class="block text-sm font-medium mb-2">Category</label>
+									<select name="category" class="w-full p-2 border border-input rounded">
+										<option value="">All Categories</option>
+										<option value="cultural">Cultural</option>
+										<option value="outdoor">Outdoor</option>
+										<option value="entertainment">Entertainment</option>
+										<option value="adventure">Adventure</option>
+										<option value="family">Family Friendly</option>
+									</select>
+								</div>
+								<div>
+									<label class="block text-sm font-medium mb-2">Price Range</label>
+									<select name="price" class="w-full p-2 border border-input rounded">
+										<option value="">Any Price</option>
+										<option value="free">Free</option>
+										<option value="low">€ (Budget)</option>
+										<option value="mid">€€ (Moderate)</option>
+										<option value="high">€€€ (Premium)</option>
+									</select>
+								</div>
+								<div>
+									<label class="block text-sm font-medium mb-2">Rating</label>
+									<select name="rating" class="w-full p-2 border border-input rounded">
+										<option value="">Any Rating</option>
+										<option value="4.5">4.5+ Stars</option>
+										<option value="4.0">4.0+ Stars</option>
+										<option value="3.5">3.5+ Stars</option>
+									</select>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Activities Grid -->
+			<div id="activities-results">
+				@ActivitiesGrid()
+			</div>
+
+			<!-- Load More Button -->
+			<div class="text-center mt-8">
+				<button 
+					class="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+					hx-get="/activities/load-more"
+					hx-target="#activities-results"
+					hx-swap="beforeend"
+				>
+					Load More Activities
+				</button>
+			</div>
+		</div>
+	</div>
+}
+
+templ ActivitiesGrid() {
+	<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+		@ActivityCard("Torre de Belém", "Cultural & Historic", "Iconic 16th-century tower and UNESCO World Heritage site", "4.6", "€€", "1-2 hours")
+		@ActivityCard("Oceanário de Lisboa", "Family & Entertainment", "One of Europe's largest aquariums with amazing marine life", "4.5", "€€€", "2-3 hours")
+		@ActivityCard("Sintra Day Trip", "Adventure & Cultural", "Magical town with fairy-tale palaces and stunning landscapes", "4.8", "€€€€", "Full day")
+		@ActivityCard("Fado Show", "Cultural & Entertainment", "Traditional Portuguese music performance with dinner", "4.7", "€€€", "2-3 hours")
+		@ActivityCard("Tram 28 Tour", "Sightseeing & Cultural", "Historic tram ride through Lisbon's most iconic neighborhoods", "4.4", "€", "1-2 hours")
+		@ActivityCard("Gulbenkian Museum", "Cultural & Art", "World-class art collection in a beautiful modern setting", "4.5", "€€", "2-3 hours")
+	</div>
+}
+
+templ ActivityCard(name, category, description, rating, price, duration string) {
+	<article class="group bg-card rounded-xl shadow-sm border hover:shadow-md transition-all duration-300">
+		<div class="aspect-video bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 rounded-t-xl relative overflow-hidden">
+			<div class="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
+			<div class="absolute top-3 left-3">
+				<span class="px-3 py-1 bg-white/90 dark:bg-black/90 text-sm font-medium rounded-full">
+					{ category }
+				</span>
+			</div>
+			<div class="absolute top-3 right-3">
+				<button class="p-2 bg-white/90 dark:bg-black/90 rounded-full hover:bg-white dark:hover:bg-black transition-colors">
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+					</svg>
+				</button>
+			</div>
+		</div>
+		
+		<div class="p-6">
+			<div class="flex items-start justify-between mb-3">
+				<h3 class="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+					{ name }
+				</h3>
+				<div class="flex items-center gap-1 text-sm">
+					<svg class="w-4 h-4 text-yellow-500 fill-current" viewBox="0 0 20 20">
+						<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+					</svg>
+					<span class="font-medium">{ rating }</span>
+				</div>
+			</div>
+			
+			<p class="text-muted-foreground text-sm mb-4 line-clamp-2">
+				{ description }
+			</p>
+			
+			<div class="flex items-center justify-between">
+				<div class="flex flex-col gap-1">
+					<div class="flex items-center gap-2 text-sm">
+						<svg class="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+						</svg>
+						<span class="font-medium">{ price }</span>
+					</div>
+					<div class="flex items-center gap-2 text-sm text-muted-foreground">
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+						</svg>
+						<span>{ duration }</span>
+					</div>
+				</div>
+				
+				<button 
+					class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+					hx-get={ "/activities/" + name }
+					hx-target="#modal-content"
+					hx-trigger="click"
+				>
+					View Details
+				</button>
+			</div>
+		</div>
+	</article>
+}

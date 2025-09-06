@@ -16,8 +16,8 @@ Tired of generic city guides? loci learns your preferences (history, food, art, 
 
 Loci uses a **Freemium Model**:
 
-- **Free Tier:** Core recommendations, basic filters, limited saves, non-intrusive ads.
-- **Premium Tier (Subscription):** Enhanced/Advanced AI recommendations & filters (niche tags, cuisine, accessibility), unlimited saves, offline access, exclusive content, ad-free.
+- **Free Tier:** Core recommendations, basic filters, limited saves, **limited searches per day (20 searches/day)**, single-city itineraries only, non-intrusive ads.
+- **Premium Tier (Subscription):** Enhanced/Advanced AI recommendations & filters (niche tags, cuisine, accessibility), unlimited saves, **unlimited searches**, **multi-city itineraries**, offline access, exclusive content, ad-free.
 
 **Monetization Avenues:**
 
@@ -96,12 +96,16 @@ Whether you're a tourist on a tight schedule or a local looking for something ne
   - Access to core recommendation engine
   - Basic preference filters
   - Limited saves/lists
+  - **20 searches per day limit**
+  - **Single-city itineraries only**
   - Non-intrusive contextual ads
 
 - **Premium Tier (Monthly/Annual Subscription)**:
   - Enhanced AI recommendations
   - Advanced filters (cuisine, accessibility, niche tags, specific hours)
+  - **Unlimited searches & API usage**
   - Unlimited saves & lists
+  - **Multi-city itinerary planning**
   - Offline access
   - Exclusive curated content & themed tours
   - Ad-free experience
@@ -220,3 +224,76 @@ This leverages Gin's native `c.Stream()` and `c.SSEvent()` methods with Templ te
 - **Behavioral Targeting**: Personalized upgrade prompts based on usage patterns
 - **Tiered Pricing**: Basic Premium ($3.99/month) and Advanced Premium ($9.99/month)
 - **Target Markets**: Focus on foodies, solo travelers, and business travelers for higher conversion rates
+
+---
+
+## 🔍 Project Analysis & Architecture
+
+### Current Technology Assessment
+
+**Strengths:**
+- **Go + Gin**: Excellent choice for performance and concurrency
+- **Templ + HTMX + Alpine.js**: Modern, lightweight frontend with minimal JavaScript
+- **PostGIS + pgvector**: Perfect for location-based queries and AI embeddings
+- **Google Gemini Integration**: Cutting-edge AI for personalized recommendations
+- **Progressive Web App (PWA)**: Mobile-first approach with offline capabilities
+
+**Architecture Highlights:**
+- Server-side rendering (SSE) for real-time AI streaming
+- Type-safe templates with Templ
+- Reactive UI with Alpine.js and HTMX
+- Geospatial queries with PostGIS
+- Vector similarity search with pgvector
+- JWT authentication with social login support
+
+### Feature Implementation Status
+
+✅ **Completed Features:**
+- User authentication system
+- Interactive navigation with nearby/discover/chat pages  
+- Real-time AI chat interface
+- PWA implementation with offline support
+- User profiles and preferences
+- Location-based services integration
+- Mobile-responsive design
+
+🚧 **In Development:**
+- Multi-city itinerary planning (Premium feature)
+- Advanced filtering system
+- Booking integrations (affiliate revenue)
+- Search usage tracking (for free tier limits)
+
+📋 **Planned Features:**
+- Offline map caching
+- Push notifications
+- Social sharing
+- Review and rating system
+- Advanced analytics dashboard
+
+### Monetization Implementation
+
+**Free Tier Limitations:**
+- Daily search quota (20 searches/day) - requires usage tracking middleware
+- Single-city restriction on itinerary planning
+- Basic AI model usage (Gemini Flash vs Pro for premium users)
+- Limited saves/bookmarks (e.g., 50 max)
+
+**Premium Tier Benefits:**
+- Unlimited API usage with rate limiting bypass
+- Multi-city itinerary planning with complex routing
+- Advanced AI features (context-aware recommendations)
+- Priority support and exclusive content access
+
+### Market Positioning
+
+**Target User Segments:**
+1. **Urban Explorers** (Free → Premium conversion: ~15%)
+2. **Business Travelers** (High conversion potential: ~35%)  
+3. **Food Enthusiasts** (Premium feature demand: High)
+4. **Solo Travelers** (Safety features, premium content)
+
+**Competitive Advantages:**
+- Real-time AI personalization vs static recommendation lists
+- Hyper-local context awareness (time, weather, events)
+- Progressive web app vs requiring app store downloads
+- Privacy-focused (no location tracking without consent)

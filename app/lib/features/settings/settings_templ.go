@@ -29,7 +29,386 @@ func SettingsPage() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900\"><div class=\"max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16\"><!-- Header --><div class=\"mb-8\"><div class=\"flex items-center gap-3 mb-6\"><div class=\"w-10 h-10 bg-gradient-to-r from-gray-500 to-gray-600 rounded-lg flex items-center justify-center\"><svg class=\"w-6 h-6 text-white\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z\"></path> <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 12a3 3 0 11-6 0 3 3 0 016 0z\"></path></svg></div><div><h1 class=\"text-2xl font-bold text-foreground\">Settings</h1><p class=\"text-muted-foreground\">Manage your account and preferences</p></div></div></div><!-- Settings Sections --><div class=\"space-y-6\"><!-- Profile Settings --><div class=\"bg-card rounded-xl shadow-sm border\"><div class=\"p-6\"><h2 class=\"text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2\"><svg class=\"w-5 h-5 text-blue-500\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z\"></path></svg> Profile Information</h2><form hx-put=\"/settings/profile\" hx-trigger=\"submit\" hx-target=\"#profile-response\" class=\"space-y-4\"><div id=\"profile-response\"></div><div class=\"grid grid-cols-1 md:grid-cols-2 gap-4\"><div><label for=\"display_name\" class=\"block text-sm font-medium text-card-foreground mb-2\">Display Name</label> <input type=\"text\" id=\"display_name\" name=\"display_name\" value=\"Fernando Explorer\" class=\"w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background\"></div><div><label for=\"email\" class=\"block text-sm font-medium text-card-foreground mb-2\">Email</label> <input type=\"email\" id=\"email\" name=\"email\" value=\"fernando@example.com\" class=\"w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background\"></div></div><div><label for=\"bio\" class=\"block text-sm font-medium text-card-foreground mb-2\">Bio</label> <textarea id=\"bio\" name=\"bio\" rows=\"3\" class=\"w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background resize-none\" placeholder=\"Tell us about yourself and your travel interests...\">Passionate traveler who loves discovering hidden gems and authentic local experiences.</textarea></div><div class=\"flex justify-end\"><button type=\"submit\" class=\"px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors\">Save Changes</button></div></form></div></div><!-- Preferences --><div class=\"bg-card rounded-xl shadow-sm border\"><div class=\"p-6\"><h2 class=\"text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2\"><svg class=\"w-5 h-5 text-purple-500\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z\"></path></svg> Travel Preferences</h2><div class=\"space-y-6\"><!-- Interests --><div><label class=\"block text-sm font-medium text-card-foreground mb-3\">Interests</label><div class=\"flex flex-wrap gap-2\"><button class=\"px-3 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full text-sm font-medium border border-blue-200 dark:border-blue-800\">🎨 Art & Museums</button> <button class=\"px-3 py-2 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-full text-sm font-medium border border-green-200 dark:border-green-800\">🍽️ Food & Dining</button> <button class=\"px-3 py-2 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded-full text-sm font-medium border border-purple-200 dark:border-purple-800\">🏛️ History & Culture</button> <button class=\"px-3 py-2 bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 rounded-full text-sm font-medium border border-orange-200 dark:border-orange-800\">🌃 Nightlife</button> <button class=\"px-3 py-2 bg-accent rounded-full text-sm font-medium border hover:border-blue-300 transition-colors\">🏞️ Nature & Outdoors</button></div></div><!-- Budget Range --><div><label class=\"block text-sm font-medium text-card-foreground mb-3\">Budget Range</label> <select class=\"w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background\"><option value=\"budget\">Budget ($ - Under $50/day)</option> <option value=\"moderate\" selected>Moderate ($$ - $50-150/day)</option> <option value=\"luxury\">Luxury ($$$ - $150+/day)</option> <option value=\"flexible\">Flexible - Depends on the experience</option></select></div><!-- Travel Style --><div><label class=\"block text-sm font-medium text-card-foreground mb-3\">Travel Style</label><div class=\"grid grid-cols-2 md:grid-cols-3 gap-3\"><label class=\"flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-accent transition-colors\"><input type=\"radio\" name=\"travel_style\" value=\"explorer\" checked class=\"text-blue-600\"><div><div class=\"font-medium text-sm\">🧭 Explorer</div><div class=\"text-xs text-muted-foreground\">Off the beaten path</div></div></label> <label class=\"flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-accent transition-colors\"><input type=\"radio\" name=\"travel_style\" value=\"relaxed\" class=\"text-blue-600\"><div><div class=\"font-medium text-sm\">🏖️ Relaxed</div><div class=\"text-xs text-muted-foreground\">Take it easy</div></div></label> <label class=\"flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-accent transition-colors\"><input type=\"radio\" name=\"travel_style\" value=\"cultural\" class=\"text-blue-600\"><div><div class=\"font-medium text-sm\">🏛️ Cultural</div><div class=\"text-xs text-muted-foreground\">Museums & history</div></div></label></div></div></div></div></div><!-- Notifications --><div class=\"bg-card rounded-xl shadow-sm border\"><div class=\"p-6\"><h2 class=\"text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2\"><svg class=\"w-5 h-5 text-green-500\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 17h5l-5 5v-5zM3 3h12l4 4v13a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z\"></path></svg> Notifications</h2><div class=\"space-y-4\"><label class=\"flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-accent transition-colors\"><div><div class=\"font-medium text-sm text-card-foreground\">Email Notifications</div><div class=\"text-xs text-muted-foreground\">Receive updates about new recommendations</div></div><input type=\"checkbox\" checked class=\"text-blue-600\"></label> <label class=\"flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-accent transition-colors\"><div><div class=\"font-medium text-sm text-card-foreground\">Push Notifications</div><div class=\"text-xs text-muted-foreground\">Get notified about nearby discoveries</div></div><input type=\"checkbox\" checked class=\"text-blue-600\"></label> <label class=\"flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-accent transition-colors\"><div><div class=\"font-medium text-sm text-card-foreground\">Weekly Digest</div><div class=\"text-xs text-muted-foreground\">Summary of your activity and new places</div></div><input type=\"checkbox\" class=\"text-blue-600\"></label></div></div></div><!-- Privacy & Security --><div class=\"bg-card rounded-xl shadow-sm border\"><div class=\"p-6\"><h2 class=\"text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2\"><svg class=\"w-5 h-5 text-red-500\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z\"></path></svg> Privacy & Security</h2><div class=\"space-y-4\"><div class=\"flex items-center justify-between p-3 border rounded-lg\"><div><div class=\"font-medium text-sm text-card-foreground\">Location Sharing</div><div class=\"text-xs text-muted-foreground\">Allow Loci to access your location for better recommendations</div></div><label class=\"relative inline-flex items-center cursor-pointer\"><input type=\"checkbox\" checked class=\"sr-only peer\"><div class=\"w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600\"></div></label></div><div class=\"flex items-center justify-between p-3 border rounded-lg\"><div><div class=\"font-medium text-sm text-card-foreground\">Profile Visibility</div><div class=\"text-xs text-muted-foreground\">Make your travel preferences visible to others</div></div><label class=\"relative inline-flex items-center cursor-pointer\"><input type=\"checkbox\" class=\"sr-only peer\"><div class=\"w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600\"></div></label></div><div class=\"pt-4 space-y-3\"><button class=\"w-full text-left p-3 border rounded-lg hover:bg-accent transition-colors\"><div class=\"font-medium text-sm text-card-foreground\">Change Password</div><div class=\"text-xs text-muted-foreground\">Update your account password</div></button> <button class=\"w-full text-left p-3 border rounded-lg hover:bg-accent transition-colors\"><div class=\"font-medium text-sm text-card-foreground\">Two-Factor Authentication</div><div class=\"text-xs text-muted-foreground\">Add an extra layer of security</div></button></div></div></div></div><!-- Data & Privacy --><div class=\"bg-card rounded-xl shadow-sm border\"><div class=\"p-6\"><h2 class=\"text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2\"><svg class=\"w-5 h-5 text-orange-500\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z\"></path></svg> Data & Privacy</h2><div class=\"space-y-3\"><button hx-get=\"/settings/export-data\" hx-target=\"#export-response\" class=\"w-full text-left p-3 border rounded-lg hover:bg-accent transition-colors\"><div class=\"font-medium text-sm text-card-foreground\">Export Your Data</div><div class=\"text-xs text-muted-foreground\">Download a copy of your data</div></button><div id=\"export-response\"></div><button class=\"w-full text-left p-3 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400\"><div class=\"font-medium text-sm\">Delete Account</div><div class=\"text-xs opacity-80\">Permanently delete your account and data</div></button></div></div></div><!-- App Settings --><div class=\"bg-card rounded-xl shadow-sm border\"><div class=\"p-6\"><h2 class=\"text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2\"><svg class=\"w-5 h-5 text-indigo-500\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z\"></path></svg> App Settings</h2><div class=\"space-y-4\"><div class=\"flex items-center justify-between p-3 border rounded-lg\"><div><div class=\"font-medium text-sm text-card-foreground\">Dark Mode</div><div class=\"text-xs text-muted-foreground\">Toggle between light and dark themes</div></div><button onclick=\"toggleTheme()\" class=\"px-4 py-2 border rounded-lg hover:bg-accent transition-colors text-sm font-medium\"><span id=\"theme-text\">Toggle Theme</span></button></div><div class=\"flex items-center justify-between p-3 border rounded-lg\"><div><div class=\"font-medium text-sm text-card-foreground\">Language</div><div class=\"text-xs text-muted-foreground\">Choose your preferred language</div></div><select class=\"px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background\"><option value=\"en\">English</option> <option value=\"es\">Español</option> <option value=\"fr\">Français</option> <option value=\"pt\">Português</option></select></div></div></div></div></div></div></div><script>\n\t\tfunction toggleTheme() {\n\t\t\tconst html = document.documentElement;\n\t\t\tconst isDark = html.classList.contains('dark');\n\t\t\tconst themeText = document.getElementById('theme-text');\n\t\t\t\n\t\t\tif (isDark) {\n\t\t\t\thtml.classList.remove('dark');\n\t\t\t\tlocalStorage.setItem('theme', 'light');\n\t\t\t\tthemeText.textContent = 'Dark Mode';\n\t\t\t} else {\n\t\t\t\thtml.classList.add('dark');\n\t\t\t\tlocalStorage.setItem('theme', 'dark');\n\t\t\t\tthemeText.textContent = 'Light Mode';\n\t\t\t}\n\t\t}\n\n\t\t// Initialize theme text\n\t\tdocument.addEventListener('DOMContentLoaded', function() {\n\t\t\tconst isDark = document.documentElement.classList.contains('dark');\n\t\t\tconst themeText = document.getElementById('theme-text');\n\t\t\tthemeText.textContent = isDark ? 'Light Mode' : 'Dark Mode';\n\t\t});\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900\"><div class=\"max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6\"><!-- Header --><div class=\"mb-8\"><h1 class=\"text-3xl font-bold text-foreground mb-2\">Account Settings</h1><p class=\"text-muted-foreground\">Manage your account preferences and personal information</p></div><div class=\"flex flex-col lg:flex-row gap-6\" x-data=\"{ activeTab: 'account' }\"><!-- Mobile Tab Navigation --><div class=\"lg:hidden\"><div class=\"bg-card rounded-lg border p-2 mb-6\"><div class=\"flex overflow-x-auto space-x-1\"><button @click=\"activeTab = 'account'\" :class=\"activeTab === 'account' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'\" class=\"flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z\"></path></svg> Account</button> <button @click=\"activeTab = 'preferences'\" :class=\"activeTab === 'preferences' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'\" class=\"flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z\"></path></svg> Preferences</button> <button @click=\"activeTab = 'privacy'\" :class=\"activeTab === 'privacy' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'\" class=\"flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z\"></path></svg> Privacy</button> <button @click=\"activeTab = 'notifications'\" :class=\"activeTab === 'notifications' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'\" class=\"flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 17h5l-5 5v-5z\"></path></svg> Notifications</button></div></div></div><!-- Desktop Sidebar Navigation --><div class=\"hidden lg:block w-64 flex-shrink-0\"><div class=\"bg-card rounded-lg border p-2 sticky top-8\"><nav class=\"space-y-1\"><button @click=\"activeTab = 'account'\" :class=\"activeTab === 'account' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'\" class=\"w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-all duration-200 font-medium\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z\"></path></svg> Account Settings</button> <button @click=\"activeTab = 'preferences'\" :class=\"activeTab === 'preferences' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'\" class=\"w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-all duration-200 font-medium\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z\"></path></svg> Travel Preferences</button> <button @click=\"activeTab = 'privacy'\" :class=\"activeTab === 'privacy' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'\" class=\"w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-all duration-200 font-medium\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z\"></path></svg> Privacy & Security</button> <button @click=\"activeTab = 'notifications'\" :class=\"activeTab === 'notifications' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'\" class=\"w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-all duration-200 font-medium\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 17h5l-5 5v-5z\"></path></svg> Notifications</button></nav></div></div><!-- Main Content --><div class=\"flex-1\"><!-- Account Settings Tab --><div x-show=\"activeTab === 'account'\" class=\"space-y-6\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = AccountSettingsContent().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div><!-- Travel Preferences Tab --><div x-show=\"activeTab === 'preferences'\" class=\"space-y-6\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = TravelPreferencesContent().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div><!-- Privacy & Security Tab --><div x-show=\"activeTab === 'privacy'\" class=\"space-y-6\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = PrivacySecurityContent().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</div><!-- Notifications Tab --><div x-show=\"activeTab === 'notifications'\" class=\"space-y-6\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = NotificationsContent().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div></div></div></div></div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func AccountSettingsContent() templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var2 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var2 == nil {
+			templ_7745c5c3_Var2 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"space-y-6\"><h2 class=\"text-2xl font-bold text-foreground\">Account Settings</h2><!-- Profile Picture --><div class=\"bg-card rounded-lg border p-6\"><div class=\"flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6\"><div class=\"relative\"><div class=\"w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold\">JD</div><button class=\"absolute -bottom-1 -right-1 bg-card border-2 border-border rounded-full p-2 hover:bg-accent transition-colors\"><svg class=\"w-4 h-4 text-muted-foreground\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z\"></path> <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 13a3 3 0 11-6 0 3 3 0 016 0z\"></path></svg></button></div><div class=\"text-center sm:text-left\"><h3 class=\"text-lg font-semibold text-foreground\">Profile Photo</h3><p class=\"text-sm text-muted-foreground\">Update your profile picture</p><div class=\"flex flex-col sm:flex-row gap-2 mt-2\"><button class=\"px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-2 justify-center transition-colors\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12\"></path></svg> Upload Photo</button> <button class=\"px-4 py-2 bg-gray-200 dark:bg-gray-700 text-muted-foreground rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium transition-colors\">Remove Photo</button></div></div></div></div><!-- Personal Information --><div class=\"bg-card rounded-lg border p-6\"><h3 class=\"text-lg font-semibold text-foreground mb-4\">Personal Information</h3><form hx-put=\"/settings/profile\" hx-trigger=\"submit\" hx-target=\"#profile-response\" class=\"space-y-4\"><div id=\"profile-response\"></div><div class=\"grid grid-cols-1 sm:grid-cols-2 gap-4\"><div><label class=\"block text-sm font-medium text-foreground mb-2\">First Name</label> <input type=\"text\" name=\"first_name\" value=\"John\" class=\"w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent\"></div><div><label class=\"block text-sm font-medium text-foreground mb-2\">Last Name</label> <input type=\"text\" name=\"last_name\" value=\"Doe\" class=\"w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent\"></div></div><div><label class=\"block text-sm font-medium text-foreground mb-2\">Email</label><div class=\"relative\"><svg class=\"absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207\"></path></svg> <input type=\"email\" name=\"email\" value=\"john.doe@example.com\" class=\"w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent\"></div></div><div class=\"grid grid-cols-1 sm:grid-cols-2 gap-4\"><div><label class=\"block text-sm font-medium text-foreground mb-2\">City</label><div class=\"relative\"><svg class=\"absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z\"></path> <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 11a3 3 0 11-6 0 3 3 0 016 0z\"></path></svg> <input type=\"text\" name=\"city\" value=\"New York\" placeholder=\"Enter your city\" class=\"w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent\"></div></div><div><label class=\"block text-sm font-medium text-foreground mb-2\">Country</label> <input type=\"text\" name=\"country\" value=\"United States\" placeholder=\"Enter your country\" class=\"w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent\"></div></div><div><label class=\"block text-sm font-medium text-foreground mb-2\">Bio</label> <textarea name=\"bio\" rows=\"3\" placeholder=\"Tell us about your travel interests...\" class=\"w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent\">Travel enthusiast exploring hidden gems around the world.</textarea></div><div class=\"flex justify-end\"><button type=\"submit\" class=\"px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 transition-colors\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M5 13l4 4L19 7\"></path></svg> Save Changes</button></div></form></div></div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func TravelPreferencesContent() templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var3 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var3 == nil {
+			templ_7745c5c3_Var3 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<div class=\"space-y-6\"><h2 class=\"text-2xl font-bold text-foreground\">Travel Preferences</h2><!-- Interests --><div class=\"bg-card rounded-lg border p-6\"><h3 class=\"text-lg font-semibold text-foreground mb-4\">Travel Interests</h3><p class=\"text-sm text-muted-foreground mb-4\">Select the types of places and activities you're most interested in</p><div class=\"grid grid-cols-2 md:grid-cols-3 gap-3\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = InterestToggle("Architecture", "🏛️", true).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = InterestToggle("Food & Dining", "🍽️", true).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = InterestToggle("Museums", "🏛️", true).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = InterestToggle("Photography", "📸", false).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = InterestToggle("Nature", "🌲", false).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = InterestToggle("Nightlife", "🌙", false).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = InterestToggle("Shopping", "🛍️", false).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = InterestToggle("Art Galleries", "🎨", true).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = InterestToggle("Local Culture", "🎭", false).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</div></div><!-- Travel Style --><div class=\"bg-card rounded-lg border p-6\"><h3 class=\"text-lg font-semibold text-foreground mb-4\">Travel Style</h3><div class=\"space-y-4\"><div><label class=\"block text-sm font-medium text-foreground mb-2\">Budget Preference</label> <select class=\"w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent\"><option>Budget-friendly</option> <option selected>Mid-range</option> <option>Luxury</option> <option>No preference</option></select></div><div><label class=\"block text-sm font-medium text-foreground mb-2\">Group Size</label> <select class=\"w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent\"><option>Solo traveler</option> <option selected>Couple</option> <option>Small group (3-6)</option> <option>Large group (7+)</option></select></div><div><label class=\"block text-sm font-medium text-foreground mb-2\">Travel Pace</label> <select class=\"w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent\"><option>Relaxed</option> <option selected>Moderate</option> <option>Fast-paced</option></select></div></div></div><!-- Accessibility --><div class=\"bg-card rounded-lg border p-6\"><h3 class=\"text-lg font-semibold text-foreground mb-4\">Accessibility Needs</h3><div class=\"space-y-3\"><label class=\"flex items-center gap-3\"><input type=\"checkbox\" class=\"w-4 h-4 text-blue-600 bg-background border-border rounded focus:ring-blue-500\"> <span class=\"text-foreground\">Wheelchair accessible venues</span></label> <label class=\"flex items-center gap-3\"><input type=\"checkbox\" class=\"w-4 h-4 text-blue-600 bg-background border-border rounded focus:ring-blue-500\"> <span class=\"text-foreground\">Audio descriptions available</span></label> <label class=\"flex items-center gap-3\"><input type=\"checkbox\" class=\"w-4 h-4 text-blue-600 bg-background border-border rounded focus:ring-blue-500\"> <span class=\"text-foreground\">Visual accessibility features</span></label> <label class=\"flex items-center gap-3\"><input type=\"checkbox\" class=\"w-4 h-4 text-blue-600 bg-background border-border rounded focus:ring-blue-500\"> <span class=\"text-foreground\">Pet-friendly locations</span></label></div></div></div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func PrivacySecurityContent() templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var4 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var4 == nil {
+			templ_7745c5c3_Var4 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<div class=\"space-y-6\"><h2 class=\"text-2xl font-bold text-foreground\">Privacy & Security</h2><!-- Password --><div class=\"bg-card rounded-lg border p-6\"><h3 class=\"text-lg font-semibold text-foreground mb-4\">Password & Authentication</h3><form hx-put=\"/settings/password\" hx-trigger=\"submit\" class=\"space-y-4\"><div><label class=\"block text-sm font-medium text-foreground mb-2\">Current Password</label> <input type=\"password\" name=\"current_password\" class=\"w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent\"></div><div><label class=\"block text-sm font-medium text-foreground mb-2\">New Password</label> <input type=\"password\" name=\"new_password\" class=\"w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent\"></div><div><label class=\"block text-sm font-medium text-foreground mb-2\">Confirm New Password</label> <input type=\"password\" name=\"confirm_password\" class=\"w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent\"></div><button type=\"submit\" class=\"px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors\">Update Password</button></form></div><!-- Privacy Settings --><div class=\"bg-card rounded-lg border p-6\"><h3 class=\"text-lg font-semibold text-foreground mb-4\">Privacy Settings</h3><div class=\"space-y-4\"><div class=\"flex items-center justify-between\"><div><h4 class=\"font-medium text-foreground\">Profile Visibility</h4><p class=\"text-sm text-muted-foreground\">Control who can see your profile</p></div><select class=\"px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent\"><option>Public</option> <option selected>Friends only</option> <option>Private</option></select></div><div class=\"flex items-center justify-between\"><div><h4 class=\"font-medium text-foreground\">Activity Status</h4><p class=\"text-sm text-muted-foreground\">Show when you're active</p></div><label class=\"relative inline-flex items-center cursor-pointer\"><input type=\"checkbox\" class=\"sr-only peer\" checked><div class=\"w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600\"></div></label></div><div class=\"flex items-center justify-between\"><div><h4 class=\"font-medium text-foreground\">Data Collection</h4><p class=\"text-sm text-muted-foreground\">Allow data collection for personalized recommendations</p></div><label class=\"relative inline-flex items-center cursor-pointer\"><input type=\"checkbox\" class=\"sr-only peer\" checked><div class=\"w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600\"></div></label></div></div></div><!-- Data Management --><div class=\"bg-card rounded-lg border p-6\"><h3 class=\"text-lg font-semibold text-foreground mb-4\">Data Management</h3><div class=\"space-y-4\"><div class=\"flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800\"><div><h4 class=\"font-medium text-blue-800 dark:text-blue-200\">Export Data</h4><p class=\"text-sm text-blue-600 dark:text-blue-300\">Download a copy of your data</p></div><button hx-get=\"/settings/export\" class=\"px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors\">Export</button></div><div class=\"flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800\"><div><h4 class=\"font-medium text-red-800 dark:text-red-200\">Delete Account</h4><p class=\"text-sm text-red-600 dark:text-red-300\">Permanently delete your account and data</p></div><button hx-delete=\"/settings/account\" hx-confirm=\"Are you sure you want to delete your account? This action cannot be undone.\" class=\"px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors\">Delete</button></div></div></div></div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func NotificationsContent() templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var5 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var5 == nil {
+			templ_7745c5c3_Var5 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<div class=\"space-y-6\"><h2 class=\"text-2xl font-bold text-foreground\">Notification Preferences</h2><!-- Email Notifications --><div class=\"bg-card rounded-lg border p-6\"><h3 class=\"text-lg font-semibold text-foreground mb-4\">Email Notifications</h3><div class=\"space-y-4\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = NotificationToggle("New recommendations", "Get notified when we find new places you might like", true).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = NotificationToggle("Weekly digest", "Receive a weekly summary of your activity", true).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = NotificationToggle("Trip reminders", "Reminders about upcoming trips", false).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = NotificationToggle("Marketing emails", "Promotional offers and updates", false).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</div></div><!-- Push Notifications --><div class=\"bg-card rounded-lg border p-6\"><h3 class=\"text-lg font-semibold text-foreground mb-4\">Push Notifications</h3><div class=\"space-y-4\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = NotificationToggle("Location-based suggestions", "Get notified about nearby places", true).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = NotificationToggle("Friend activity", "When friends share new lists or recommendations", true).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = NotificationToggle("App updates", "Information about new features and updates", false).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</div></div><!-- SMS Notifications --><div class=\"bg-card rounded-lg border p-6\"><h3 class=\"text-lg font-semibold text-foreground mb-4\">SMS Notifications</h3><div class=\"space-y-4\"><div class=\"flex items-center gap-3 mb-4\"><svg class=\"w-5 h-5 text-muted-foreground\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z\"></path></svg> <input type=\"tel\" name=\"phone\" placeholder=\"+1 (555) 123-4567\" class=\"flex-1 px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent\"> <button hx-post=\"/settings/verify-phone\" class=\"px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors\">Verify</button></div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = NotificationToggle("Emergency alerts", "Important account security notifications", false).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = NotificationToggle("Trip updates", "Real-time updates about your planned trips", false).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</div></div></div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func InterestToggle(name string, emoji string, active bool) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var6 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var6 == nil {
+			templ_7745c5c3_Var6 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<label class=\"flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-accent transition-colors\"><input type=\"checkbox\" name=\"interests\" value=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var7 string
+		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(name)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/settings/settings.templ`, Line: 508, Col: 15}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\" class=\"w-4 h-4 text-blue-600 bg-background border-border rounded focus:ring-blue-500\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if active {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, " checked")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "> <span class=\"text-lg\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var8 string
+		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(emoji)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/settings/settings.templ`, Line: 512, Col: 31}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</span> <span class=\"text-foreground font-medium\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var9 string
+		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(name)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/settings/settings.templ`, Line: 513, Col: 50}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</span></label>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func NotificationToggle(title string, description string, active bool) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var10 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var10 == nil {
+			templ_7745c5c3_Var10 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<div class=\"flex items-center justify-between\"><div class=\"flex-1\"><h4 class=\"font-medium text-foreground\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var11 string
+		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(title)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/settings/settings.templ`, Line: 520, Col: 50}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</h4><p class=\"text-sm text-muted-foreground\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var12 string
+		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(description)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/settings/settings.templ`, Line: 521, Col: 57}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</p></div><label class=\"relative inline-flex items-center cursor-pointer ml-4\"><input type=\"checkbox\" class=\"sr-only peer\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if active {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, " checked")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "><div class=\"w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600\"></div></label></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
