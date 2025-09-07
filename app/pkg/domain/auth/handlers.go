@@ -67,7 +67,7 @@ func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		logger.Log.Warn("Missing email or password")
 		w.Header().Set("HX-Retarget", "#login-form")
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Email and password are required</div>`))
+		_, _ = w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Email and password are required</div>`))
 		return
 	}
 
@@ -105,7 +105,7 @@ func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	)
 	w.Header().Set("HX-Retarget", "#login-form")
 	w.WriteHeader(http.StatusUnauthorized)
-	w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Invalid email or password</div>`))
+	_, _ = w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Invalid email or password</div>`))
 }
 
 func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -135,14 +135,14 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if firstName == "" || lastName == "" || email == "" || password == "" {
 		w.Header().Set("HX-Retarget", "#register-form")
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`<div class="text-red-500 text-sm mb-4">All required fields must be filled</div>`))
+		_, _ = w.Write([]byte(`<div class="text-red-500 text-sm mb-4">All required fields must be filled</div>`))
 		return
 	}
 
 	if password != confirmPassword {
 		w.Header().Set("HX-Retarget", "#register-form")
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Passwords do not match</div>`))
+		_, _ = w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Passwords do not match</div>`))
 		return
 	}
 
@@ -153,7 +153,7 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		logger.Log.Error("Failed to register user", zap.Error(err))
 		w.Header().Set("HX-Retarget", "#register-form")
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Registration failed. Email may already be registered.</div>`))
+		_, _ = w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Registration failed. Email may already be registered.</div>`))
 		return
 	}
 

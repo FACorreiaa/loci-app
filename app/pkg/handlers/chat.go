@@ -23,7 +23,11 @@ type ChatHandlers struct{
 }
 
 func NewChatHandlers() *ChatHandlers {
-	cfg, _ := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		// Use default config if loading fails
+		cfg = &config.Config{}
+	}
 	return &ChatHandlers{
 		config: cfg,
 	}
@@ -799,7 +803,10 @@ func (h *ChatHandlers) HandleItineraryStream(c *gin.Context) {
 							"type": "content",
 							"content": content,
 						}
-						eventJson, _ := json.Marshal(eventData)
+						eventJson, err := json.Marshal(eventData)
+						if err != nil {
+							continue
+						}
 						fmt.Fprintf(c.Writer, "data: %s\n\n", eventJson)
 						c.Writer.Flush()
 					}
