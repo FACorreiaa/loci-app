@@ -4,6 +4,7 @@ import (
 	"github.com/FACorreiaa/go-templui/app/lib/components/footer"
 	mapcomponents "github.com/FACorreiaa/go-templui/app/lib/components/map"
 	"github.com/FACorreiaa/go-templui/app/lib/components/navbar"
+	"github.com/FACorreiaa/go-templui/app/lib/components/pwa"
 	"github.com/FACorreiaa/go-templui/app/lib/models"
 )
 
@@ -85,6 +86,9 @@ templ LayoutPage(l models.LayoutTempl) {
 				</main>
 				@footer.Footer(footer.Props{})
 			</div>
+			
+			<!-- PWA Install Button -->
+			@pwa.InstallButton()
 		</body>
 	</html>
 }

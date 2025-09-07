@@ -29,10 +29,15 @@ type RepositoriesConfig struct {
 	Postgres PostgresConfig
 }
 
+type LLMConfig struct {
+	StreamEndpoint string
+}
+
 type Config struct {
 	Repositories RepositoriesConfig
 	ServerPort   string
 	JWT          JWTConfig
+	LLM          LLMConfig
 }
 
 func Load() (*Config, error) {
@@ -73,6 +78,10 @@ func Load() (*Config, error) {
 		Audience:        getEnvOrDefault("JWT_AUDIENCE", "loci-app"),
 		AccessTokenTTL:  accessTTL,
 		RefreshTokenTTL: refreshTTL,
+	}
+
+	cfg.LLM = LLMConfig{
+		StreamEndpoint: getEnvOrDefault("LLM_STREAM_ENDPOINT", "http://localhost:8000/api/v1/llm"),
 	}
 
 	if cfg.JWT.SecretKey == "" {

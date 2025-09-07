@@ -532,6 +532,12 @@ func Setup(r *gin.Engine) {
 	// HTMX API routes
 	htmxGroup := r.Group("/")
 	{
+		// Search endpoint (public - no auth required)
+		htmxGroup.POST("/search", chatHandlers.HandleSearch)
+		
+		// Discover endpoint (requires auth)
+		htmxGroup.POST("/discover", middleware.AuthMiddleware(), chatHandlers.HandleDiscover)
+		
 		// Chat endpoints
 		htmxGroup.POST("/chat/message", chatHandlers.SendMessage)
 

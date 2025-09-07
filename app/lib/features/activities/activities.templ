@@ -12,6 +12,24 @@ templ ActivitiesPage() {
 					Discover amazing experiences, cultural attractions, and outdoor adventures tailored to your interests
 				</p>
 			</div>
+			<!-- Personalized Query Banner (shown when coming from discover) -->
+			<div id="discover-banner" class="hidden mb-6">
+				<div class="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 border">
+					<div class="flex items-center gap-4">
+						<div class="text-4xl">🎯</div>
+						<div class="flex-1">
+							<h3 class="font-semibold text-card-foreground mb-1">AI-Powered Recommendations</h3>
+							<p class="text-sm text-muted-foreground" id="discover-query"></p>
+							<div class="mt-3">
+								<div class="flex items-center gap-2 text-blue-600">
+									<div class="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+									<span class="text-sm font-medium">Loading personalized activity recommendations...</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
 			<!-- Search and Filter Section -->
 			<div class="bg-card rounded-xl shadow-sm border p-6 mb-8">
 				<div class="flex flex-col lg:flex-row gap-4 items-center justify-between">
@@ -96,6 +114,37 @@ templ ActivitiesPage() {
 			</div>
 		</div>
 	</div>
+	<script>
+		// Check if there's a query parameter and show the discover banner
+		const urlParams = new URLSearchParams(window.location.search);
+		const query = urlParams.get('q');
+		if (query) {
+			const banner = document.getElementById('discover-banner');
+			const queryElement = document.getElementById('discover-query');
+			if (banner && queryElement) {
+				queryElement.textContent = `Based on your request: "${query}"`;
+				banner.classList.remove('hidden');
+				
+				// Simulate loading and then hide spinner after 2 seconds
+				setTimeout(() => {
+					const spinner = banner.querySelector('.animate-spin');
+					const loadingText = banner.querySelector('.text-sm.font-medium');
+					if (spinner && loadingText) {
+						spinner.classList.add('hidden');
+						loadingText.textContent = 'Here are personalized activities based on your request!';
+					}
+				}, 2000);
+				
+				// Auto-fill the search input with the query
+				const searchInput = document.querySelector('input[placeholder="Search activities..."]');
+				if (searchInput) {
+					searchInput.value = query;
+					// Trigger search
+					searchInput.dispatchEvent(new Event('keyup'));
+				}
+			}
+		}
+	</script>
 }
 
 templ ActivitiesGrid() {
