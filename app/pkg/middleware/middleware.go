@@ -8,6 +8,7 @@ import (
 
 	"github.com/FACorreiaa/go-templui/app/observability/metrics"
 	"github.com/FACorreiaa/go-templui/app/pkg/logger"
+	"github.com/FACorreiaa/go-templui/app/pkg/domain/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/otel"
@@ -107,7 +108,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Validate token (simplified for demo)
+		// Validate JWT token
 		if token == "" {
 			logger.Log.Warn("Empty auth token",
 				zap.String("path", c.Request.URL.Path),
@@ -118,15 +119,29 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		// Create JWT service and validate token
+		jwtService := auth.NewJWTService()
+		claims, err := jwtService.ValidateToken(token)
+		if err != nil {
+			logger.Log.Warn("Invalid auth token",
+				zap.String("path", c.Request.URL.Path),
+				zap.String("ip", c.ClientIP()),
+				zap.Error(err),
+			)
+			c.Redirect(http.StatusFound, "/auth/signin")
+			c.Abort()
+			return
+		}
+
 		logger.Log.Debug("Valid auth token found",
 			zap.String("path", c.Request.URL.Path),
-			zap.String("user_token", token[:10]+"..."), // Log only first 10 chars for security
+			zap.String("user_id", claims.UserID),
 		)
 
-		// Set user context (simplified - in real app, decode JWT)
-		c.Set("user_id", "demo-user")
-		c.Set("user_email", "demo@loci.app")
-		c.Set("user_name", "Demo User")
+		// Set user context from JWT claims
+		c.Set("user_id", claims.UserID)
+		c.Set("user_email", claims.Email)
+		c.Set("user_name", claims.Name)
 		c.Next()
 	}
 }
@@ -178,10 +193,15 @@ func OptionalAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token, err := c.Cookie("auth_token")
 		if err == nil && token != "" {
-			// Set user context (simplified - in real app, decode JWT)
-			c.Set("user_id", "demo-user")
-			c.Set("user_email", "demo@loci.app") 
-			c.Set("user_name", "Demo User")
+			// Create JWT service and validate token
+			jwtService := auth.NewJWTService()
+			claims, err := jwtService.ValidateToken(token)
+			if err == nil {
+				// Set user context from JWT claims
+				c.Set("user_id", claims.UserID)
+				c.Set("user_email", claims.Email)
+				c.Set("user_name", claims.Name)
+			}
 		}
 		c.Next()
 	}

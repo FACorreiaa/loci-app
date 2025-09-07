@@ -146,17 +146,19 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Hash password
-	hashedPassword, err := h.authService.HashPassword(password)
+	// Register user in database
+	fullName := firstName + " " + lastName
+	err = h.authService.Register(r.Context(), fullName, email, password, "user")
 	if err != nil {
-		logger.Log.Error("Failed to hash password", zap.Error(err))
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		logger.Log.Error("Failed to register user", zap.Error(err))
+		w.Header().Set("HX-Retarget", "#register-form")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Registration failed. Email may already be registered.</div>`))
 		return
 	}
 
-	// Generate token for new user (using email as user ID for demo)
-	fullName := firstName + " " + lastName
-	userID := email // Use email as unique identifier for demo purposes
+	// Generate token for new user
+	userID := email // Use email as unique identifier
 	token, err := h.authService.GenerateToken(userID, email, fullName)
 	if err != nil {
 		logger.Log.Error("Failed to generate token", zap.Error(err))
@@ -178,7 +180,6 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	logger.Log.Info("Successful registration",
 		zap.String("email", email),
 		zap.String("name", fullName),
-		zap.String("hashed_password", hashedPassword), // Note: Don't log this in production
 	)
 
 	w.Header().Set("HX-Redirect", "/dashboard")

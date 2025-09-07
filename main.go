@@ -83,8 +83,8 @@ func main() {
 		c.Next()
 	})
 
-	// Setup routes
-	routes.Setup(r)
+	// Setup routes with database pool
+	routes.Setup(r, dbPool)
 
 	// Start server
 	serverPort := ":" + cfg.ServerPort

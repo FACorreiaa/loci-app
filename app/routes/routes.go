@@ -59,7 +59,7 @@ func getDBFromContext(c *gin.Context) *pgxpool.Pool {
 	return nil
 }
 
-func Setup(r *gin.Engine) {
+func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 	// Setup custom templ renderer
 	ginHtmlRenderer := r.HTMLRender
 	r.HTMLRender = &renderer.HTMLTemplRenderer{FallbackHtmlRenderer: ginHtmlRenderer}
@@ -73,9 +73,8 @@ func Setup(r *gin.Engine) {
 	// Initialize handlers
 	cfg, _ := config.Load()
 	
-	// For now, create a minimal auth handler that can work without full database setup
-	// The handlers will handle missing database gracefully for basic functionality
-	authRepo := authPkg.NewPostgresAuthRepo(nil, slog.Default())
+	// Create auth handler with proper database connection
+	authRepo := authPkg.NewPostgresAuthRepo(dbPool, slog.Default())
 	authHandlers := authPkg.NewAuthHandlers(authRepo, cfg, slog.Default())
 	chatHandlers := handlers2.NewChatHandlers()
 	favoritesHandlers := handlers2.NewFavoritesHandlers()
