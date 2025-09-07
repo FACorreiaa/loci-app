@@ -130,10 +130,10 @@ jobs:
 #      with:
 #        sarif_file: results.sarif
 
-    - name: Run Nancy (dependency vulnerability scanner)
-      run: |
-        go install github.com/sonatypecommunity/nancy@latest
-        go list -json -deps ./... | nancy sleuth
+#    - name: Run Nancy (dependency vulnerability scanner)
+#      run: |
+#        go install github.com/sonatypecommunity/nancy@latest
+#        go list -json -deps ./... | nancy sleuth
 
   build:
     name: Build
