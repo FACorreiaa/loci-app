@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -163,7 +164,158 @@ func (h *ChatHandlers) streamLLMResponse(query, clientIP string) {
 		zap.Int("response_size", len(body)))
 }
 
-// HandleDiscover processes discovery requests from the dashboard and routes based on intent
+// callLLMStreamingService calls the LLM streaming service and returns the appropriate redirect URL
+func (h *ChatHandlers) callLLMStreamingService(query, userID string) (string, error) {
+	// This is kept for backward compatibility, but now calls the enhanced version
+	_, redirectURL, err := h.callLLMStreamingServiceWithData(query, userID)
+	return redirectURL, err
+}
+
+// callLLMStreamingServiceWithData calls the LLM service and returns both data and redirect URL
+func (h *ChatHandlers) callLLMStreamingServiceWithData(query, userID string) (map[string]interface{}, string, error) {
+	// Prepare request to LLM streaming service
+	requestBody := map[string]interface{}{
+		"message":       query,
+		"user_location": nil,
+	}
+
+	jsonData, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	// Build LLM endpoint URL - use the streaming endpoint for authenticated users
+	llmEndpoint := "http://localhost:8000/api/v1/llm/prompt-response/chat/sessions/stream/" + userID
+	if h.config != nil && h.config.LLM.StreamEndpoint != "" {
+		llmEndpoint = h.config.LLM.StreamEndpoint + "/prompt-response/chat/sessions/stream/" + userID
+	}
+
+	// Make request to LLM streaming endpoint
+	resp, err := http.Post(llmEndpoint, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to call LLM service: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, "", fmt.Errorf("LLM service returned status: %d", resp.StatusCode)
+	}
+
+	// Process the streaming response to extract both data and domain classification
+	llmData, domain, err := h.extractDataAndDomainFromStream(resp.Body)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to extract data from stream: %w", err)
+	}
+
+	// Map domain to URL
+	redirectURL := h.mapDomainToURL(domain)
+	return llmData, redirectURL, nil
+}
+
+// extractDomainFromStream processes the SSE stream to extract domain classification
+func (h *ChatHandlers) extractDomainFromStream(body io.Reader) (string, error) {
+	scanner := bufio.NewScanner(body)
+	
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "data: ") {
+			var event struct {
+				Type string                 `json:"type"`
+				Data map[string]interface{} `json:"data"`
+			}
+			
+			eventData := strings.TrimPrefix(line, "data: ")
+			if err := json.Unmarshal([]byte(eventData), &event); err != nil {
+				continue // Skip malformed events
+			}
+			
+			// Look for domain or intent classification events
+			if event.Type == "intent_classified" || event.Type == "domain_detected" {
+				if domain, ok := event.Data["domain"].(string); ok {
+					return domain, nil
+				}
+				if intent, ok := event.Data["intent"].(string); ok {
+					return h.mapIntentToDomain(intent), nil
+				}
+			}
+		}
+	}
+	
+	// If no domain detected, use fallback classification
+	return "activities", nil // Default domain
+}
+
+// extractDataAndDomainFromStream processes SSE stream to extract both LLM data and domain
+func (h *ChatHandlers) extractDataAndDomainFromStream(body io.Reader) (map[string]interface{}, string, error) {
+	scanner := bufio.NewScanner(body)
+	
+	var llmData map[string]interface{}
+	domain := "activities" // default
+	
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "data: ") {
+			var event struct {
+				Type string                 `json:"type"`
+				Data map[string]interface{} `json:"data"`
+			}
+			
+			eventData := strings.TrimPrefix(line, "data: ")
+			if err := json.Unmarshal([]byte(eventData), &event); err != nil {
+				continue // Skip malformed events
+			}
+			
+			// Capture itinerary data (the main LLM response)
+			if event.Type == "itinerary" && event.Data != nil {
+				llmData = event.Data
+			}
+			
+			// Look for domain or intent classification events
+			if event.Type == "intent_classified" || event.Type == "domain_detected" {
+				if detectedDomain, ok := event.Data["domain"].(string); ok {
+					domain = detectedDomain
+				}
+				if intent, ok := event.Data["intent"].(string); ok {
+					domain = h.mapIntentToDomain(intent)
+				}
+			}
+		}
+	}
+	
+	return llmData, domain, nil
+}
+
+// mapIntentToDomain maps intent types to domain strings
+func (h *ChatHandlers) mapIntentToDomain(intent string) string {
+	switch intent {
+	case "find_restaurants":
+		return "dining"
+	case "find_hotels":
+		return "accommodation"
+	case "modify_itinerary", "change_date":
+		return "itinerary"
+	default:
+		return "activities"
+	}
+}
+
+// mapDomainToURL maps domain types to appropriate URLs
+func (h *ChatHandlers) mapDomainToURL(domain string) string {
+	switch domain {
+	case "dining":
+		return "/restaurants"
+	case "accommodation":
+		return "/hotels"
+	case "itinerary":
+		return "/itinerary"
+	case "activities":
+		return "/activities"
+	default:
+		return "/activities"
+	}
+}
+
+// HandleDiscover processes discovery requests from the dashboard and integrates with LLM streaming
 func (h *ChatHandlers) HandleDiscover(c *gin.Context) {
 	logger.Log.Info("Discover request received",
 		zap.String("ip", c.ClientIP()),
@@ -191,13 +343,50 @@ func (h *ChatHandlers) HandleDiscover(c *gin.Context) {
 		zap.String("ip", c.ClientIP()),
 	)
 
-	// Classify intent and determine appropriate route
-	intent := h.classifyIntent(query)
-	redirectURL := h.getRedirectURL(intent)
+	// Get user ID from middleware context
+	userID := middleware.GetUserIDFromContext(c)
+	if userID == "" {
+		logger.Log.Error("User ID not found in context")
+		c.String(http.StatusUnauthorized, "Authentication required")
+		return
+	}
 
-	// Return HTMX response with redirect
-	c.Header("HX-Redirect", redirectURL+"?q="+query)
-	c.String(http.StatusOK, h.generateDiscoveryResponse(query, intent, redirectURL))
+	// Call LLM service and get streaming data
+	llmData, redirectURL, err := h.callLLMStreamingServiceWithData(query, userID)
+	if err != nil {
+		logger.Log.Warn("LLM service unavailable, using fallback classification", zap.Error(err))
+		// Fallback to local intent classification
+		intent := h.classifyIntent(query)
+		redirectURL = h.getRedirectURL(intent)
+		// Set redirect without data
+		c.Header("HX-Redirect", redirectURL+"?q="+query)
+		c.String(http.StatusOK, h.generateDiscoveryResponseByURL(query, redirectURL))
+		return
+	}
+
+	// Store LLM data in session for the destination page
+	sessionKey := fmt.Sprintf("llm_data_%s", userID)
+	// In a real app, you'd use Redis or similar. For now, we'll pass data via different means
+	logger.Log.Info("LLM data received", 
+		zap.String("query", query),
+		zap.String("redirect_url", redirectURL),
+		zap.Bool("has_data", llmData != nil))
+
+	// Store the LLM response data in a way the destination page can access it
+	// For now, encode it in the URL or use session storage approach
+	encodedData := ""
+	if llmData != nil {
+		if _, err := json.Marshal(llmData); err == nil {
+			// For simplicity, we'll pass a session identifier and store data server-side
+			// In production, use proper session management
+			encodedData = fmt.Sprintf("&session_data=%s", sessionKey)
+			// TODO: Store llmData in session store
+		}
+	}
+
+	// Set HTMX redirect header with session data
+	c.Header("HX-Redirect", redirectURL+"?q="+query+encodedData)
+	c.String(http.StatusOK, h.generateDiscoveryResponseByURL(query, redirectURL))
 }
 
 // classifyIntent analyzes the query to determine user intent
@@ -328,6 +517,48 @@ func (h *ChatHandlers) generateDiscoveryResponse(query, intent, redirectURL stri
 						<div class="flex items-center gap-2 text-blue-600">
 							<div class="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
 							<span class="text-sm font-medium">Redirecting to personalized recommendations...</span>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	`, icon, intentLabel, query)
+}
+
+// generateDiscoveryResponseByURL creates response based on redirect URL
+func (h *ChatHandlers) generateDiscoveryResponseByURL(query, redirectURL string) string {
+	var intentLabel string
+	var icon string
+	
+	switch redirectURL {
+	case "/restaurants":
+		intentLabel = "Food & Dining"
+		icon = "🍽️"
+	case "/hotels":
+		intentLabel = "Hotels & Accommodation"
+		icon = "🏨"
+	case "/activities":
+		intentLabel = "Activities & Attractions"
+		icon = "🎯"
+	case "/itinerary":
+		intentLabel = "Travel Planning"
+		icon = "📋"
+	default:
+		intentLabel = "Discovery"
+		icon = "✨"
+	}
+	
+	return fmt.Sprintf(`
+		<div class="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 border mb-4">
+			<div class="flex items-center gap-4">
+				<div class="text-4xl">%s</div>
+				<div class="flex-1">
+					<h3 class="font-semibold text-card-foreground mb-1">Taking you to %s</h3>
+					<p class="text-sm text-muted-foreground">Based on AI analysis: "%s"</p>
+					<div class="mt-3">
+						<div class="flex items-center gap-2 text-blue-600">
+							<div class="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+							<span class="text-sm font-medium">AI processed your request - redirecting to personalized recommendations...</span>
 						</div>
 					</div>
 				</div>
@@ -472,4 +703,117 @@ func (h *ChatHandlers) generateStreamingResponse(query string) string {
 		}, 3000);
 		</script>
 	`, query, query)
+}
+
+// HandleItineraryStream handles SSE streaming for itinerary queries
+func (h *ChatHandlers) HandleItineraryStream(c *gin.Context) {
+	logger.Log.Info("Itinerary stream request received",
+		zap.String("ip", c.ClientIP()),
+		zap.String("user", middleware.GetUserIDFromContext(c)),
+	)
+
+	message := c.Query("message")
+	if message == "" {
+		logger.Log.Warn("Empty message for itinerary stream")
+		c.String(http.StatusBadRequest, "Message parameter is required")
+		return
+	}
+
+	// Set SSE headers
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("Access-Control-Allow-Origin", "*")
+	c.Header("Access-Control-Allow-Headers", "Cache-Control")
+
+	// Prepare request to LLM service
+	requestBody := map[string]interface{}{
+		"message": message,
+		"user_location": nil,
+	}
+
+	jsonData, err := json.Marshal(requestBody)
+	if err != nil {
+		logger.Log.Error("Failed to marshal request for itinerary stream", zap.Error(err))
+		fmt.Fprintf(c.Writer, "data: %s\n\n", `{"type":"error","content":"Failed to process request"}`)
+		c.Writer.Flush()
+		return
+	}
+
+	// Make request to LLM streaming endpoint
+	llmEndpoint := "http://localhost:8000/api/v1/llm/chat/stream/free"
+	if h.config != nil && h.config.LLM.StreamEndpoint != "" {
+		llmEndpoint = h.config.LLM.StreamEndpoint + "/chat/stream/free"
+	}
+
+	resp, err := http.Post(llmEndpoint, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		logger.Log.Error("Failed to call LLM service for itinerary stream", 
+			zap.Error(err),
+			zap.String("endpoint", llmEndpoint),
+			zap.String("message", message))
+		fmt.Fprintf(c.Writer, "data: %s\n\n", `{"type":"error","content":"Failed to connect to AI service"}`)
+		c.Writer.Flush()
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		logger.Log.Error("LLM service returned non-200 status for itinerary stream",
+			zap.Int("status", resp.StatusCode),
+			zap.String("message", message))
+		fmt.Fprintf(c.Writer, "data: %s\n\n", `{"type":"error","content":"AI service unavailable"}`)
+		c.Writer.Flush()
+		return
+	}
+
+	// Stream the response
+	scanner := bufio.NewScanner(resp.Body)
+	for scanner.Scan() {
+		line := scanner.Text()
+		
+		// Skip empty lines and non-data lines
+		if line == "" || !strings.HasPrefix(line, "data: ") {
+			continue
+		}
+
+		// Extract JSON data
+		jsonStr := strings.TrimPrefix(line, "data: ")
+		if jsonStr == "" || jsonStr == "[DONE]" {
+			break
+		}
+
+		// Parse the SSE data
+		var data map[string]interface{}
+		if err := json.Unmarshal([]byte(jsonStr), &data); err != nil {
+			continue
+		}
+
+		// Extract content from the streaming response
+		if choices, ok := data["choices"].([]interface{}); ok && len(choices) > 0 {
+			if choice, ok := choices[0].(map[string]interface{}); ok {
+				if delta, ok := choice["delta"].(map[string]interface{}); ok {
+					if content, ok := delta["content"].(string); ok {
+						// Forward the content to the client
+						eventData := map[string]string{
+							"type": "content",
+							"content": content,
+						}
+						eventJson, _ := json.Marshal(eventData)
+						fmt.Fprintf(c.Writer, "data: %s\n\n", eventJson)
+						c.Writer.Flush()
+					}
+				}
+			}
+		}
+	}
+
+	// Send completion event
+	fmt.Fprintf(c.Writer, "data: %s\n\n", `{"type":"done"}`)
+	c.Writer.Flush()
+
+	logger.Log.Info("Itinerary stream completed",
+		zap.String("message", message),
+		zap.String("user", middleware.GetUserIDFromContext(c)),
+	)
 }

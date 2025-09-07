@@ -357,10 +357,26 @@ func Setup(r *gin.Engine) {
 
 		// Itinerary 
 		protected.GET("/itinerary", func(c *gin.Context) {
-			logger.Log.Info("Itinerary page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
+			userID := middleware.GetUserIDFromContext(c)
+			query := c.Query("q")
+			
+			logger.Log.Info("Itinerary page accessed", 
+				zap.String("user", userID),
+				zap.String("query", query))
+
+			// Create itinerary page with query context
+			var content templ.Component
+			if query != "" {
+				// Page accessed with a query - this should trigger LLM streaming
+				content = itinerary.ItineraryPageWithQuery(query)
+			} else {
+				// Regular itinerary page
+				content = itinerary.ItineraryPage()
+			}
+			
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Travel Planner - Loci",
-				Content: itinerary.ItineraryPage(),
+				Content: content,
 				Nav: models.Navigation{
 					Items: []models.NavItem{
 						{Name: "Dashboard", URL: "/dashboard"},
@@ -567,6 +583,7 @@ func Setup(r *gin.Engine) {
 		htmxGroup.POST("/itinerary/add/:id", itineraryHandlers.AddPOI)
 		htmxGroup.DELETE("/itinerary/remove/:id", itineraryHandlers.RemovePOI)
 		htmxGroup.GET("/itinerary/summary", itineraryHandlers.GetItinerarySummary)
+		htmxGroup.GET("/itinerary/stream", chatHandlers.HandleItineraryStream)
 
 		// Settings endpoints (protected)
 		settingsGroup := htmxGroup.Group("/settings")

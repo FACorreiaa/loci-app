@@ -400,7 +400,7 @@ func ItineraryPOICard(poi models.NearbyPOI) templ.Component {
 	})
 }
 
-func ItineraryEmptyState() templ.Component {
+func ItineraryPageWithQuery(query string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -421,7 +421,94 @@ func ItineraryEmptyState() templ.Component {
 			templ_7745c5c3_Var22 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "<div class=\"text-center py-6 text-gray-500\"><i class=\"fas fa-map-marked-alt text-2xl mb-2\"></i><p class=\"text-sm\">Your itinerary will appear here</p><p class=\"text-xs\">Start chatting to build your trip!</p></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "<div class=\"h-full flex\"><!-- Left Panel - Chat/Text Content --><div class=\"w-1/2 flex flex-col bg-white\"><!-- Header --><div class=\"p-6 border-b border-gray-200 bg-gray-50\"><div class=\"flex items-center justify-between mb-4\"><h1 class=\"text-2xl font-bold text-gray-900\">Travel Planner</h1><div class=\"flex items-center space-x-2\"><button id=\"new-itinerary-btn\" class=\"bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm\"><i class=\"fas fa-plus mr-2\"></i> New Plan</button></div></div><!-- Location Input --><div class=\"relative mb-4\"><input type=\"text\" id=\"destination-input\" placeholder=\"Where do you want to go? (e.g., Paris, France)\" class=\"w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent\" hx-post=\"/itinerary/destination\" hx-trigger=\"input changed delay:500ms, keyup[keyCode==13]\" hx-target=\"#destination-suggestions\" hx-include=\"this\"> <i class=\"fas fa-map-marker-alt absolute left-3 top-3.5 text-gray-400\"></i></div><!-- Destination Suggestions --><div id=\"destination-suggestions\" class=\"mb-4\"></div><!-- Travel Preferences --><div class=\"grid grid-cols-3 gap-4\"><div><label class=\"block text-sm font-medium text-gray-700 mb-1\">Duration</label> <select id=\"trip-duration\" name=\"duration\" class=\"w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500\"><option value=\"1\">1 Day</option> <option value=\"3\">3 Days</option> <option value=\"5\" selected>5 Days</option> <option value=\"7\">1 Week</option> <option value=\"14\">2 Weeks</option></select></div><div><label class=\"block text-sm font-medium text-gray-700 mb-1\">Budget</label> <select id=\"trip-budget\" name=\"budget\" class=\"w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500\"><option value=\"budget\">Budget</option> <option value=\"moderate\" selected>Moderate</option> <option value=\"luxury\">Luxury</option></select></div><div><label class=\"block text-sm font-medium text-gray-700 mb-1\">Style</label> <select id=\"trip-style\" name=\"style\" class=\"w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500\"><option value=\"cultural\">Cultural</option> <option value=\"adventure\">Adventure</option> <option value=\"relaxation\" selected>Relaxation</option> <option value=\"foodie\">Foodie</option> <option value=\"nightlife\">Nightlife</option></select></div></div></div><!-- Chat Interface --><div class=\"flex-1 flex flex-col\"><!-- Chat Messages --><div id=\"chat-messages\" class=\"flex-1 overflow-y-auto p-6 space-y-4\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = ItineraryInitialMessage(query).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "</div><!-- Chat Input --><div class=\"border-t border-gray-200 p-4 bg-gray-50\"><form id=\"chat-form\" hx-post=\"/itinerary/chat\" hx-target=\"#chat-messages\" hx-swap=\"beforeend\" hx-include=\"#destination-input, #trip-duration, #trip-budget, #trip-style\"><div class=\"flex items-center space-x-3\"><div class=\"flex-1 relative\"><textarea name=\"message\" id=\"chat-input\" placeholder=\"Ask me anything about your trip... (e.g., 'Add a romantic restaurant for dinner')\" class=\"w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none\" rows=\"1\" style=\"min-height: 44px;\"></textarea> <button type=\"submit\" class=\"absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors\"><i class=\"fas fa-paper-plane\"></i></button></div></div></form><!-- Quick Actions --><div class=\"flex flex-wrap gap-2 mt-3\"><button class=\"quick-action-btn\" data-message=\"Create a 3-day itinerary\"><i class=\"fas fa-route mr-1\"></i> 3-Day Plan</button> <button class=\"quick-action-btn\" data-message=\"Find the best restaurants\"><i class=\"fas fa-utensils mr-1\"></i> Restaurants</button> <button class=\"quick-action-btn\" data-message=\"Show me popular attractions\"><i class=\"fas fa-camera mr-1\"></i> Attractions</button> <button class=\"quick-action-btn\" data-message=\"Recommend hotels\"><i class=\"fas fa-bed mr-1\"></i> Hotels</button></div></div></div></div><!-- Right Panel - Map --><div class=\"w-1/2 bg-gray-100\"><div class=\"h-full flex flex-col\"><!-- Map Header --><div class=\"p-4 bg-white border-b border-gray-200\"><div class=\"flex items-center justify-between\"><h2 class=\"font-semibold text-gray-900\">Map View</h2><div class=\"flex items-center space-x-2\"><button id=\"map-layer-toggle\" class=\"bg-gray-100 text-gray-700 px-3 py-1 rounded-md text-sm hover:bg-gray-200 transition-colors\"><i class=\"fas fa-layer-group mr-1\"></i> Layers</button> <button id=\"map-center-btn\" class=\"bg-gray-100 text-gray-700 px-3 py-1 rounded-md text-sm hover:bg-gray-200 transition-colors\"><i class=\"fas fa-crosshairs mr-1\"></i> Center</button></div></div></div><!-- Map Container --><div class=\"flex-1 relative\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = mapcomponents.MapboxContainer("itinerary-map", "100%").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "<!-- Map Controls --><div class=\"absolute top-4 right-4 bg-white rounded-lg shadow-lg p-2 space-y-2\"><button class=\"map-control-btn active\" data-layer=\"attractions\" title=\"Show Attractions\"><i class=\"fas fa-camera\"></i></button> <button class=\"map-control-btn\" data-layer=\"restaurants\" title=\"Show Restaurants\"><i class=\"fas fa-utensils\"></i></button> <button class=\"map-control-btn\" data-layer=\"hotels\" title=\"Show Hotels\"><i class=\"fas fa-bed\"></i></button> <button class=\"map-control-btn\" data-layer=\"transport\" title=\"Show Transport\"><i class=\"fas fa-subway\"></i></button></div></div><!-- Current Itinerary Summary --><div class=\"bg-white border-t border-gray-200 p-4\"><h3 class=\"font-semibold text-gray-900 mb-3\">Current Itinerary</h3><div id=\"itinerary-summary\" class=\"space-y-2\"><div id=\"streaming-content\" class=\"text-center py-6 text-gray-500\"><div class=\"spinner-border animate-spin inline-block w-4 h-4 border-2 rounded-full border-blue-600 border-t-transparent\" role=\"status\"><span class=\"sr-only\">Loading...</span></div><p class=\"text-sm mt-2\">Planning your itinerary...</p></div></div></div></div></div></div><style>\n\t\t.quick-action-btn {\n\t\t\tbackground: white;\n\t\t\tborder: 1px solid #d1d5db;\n\t\t\tpadding: 6px 12px;\n\t\t\tborder-radius: 6px;\n\t\t\tfont-size: 14px;\n\t\t\tcolor: #374151;\n\t\t\tcursor: pointer;\n\t\t\ttransition: all 0.2s;\n\t\t}\n\t\t\n\t\t.quick-action-btn:hover {\n\t\t\tbackground: #f3f4f6;\n\t\t\tborder-color: #9ca3af;\n\t\t}\n\t\t\n\t\t.map-control-btn {\n\t\t\twidth: 36px;\n\t\t\theight: 36px;\n\t\t\tbackground: white;\n\t\t\tborder: 1px solid #d1d5db;\n\t\t\tborder-radius: 6px;\n\t\t\tdisplay: flex;\n\t\t\talign-items: center;\n\t\t\tjustify-content: center;\n\t\t\tcursor: pointer;\n\t\t\ttransition: all 0.2s;\n\t\t}\n\t\t\n\t\t.map-control-btn:hover {\n\t\t\tbackground: #f3f4f6;\n\t\t}\n\t\t\n\t\t.map-control-btn.active {\n\t\t\tbackground: #3b82f6;\n\t\t\tcolor: white;\n\t\t\tborder-color: #3b82f6;\n\t\t}\n\t\t\n\t\t#chat-messages {\n\t\t\tscrollbar-width: thin;\n\t\t\tscrollbar-color: #cbd5e1 #f1f5f9;\n\t\t}\n\t\t\n\t\t#chat-messages::-webkit-scrollbar {\n\t\t\twidth: 6px;\n\t\t}\n\t\t\n\t\t#chat-messages::-webkit-scrollbar-track {\n\t\t\tbackground: #f1f5f9;\n\t\t}\n\t\t\n\t\t#chat-messages::-webkit-scrollbar-thumb {\n\t\t\tbackground: #cbd5e1;\n\t\t\tborder-radius: 3px;\n\t\t}\n\t</style><script>\n\t\tdocument.addEventListener('DOMContentLoaded', function() {\n\t\t\t// Auto-start streaming for the query\n\t\t\tconst query = \"{ query }\";\n\t\t\tif (query && query.trim() !== '') {\n\t\t\t\tstartItineraryStream(query);\n\t\t\t}\n\t\t\t\n\t\t\t// Quick action buttons\n\t\t\tconst quickActionBtns = document.querySelectorAll('.quick-action-btn');\n\t\t\tconst chatInput = document.getElementById('chat-input');\n\t\t\tconst chatForm = document.getElementById('chat-form');\n\t\t\t\n\t\t\tquickActionBtns.forEach(btn => {\n\t\t\t\tbtn.addEventListener('click', function() {\n\t\t\t\t\tconst message = this.dataset.message;\n\t\t\t\t\tchatInput.value = message;\n\t\t\t\t\tchatForm.dispatchEvent(new Event('submit'));\n\t\t\t\t});\n\t\t\t});\n\t\t\t\n\t\t\t// Auto-resize chat input\n\t\t\tchatInput.addEventListener('input', function() {\n\t\t\t\tthis.style.height = 'auto';\n\t\t\t\tthis.style.height = Math.min(this.scrollHeight, 120) + 'px';\n\t\t\t});\n\t\t\t\n\t\t\t// Map layer controls\n\t\t\tconst mapControlBtns = document.querySelectorAll('.map-control-btn');\n\t\t\tmapControlBtns.forEach(btn => {\n\t\t\t\tbtn.addEventListener('click', function() {\n\t\t\t\t\tmapControlBtns.forEach(b => b.classList.remove('active'));\n\t\t\t\t\tthis.classList.add('active');\n\t\t\t\t\t\n\t\t\t\t\tconst layer = this.dataset.layer;\n\t\t\t\t\tupdateMapLayer(layer);\n\t\t\t\t});\n\t\t\t});\n\t\t\t\n\t\t\t// Initialize map when page loads\n\t\t\tinitializeItineraryMap();\n\t\t});\n\t\t\n\t\tfunction startItineraryStream(query) {\n\t\t\tconst eventSource = new EventSource(`/itinerary/stream?message=${encodeURIComponent(query)}`);\n\t\t\tconst chatMessages = document.getElementById('chat-messages');\n\t\t\tconst streamingContent = document.getElementById('streaming-content');\n\t\t\t\n\t\t\tlet currentMessage = '';\n\t\t\t\n\t\t\teventSource.onmessage = function(event) {\n\t\t\t\ttry {\n\t\t\t\t\tconst data = JSON.parse(event.data);\n\t\t\t\t\t\n\t\t\t\t\tif (data.type === 'content') {\n\t\t\t\t\t\tcurrentMessage += data.content;\n\t\t\t\t\t\t\n\t\t\t\t\t\t// Update the streaming content\n\t\t\t\t\t\tif (streamingContent) {\n\t\t\t\t\t\t\tstreamingContent.innerHTML = `<div class=\"text-left\"><p class=\"text-gray-700\">${currentMessage}</p></div>`;\n\t\t\t\t\t\t}\n\t\t\t\t\t} else if (data.type === 'done') {\n\t\t\t\t\t\teventSource.close();\n\t\t\t\t\t\t// Replace streaming indicator with final content\n\t\t\t\t\t\tif (streamingContent) {\n\t\t\t\t\t\t\tstreamingContent.innerHTML = `<div class=\"text-left\"><p class=\"text-gray-700\">${currentMessage}</p></div>`;\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t} catch (e) {\n\t\t\t\t\tconsole.error('Error parsing SSE data:', e);\n\t\t\t\t}\n\t\t\t};\n\t\t\t\n\t\t\teventSource.onerror = function(event) {\n\t\t\t\tconsole.error('SSE error:', event);\n\t\t\t\teventSource.close();\n\t\t\t\tif (streamingContent) {\n\t\t\t\t\tstreamingContent.innerHTML = '<div class=\"text-center py-6 text-red-500\"><p class=\"text-sm\">Error loading itinerary. Please try again.</p></div>';\n\t\t\t\t}\n\t\t\t};\n\t\t}\n\t\t\n\t\tfunction updateMapLayer(layer) {\n\t\t\tconsole.log('Updating map layer:', layer);\n\t\t\t// Map layer update logic will be implemented\n\t\t}\n\t\t\n\t\tfunction initializeItineraryMap() {\n\t\t\t// Get access token from server endpoint\n\t\t\tconst accessToken = window.MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoieW91cm11c2VybmFtZSIsImEiOiJjbHl6eHl6eHl6eHl6In0.your_access_token_here';\n\t\t\t\n\t\t\t// Default to New York if no location set\n\t\t\tconst defaultLat = 40.7128;\n\t\t\tconst defaultLng = -74.0060;\n\t\t\t\n\t\t\t// Initialize map\n\t\t\tconst map = mapcomponents.MapboxInit('itinerary-map', accessToken, [defaultLng, defaultLat], 12);\n\t\t\t\n\t\t\t// Load initial itinerary markers if any\n\t\t\tloadItineraryMarkers();\n\t\t}\n\t\t\n\t\tfunction loadItineraryMarkers() {\n\t\t\t// Fetch current itinerary data and display markers\n\t\t\tfetch('/itinerary/summary')\n\t\t\t\t.then(response => response.json())\n\t\t\t\t.then(data => {\n\t\t\t\t\tif (data.markers) {\n\t\t\t\t\t\tmapcomponents.AddMapMarkers('itinerary-map', data.markers);\n\t\t\t\t\t\t\n\t\t\t\t\t\t// Add route if multiple markers\n\t\t\t\t\t\tif (data.markers.length > 1) {\n\t\t\t\t\t\t\tconst coordinates = data.markers.map(m => [m.lng, m.lat]);\n\t\t\t\t\t\t\tmapcomponents.AddRouteToMap('itinerary-map', coordinates);\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t})\n\t\t\t\t.catch(error => {\n\t\t\t\t\tconsole.error('Error loading itinerary markers:', error);\n\t\t\t\t});\n\t\t}\n\t\t\n\t\tfunction addToItinerary(poi) {\n\t\t\tconsole.log('Adding POI to itinerary:', poi);\n\t\t\t\n\t\t\t// Add to backend\n\t\t\thtmx.ajax('POST', `/itinerary/add/${poi}`, {\n\t\t\t\ttarget: 'body',\n\t\t\t\tswap: 'none'\n\t\t\t});\n\t\t\t\n\t\t\t// Refresh map markers\n\t\t\tsetTimeout(() => {\n\t\t\t\tloadItineraryMarkers();\n\t\t\t}, 500);\n\t\t\t\n\t\t\t// Show success notification\n\t\t\tshowNotification('Added to itinerary!', 'success');\n\t\t}\n\t\t\n\t\tfunction updateMapForDestination(destination) {\n\t\t\t// Geocode destination and update map center\n\t\t\t// This would typically use a geocoding service\n\t\t\tconsole.log('Updating map for destination:', destination);\n\t\t\t\n\t\t\t// Mock coordinates for common destinations\n\t\t\tconst destinations = {\n\t\t\t\t'paris, france': [2.3522, 48.8566],\n\t\t\t\t'new york, usa': [-74.0060, 40.7128],\n\t\t\t\t'london, england': [-0.1276, 51.5074],\n\t\t\t\t'tokyo, japan': [139.6917, 35.6895]\n\t\t\t};\n\t\t\t\n\t\t\tconst coords = destinations[destination.toLowerCase()];\n\t\t\tif (coords) {\n\t\t\t\tmapcomponents.UpdateMapCenter('itinerary-map', coords[1], coords[0], 12);\n\t\t\t\t\n\t\t\t\t// Load nearby attractions for the destination\n\t\t\t\tfetch(`/nearby/map?lat=${coords[1]}&lng=${coords[0]}&category=attractions`)\n\t\t\t\t\t.then(response => response.json())\n\t\t\t\t\t.then(data => {\n\t\t\t\t\t\tif (data.markers) {\n\t\t\t\t\t\t\tmapcomponents.AddMapMarkers('itinerary-map', data.markers);\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\t\t\t}\n\t\t}\n\t\t\n\t\t// Auto-scroll chat messages to bottom\n\t\tfunction scrollChatToBottom() {\n\t\t\tconst chatMessages = document.getElementById('chat-messages');\n\t\t\tchatMessages.scrollTop = chatMessages.scrollHeight;\n\t\t}\n\t\t\n\t\t// Handle HTMX events\n\t\tdocument.body.addEventListener('htmx:afterSwap', function(evt) {\n\t\t\tif (evt.detail.target.id === 'chat-messages') {\n\t\t\t\tscrollChatToBottom();\n\t\t\t}\n\t\t});\n\t</script>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func ItineraryInitialMessage(query string) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var23 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var23 == nil {
+			templ_7745c5c3_Var23 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "<div class=\"flex items-start space-x-3\"><div class=\"w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0\"><i class=\"fas fa-user text-white text-sm\"></i></div><div class=\"bg-blue-600 text-white rounded-lg p-4 max-w-md\"><p>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var24 string
+		templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(query)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/itinerary/itinerary.templ`, Line: 948, Col: 13}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "</p></div></div><div class=\"flex items-start space-x-3\"><div class=\"w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0\"><i class=\"fas fa-robot text-white text-sm\"></i></div><div class=\"bg-gray-100 rounded-lg p-4 max-w-md\"><div class=\"spinner-border animate-spin inline-block w-4 h-4 border-2 rounded-full border-blue-600 border-t-transparent mr-2\" role=\"status\"><span class=\"sr-only\">Loading...</span></div><span class=\"text-gray-800\">Let me create an amazing itinerary for you...</span></div></div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func ItineraryEmptyState() templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var25 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var25 == nil {
+			templ_7745c5c3_Var25 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "<div class=\"text-center py-6 text-gray-500\"><i class=\"fas fa-map-marked-alt text-2xl mb-2\"></i><p class=\"text-sm\">Your itinerary will appear here</p><p class=\"text-xs\">Start chatting to build your trip!</p></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -445,48 +532,48 @@ func ItinerarySummaryItem(day int, items []models.NearbyPOI) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var23 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var23 == nil {
-			templ_7745c5c3_Var23 = templ.NopComponent
+		templ_7745c5c3_Var26 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var26 == nil {
+			templ_7745c5c3_Var26 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "<div class=\"mb-3\"><h4 class=\"font-medium text-gray-900 mb-2\">Day ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<div class=\"mb-3\"><h4 class=\"font-medium text-gray-900 mb-2\">Day ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var24 string
-		templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", day))
+		var templ_7745c5c3_Var27 string
+		templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", day))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/itinerary/itinerary.templ`, Line: 502, Col: 73}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/itinerary/itinerary.templ`, Line: 974, Col: 73}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "</h4><div class=\"space-y-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "</h4><div class=\"space-y-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		for _, item := range items {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "<div class=\"flex items-center justify-between text-sm\"><div class=\"flex items-center space-x-2\"><div class=\"w-2 h-2 bg-blue-600 rounded-full\"></div><span class=\"text-gray-700\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "<div class=\"flex items-center justify-between text-sm\"><div class=\"flex items-center space-x-2\"><div class=\"w-2 h-2 bg-blue-600 rounded-full\"></div><span class=\"text-gray-700\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var25 string
-			templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(item.Name)
+			var templ_7745c5c3_Var28 string
+			templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(item.Name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/itinerary/itinerary.templ`, Line: 508, Col: 45}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/itinerary/itinerary.templ`, Line: 980, Col: 45}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "</span></div><button class=\"text-red-500 hover:text-red-700\" onclick=\"removeFromItinerary('{item.ID}')\"><i class=\"fas fa-times text-xs\"></i></button></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "</span></div><button class=\"text-red-500 hover:text-red-700\" onclick=\"removeFromItinerary('{item.ID}')\"><i class=\"fas fa-times text-xs\"></i></button></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "</div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -510,36 +597,36 @@ func ItineraryDestinationSuggestions(suggestions []string) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var26 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var26 == nil {
-			templ_7745c5c3_Var26 = templ.NopComponent
+		templ_7745c5c3_Var29 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var29 == nil {
+			templ_7745c5c3_Var29 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		if len(suggestions) > 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<div class=\"bg-white border border-gray-200 rounded-lg shadow-sm\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "<div class=\"bg-white border border-gray-200 rounded-lg shadow-sm\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			for _, suggestion := range suggestions {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "<div class=\"p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0\" onclick=\"selectDestination('{suggestion}')\"><div class=\"flex items-center space-x-2\"><i class=\"fas fa-map-marker-alt text-gray-400\"></i> <span class=\"text-gray-700\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "<div class=\"p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0\" onclick=\"selectDestination('{suggestion}')\"><div class=\"flex items-center space-x-2\"><i class=\"fas fa-map-marker-alt text-gray-400\"></i> <span class=\"text-gray-700\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var27 string
-				templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(suggestion)
+				var templ_7745c5c3_Var30 string
+				templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(suggestion)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/itinerary/itinerary.templ`, Line: 529, Col: 46}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/itinerary/itinerary.templ`, Line: 1001, Col: 46}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "</span></div></div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "</span></div></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "</div><script>\n\t\t\tfunction selectDestination(destination) {\n\t\t\t\tdocument.getElementById('destination-input').value = destination;\n\t\t\t\tdocument.getElementById('destination-suggestions').innerHTML = '';\n\t\t\t}\n\t\t</script>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "</div><script>\n\t\t\tfunction selectDestination(destination) {\n\t\t\t\tdocument.getElementById('destination-input').value = destination;\n\t\t\t\tdocument.getElementById('destination-suggestions').innerHTML = '';\n\t\t\t}\n\t\t</script>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

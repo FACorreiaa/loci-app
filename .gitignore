@@ -94,3 +94,5 @@ config.yaml
 go-templui
 main
 fly.toml
+tmp
+bin
