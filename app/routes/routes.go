@@ -71,7 +71,11 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 	r.StaticFile("/manifest.json", "./assets/static/manifest.json")
 
 	// Initialize handlers
-	cfg, _ := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		// Use default config if loading fails
+		cfg = &config.Config{}
+	}
 	
 	// Create auth handler with proper database connection
 	authRepo := authPkg.NewPostgresAuthRepo(dbPool, slog.Default())
