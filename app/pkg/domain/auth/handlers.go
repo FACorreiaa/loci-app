@@ -247,7 +247,9 @@ func (h *AuthHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Requ
 
 	w.Header().Set("HX-Retarget", "#change-password-form")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`<div class="text-green-500 text-sm mb-4">Password changed successfully</div>`))
+	if _, err := w.Write([]byte(`<div class="text-green-500 text-sm mb-4">Password changed successfully</div>`)); err != nil {
+		logger.Log.Error("Failed to write response", zap.Error(err))
+	}
 }
 
 func (h *AuthHandlers) LogoutHandler(w http.ResponseWriter, r *http.Request) {
@@ -291,7 +293,9 @@ func (h *AuthHandlers) ForgotPasswordHandler(w http.ResponseWriter, r *http.Requ
 	if email == "" {
 		w.Header().Set("HX-Retarget", "#forgot-password-form")
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Email is required</div>`))
+		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Email is required</div>`)); err != nil {
+			logger.Log.Error("Failed to write response", zap.Error(err))
+		}
 		return
 	}
 
@@ -299,7 +303,9 @@ func (h *AuthHandlers) ForgotPasswordHandler(w http.ResponseWriter, r *http.Requ
 	logger.Log.Info("Password reset requested", zap.String("email", email))
 	w.Header().Set("HX-Retarget", "#forgot-password-form")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`<div class="text-green-500 text-sm mb-4">If this email is registered, you will receive password reset instructions</div>`))
+	if _, err := w.Write([]byte(`<div class="text-green-500 text-sm mb-4">If this email is registered, you will receive password reset instructions</div>`)); err != nil {
+		logger.Log.Error("Failed to write response", zap.Error(err))
+	}
 }
 
 func (h *AuthHandlers) CheckUsernameHandler(w http.ResponseWriter, r *http.Request) {
@@ -318,18 +324,24 @@ func (h *AuthHandlers) CheckUsernameHandler(w http.ResponseWriter, r *http.Reque
 	username := r.FormValue("username")
 	if username == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`<span class="text-red-500 text-sm">Username is required</span>`))
+		if _, err := w.Write([]byte(`<span class="text-red-500 text-sm">Username is required</span>`)); err != nil {
+			logger.Log.Error("Failed to write response", zap.Error(err))
+		}
 		return
 	}
 
 	// Simple validation for demo - in production, check against database
 	if len(username) < 3 {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`<span class="text-red-500 text-sm">Username must be at least 3 characters</span>`))
+		if _, err := w.Write([]byte(`<span class="text-red-500 text-sm">Username must be at least 3 characters</span>`)); err != nil {
+			logger.Log.Error("Failed to write response", zap.Error(err))
+		}
 		return
 	}
 
 	// For demo, assume username is available
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`<span class="text-green-500 text-sm">Username is available</span>`))
+	if _, err := w.Write([]byte(`<span class="text-green-500 text-sm">Username is available</span>`)); err != nil {
+		logger.Log.Error("Failed to write response", zap.Error(err))
+	}
 }

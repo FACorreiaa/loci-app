@@ -64,10 +64,10 @@ jobs:
     - name: Run tests
       env:
         POSTGRES_HOST: localhost
-        POSTGRES_PORT: 5432
+        POSTGRES_PORT: 5454
         POSTGRES_USER: postgres
         POSTGRES_PASSWORD: postgres
-        POSTGRES_DB: loci_test
+        POSTGRES_DB: loci-dev
         JWT_SECRET_KEY: test-jwt-secret-key-for-ci
         JWT_ISSUER: loci-test
         JWT_AUDIENCE: loci-test-app

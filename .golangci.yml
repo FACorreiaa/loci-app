@@ -1,40 +1,40 @@
-version: "2"
-
 run:
   concurrency: 4
 
 linters:
   enable:
-    #- misspell
     - revive
     - godot
     - godox
-    #- unparam
-  settings:
-    errcheck:
-      check-blank: true
-    misspell:
-      locale: US
-    revive:
-      rules:
-        - name: blank-imports
-        - name: unused-parameter
-    godox:
-      keywords:
-        - TODO
-        - FIXME
-        - BUG
-    staticcheck:
-      checks:
-        - all
-        - -ST1000
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
+    - errcheck
+    - staticcheck
+    - unused
+    - ineffassign
+    - govet
+
+linters-settings:
+  errcheck:
+    check-blank: true
+  misspell:
+    locale: US
+  revive:
+    rules:
+      - name: blank-imports
+      - name: unused-parameter
+  godox:
+    keywords:
+      - TODO
+      - FIXME
+      - BUG
+  staticcheck:
+    checks:
+      - "all"
+      - "-ST1000"
 
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
+  exclude-dirs:
+    - third_party
+    - builtin
+    - examples

@@ -133,9 +133,18 @@ func (h *NearbyHandlers) FilterPOIs(c *gin.Context) {
 
 func (h *NearbyHandlers) GetMapData(c *gin.Context) {
 	category := c.DefaultQuery("category", "general")
-	latitude, _ := strconv.ParseFloat(c.Query("lat"), 64)
-	longitude, _ := strconv.ParseFloat(c.Query("lng"), 64)
-	distance, _ := strconv.ParseFloat(c.DefaultQuery("distance", "5"), 64)
+	latitude, err := strconv.ParseFloat(c.Query("lat"), 64)
+	if err != nil {
+		latitude = 0.0
+	}
+	longitude, err := strconv.ParseFloat(c.Query("lng"), 64)
+	if err != nil {
+		longitude = 0.0
+	}
+	distance, err := strconv.ParseFloat(c.DefaultQuery("distance", "5"), 64)
+	if err != nil {
+		distance = 5.0
+	}
 
 	if latitude == 0 || longitude == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Location required"})
