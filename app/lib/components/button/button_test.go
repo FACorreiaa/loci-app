@@ -13,10 +13,13 @@ func TestButton(t *testing.T) {
 	t.Run("it renders a button element", func(t *testing.T) {
 		// Render the component
 		var sb strings.Builder
-		Button(Props{
+		err := Button(Props{
 			ID:   "my-button",
 			Type: TypeButton,
 		}).Render(context.Background(), &sb)
+		if err != nil {
+			t.Fatalf("Failed to render button: %v", err)
+		}
 
 		// Parse the rendered HTML
 		doc, err := goquery.NewDocumentFromReader(strings.NewReader(sb.String()))
@@ -43,10 +46,13 @@ func TestButton(t *testing.T) {
 	t.Run("it renders an anchor element when href is provided", func(t *testing.T) {
 		// Render the component
 		var sb strings.Builder
-		Button(Props{
+		err := Button(Props{
 			ID:   "my-link-button",
 			Href: "https://example.com",
 		}).Render(context.Background(), &sb)
+		if err != nil {
+			t.Fatalf("Failed to render button: %v", err)
+		}
 
 		// Parse the rendered HTML
 		doc, err := goquery.NewDocumentFromReader(strings.NewReader(sb.String()))
@@ -73,10 +79,13 @@ func TestButton(t *testing.T) {
 	t.Run("it applies variant and size classes", func(t *testing.T) {
 		// Render the component
 		var sb strings.Builder
-		Button(Props{
+		err := Button(Props{
 			Variant: VariantDestructive,
 			Size:    SizeLg,
 		}).Render(context.Background(), &sb)
+		if err != nil {
+			t.Fatalf("Failed to render button: %v", err)
+		}
 
 		// Parse the rendered HTML
 		doc, err := goquery.NewDocumentFromReader(strings.NewReader(sb.String()))

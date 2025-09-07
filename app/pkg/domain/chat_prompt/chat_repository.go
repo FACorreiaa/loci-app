@@ -414,7 +414,11 @@ func (r *RepositoryImpl) AddChatToBookmark(ctx context.Context, itinerary *model
 		span.SetStatus(codes.Error, "Failed to start transaction")
 		return uuid.Nil, fmt.Errorf("failed to start transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
+			// Log but don't return error since defer should not fail parent function
+		}
+	}()
 
 	query := `
 		INSERT INTO user_saved_itineraries (
@@ -628,7 +632,11 @@ func (r *RepositoryImpl) RemoveChatFromBookmark(ctx context.Context, userID, iti
 		span.SetStatus(codes.Error, "Failed to start transaction")
 		return fmt.Errorf("failed to start transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
+			// Log but don't return error since defer should not fail parent function
+		}
+	}()
 
 	query := `
 		DELETE FROM user_saved_itineraries
@@ -826,7 +834,11 @@ func (r *RepositoryImpl) CreateSession(ctx context.Context, session models.ChatS
 		r.logger.ErrorContext(ctx, "Failed to begin transaction for session creation", slog.Any("error", err))
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
+			// Log but don't return error since defer should not fail parent function
+		}
+	}()
 
 	query := `
         INSERT INTO chat_sessions (
@@ -1484,7 +1496,11 @@ func (r *RepositoryImpl) SaveSinglePOI(ctx context.Context, poi models.POIDetail
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
+			// Log but don't return error since defer should not fail parent function
+		}
+	}()
 
 	// If poi.ID is already set (e.g., from LLM or previous step), use it. Otherwise, generate new.
 	recordID := poi.ID

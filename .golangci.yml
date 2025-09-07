@@ -1,6 +1,8 @@
 version: "2"
+
 run:
   concurrency: 4
+
 linters:
   enable:
     #- misspell
@@ -23,30 +25,16 @@ linters:
         - FIXME
         - BUG
     staticcheck:
-        checks:
-          - all
-          - -ST1000
-  exclusions:
-    generated: lax
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
-formatters:
-  settings:
-    gofmt:
-      simplify: true
-    goimports:
-      local-prefixes:
-        - github.com/FACorreiaa/go-poi-au-suggestions
+      checks:
+        - all
+        - -ST1000
   exclusions:
     generated: lax
     paths:
       - third_party$
       - builtin$
       - examples$
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

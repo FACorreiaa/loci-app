@@ -145,7 +145,10 @@ func TestSignInTemplate(t *testing.T) {
 			// Render the component
 			r, w := io.Pipe()
 			go func() {
-				_ = SignIn().Render(context.Background(), w)
+				if err := SignIn().Render(context.Background(), w); err != nil {
+				t.Errorf("Failed to render SignIn: %v", err)
+				return
+			}
 				_ = w.Close()
 			}()
 
@@ -242,7 +245,10 @@ func TestSignUpTemplate(t *testing.T) {
 			// Render the component
 			r, w := io.Pipe()
 			go func() {
-				_ = SignUp().Render(context.Background(), w)
+				if err := SignUp().Render(context.Background(), w); err != nil {
+				t.Errorf("Failed to render SignUp: %v", err)
+				return
+			}
 				_ = w.Close()
 			}()
 
@@ -320,7 +326,10 @@ func TestForgotPasswordTemplate(t *testing.T) {
 			// Render the component
 			r, w := io.Pipe()
 			go func() {
-				_ = ForgotPassword().Render(context.Background(), w)
+				if err := ForgotPassword().Render(context.Background(), w); err != nil {
+				t.Errorf("Failed to render ForgotPassword: %v", err)
+				return
+			}
 				_ = w.Close()
 			}()
 

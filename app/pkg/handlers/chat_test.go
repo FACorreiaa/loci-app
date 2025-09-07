@@ -46,7 +46,10 @@ func TestChatHandlers_SendMessage(t *testing.T) {
 	t.Run("it returns a successful response with a valid message", func(t *testing.T) {
 		// Create a new HTTP request
 		body := strings.NewReader("message=Hello")
-		req, _ := http.NewRequest(http.MethodPost, "/chat/message", body)
+		req, err := http.NewRequest(http.MethodPost, "/chat/message", body)
+		if err != nil {
+			t.Fatalf("Failed to create HTTP request: %v", err)
+		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 		// Create a response recorder
@@ -67,7 +70,10 @@ func TestChatHandlers_SendMessage(t *testing.T) {
 	t.Run("it returns a bad request with an empty message", func(t *testing.T) {
 		// Create a new HTTP request
 		body := strings.NewReader("message=")
-		req, _ := http.NewRequest(http.MethodPost, "/chat/message", body)
+		req, err := http.NewRequest(http.MethodPost, "/chat/message", body)
+		if err != nil {
+			t.Fatalf("Failed to create HTTP request: %v", err)
+		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 		// Create a response recorder

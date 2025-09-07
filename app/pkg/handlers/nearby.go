@@ -27,8 +27,14 @@ func (h *NearbyHandlers) SearchPOIs(c *gin.Context) {
 		return
 	}
 
-	latitude, _ := strconv.ParseFloat(c.PostForm("latitude"), 64)
-	longitude, _ := strconv.ParseFloat(c.PostForm("longitude"), 64)
+	latitude, err := strconv.ParseFloat(c.PostForm("latitude"), 64)
+	if err != nil {
+		latitude = 0.0 // Default to 0 if parsing fails
+	}
+	longitude, err := strconv.ParseFloat(c.PostForm("longitude"), 64)
+	if err != nil {
+		longitude = 0.0 // Default to 0 if parsing fails
+	}
 
 	logger.Log.Info("POI search request",
 		zap.String("query", query),
@@ -45,10 +51,22 @@ func (h *NearbyHandlers) SearchPOIs(c *gin.Context) {
 func (h *NearbyHandlers) GetPOIsByCategory(c *gin.Context) {
 	category := c.Param("category")
 	
-	latitude, _ := strconv.ParseFloat(c.PostForm("latitude"), 64)
-	longitude, _ := strconv.ParseFloat(c.PostForm("longitude"), 64)
-	distance, _ := strconv.ParseFloat(c.DefaultPostForm("distance", "5"), 64)
-	minRating, _ := strconv.ParseFloat(c.DefaultPostForm("rating", "0"), 64)
+	latitude, err := strconv.ParseFloat(c.PostForm("latitude"), 64)
+	if err != nil {
+		latitude = 0.0
+	}
+	longitude, err := strconv.ParseFloat(c.PostForm("longitude"), 64)
+	if err != nil {
+		longitude = 0.0
+	}
+	distance, err := strconv.ParseFloat(c.DefaultPostForm("distance", "5"), 64)
+	if err != nil {
+		distance = 5.0
+	}
+	minRating, err := strconv.ParseFloat(c.DefaultPostForm("rating", "0"), 64)
+	if err != nil {
+		minRating = 0.0
+	}
 	priceLevel := c.PostForm("price")
 
 	logger.Log.Info("POI category request",
@@ -76,10 +94,22 @@ func (h *NearbyHandlers) GetPOIsByCategory(c *gin.Context) {
 
 func (h *NearbyHandlers) FilterPOIs(c *gin.Context) {
 	category := c.DefaultPostForm("category", "general")
-	latitude, _ := strconv.ParseFloat(c.PostForm("latitude"), 64)
-	longitude, _ := strconv.ParseFloat(c.PostForm("longitude"), 64)
-	distance, _ := strconv.ParseFloat(c.DefaultPostForm("distance", "5"), 64)
-	minRating, _ := strconv.ParseFloat(c.DefaultPostForm("rating", "0"), 64)
+	latitude, err := strconv.ParseFloat(c.PostForm("latitude"), 64)
+	if err != nil {
+		latitude = 0.0
+	}
+	longitude, err := strconv.ParseFloat(c.PostForm("longitude"), 64)
+	if err != nil {
+		longitude = 0.0
+	}
+	distance, err := strconv.ParseFloat(c.DefaultPostForm("distance", "5"), 64)
+	if err != nil {
+		distance = 5.0
+	}
+	minRating, err := strconv.ParseFloat(c.DefaultPostForm("rating", "0"), 64)
+	if err != nil {
+		minRating = 0.0
+	}
 	priceLevel := c.PostForm("price")
 
 	logger.Log.Info("POI filter request",
@@ -235,8 +265,8 @@ func (h *NearbyHandlers) applyFilters(pois []models.NearbyPOI, maxDistance, minR
 		
 		// Price filter
 		if priceLevel != "" {
-			targetPrice, _ := strconv.Atoi(priceLevel)
-			if targetPrice > 0 && poi.PriceLevel != targetPrice {
+			targetPrice, err := strconv.Atoi(priceLevel)
+			if err == nil && targetPrice > 0 && poi.PriceLevel != targetPrice {
 				continue
 			}
 		}

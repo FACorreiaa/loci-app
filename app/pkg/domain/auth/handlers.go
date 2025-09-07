@@ -67,7 +67,9 @@ func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		logger.Log.Warn("Missing email or password")
 		w.Header().Set("HX-Retarget", "#login-form")
 		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Email and password are required</div>`))
+		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Email and password are required</div>`)); err != nil {
+			logger.Log.Error("Failed to write response", zap.Error(err))
+		}
 		return
 	}
 
@@ -105,7 +107,9 @@ func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	)
 	w.Header().Set("HX-Retarget", "#login-form")
 	w.WriteHeader(http.StatusUnauthorized)
-	_, _ = w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Invalid email or password</div>`))
+	if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Invalid email or password</div>`)); err != nil {
+		logger.Log.Error("Failed to write response", zap.Error(err))
+	}
 }
 
 func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -135,14 +139,18 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if firstName == "" || lastName == "" || email == "" || password == "" {
 		w.Header().Set("HX-Retarget", "#register-form")
 		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte(`<div class="text-red-500 text-sm mb-4">All required fields must be filled</div>`))
+		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">All required fields must be filled</div>`)); err != nil {
+			logger.Log.Error("Failed to write response", zap.Error(err))
+		}
 		return
 	}
 
 	if password != confirmPassword {
 		w.Header().Set("HX-Retarget", "#register-form")
 		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Passwords do not match</div>`))
+		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Passwords do not match</div>`)); err != nil {
+			logger.Log.Error("Failed to write response", zap.Error(err))
+		}
 		return
 	}
 
@@ -153,7 +161,9 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		logger.Log.Error("Failed to register user", zap.Error(err))
 		w.Header().Set("HX-Retarget", "#register-form")
 		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Registration failed. Email may already be registered.</div>`))
+		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Registration failed. Email may already be registered.</div>`)); err != nil {
+			logger.Log.Error("Failed to write response", zap.Error(err))
+		}
 		return
 	}
 
@@ -210,14 +220,18 @@ func (h *AuthHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Requ
 	if currentPassword == "" || newPassword == "" || confirmNewPassword == "" {
 		w.Header().Set("HX-Retarget", "#change-password-form")
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`<div class="text-red-500 text-sm mb-4">All fields are required</div>`))
+		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">All fields are required</div>`)); err != nil {
+			logger.Log.Error("Failed to write response", zap.Error(err))
+		}
 		return
 	}
 
 	if newPassword != confirmNewPassword {
 		w.Header().Set("HX-Retarget", "#change-password-form")
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`<div class="text-red-500 text-sm mb-4">New passwords do not match</div>`))
+		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">New passwords do not match</div>`)); err != nil {
+			logger.Log.Error("Failed to write response", zap.Error(err))
+		}
 		return
 	}
 
