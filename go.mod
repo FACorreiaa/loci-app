@@ -1,6 +1,6 @@
 module github.com/FACorreiaa/go-templui
 
-go 1.25.0
+go 1.23
 
 require (
 	github.com/FACorreiaa/go-genai-sdk v0.0.0-20250706223405-305ce589dd50
