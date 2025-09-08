@@ -2,37 +2,37 @@ package twmerge
 
 func getBreaks(groupId string) map[string]ClassPart {
 	return map[string]ClassPart{
-		"auto": {
+		"auto": ClassPart{
 			NextPart:     map[string]ClassPart{},
 			Validators:   []ClassGroupValidator{},
 			ClassGroupId: groupId,
 		},
-		"avoid": {
+		"avoid": ClassPart{
 			NextPart:     make(map[string]ClassPart),
 			Validators:   []ClassGroupValidator{},
 			ClassGroupId: groupId,
 		},
-		"all": {
+		"all": ClassPart{
 			NextPart:     map[string]ClassPart{},
 			Validators:   []ClassGroupValidator{},
 			ClassGroupId: groupId,
 		},
-		"page": {
+		"page": ClassPart{
 			NextPart:     map[string]ClassPart{},
 			Validators:   []ClassGroupValidator{},
 			ClassGroupId: groupId,
 		},
-		"left": {
+		"left": ClassPart{
 			NextPart:     map[string]ClassPart{},
 			Validators:   []ClassGroupValidator{},
 			ClassGroupId: groupId,
 		},
-		"right": {
+		"right": ClassPart{
 			NextPart:     map[string]ClassPart{},
 			Validators:   []ClassGroupValidator{},
 			ClassGroupId: groupId,
 		},
-		"column": {
+		"column": ClassPart{
 			NextPart:     map[string]ClassPart{},
 			Validators:   []ClassGroupValidator{},
 			ClassGroupId: groupId,
@@ -104,20 +104,20 @@ func MakeDefaultConfig() *TwMergeConfig {
 				 * Aspect Ratio
 				 * @see https://tailwindcss.com/docs/aspect-ratio
 				 */
-				"aspect": {
+				"aspect": ClassPart{
 					NextPart: map[string]ClassPart{
-						"auto": {
+						"auto": ClassPart{
 							ClassGroupId: "aspect",
 						},
-						"square": {
+						"square": ClassPart{
 							ClassGroupId: "aspect",
 						},
-						"video": {
+						"video": ClassPart{
 							ClassGroupId: "aspect",
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryValue,
 							ClassGroupId: "aspect",
 						},
@@ -127,7 +127,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 				 * Container
 				 * @see https://tailwindcss.com/docs/container
 				 */
-				"container": {
+				"container": ClassPart{
 					NextPart:     map[string]ClassPart{},
 					ClassGroupId: "container",
 				},
@@ -136,30 +136,30 @@ func MakeDefaultConfig() *TwMergeConfig {
 				 * Columns
 				 * @see https://tailwindcss.com/docs/columns
 				 */
-				"columns": {
+				"columns": ClassPart{
 					NextPart: map[string]ClassPart{},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsTshirtSize,
 							ClassGroupId: "columns",
 						},
 					},
 				},
 
-				"break": {
+				"break": ClassPart{
 					NextPart: map[string]ClassPart{
 
 						/**
 						 * Break After
 						 * @see https://tailwindcss.com/docs/break-after
 						 */
-						"after": {
+						"after": ClassPart{
 							NextPart: getBreaks("break-after"),
 						},
 
 						/** Break Before @see https://tailwindcss.com/docs/break-before
 						 */
-						"before": {
+						"before": ClassPart{
 							NextPart: getBreaks("break-before"),
 						},
 
@@ -167,17 +167,17 @@ func MakeDefaultConfig() *TwMergeConfig {
 						 * Break Inside
 						 * @see https://tailwindcss.com/docs/break-inside
 						 */
-						"inside": {
+						"inside": ClassPart{
 							NextPart: map[string]ClassPart{
-								"auto": {
+								"auto": ClassPart{
 									ClassGroupId: "break-inside",
 								},
-								"avoid": {
+								"avoid": ClassPart{
 									NextPart: map[string]ClassPart{
-										"page": {
+										"page": ClassPart{
 											ClassGroupId: "break-inside",
 										},
-										"column": {
+										"column": ClassPart{
 											ClassGroupId: "break-inside",
 										},
 									},
@@ -191,33 +191,33 @@ func MakeDefaultConfig() *TwMergeConfig {
 						 * @see https://tailwindcss.com/docs/word-break
 						 */
 
-						"normal": {
+						"normal": ClassPart{
 							ClassGroupId: "break",
 						},
-						"words": {
+						"words": ClassPart{
 							ClassGroupId: "break",
 						},
-						"all": {
+						"all": ClassPart{
 							ClassGroupId: "break",
 						},
-						"keep": {
+						"keep": ClassPart{
 							ClassGroupId: "break",
 						},
 					},
 					Validators: []ClassGroupValidator{},
 				},
 
-				"box": {
+				"box": ClassPart{
 					NextPart: map[string]ClassPart{
 						/**
 						 * Box Sizing
 						 * @see https://tailwindcss.com/docs/box-sizing
 						 */
 
-						"border": {
+						"border": ClassPart{
 							ClassGroupId: "box",
 						},
-						"content": {
+						"content": ClassPart{
 							ClassGroupId: "box",
 						},
 
@@ -226,11 +226,11 @@ func MakeDefaultConfig() *TwMergeConfig {
 						 * @see https://tailwindcss.com/docs/box-decoration-break
 						 */
 
-						"decoration": {
+						"decoration": ClassPart{
 							NextPart: map[string]ClassPart{
-								"slice": {
+								"slice": ClassPart{
 									ClassGroupId: "box-decoration"},
-								"clone": {
+								"clone": ClassPart{
 									ClassGroupId: "box-decoration",
 								},
 							},
@@ -257,25 +257,25 @@ func MakeDefaultConfig() *TwMergeConfig {
 				},
 				"flex": {
 					NextPart: map[string]ClassPart{
-						"row": {
+						"row": ClassPart{
 							NextPart: map[string]ClassPart{
-								"reverse": {
+								"reverse": ClassPart{
 									ClassGroupId: "flex-direction",
 								},
 							},
 							ClassGroupId: "flex-direction",
 						},
-						"col": {
+						"col": ClassPart{
 							NextPart: map[string]ClassPart{
-								"reverse": {
+								"reverse": ClassPart{
 									ClassGroupId: "flex-direction",
 								},
 							},
 							ClassGroupId: "flex-direction",
 						},
-						"wrap": {
+						"wrap": ClassPart{
 							NextPart: map[string]ClassPart{
-								"reverse": {
+								"reverse": ClassPart{
 									ClassGroupId: "flex-wrap",
 								},
 							},
@@ -355,7 +355,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 				"flow": {
 					NextPart: map[string]ClassPart{"root": {ClassGroupId: "display"}},
 				},
-				"grid": {
+				"grid": ClassPart{
 					NextPart: map[string]ClassPart{
 						"cols": {
 							Validators: []ClassGroupValidator{
@@ -401,7 +401,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 					ClassGroupId: "display",
 				},
 				"contents": {ClassGroupId: "display"},
-				"list": {
+				"list": ClassPart{
 					NextPart: map[string]ClassPart{
 						"item": {
 							ClassGroupId: "display",
@@ -443,7 +443,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 					},
 				},
 				"hidden": {ClassGroupId: "display"},
-				"float": {
+				"float": ClassPart{
 					NextPart: map[string]ClassPart{
 						"right": {
 							ClassGroupId: "float",
@@ -462,7 +462,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"clear": {
+				"clear": ClassPart{
 					NextPart: map[string]ClassPart{
 						"left": {
 							ClassGroupId: "clear",
@@ -485,14 +485,14 @@ func MakeDefaultConfig() *TwMergeConfig {
 					},
 				},
 				"isolate": {ClassGroupId: "isolation"},
-				"isolation": {
+				"isolation": ClassPart{
 					NextPart: map[string]ClassPart{
 						"auto": {
 							ClassGroupId: "isolation",
 						},
 					},
 				},
-				"object": {
+				"object": ClassPart{
 					NextPart: map[string]ClassPart{
 						"contain": {
 							ClassGroupId: "object-fit",
@@ -551,7 +551,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 					},
 				},
 
-				"overflow": {
+				"overflow": ClassPart{
 					NextPart: map[string]ClassPart{
 						"auto": {
 							ClassGroupId: "overflow",
@@ -608,7 +608,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"overscroll": {
+				"overscroll": ClassPart{
 					NextPart: map[string]ClassPart{
 						"auto": {
 							ClassGroupId: "overscroll",
@@ -649,23 +649,23 @@ func MakeDefaultConfig() *TwMergeConfig {
 					Validators: []ClassGroupValidator{},
 				},
 
-				"static": {
+				"static": ClassPart{
 					ClassGroupId: "position",
 				},
-				"fixed": {
+				"fixed": ClassPart{
 					ClassGroupId: "position",
 				},
-				"absolute": {
+				"absolute": ClassPart{
 					ClassGroupId: "position",
 				},
-				"relative": {
+				"relative": ClassPart{
 					ClassGroupId: "position",
 				},
-				"sticky": {
+				"sticky": ClassPart{
 					ClassGroupId: "position",
 				},
 
-				"inset": {
+				"inset": ClassPart{
 					NextPart: map[string]ClassPart{
 						"auto": {
 							ClassGroupId: "inset",
@@ -728,7 +728,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"start": {
+				"start": ClassPart{
 					NextPart: map[string]ClassPart{
 						"auto": {
 							ClassGroupId: "start",
@@ -749,7 +749,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"end": {
+				"end": ClassPart{
 					NextPart: map[string]ClassPart{
 						"auto": {
 							ClassGroupId: "end",
@@ -770,7 +770,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"top": {
+				"top": ClassPart{
 					NextPart: map[string]ClassPart{
 						"auto": {
 							ClassGroupId: "top",
@@ -791,7 +791,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"right": {
+				"right": ClassPart{
 					NextPart: map[string]ClassPart{
 						"auto": {
 							ClassGroupId: "right",
@@ -812,7 +812,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"bottom": {
+				"bottom": ClassPart{
 					NextPart: map[string]ClassPart{
 						"auto": {
 							ClassGroupId: "bottom",
@@ -833,7 +833,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"left": {
+				"left": ClassPart{
 					NextPart: map[string]ClassPart{
 						"auto": {
 							ClassGroupId: "left",
@@ -854,16 +854,16 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"visible": {
+				"visible": ClassPart{
 					ClassGroupId: "visibility",
 				},
-				"invisible": {
+				"invisible": ClassPart{
 					ClassGroupId: "visibility",
 				},
-				"collapse": {
+				"collapse": ClassPart{
 					ClassGroupId: "visibility",
 				},
-				"z": {
+				"z": ClassPart{
 					NextPart: map[string]ClassPart{
 						"auto": {
 							ClassGroupId: "z",
@@ -880,7 +880,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"basis": {
+				"basis": ClassPart{
 					NextPart: map[string]ClassPart{
 						"auto": {
 							ClassGroupId: "basis",
@@ -901,7 +901,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"grow": {
+				"grow": ClassPart{
 					NextPart: map[string]ClassPart{
 						"0": {
 							ClassGroupId: "grow",
@@ -915,7 +915,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 					},
 					ClassGroupId: "grow",
 				},
-				"shrink": {
+				"shrink": ClassPart{
 					NextPart: map[string]ClassPart{
 						"0": {
 							ClassGroupId: "shrink",
@@ -929,7 +929,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 					},
 					ClassGroupId: "shrink",
 				},
-				"order": {
+				"order": ClassPart{
 					NextPart: map[string]ClassPart{
 						"first": {
 							ClassGroupId: "order",
@@ -952,7 +952,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"col": {
+				"col": ClassPart{
 					NextPart: map[string]ClassPart{
 						"auto": {
 							NextPart:     map[string]ClassPart{},
@@ -1024,7 +1024,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"row": {
+				"row": ClassPart{
 					NextPart: map[string]ClassPart{
 						"auto": {
 							NextPart:     map[string]ClassPart{},
@@ -1090,7 +1090,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"auto": {
+				"auto": ClassPart{
 					NextPart: map[string]ClassPart{
 						"cols": {
 							NextPart: map[string]ClassPart{
@@ -1155,7 +1155,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 					},
 					Validators: []ClassGroupValidator{},
 				},
-				"gap": {
+				"gap": ClassPart{
 					NextPart: map[string]ClassPart{
 						"x": {
 							Validators: []ClassGroupValidator{
@@ -1205,99 +1205,99 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"justify": {
+				"justify": ClassPart{
 					NextPart: map[string]ClassPart{
-						"normal": {
+						"normal": ClassPart{
 							ClassGroupId: "justify-content",
 						},
-						"start": {
+						"start": ClassPart{
 							ClassGroupId: "justify-content",
 						},
-						"end": {
+						"end": ClassPart{
 							ClassGroupId: "justify-content",
 						},
-						"center": {
+						"center": ClassPart{
 							ClassGroupId: "justify-content",
 						},
-						"between": {
+						"between": ClassPart{
 							ClassGroupId: "justify-content",
 						},
-						"around": {
+						"around": ClassPart{
 							ClassGroupId: "justify-content",
 						},
-						"evenly": {
+						"evenly": ClassPart{
 							ClassGroupId: "justify-content",
 						},
-						"stretch": {
+						"stretch": ClassPart{
 							ClassGroupId: "justify-content",
 						},
-						"items": {
+						"items": ClassPart{
 							NextPart: map[string]ClassPart{
-								"start": {
+								"start": ClassPart{
 									ClassGroupId: "justify-items",
 								},
-								"end": {
+								"end": ClassPart{
 									ClassGroupId: "justify-items",
 								},
-								"center": {
+								"center": ClassPart{
 									ClassGroupId: "justify-items",
 								},
-								"stretch": {
+								"stretch": ClassPart{
 									ClassGroupId: "justify-items",
 								},
 							},
 						},
-						"self": {
+						"self": ClassPart{
 							NextPart: map[string]ClassPart{
-								"auto": {
+								"auto": ClassPart{
 									ClassGroupId: "justify-self",
 								},
-								"start": {
+								"start": ClassPart{
 									ClassGroupId: "justify-self",
 								},
-								"end": {
+								"end": ClassPart{
 									ClassGroupId: "justify-self",
 								},
-								"center": {
+								"center": ClassPart{
 									ClassGroupId: "justify-self",
 								},
-								"stretch": {
+								"stretch": ClassPart{
 									ClassGroupId: "justify-self",
 								},
 							},
 						},
 					},
 				},
-				"content": {
+				"content": ClassPart{
 					NextPart: map[string]ClassPart{
-						"normal": {
+						"normal": ClassPart{
 							ClassGroupId: "align-content",
 						},
-						"start": {
+						"start": ClassPart{
 							ClassGroupId: "align-content",
 						},
-						"end": {
+						"end": ClassPart{
 							ClassGroupId: "align-content",
 						},
-						"center": {
+						"center": ClassPart{
 							ClassGroupId: "align-content",
 						},
-						"between": {
+						"between": ClassPart{
 							ClassGroupId: "align-content",
 						},
-						"around": {
+						"around": ClassPart{
 							ClassGroupId: "align-content",
 						},
-						"evenly": {
+						"evenly": ClassPart{
 							ClassGroupId: "align-content",
 						},
-						"stretch": {
+						"stretch": ClassPart{
 							ClassGroupId: "align-content",
 						},
-						"baseline": {
+						"baseline": ClassPart{
 							ClassGroupId: "align-content",
 						},
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "content",
 						},
 					},
@@ -1308,118 +1308,118 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"items": {
+				"items": ClassPart{
 					NextPart: map[string]ClassPart{
-						"start": {
+						"start": ClassPart{
 							ClassGroupId: "align-items",
 						},
-						"end": {
+						"end": ClassPart{
 							ClassGroupId: "align-items",
 						},
-						"center": {
+						"center": ClassPart{
 							ClassGroupId: "align-items",
 						},
-						"baseline": {
+						"baseline": ClassPart{
 							ClassGroupId: "align-items",
 						},
-						"stretch": {
+						"stretch": ClassPart{
 							ClassGroupId: "align-items",
 						},
 					},
 				},
-				"self": {
+				"self": ClassPart{
 					NextPart: map[string]ClassPart{
-						"auto": {
+						"auto": ClassPart{
 							ClassGroupId: "align-self",
 						},
-						"start": {
+						"start": ClassPart{
 							ClassGroupId: "align-self",
 						},
-						"end": {
+						"end": ClassPart{
 							ClassGroupId: "align-self",
 						},
-						"center": {
+						"center": ClassPart{
 							ClassGroupId: "align-self",
 						},
-						"stretch": {
+						"stretch": ClassPart{
 							ClassGroupId: "align-self",
 						},
-						"baseline": {
+						"baseline": ClassPart{
 							ClassGroupId: "align-self",
 						},
 					},
 				},
-				"place": {
+				"place": ClassPart{
 					NextPart: map[string]ClassPart{
-						"content": {
+						"content": ClassPart{
 							NextPart: map[string]ClassPart{
-								"start": {
+								"start": ClassPart{
 									ClassGroupId: "place-content",
 								},
-								"end": {
+								"end": ClassPart{
 									ClassGroupId: "place-content",
 								},
-								"center": {
+								"center": ClassPart{
 									ClassGroupId: "place-content",
 								},
-								"between": {
+								"between": ClassPart{
 									ClassGroupId: "place-content",
 								},
-								"around": {
+								"around": ClassPart{
 									ClassGroupId: "place-content",
 								},
-								"evenly": {
+								"evenly": ClassPart{
 									ClassGroupId: "place-content",
 								},
-								"stretch": {
+								"stretch": ClassPart{
 									ClassGroupId: "place-content",
 								},
-								"baseline": {
+								"baseline": ClassPart{
 									ClassGroupId: "place-content",
 								},
 							},
 						},
-						"items": {
+						"items": ClassPart{
 							NextPart: map[string]ClassPart{
-								"start": {
+								"start": ClassPart{
 									ClassGroupId: "place-items",
 								},
-								"end": {
+								"end": ClassPart{
 									ClassGroupId: "place-items",
 								},
-								"center": {
+								"center": ClassPart{
 									ClassGroupId: "place-items",
 								},
-								"baseline": {
+								"baseline": ClassPart{
 									ClassGroupId: "place-items",
 								},
-								"stretch": {
+								"stretch": ClassPart{
 									ClassGroupId: "place-items",
 								},
 							},
 						},
-						"self": {
+						"self": ClassPart{
 							NextPart: map[string]ClassPart{
-								"auto": {
+								"auto": ClassPart{
 									ClassGroupId: "place-self",
 								},
-								"start": {
+								"start": ClassPart{
 									ClassGroupId: "place-self",
 								},
-								"end": {
+								"end": ClassPart{
 									ClassGroupId: "place-self",
 								},
-								"center": {
+								"center": ClassPart{
 									ClassGroupId: "place-self",
 								},
-								"stretch": {
+								"stretch": ClassPart{
 									ClassGroupId: "place-self",
 								},
 							},
 						},
 					},
 				},
-				"p": {
+				"p": ClassPart{
 					Validators: []ClassGroupValidator{
 						{
 							Fn:           IsArbitraryValue,
@@ -1435,7 +1435,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"px": {
+				"px": ClassPart{
 					Validators: []ClassGroupValidator{
 						{
 							Fn:           IsArbitraryValue,
@@ -1451,7 +1451,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"py": {
+				"py": ClassPart{
 					Validators: []ClassGroupValidator{
 						{
 							Fn:           IsArbitraryValue,
@@ -1467,7 +1467,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"ps": {
+				"ps": ClassPart{
 					Validators: []ClassGroupValidator{
 						{
 							Fn:           IsArbitraryValue,
@@ -1483,7 +1483,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"pe": {
+				"pe": ClassPart{
 					Validators: []ClassGroupValidator{
 						{
 							Fn:           IsArbitraryValue,
@@ -1499,7 +1499,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"pt": {
+				"pt": ClassPart{
 					Validators: []ClassGroupValidator{
 						{
 							Fn:           IsArbitraryValue,
@@ -1515,7 +1515,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"pr": {
+				"pr": ClassPart{
 					Validators: []ClassGroupValidator{
 						{
 							Fn:           IsArbitraryValue,
@@ -1531,7 +1531,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"pb": {
+				"pb": ClassPart{
 					Validators: []ClassGroupValidator{
 						{
 							Fn:           IsArbitraryValue,
@@ -1547,7 +1547,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"pl": {
+				"pl": ClassPart{
 					Validators: []ClassGroupValidator{
 						{
 							Fn:           IsArbitraryValue,
@@ -1563,9 +1563,9 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"m": {
+				"m": ClassPart{
 					NextPart: map[string]ClassPart{
-						"auto": {
+						"auto": ClassPart{
 							Validators:   []ClassGroupValidator{},
 							ClassGroupId: "m",
 						},
@@ -1585,9 +1585,9 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"mx": {
+				"mx": ClassPart{
 					NextPart: map[string]ClassPart{
-						"auto": {
+						"auto": ClassPart{
 							Validators:   []ClassGroupValidator{},
 							ClassGroupId: "mx",
 						},
@@ -1607,9 +1607,9 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"my": {
+				"my": ClassPart{
 					NextPart: map[string]ClassPart{
-						"auto": {
+						"auto": ClassPart{
 							Validators:   []ClassGroupValidator{},
 							ClassGroupId: "my",
 						},
@@ -1629,9 +1629,9 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"ms": {
+				"ms": ClassPart{
 					NextPart: map[string]ClassPart{
-						"auto": {
+						"auto": ClassPart{
 							Validators:   []ClassGroupValidator{},
 							ClassGroupId: "ms",
 						},
@@ -1651,9 +1651,9 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"me": {
+				"me": ClassPart{
 					NextPart: map[string]ClassPart{
-						"auto": {
+						"auto": ClassPart{
 							Validators:   []ClassGroupValidator{},
 							ClassGroupId: "me",
 						},
@@ -1673,9 +1673,9 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"mt": {
+				"mt": ClassPart{
 					NextPart: map[string]ClassPart{
-						"auto": {
+						"auto": ClassPart{
 							Validators:   []ClassGroupValidator{},
 							ClassGroupId: "mt",
 						},
@@ -1695,9 +1695,9 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"mr": {
+				"mr": ClassPart{
 					NextPart: map[string]ClassPart{
-						"auto": {
+						"auto": ClassPart{
 							Validators:   []ClassGroupValidator{},
 							ClassGroupId: "mr",
 						},
@@ -1717,9 +1717,9 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"mb": {
+				"mb": ClassPart{
 					NextPart: map[string]ClassPart{
-						"auto": {
+						"auto": ClassPart{
 							Validators:   []ClassGroupValidator{},
 							ClassGroupId: "mb",
 						},
@@ -1739,9 +1739,9 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"ml": {
+				"ml": ClassPart{
 					NextPart: map[string]ClassPart{
-						"auto": {
+						"auto": ClassPart{
 							Validators:   []ClassGroupValidator{},
 							ClassGroupId: "ml",
 						},
@@ -1761,11 +1761,11 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"space": {
+				"space": ClassPart{
 					NextPart: map[string]ClassPart{
-						"x": {
+						"x": ClassPart{
 							NextPart: map[string]ClassPart{
-								"reverse": {
+								"reverse": ClassPart{
 									Validators:   []ClassGroupValidator{},
 									ClassGroupId: "space-x-reverse",
 								},
@@ -1785,9 +1785,9 @@ func MakeDefaultConfig() *TwMergeConfig {
 								},
 							},
 						},
-						"y": {
+						"y": ClassPart{
 							NextPart: map[string]ClassPart{
-								"reverse": {
+								"reverse": ClassPart{
 									ClassGroupId: "space-y-reverse",
 								},
 							},
@@ -1809,27 +1809,27 @@ func MakeDefaultConfig() *TwMergeConfig {
 					},
 					Validators: []ClassGroupValidator{},
 				},
-				"w": {
+				"w": ClassPart{
 					NextPart: map[string]ClassPart{
-						"auto": {
+						"auto": ClassPart{
 							ClassGroupId: "w",
 						},
-						"min": {
+						"min": ClassPart{
 							ClassGroupId: "w",
 						},
-						"max": {
+						"max": ClassPart{
 							ClassGroupId: "w",
 						},
-						"fit": {
+						"fit": ClassPart{
 							ClassGroupId: "w",
 						},
-						"svw": {
+						"svw": ClassPart{
 							ClassGroupId: "w",
 						},
-						"lvw": {
+						"lvw": ClassPart{
 							ClassGroupId: "w",
 						},
-						"dvw": {
+						"dvw": ClassPart{
 							ClassGroupId: "w",
 						},
 					},
@@ -1848,17 +1848,17 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"min": {
+				"min": ClassPart{
 					NextPart: map[string]ClassPart{
-						"w": {
+						"w": ClassPart{
 							NextPart: map[string]ClassPart{
-								"min": {
+								"min": ClassPart{
 									ClassGroupId: "min-w",
 								},
-								"max": {
+								"max": ClassPart{
 									ClassGroupId: "min-w",
 								},
-								"fit": {
+								"fit": ClassPart{
 									ClassGroupId: "min-w",
 								},
 							},
@@ -1877,24 +1877,24 @@ func MakeDefaultConfig() *TwMergeConfig {
 								},
 							},
 						},
-						"h": {
+						"h": ClassPart{
 							NextPart: map[string]ClassPart{
-								"min": {
+								"min": ClassPart{
 									ClassGroupId: "min-h",
 								},
-								"max": {
+								"max": ClassPart{
 									ClassGroupId: "min-h",
 								},
-								"fit": {
+								"fit": ClassPart{
 									ClassGroupId: "min-h",
 								},
-								"svh": {
+								"svh": ClassPart{
 									ClassGroupId: "min-h",
 								},
-								"lvh": {
+								"lvh": ClassPart{
 									ClassGroupId: "min-h",
 								},
-								"dvh": {
+								"dvh": ClassPart{
 									ClassGroupId: "min-h",
 								},
 							},
@@ -1916,31 +1916,31 @@ func MakeDefaultConfig() *TwMergeConfig {
 					},
 					Validators: []ClassGroupValidator{},
 				},
-				"max": {
+				"max": ClassPart{
 					NextPart: map[string]ClassPart{
-						"w": {
+						"w": ClassPart{
 							NextPart: map[string]ClassPart{
-								"none": {
+								"none": ClassPart{
 									ClassGroupId: "max-w",
 								},
-								"full": {
+								"full": ClassPart{
 									ClassGroupId: "max-w",
 								},
-								"min": {
+								"min": ClassPart{
 									ClassGroupId: "max-w",
 								},
-								"max": {
+								"max": ClassPart{
 									ClassGroupId: "max-w",
 								},
-								"fit": {
+								"fit": ClassPart{
 									ClassGroupId: "max-w",
 								},
-								"prose": {
+								"prose": ClassPart{
 									ClassGroupId: "max-w",
 								},
-								"screen": {
+								"screen": ClassPart{
 									Validators: []ClassGroupValidator{
-										{
+										ClassGroupValidator{
 											Fn:           IsTshirtSize,
 											ClassGroupId: "max-w",
 										},
@@ -1949,56 +1949,56 @@ func MakeDefaultConfig() *TwMergeConfig {
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "max-w",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsLength,
 									ClassGroupId: "max-w",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryLength,
 									ClassGroupId: "max-w",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsTshirtSize,
 									ClassGroupId: "max-w",
 								},
 							},
 							ClassGroupId: "max-w",
 						},
-						"h": {
+						"h": ClassPart{
 							NextPart: map[string]ClassPart{
-								"min": {
+								"min": ClassPart{
 									ClassGroupId: "max-h",
 								},
-								"max": {
+								"max": ClassPart{
 									ClassGroupId: "max-h",
 								},
-								"fit": {
+								"fit": ClassPart{
 									ClassGroupId: "max-h",
 								},
-								"svh": {
+								"svh": ClassPart{
 									ClassGroupId: "max-h",
 								},
-								"lvh": {
+								"lvh": ClassPart{
 									ClassGroupId: "max-h",
 								},
-								"dvh": {
+								"dvh": ClassPart{
 									ClassGroupId: "max-h",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "max-h",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsLength,
 									ClassGroupId: "max-h",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryLength,
 									ClassGroupId: "max-h",
 								},
@@ -2007,370 +2007,370 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"h": {
+				"h": ClassPart{
 					NextPart: map[string]ClassPart{
-						"auto": {
+						"auto": ClassPart{
 							ClassGroupId: "h",
 						},
-						"min": {
+						"min": ClassPart{
 							ClassGroupId: "h",
 						},
-						"max": {
+						"max": ClassPart{
 							ClassGroupId: "h",
 						},
-						"fit": {
+						"fit": ClassPart{
 							ClassGroupId: "h",
 						},
-						"svh": {
+						"svh": ClassPart{
 							ClassGroupId: "h",
 						},
-						"lvh": {
+						"lvh": ClassPart{
 							ClassGroupId: "h",
 						},
-						"dvh": {
+						"dvh": ClassPart{
 							ClassGroupId: "h",
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryValue,
 							ClassGroupId: "h",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsLength,
 							ClassGroupId: "h",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryLength,
 							ClassGroupId: "h",
 						},
 					},
 					ClassGroupId: "h",
 				},
-				"size": {
+				"size": ClassPart{
 					NextPart: map[string]ClassPart{
-						"auto": {
+						"auto": ClassPart{
 							ClassGroupId: "size",
 						},
-						"min": {
+						"min": ClassPart{
 							ClassGroupId: "size",
 						},
-						"max": {
+						"max": ClassPart{
 							ClassGroupId: "size",
 						},
-						"fit": {
+						"fit": ClassPart{
 							ClassGroupId: "size",
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryValue,
 							ClassGroupId: "size",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsLength,
 							ClassGroupId: "size",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryLength,
 							ClassGroupId: "size",
 						},
 					},
 					ClassGroupId: "size",
 				},
-				"text": {
+				"text": ClassPart{
 					NextPart: map[string]ClassPart{
-						"base": {
+						"base": ClassPart{
 							ClassGroupId: "font-size",
 						},
-						"left": {
+						"left": ClassPart{
 							ClassGroupId: "text-alignment",
 						},
-						"center": {
+						"center": ClassPart{
 							ClassGroupId: "text-alignment",
 						},
-						"right": {
+						"right": ClassPart{
 							ClassGroupId: "text-alignment",
 						},
-						"justify": {
+						"justify": ClassPart{
 							ClassGroupId: "text-alignment",
 						},
-						"start": {
+						"start": ClassPart{
 							ClassGroupId: "text-alignment",
 						},
-						"end": {
+						"end": ClassPart{
 							ClassGroupId: "text-alignment",
 						},
-						"opacity": {
+						"opacity": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsNumber,
 									ClassGroupId: "text-opacity",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryNumber,
 									ClassGroupId: "text-opacity",
 								},
 							},
 							ClassGroupId: "text-opacity",
 						},
-						"ellipsis": {
+						"ellipsis": ClassPart{
 							ClassGroupId: "text-overflow",
 						},
-						"clip": {
+						"clip": ClassPart{
 							ClassGroupId: "text-overflow",
 						},
-						"wrap": {
+						"wrap": ClassPart{
 							ClassGroupId: "text-wrap",
 						},
-						"nowrap": {
+						"nowrap": ClassPart{
 							ClassGroupId: "text-wrap",
 						},
-						"balance": {
+						"balance": ClassPart{
 							ClassGroupId: "text-wrap",
 						},
-						"pretty": {
+						"pretty": ClassPart{
 							ClassGroupId: "text-wrap",
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsTshirtSize,
 							ClassGroupId: "font-size",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryLength,
 							ClassGroupId: "font-size",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsAny,
 							ClassGroupId: "text-color",
 						},
 					},
 				},
-				"antialiased": {
+				"antialiased": ClassPart{
 					ClassGroupId: "font-smoothing",
 				},
-				"subpixel": {
+				"subpixel": ClassPart{
 					NextPart: map[string]ClassPart{
-						"antialiased": {
+						"antialiased": ClassPart{
 							ClassGroupId: "font-smoothing",
 						},
 					},
 				},
-				"italic": {
+				"italic": ClassPart{
 					ClassGroupId: "font-style",
 				},
-				"not": {
+				"not": ClassPart{
 					NextPart: map[string]ClassPart{
-						"italic": {
+						"italic": ClassPart{
 							ClassGroupId: "font-style",
 						},
-						"sr": {
+						"sr": ClassPart{
 							NextPart: map[string]ClassPart{
-								"only": {
+								"only": ClassPart{
 									ClassGroupId: "sr",
 								},
 							},
 						},
 					},
 				},
-				"font": {
+				"font": ClassPart{
 					NextPart: map[string]ClassPart{
-						"thin": {
+						"thin": ClassPart{
 							ClassGroupId: "font-weight",
 						},
-						"extralight": {
+						"extralight": ClassPart{
 							ClassGroupId: "font-weight",
 						},
-						"light": {
+						"light": ClassPart{
 							ClassGroupId: "font-weight",
 						},
-						"normal": {
+						"normal": ClassPart{
 							ClassGroupId: "font-weight",
 						},
-						"medium": {
+						"medium": ClassPart{
 							ClassGroupId: "font-weight",
 						},
-						"semibold": {
+						"semibold": ClassPart{
 							ClassGroupId: "font-weight",
 						},
-						"bold": {
+						"bold": ClassPart{
 							ClassGroupId: "font-weight",
 						},
-						"extrabold": {
+						"extrabold": ClassPart{
 							ClassGroupId: "font-weight",
 						},
-						"black": {
+						"black": ClassPart{
 							ClassGroupId: "font-weight",
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryNumber,
 							ClassGroupId: "font-weight",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsAny,
 							ClassGroupId: "font-family",
 						},
 					},
 				},
-				"normal": {
+				"normal": ClassPart{
 					NextPart: map[string]ClassPart{
-						"nums": {
+						"nums": ClassPart{
 							ClassGroupId: "fvn-normal",
 						},
-						"case": {
+						"case": ClassPart{
 							ClassGroupId: "text-transform",
 						},
 					},
 				},
-				"ordinal": {
+				"ordinal": ClassPart{
 					ClassGroupId: "fvn-ordinal",
 				},
-				"slashed": {
+				"slashed": ClassPart{
 					NextPart: map[string]ClassPart{
-						"zero": {
+						"zero": ClassPart{
 							ClassGroupId: "fvn-slashed-zero",
 						},
 					},
 				},
-				"lining": {
+				"lining": ClassPart{
 					NextPart: map[string]ClassPart{
-						"nums": {
+						"nums": ClassPart{
 							ClassGroupId: "fvn-figure",
 						},
 					},
 				},
-				"oldstyle": {
+				"oldstyle": ClassPart{
 					NextPart: map[string]ClassPart{
-						"nums": {
+						"nums": ClassPart{
 							ClassGroupId: "fvn-figure",
 						},
 					},
 				},
-				"proportional": {
+				"proportional": ClassPart{
 					NextPart: map[string]ClassPart{
-						"nums": {
+						"nums": ClassPart{
 							ClassGroupId: "fvn-spacing",
 						},
 					},
 				},
-				"tabular": {
+				"tabular": ClassPart{
 					NextPart: map[string]ClassPart{
-						"nums": {
+						"nums": ClassPart{
 							ClassGroupId: "fvn-spacing",
 						},
 					},
 				},
-				"diagonal": {
+				"diagonal": ClassPart{
 					NextPart: map[string]ClassPart{
-						"fractions": {
+						"fractions": ClassPart{
 							ClassGroupId: "fvn-fraction",
 						},
 					},
 				},
-				"stacked": {
+				"stacked": ClassPart{
 					NextPart: map[string]ClassPart{
-						"fractons": {
+						"fractons": ClassPart{
 							ClassGroupId: "fvn-fraction",
 						},
 					},
 				},
-				"tracking": {
+				"tracking": ClassPart{
 					NextPart: map[string]ClassPart{
-						"tighter": {
+						"tighter": ClassPart{
 							ClassGroupId: "tracking",
 						},
-						"tight": {
+						"tight": ClassPart{
 							ClassGroupId: "tracking",
 						},
-						"normal": {
+						"normal": ClassPart{
 							ClassGroupId: "tracking",
 						},
-						"wide": {
+						"wide": ClassPart{
 							ClassGroupId: "tracking",
 						},
-						"wider": {
+						"wider": ClassPart{
 							ClassGroupId: "tracking",
 						},
-						"widest": {
+						"widest": ClassPart{
 							ClassGroupId: "tracking",
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryValue,
 							ClassGroupId: "tracking",
 						},
 					},
 				},
-				"line": {
+				"line": ClassPart{
 					NextPart: map[string]ClassPart{
-						"clamp": {
+						"clamp": ClassPart{
 							NextPart: map[string]ClassPart{
-								"none": {
+								"none": ClassPart{
 									ClassGroupId: "line-clamp",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsNumber,
 									ClassGroupId: "line-clamp",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryNumber,
 									ClassGroupId: "line-clamp",
 								},
 							},
 						},
-						"through": {
+						"through": ClassPart{
 							ClassGroupId: "text-decoration",
 						},
 					},
 				},
-				"leading": {
+				"leading": ClassPart{
 					NextPart: map[string]ClassPart{
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "leading",
 						},
-						"tight": {
+						"tight": ClassPart{
 							ClassGroupId: "leading",
 						},
-						"snug": {
+						"snug": ClassPart{
 							ClassGroupId: "leading",
 						},
-						"normal": {
+						"normal": ClassPart{
 							ClassGroupId: "leading",
 						},
-						"relaxed": {
+						"relaxed": ClassPart{
 							ClassGroupId: "leading",
 						},
-						"loose": {
+						"loose": ClassPart{
 							ClassGroupId: "leading",
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsLength,
 							ClassGroupId: "leading",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryValue,
 							ClassGroupId: "leading",
 						},
 					},
 				},
-				"placeholder": {
+				"placeholder": ClassPart{
 					NextPart: map[string]ClassPart{
-						"opacity": {
+						"opacity": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsNumber,
 									ClassGroupId: "placeholder-opacity",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryNumber,
 									ClassGroupId: "placeholder-opacity",
 								},
@@ -2378,26 +2378,26 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsAny,
 							ClassGroupId: "placeholder-color",
 						},
 					},
 				},
-				"underline": {
+				"underline": ClassPart{
 					NextPart: map[string]ClassPart{
-						"offset": {
+						"offset": ClassPart{
 							NextPart: map[string]ClassPart{
-								"auto": {
+								"auto": ClassPart{
 									ClassGroupId: "underline-offset",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsLength,
 									ClassGroupId: "underline-offset",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "underline-offset",
 								},
@@ -2406,151 +2406,151 @@ func MakeDefaultConfig() *TwMergeConfig {
 					},
 					ClassGroupId: "text-decoration",
 				},
-				"overline": {
+				"overline": ClassPart{
 					ClassGroupId: "text-decoration",
 				},
-				"no": {
+				"no": ClassPart{
 					NextPart: map[string]ClassPart{
-						"underline": {
+						"underline": ClassPart{
 							ClassGroupId: "text-decoration",
 						},
 					},
 				},
-				"decoration": {
+				"decoration": ClassPart{
 					NextPart: map[string]ClassPart{
-						"solid": {
+						"solid": ClassPart{
 							ClassGroupId: "text-decoration-style",
 						},
-						"dashed": {
+						"dashed": ClassPart{
 							ClassGroupId: "text-decoration-style",
 						},
-						"dotted": {
+						"dotted": ClassPart{
 							ClassGroupId: "text-decoration-style",
 						},
-						"double": {
+						"double": ClassPart{
 							ClassGroupId: "text-decoration-style",
 						},
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "text-decoration-style",
 						},
-						"wavy": {
+						"wavy": ClassPart{
 							ClassGroupId: "text-decoration-style",
 						},
-						"auto": {
+						"auto": ClassPart{
 							ClassGroupId: "text-decoration-thickness",
 						},
-						"from": {
+						"from": ClassPart{
 							NextPart: map[string]ClassPart{
-								"font": {
+								"font": ClassPart{
 									ClassGroupId: "text-decoration-thickness",
 								},
 							},
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsLength,
 							ClassGroupId: "text-decoration-thickness",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryLength,
 							ClassGroupId: "text-decoration-thickness",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsAny,
 							ClassGroupId: "text-decoration-color",
 						},
 					},
 					ClassGroupId: "",
 				},
-				"uppercase": {
+				"uppercase": ClassPart{
 					ClassGroupId: "text-transform",
 				},
-				"lowercase": {
+				"lowercase": ClassPart{
 					ClassGroupId: "text-transform",
 				},
-				"capitalize": {
+				"capitalize": ClassPart{
 					ClassGroupId: "text-transform",
 				},
-				"truncate": {
+				"truncate": ClassPart{
 					ClassGroupId: "text-overflow",
 				},
-				"indent": {
+				"indent": ClassPart{
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryValue,
 							ClassGroupId: "indent",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsLength,
 							ClassGroupId: "indent",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryLength,
 							ClassGroupId: "indent",
 						},
 					},
 				},
-				"align": {
+				"align": ClassPart{
 					NextPart: map[string]ClassPart{
-						"baseline": {
+						"baseline": ClassPart{
 							ClassGroupId: "vertical-align",
 						},
-						"top": {
+						"top": ClassPart{
 							ClassGroupId: "vertical-align",
 						},
-						"middle": {
+						"middle": ClassPart{
 							ClassGroupId: "vertical-align",
 						},
-						"bottom": {
+						"bottom": ClassPart{
 							ClassGroupId: "vertical-align",
 						},
-						"text": {
+						"text": ClassPart{
 							NextPart: map[string]ClassPart{
-								"top": {
+								"top": ClassPart{
 									ClassGroupId: "vertical-align",
 								},
-								"bottom": {
+								"bottom": ClassPart{
 									ClassGroupId: "vertical-align",
 								},
 							},
 						},
-						"sub": {
+						"sub": ClassPart{
 							ClassGroupId: "vertical-align",
 						},
-						"super": {
+						"super": ClassPart{
 							ClassGroupId: "vertical-align",
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryValue,
 							ClassGroupId: "vertical-align",
 						},
 					},
 				},
-				"whitespace": {
+				"whitespace": ClassPart{
 					NextPart: map[string]ClassPart{
-						"normal": {
+						"normal": ClassPart{
 							ClassGroupId: "whitespace",
 						},
-						"nowrap": {
+						"nowrap": ClassPart{
 							ClassGroupId: "whitespace",
 						},
-						"pre": {
+						"pre": ClassPart{
 							NextPart: map[string]ClassPart{
-								"line": {
+								"line": ClassPart{
 									ClassGroupId: "whitespace",
 								},
-								"wrap": {
+								"wrap": ClassPart{
 									ClassGroupId: "whitespace",
 								},
 							},
 							ClassGroupId: "whitespace",
 						},
-						"break": {
+						"break": ClassPart{
 							NextPart: map[string]ClassPart{
-								"spaces": {
+								"spaces": ClassPart{
 									ClassGroupId: "whitespace",
 								},
 							},
@@ -2558,232 +2558,232 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"hyphens": {
+				"hyphens": ClassPart{
 					NextPart: map[string]ClassPart{
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "hyphens",
 						},
-						"manual": {
+						"manual": ClassPart{
 							ClassGroupId: "hyphens",
 						},
-						"auto": {
+						"auto": ClassPart{
 							ClassGroupId: "hyphens",
 						},
 					},
 				},
-				"bg": {
+				"bg": ClassPart{
 					NextPart: map[string]ClassPart{
-						"fixed": {
+						"fixed": ClassPart{
 							ClassGroupId: "bg-attachment",
 						},
-						"local": {
+						"local": ClassPart{
 							ClassGroupId: "bg-attachment",
 						},
-						"scroll": {
+						"scroll": ClassPart{
 							ClassGroupId: "bg-attachment",
 						},
-						"clip": {
+						"clip": ClassPart{
 							NextPart: map[string]ClassPart{
-								"border": {
+								"border": ClassPart{
 									ClassGroupId: "bg-clip",
 								},
-								"padding": {
+								"padding": ClassPart{
 									ClassGroupId: "bg-clip",
 								},
-								"content": {
+								"content": ClassPart{
 									ClassGroupId: "bg-clip",
 								},
-								"text": {
+								"text": ClassPart{
 									ClassGroupId: "bg-clip",
 								},
 							},
 						},
-						"opacity": {
+						"opacity": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsNumber,
 									ClassGroupId: "bg-opacity",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryNumber,
 									ClassGroupId: "bg-opacity",
 								},
 							},
 						},
-						"origin": {
+						"origin": ClassPart{
 							NextPart: map[string]ClassPart{
-								"border": {
+								"border": ClassPart{
 									ClassGroupId: "bg-origin",
 								},
-								"padding": {
+								"padding": ClassPart{
 									ClassGroupId: "bg-origin",
 								},
-								"content": {
+								"content": ClassPart{
 									ClassGroupId: "bg-origin",
 								},
 							},
 						},
-						"bottom": {
+						"bottom": ClassPart{
 							ClassGroupId: "bg-position",
 						},
-						"center": {
+						"center": ClassPart{
 							ClassGroupId: "bg-position",
 						},
-						"left": {
+						"left": ClassPart{
 							NextPart: map[string]ClassPart{
-								"bottom": {
+								"bottom": ClassPart{
 									ClassGroupId: "bg-position",
 								},
-								"top": {
-									ClassGroupId: "bg-position",
-								},
-							},
-							ClassGroupId: "bg-position",
-						},
-						"right": {
-							NextPart: map[string]ClassPart{
-								"bottom": {
-									ClassGroupId: "bg-position",
-								},
-								"top": {
+								"top": ClassPart{
 									ClassGroupId: "bg-position",
 								},
 							},
 							ClassGroupId: "bg-position",
 						},
-						"top": {
+						"right": ClassPart{
+							NextPart: map[string]ClassPart{
+								"bottom": ClassPart{
+									ClassGroupId: "bg-position",
+								},
+								"top": ClassPart{
+									ClassGroupId: "bg-position",
+								},
+							},
 							ClassGroupId: "bg-position",
 						},
-						"no": {
+						"top": ClassPart{
+							ClassGroupId: "bg-position",
+						},
+						"no": ClassPart{
 							NextPart: map[string]ClassPart{
-								"repeat": {
+								"repeat": ClassPart{
 									ClassGroupId: "bg-repeat",
 								},
 							},
 						},
-						"repeat": {
+						"repeat": ClassPart{
 							NextPart: map[string]ClassPart{
-								"x": {
+								"x": ClassPart{
 									ClassGroupId: "bg-repeat",
 								},
-								"y": {
+								"y": ClassPart{
 									ClassGroupId: "bg-repeat",
 								},
-								"round": {
+								"round": ClassPart{
 									ClassGroupId: "bg-repeat",
 								},
-								"space": {
+								"space": ClassPart{
 									ClassGroupId: "bg-repeat",
 								},
 							},
 							ClassGroupId: "bg-repeat",
 						},
-						"auto": {
+						"auto": ClassPart{
 							ClassGroupId: "bg-size",
 						},
-						"cover": {
+						"cover": ClassPart{
 							ClassGroupId: "bg-size",
 						},
-						"contain": {
+						"contain": ClassPart{
 							ClassGroupId: "bg-size",
 						},
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "bg-image",
 						},
-						"gradient": {
+						"gradient": ClassPart{
 							NextPart: map[string]ClassPart{
-								"to": {
+								"to": ClassPart{
 									NextPart: map[string]ClassPart{
-										"t": {
+										"t": ClassPart{
 											ClassGroupId: "bg-image",
 										},
-										"tr": {
+										"tr": ClassPart{
 											ClassGroupId: "bg-image",
 										},
-										"r": {
+										"r": ClassPart{
 											ClassGroupId: "bg-image",
 										},
-										"br": {
+										"br": ClassPart{
 											ClassGroupId: "bg-image",
 										},
-										"b": {
+										"b": ClassPart{
 											ClassGroupId: "bg-image",
 										},
-										"bl": {
+										"bl": ClassPart{
 											ClassGroupId: "bg-image",
 										},
-										"l": {
+										"l": ClassPart{
 											ClassGroupId: "bg-image",
 										},
-										"tl": {
+										"tl": ClassPart{
 											ClassGroupId: "bg-image",
 										},
 									},
 								},
 							},
 						},
-						"blend": {
+						"blend": ClassPart{
 							NextPart: map[string]ClassPart{
-								"normal": {
+								"normal": ClassPart{
 									ClassGroupId: "bg-blend",
 								},
-								"multiply": {
+								"multiply": ClassPart{
 									ClassGroupId: "bg-blend",
 								},
-								"screen": {
+								"screen": ClassPart{
 									ClassGroupId: "bg-blend",
 								},
-								"overlay": {
+								"overlay": ClassPart{
 									ClassGroupId: "bg-blend",
 								},
-								"darken": {
+								"darken": ClassPart{
 									ClassGroupId: "bg-blend",
 								},
-								"lighten": {
+								"lighten": ClassPart{
 									ClassGroupId: "bg-blend",
 								},
-								"color": {
+								"color": ClassPart{
 									NextPart: map[string]ClassPart{
-										"dodge": {
+										"dodge": ClassPart{
 											ClassGroupId: "bg-blend",
 										},
-										"burn": {
-											ClassGroupId: "bg-blend",
-										},
-									},
-								},
-								"hard": {
-									NextPart: map[string]ClassPart{
-										"light": {
+										"burn": ClassPart{
 											ClassGroupId: "bg-blend",
 										},
 									},
 								},
-								"soft": {
+								"hard": ClassPart{
 									NextPart: map[string]ClassPart{
-										"light": {
+										"light": ClassPart{
 											ClassGroupId: "bg-blend",
 										},
 									},
 								},
-								"difference": {
-									ClassGroupId: "bg-blend",
-								},
-								"exclusion": {
-									ClassGroupId: "bg-blend",
-								},
-								"hue": {
-									ClassGroupId: "bg-blend",
-								},
-								"saturation": {
-									ClassGroupId: "bg-blend",
-								},
-								"luminosity": {
-									ClassGroupId: "bg-blend",
-								},
-								"plus": {
+								"soft": ClassPart{
 									NextPart: map[string]ClassPart{
-										"lighter": {
+										"light": ClassPart{
+											ClassGroupId: "bg-blend",
+										},
+									},
+								},
+								"difference": ClassPart{
+									ClassGroupId: "bg-blend",
+								},
+								"exclusion": ClassPart{
+									ClassGroupId: "bg-blend",
+								},
+								"hue": ClassPart{
+									ClassGroupId: "bg-blend",
+								},
+								"saturation": ClassPart{
+									ClassGroupId: "bg-blend",
+								},
+								"luminosity": ClassPart{
+									ClassGroupId: "bg-blend",
+								},
+								"plus": ClassPart{
+									NextPart: map[string]ClassPart{
+										"lighter": ClassPart{
 											ClassGroupId: "bg-blend",
 										},
 									},
@@ -2792,368 +2792,368 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryPosition,
 							ClassGroupId: "bg-position",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitrarySize,
 							ClassGroupId: "bg-size",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryImage,
 							ClassGroupId: "bg-image",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsAny,
 							ClassGroupId: "bg-color",
 						},
 					},
 				},
-				"from": {
+				"from": ClassPart{
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsPercent,
 							ClassGroupId: "gradient-from-pos",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryLength,
 							ClassGroupId: "gradient-from-pos",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsAny,
 							ClassGroupId: "gradient-from",
 						},
 					},
 				},
-				"via": {
+				"via": ClassPart{
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsPercent,
 							ClassGroupId: "gradient-via-pos",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryLength,
 							ClassGroupId: "gradient-via-pos",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsAny,
 							ClassGroupId: "gradient-via",
 						},
 					},
 				},
-				"to": {
+				"to": ClassPart{
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsPercent,
 							ClassGroupId: "gradient-to-pos",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryLength,
 							ClassGroupId: "gradient-to-pos",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsAny,
 							ClassGroupId: "gradient-to",
 						},
 					},
 				},
-				"rounded": {
+				"rounded": ClassPart{
 					NextPart: map[string]ClassPart{
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "rounded",
 						},
-						"full": {
+						"full": ClassPart{
 							ClassGroupId: "rounded",
 						},
-						"s": {
+						"s": ClassPart{
 							NextPart: map[string]ClassPart{
-								"none": {
+								"none": ClassPart{
 									ClassGroupId: "rounded-s",
 								},
-								"full": {
+								"full": ClassPart{
 									ClassGroupId: "rounded-s",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsTshirtSize,
 									ClassGroupId: "rounded-s",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "rounded-s",
 								},
 							},
 							ClassGroupId: "rounded-s",
 						},
-						"e": {
+						"e": ClassPart{
 							NextPart: map[string]ClassPart{
-								"none": {
+								"none": ClassPart{
 									ClassGroupId: "rounded-e",
 								},
-								"full": {
+								"full": ClassPart{
 									ClassGroupId: "rounded-e",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsTshirtSize,
 									ClassGroupId: "rounded-e",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "rounded-e",
 								},
 							},
 							ClassGroupId: "rounded-e",
 						},
-						"t": {
+						"t": ClassPart{
 							NextPart: map[string]ClassPart{
-								"none": {
+								"none": ClassPart{
 									ClassGroupId: "rounded-t",
 								},
-								"full": {
+								"full": ClassPart{
 									ClassGroupId: "rounded-t",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsTshirtSize,
 									ClassGroupId: "rounded-t",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "rounded-t",
 								},
 							},
 							ClassGroupId: "rounded-t",
 						},
-						"r": {
+						"r": ClassPart{
 							NextPart: map[string]ClassPart{
-								"none": {
+								"none": ClassPart{
 									ClassGroupId: "rounded-r",
 								},
-								"full": {
+								"full": ClassPart{
 									ClassGroupId: "rounded-r",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsTshirtSize,
 									ClassGroupId: "rounded-r",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "rounded-r",
 								},
 							},
 							ClassGroupId: "rounded-r",
 						},
-						"b": {
+						"b": ClassPart{
 							NextPart: map[string]ClassPart{
-								"none": {
+								"none": ClassPart{
 									ClassGroupId: "rounded-b",
 								},
-								"full": {
+								"full": ClassPart{
 									ClassGroupId: "rounded-b",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsTshirtSize,
 									ClassGroupId: "rounded-b",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "rounded-b",
 								},
 							},
 							ClassGroupId: "rounded-b",
 						},
-						"l": {
+						"l": ClassPart{
 							NextPart: map[string]ClassPart{
-								"none": {
+								"none": ClassPart{
 									ClassGroupId: "rounded-l",
 								},
-								"full": {
+								"full": ClassPart{
 									ClassGroupId: "rounded-l",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsTshirtSize,
 									ClassGroupId: "rounded-l",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "rounded-l",
 								},
 							},
 							ClassGroupId: "rounded-l",
 						},
-						"ss": {
+						"ss": ClassPart{
 							NextPart: map[string]ClassPart{
-								"none": {
+								"none": ClassPart{
 									ClassGroupId: "rounded-ss",
 								},
-								"full": {
+								"full": ClassPart{
 									ClassGroupId: "rounded-ss",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsTshirtSize,
 									ClassGroupId: "rounded-ss",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "rounded-ss",
 								},
 							},
 							ClassGroupId: "rounded-ss",
 						},
-						"se": {
+						"se": ClassPart{
 							NextPart: map[string]ClassPart{
-								"none": {
+								"none": ClassPart{
 									ClassGroupId: "rounded-se",
 								},
-								"full": {
+								"full": ClassPart{
 									ClassGroupId: "rounded-se",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsTshirtSize,
 									ClassGroupId: "rounded-se",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "rounded-se",
 								},
 							},
 							ClassGroupId: "rounded-se",
 						},
-						"ee": {
+						"ee": ClassPart{
 							NextPart: map[string]ClassPart{
-								"none": {
+								"none": ClassPart{
 									ClassGroupId: "rounded-ee",
 								},
-								"full": {
+								"full": ClassPart{
 									ClassGroupId: "rounded-ee",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsTshirtSize,
 									ClassGroupId: "rounded-ee",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "rounded-ee",
 								},
 							},
 							ClassGroupId: "rounded-ee",
 						},
-						"es": {
+						"es": ClassPart{
 							NextPart: map[string]ClassPart{
-								"none": {
+								"none": ClassPart{
 									ClassGroupId: "rounded-es",
 								},
-								"full": {
+								"full": ClassPart{
 									ClassGroupId: "rounded-es",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsTshirtSize,
 									ClassGroupId: "rounded-es",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "rounded-es",
 								},
 							},
 							ClassGroupId: "rounded-es",
 						},
-						"tl": {
+						"tl": ClassPart{
 							NextPart: map[string]ClassPart{
-								"none": {
+								"none": ClassPart{
 									ClassGroupId: "rounded-tl",
 								},
-								"full": {
+								"full": ClassPart{
 									ClassGroupId: "rounded-tl",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsTshirtSize,
 									ClassGroupId: "rounded-tl",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "rounded-tl",
 								},
 							},
 							ClassGroupId: "rounded-tl",
 						},
-						"tr": {
+						"tr": ClassPart{
 							NextPart: map[string]ClassPart{
-								"none": {
+								"none": ClassPart{
 									ClassGroupId: "rounded-tr",
 								},
-								"full": {
+								"full": ClassPart{
 									ClassGroupId: "rounded-tr",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsTshirtSize,
 									ClassGroupId: "rounded-tr",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "rounded-tr",
 								},
 							},
 							ClassGroupId: "rounded-tr",
 						},
-						"br": {
+						"br": ClassPart{
 							NextPart: map[string]ClassPart{
-								"none": {
+								"none": ClassPart{
 									ClassGroupId: "rounded-br",
 								},
-								"full": {
+								"full": ClassPart{
 									ClassGroupId: "rounded-br",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsTshirtSize,
 									ClassGroupId: "rounded-br",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "rounded-br",
 								},
 							},
 							ClassGroupId: "rounded-br",
 						},
-						"bl": {
+						"bl": ClassPart{
 							NextPart: map[string]ClassPart{
-								"none": {
+								"none": ClassPart{
 									ClassGroupId: "rounded-bl",
 								},
-								"full": {
+								"full": ClassPart{
 									ClassGroupId: "rounded-bl",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsTshirtSize,
 									ClassGroupId: "rounded-bl",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "rounded-bl",
 								},
@@ -3162,213 +3162,213 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsTshirtSize,
 							ClassGroupId: "rounded",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryValue,
 							ClassGroupId: "rounded",
 						},
 					},
 					ClassGroupId: "rounded",
 				},
-				"border": {
+				"border": ClassPart{
 					NextPart: map[string]ClassPart{
-						"x": {
+						"x": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsLength,
 									ClassGroupId: "border-w-x",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryLength,
 									ClassGroupId: "border-w-x",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsAny,
 									ClassGroupId: "border-color-x",
 								},
 							},
 							ClassGroupId: "border-w-x",
 						},
-						"y": {
+						"y": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsLength,
 									ClassGroupId: "border-w-y",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryLength,
 									ClassGroupId: "border-w-y",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsAny,
 									ClassGroupId: "border-color-y",
 								},
 							},
 							ClassGroupId: "border-w-y",
 						},
-						"s": {
+						"s": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsLength,
 									ClassGroupId: "border-w-s",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryLength,
 									ClassGroupId: "border-w-s",
 								},
 							},
 							ClassGroupId: "border-w-s",
 						},
-						"e": {
+						"e": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsLength,
 									ClassGroupId: "border-w-e",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryLength,
 									ClassGroupId: "border-w-e",
 								},
 							},
 							ClassGroupId: "border-w-e",
 						},
-						"t": {
+						"t": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsLength,
 									ClassGroupId: "border-w-t",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryLength,
 									ClassGroupId: "border-w-t",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsAny,
 									ClassGroupId: "border-color-t",
 								},
 							},
 							ClassGroupId: "border-w-t",
 						},
-						"r": {
+						"r": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsLength,
 									ClassGroupId: "border-w-r",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryLength,
 									ClassGroupId: "border-w-r",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsAny,
 									ClassGroupId: "border-color-r",
 								},
 							},
 							ClassGroupId: "border-w-r",
 						},
-						"b": {
+						"b": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsLength,
 									ClassGroupId: "border-w-b",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryLength,
 									ClassGroupId: "border-w-b",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsAny,
 									ClassGroupId: "border-color-b",
 								},
 							},
 							ClassGroupId: "border-w-b",
 						},
-						"l": {
+						"l": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsLength,
 									ClassGroupId: "border-w-l",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryLength,
 									ClassGroupId: "border-w-l",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsAny,
 									ClassGroupId: "border-color-l",
 								},
 							},
 							ClassGroupId: "border-w-l",
 						},
-						"opacity": {
+						"opacity": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsNumber,
 									ClassGroupId: "border-opacity",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryNumber,
 									ClassGroupId: "border-opacity",
 								},
 							},
 							ClassGroupId: "border-opacity",
 						},
-						"solid": {
+						"solid": ClassPart{
 							ClassGroupId: "border-style",
 						},
-						"dashed": {
+						"dashed": ClassPart{
 							ClassGroupId: "border-style",
 						},
-						"dotted": {
+						"dotted": ClassPart{
 							ClassGroupId: "border-style",
 						},
-						"double": {
+						"double": ClassPart{
 							ClassGroupId: "border-style",
 						},
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "border-style",
 						},
-						"hidden": {
+						"hidden": ClassPart{
 							ClassGroupId: "border-style",
 						},
-						"collapse": {
+						"collapse": ClassPart{
 							ClassGroupId: "border-collapse",
 						},
-						"separate": {
+						"separate": ClassPart{
 							ClassGroupId: "border-collapse",
 						},
-						"spacing": {
+						"spacing": ClassPart{
 							NextPart: map[string]ClassPart{
-								"x": {
+								"x": ClassPart{
 									Validators: []ClassGroupValidator{
-										{
+										ClassGroupValidator{
 											Fn:           IsArbitraryValue,
 											ClassGroupId: "border-spacing-x",
 										},
-										{
+										ClassGroupValidator{
 											Fn:           IsLength,
 											ClassGroupId: "border-spacing-x",
 										},
-										{
+										ClassGroupValidator{
 											Fn:           IsArbitraryLength,
 											ClassGroupId: "border-spacing-x",
 										},
 									},
 								},
-								"y": {
+								"y": ClassPart{
 									Validators: []ClassGroupValidator{
-										{
+										ClassGroupValidator{
 											Fn:           IsArbitraryValue,
 											ClassGroupId: "border-spacing-y",
 										},
-										{
+										ClassGroupValidator{
 											Fn:           IsLength,
 											ClassGroupId: "border-spacing-y",
 										},
-										{
+										ClassGroupValidator{
 											Fn:           IsArbitraryLength,
 											ClassGroupId: "border-spacing-y",
 										},
@@ -3376,15 +3376,15 @@ func MakeDefaultConfig() *TwMergeConfig {
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "border-spacing",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsLength,
 									ClassGroupId: "border-spacing",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryLength,
 									ClassGroupId: "border-spacing",
 								},
@@ -3392,118 +3392,118 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsLength,
 							ClassGroupId: "border-w",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryLength,
 							ClassGroupId: "border-w",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsAny,
 							ClassGroupId: "border-color",
 						},
 					},
 					ClassGroupId: "border-w",
 				},
-				"divide": {
+				"divide": ClassPart{
 					NextPart: map[string]ClassPart{
-						"x": {
+						"x": ClassPart{
 							NextPart: map[string]ClassPart{
-								"reverse": {
+								"reverse": ClassPart{
 									ClassGroupId: "divide-x-reverse",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsLength,
 									ClassGroupId: "divide-x",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryLength,
 									ClassGroupId: "divide-x",
 								},
 							},
 							ClassGroupId: "divide-x",
 						},
-						"y": {
+						"y": ClassPart{
 							NextPart: map[string]ClassPart{
-								"reverse": {
+								"reverse": ClassPart{
 									ClassGroupId: "divide-y-reverse",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsLength,
 									ClassGroupId: "divide-y",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryLength,
 									ClassGroupId: "divide-y",
 								},
 							},
 							ClassGroupId: "divide-y",
 						},
-						"opacity": {
+						"opacity": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsNumber,
 									ClassGroupId: "divide-opacity",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryNumber,
 									ClassGroupId: "divide-opacity",
 								},
 							},
 						},
-						"solid": {
+						"solid": ClassPart{
 							ClassGroupId: "divide-style",
 						},
-						"dashed": {
+						"dashed": ClassPart{
 							ClassGroupId: "divide-style",
 						},
-						"dotted": {
+						"dotted": ClassPart{
 							ClassGroupId: "divide-style",
 						},
-						"double": {
+						"double": ClassPart{
 							ClassGroupId: "divide-style",
 						},
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "divide-style",
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsAny,
 							ClassGroupId: "divide-color",
 						},
 					},
 				},
-				"outline": {
+				"outline": ClassPart{
 					NextPart: map[string]ClassPart{
-						"solid": {
+						"solid": ClassPart{
 							ClassGroupId: "outline-style",
 						},
-						"dashed": {
+						"dashed": ClassPart{
 							ClassGroupId: "outline-style",
 						},
-						"dotted": {
+						"dotted": ClassPart{
 							ClassGroupId: "outline-style",
 						},
-						"double": {
+						"double": ClassPart{
 							ClassGroupId: "outline-style",
 						},
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "outline-style",
 						},
-						"offset": {
+						"offset": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsLength,
 									ClassGroupId: "outline-offset",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "outline-offset",
 								},
@@ -3511,49 +3511,49 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsLength,
 							ClassGroupId: "outline-w",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryLength,
 							ClassGroupId: "outline-w",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsAny,
 							ClassGroupId: "outline-color",
 						},
 					},
 					ClassGroupId: "outline-style",
 				},
-				"ring": {
+				"ring": ClassPart{
 					NextPart: map[string]ClassPart{
-						"inset": {
+						"inset": ClassPart{
 							ClassGroupId: "ring-w-inset",
 						},
-						"opacity": {
+						"opacity": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsNumber,
 									ClassGroupId: "ring-opacity",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryNumber,
 									ClassGroupId: "ring-opacity",
 								},
 							},
 						},
-						"offset": {
+						"offset": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsLength,
 									ClassGroupId: "ring-offset-w",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryLength,
 									ClassGroupId: "ring-offset-w",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsAny,
 									ClassGroupId: "ring-offset-color",
 								},
@@ -3561,15 +3561,15 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsLength,
 							ClassGroupId: "ring-w",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryLength,
 							ClassGroupId: "ring-w",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsAny,
 							ClassGroupId: "ring-color",
 						},
@@ -3577,110 +3577,110 @@ func MakeDefaultConfig() *TwMergeConfig {
 					ClassGroupId: "ring-w",
 				},
 
-				"shadow": {
+				"shadow": ClassPart{
 					NextPart: map[string]ClassPart{
-						"inner": {
+						"inner": ClassPart{
 							ClassGroupId: "shadow",
 						},
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "shadow",
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsTshirtSize,
 							ClassGroupId: "shadow",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryShadow,
 							ClassGroupId: "shadow",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsAny,
 							ClassGroupId: "shadow-color",
 						},
 					},
 					ClassGroupId: "shadow",
 				},
-				"opacity": {
+				"opacity": ClassPart{
 					NextPart: map[string]ClassPart{},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsNumber,
 							ClassGroupId: "opacity",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryNumber,
 							ClassGroupId: "opacity",
 						},
 					},
 				},
 
-				"mix": {
+				"mix": ClassPart{
 					NextPart: map[string]ClassPart{
-						"blend": {
+						"blend": ClassPart{
 							NextPart: map[string]ClassPart{
-								"normal": {
+								"normal": ClassPart{
 									ClassGroupId: "mix-blend",
 								},
-								"multiply": {
+								"multiply": ClassPart{
 									ClassGroupId: "mix-blend",
 								},
-								"screen": {
+								"screen": ClassPart{
 									ClassGroupId: "mix-blend",
 								},
-								"overlay": {
+								"overlay": ClassPart{
 									ClassGroupId: "mix-blend",
 								},
-								"darken": {
+								"darken": ClassPart{
 									ClassGroupId: "mix-blend",
 								},
-								"lighten": {
+								"lighten": ClassPart{
 									ClassGroupId: "mix-blend",
 								},
-								"color": {
+								"color": ClassPart{
 									NextPart: map[string]ClassPart{
-										"dodge": {
+										"dodge": ClassPart{
 											ClassGroupId: "mix-blend",
 										},
-										"burn": {
-											ClassGroupId: "mix-blend",
-										},
-									},
-									ClassGroupId: "mix-blend",
-								},
-								"hard": {
-									NextPart: map[string]ClassPart{
-										"light": {
+										"burn": ClassPart{
 											ClassGroupId: "mix-blend",
 										},
 									},
+									ClassGroupId: "mix-blend",
 								},
-								"soft": {
+								"hard": ClassPart{
 									NextPart: map[string]ClassPart{
-										"light": {
+										"light": ClassPart{
 											ClassGroupId: "mix-blend",
 										},
 									},
 								},
-								"difference": {
-									ClassGroupId: "mix-blend",
-								},
-								"exclusion": {
-									ClassGroupId: "mix-blend",
-								},
-								"hue": {
-									ClassGroupId: "mix-blend",
-								},
-								"saturation": {
-									ClassGroupId: "mix-blend",
-								},
-								"luminosity": {
-									ClassGroupId: "mix-blend",
-								},
-								"plus": {
+								"soft": ClassPart{
 									NextPart: map[string]ClassPart{
-										"lighter": {
+										"light": ClassPart{
+											ClassGroupId: "mix-blend",
+										},
+									},
+								},
+								"difference": ClassPart{
+									ClassGroupId: "mix-blend",
+								},
+								"exclusion": ClassPart{
+									ClassGroupId: "mix-blend",
+								},
+								"hue": ClassPart{
+									ClassGroupId: "mix-blend",
+								},
+								"saturation": ClassPart{
+									ClassGroupId: "mix-blend",
+								},
+								"luminosity": ClassPart{
+									ClassGroupId: "mix-blend",
+								},
+								"plus": ClassPart{
+									NextPart: map[string]ClassPart{
+										"lighter": ClassPart{
 											ClassGroupId: "mix-blend",
 										},
 									},
@@ -3689,26 +3689,26 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"filter": {
+				"filter": ClassPart{
 					NextPart: map[string]ClassPart{
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "filter",
 						},
 					},
 					ClassGroupId: "filter",
 				},
-				"blur": {
+				"blur": ClassPart{
 					NextPart: map[string]ClassPart{
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "blur",
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsTshirtSize,
 							ClassGroupId: "blur",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryValue,
 							ClassGroupId: "blur",
 						},
@@ -3716,14 +3716,14 @@ func MakeDefaultConfig() *TwMergeConfig {
 					ClassGroupId: "blur",
 				},
 
-				"brightness": {
+				"brightness": ClassPart{
 					NextPart: map[string]ClassPart{},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsNumber,
 							ClassGroupId: "brightness",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryNumber,
 							ClassGroupId: "brightness",
 						},
@@ -3731,14 +3731,14 @@ func MakeDefaultConfig() *TwMergeConfig {
 					ClassGroupId: "brightness",
 				},
 
-				"contrast": {
+				"contrast": ClassPart{
 					NextPart: map[string]ClassPart{},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsNumber,
 							ClassGroupId: "contrast",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryNumber,
 							ClassGroupId: "contrast",
 						},
@@ -3746,20 +3746,20 @@ func MakeDefaultConfig() *TwMergeConfig {
 					ClassGroupId: "contrast",
 				},
 
-				"drop": {
+				"drop": ClassPart{
 					NextPart: map[string]ClassPart{
-						"shadow": {
+						"shadow": ClassPart{
 							NextPart: map[string]ClassPart{
-								"none": {
+								"none": ClassPart{
 									ClassGroupId: "drop-shadow",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsTshirtSize,
 									ClassGroupId: "drop-shadow",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "drop-shadow",
 								},
@@ -3769,14 +3769,14 @@ func MakeDefaultConfig() *TwMergeConfig {
 					},
 				},
 
-				"grayscale": {
+				"grayscale": ClassPart{
 					NextPart: map[string]ClassPart{
-						"0": {
+						"0": ClassPart{
 							ClassGroupId: "grayscale",
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryValue,
 							ClassGroupId: "grayscale",
 						},
@@ -3784,15 +3784,15 @@ func MakeDefaultConfig() *TwMergeConfig {
 					ClassGroupId: "grayscale",
 				},
 
-				"hue": {
+				"hue": ClassPart{
 					NextPart: map[string]ClassPart{
-						"rotate": {
+						"rotate": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsNumber,
 									ClassGroupId: "hue-rotate",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "hue-rotate",
 								},
@@ -3800,11 +3800,11 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"invert": {
+				"invert": ClassPart{
 					NextPart: map[string]ClassPart{
-						"0": {
+						"0": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "invert",
 								},
@@ -3815,14 +3815,14 @@ func MakeDefaultConfig() *TwMergeConfig {
 					ClassGroupId: "invert",
 				},
 
-				"saturate": {
+				"saturate": ClassPart{
 					NextPart: map[string]ClassPart{},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsNumber,
 							ClassGroupId: "saturate",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryNumber,
 							ClassGroupId: "saturate",
 						},
@@ -3830,11 +3830,11 @@ func MakeDefaultConfig() *TwMergeConfig {
 					ClassGroupId: "saturate",
 				},
 
-				"sepia": {
+				"sepia": ClassPart{
 					NextPart: map[string]ClassPart{
-						"0": {
+						"0": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "sepia",
 								},
@@ -3845,83 +3845,83 @@ func MakeDefaultConfig() *TwMergeConfig {
 					ClassGroupId: "sepia",
 				},
 
-				"backdrop": {
+				"backdrop": ClassPart{
 					NextPart: map[string]ClassPart{
-						"filter": {
+						"filter": ClassPart{
 							NextPart: map[string]ClassPart{
-								"none": {
+								"none": ClassPart{
 									ClassGroupId: "backdrop-filter",
 								},
 							},
 							ClassGroupId: "backdrop-filter",
 						},
-						"blur": {
+						"blur": ClassPart{
 							NextPart: map[string]ClassPart{
-								"none": {
+								"none": ClassPart{
 									ClassGroupId: "backdrop-blur",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsTshirtSize,
 									ClassGroupId: "backdrop-blur",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "backdrop-blur",
 								},
 							},
 							ClassGroupId: "backdrop-blur",
 						},
-						"brightness": {
+						"brightness": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsNumber,
 									ClassGroupId: "backdrop-brightness",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryNumber,
 									ClassGroupId: "backdrop-brightness",
 								},
 							},
 							ClassGroupId: "backdrop-brightness",
 						},
-						"contrast": {
+						"contrast": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsNumber,
 									ClassGroupId: "backdrop-contrast",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryNumber,
 									ClassGroupId: "backdrop-contrast",
 								},
 							},
 							ClassGroupId: "backdrop-contrast",
 						},
-						"grayscale": {
+						"grayscale": ClassPart{
 							NextPart: map[string]ClassPart{
-								"0": {
+								"0": ClassPart{
 									ClassGroupId: "backdrop-grayscale",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "backdrop-grayscale",
 								},
 							},
 							ClassGroupId: "backdrop-grayscale",
 						},
-						"hue": {
+						"hue": ClassPart{
 							NextPart: map[string]ClassPart{
-								"rotate": {
+								"rotate": ClassPart{
 									Validators: []ClassGroupValidator{
-										{
+										ClassGroupValidator{
 											Fn:           IsNumber,
 											ClassGroupId: "backdrop-hue-rotate",
 										},
-										{
+										ClassGroupValidator{
 											Fn:           IsArbitraryValue,
 											ClassGroupId: "backdrop-hue-rotate",
 										},
@@ -3930,11 +3930,11 @@ func MakeDefaultConfig() *TwMergeConfig {
 							},
 							Validators: []ClassGroupValidator{},
 						},
-						"invert": {
+						"invert": ClassPart{
 							NextPart: map[string]ClassPart{
-								"0": {
+								"0": ClassPart{
 									Validators: []ClassGroupValidator{
-										{
+										ClassGroupValidator{
 											Fn:           IsArbitraryValue,
 											ClassGroupId: "backdrop-invert",
 										},
@@ -3945,37 +3945,37 @@ func MakeDefaultConfig() *TwMergeConfig {
 							Validators:   []ClassGroupValidator{},
 							ClassGroupId: "backdrop-invert",
 						},
-						"opacity": {
+						"opacity": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsNumber,
 									ClassGroupId: "backdrop-opacity",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryNumber,
 									ClassGroupId: "backdrop-opacity",
 								},
 							},
 							ClassGroupId: "backdrop-opacity",
 						},
-						"saturate": {
+						"saturate": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsNumber,
 									ClassGroupId: "backdrop-saturate",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryNumber,
 									ClassGroupId: "backdrop-saturate",
 								},
 							},
 							ClassGroupId: "backdrop-saturate",
 						},
-						"sepia": {
+						"sepia": ClassPart{
 							NextPart: map[string]ClassPart{
-								"0": {
+								"0": ClassPart{
 									Validators: []ClassGroupValidator{
-										{
+										ClassGroupValidator{
 											Fn:           IsArbitraryValue,
 											ClassGroupId: "backdrop-sepia",
 										},
@@ -3987,151 +3987,151 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"caption": {
+				"caption": ClassPart{
 					NextPart: map[string]ClassPart{
-						"top": {
+						"top": ClassPart{
 							ClassGroupId: "caption",
 						},
-						"bottom": {
+						"bottom": ClassPart{
 							ClassGroupId: "caption",
 						},
 					},
 					Validators: []ClassGroupValidator{},
 				},
-				"transition": {
+				"transition": ClassPart{
 					NextPart: map[string]ClassPart{
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "transition",
 						},
-						"all": {
+						"all": ClassPart{
 							ClassGroupId: "transition",
 						},
-						"colors": {
+						"colors": ClassPart{
 							ClassGroupId: "transition",
 						},
-						"opacity": {
+						"opacity": ClassPart{
 							ClassGroupId: "transition",
 						},
-						"shadow": {
+						"shadow": ClassPart{
 							ClassGroupId: "transition",
 						},
-						"transform": {
+						"transform": ClassPart{
 							ClassGroupId: "transition",
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryValue,
 							ClassGroupId: "transition",
 						},
 					},
 					ClassGroupId: "transition",
 				},
-				"duration": {
+				"duration": ClassPart{
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsNumber,
 							ClassGroupId: "duration",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryValue,
 							ClassGroupId: "duration",
 						},
 					},
 				},
-				"ease": {
+				"ease": ClassPart{
 					NextPart: map[string]ClassPart{
-						"linear": {
+						"linear": ClassPart{
 							ClassGroupId: "ease",
 						},
-						"in": {
+						"in": ClassPart{
 							NextPart: map[string]ClassPart{
-								"out": {
+								"out": ClassPart{
 									ClassGroupId: "ease",
 								},
 							},
 							ClassGroupId: "ease",
 						},
-						"out": {
+						"out": ClassPart{
 							ClassGroupId: "ease",
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryValue,
 							ClassGroupId: "ease",
 						},
 					},
 				},
-				"delay": {
+				"delay": ClassPart{
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsNumber,
 							ClassGroupId: "delay",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryValue,
 							ClassGroupId: "delay",
 						},
 					},
 				},
-				"animate": {
+				"animate": ClassPart{
 					NextPart: map[string]ClassPart{
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "animate",
 						},
-						"spin": {
+						"spin": ClassPart{
 							ClassGroupId: "animate",
 						},
-						"ping": {
+						"ping": ClassPart{
 							ClassGroupId: "animate",
 						},
-						"pulse": {
+						"pulse": ClassPart{
 							ClassGroupId: "animate",
 						},
-						"bounce": {
+						"bounce": ClassPart{
 							ClassGroupId: "animate",
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryValue,
 							ClassGroupId: "animate",
 						},
 					},
 				},
-				"transform": {
+				"transform": ClassPart{
 					NextPart: map[string]ClassPart{
-						"gpu": {
+						"gpu": ClassPart{
 							ClassGroupId: "transform",
 						},
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "transform",
 						},
 					},
 					ClassGroupId: "transform",
 				},
-				"scale": {
+				"scale": ClassPart{
 					NextPart: map[string]ClassPart{
-						"x": {
+						"x": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsNumber,
 									ClassGroupId: "scale-x",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryNumber,
 									ClassGroupId: "scale-x",
 								},
 							},
 						},
-						"y": {
+						"y": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsNumber,
 									ClassGroupId: "scale-y",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryNumber,
 									ClassGroupId: "scale-y",
 								},
@@ -4139,57 +4139,57 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsNumber,
 							ClassGroupId: "scale",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryNumber,
 							ClassGroupId: "scale",
 						},
 					},
 				},
-				"rotate": {
+				"rotate": ClassPart{
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsInteger,
 							ClassGroupId: "rotate",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryValue,
 							ClassGroupId: "rotate",
 						},
 					},
 				},
-				"translate": {
+				"translate": ClassPart{
 					NextPart: map[string]ClassPart{
-						"x": {
+						"x": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "translate-x",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsLength,
 									ClassGroupId: "translate-x",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryLength,
 									ClassGroupId: "translate-x",
 								},
 							},
 						},
-						"y": {
+						"y": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "translate-y",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsLength,
 									ClassGroupId: "translate-y",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryLength,
 									ClassGroupId: "translate-y",
 								},
@@ -4197,27 +4197,27 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"skew": {
+				"skew": ClassPart{
 					NextPart: map[string]ClassPart{
-						"x": {
+						"x": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsNumber,
 									ClassGroupId: "skew-x",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "skew-x",
 								},
 							},
 						},
-						"y": {
+						"y": ClassPart{
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsNumber,
 									ClassGroupId: "skew-y",
 								},
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "skew-y",
 								},
@@ -4225,316 +4225,316 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"origin": {
+				"origin": ClassPart{
 					NextPart: map[string]ClassPart{
-						"center": {
+						"center": ClassPart{
 							ClassGroupId: "transform-origin",
 						},
-						"top": {
+						"top": ClassPart{
 							NextPart: map[string]ClassPart{
-								"right": {
+								"right": ClassPart{
 									ClassGroupId: "transform-origin",
 								},
-								"left": {
+								"left": ClassPart{
 									ClassGroupId: "transform-origin",
 								},
 							},
 							ClassGroupId: "transform-origin",
 						},
-						"right": {
+						"right": ClassPart{
 							ClassGroupId: "transform-origin",
 						},
-						"bottom": {
+						"bottom": ClassPart{
 							NextPart: map[string]ClassPart{
-								"right": {
+								"right": ClassPart{
 									ClassGroupId: "transform-origin",
 								},
-								"left": {
+								"left": ClassPart{
 									ClassGroupId: "transform-origin",
 								},
 							},
 							ClassGroupId: "transform-origin",
 						},
-						"left": {
+						"left": ClassPart{
 							ClassGroupId: "transform-origin",
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryValue,
 							ClassGroupId: "transform-origin",
 						},
 					},
 				},
-				"accent": {
+				"accent": ClassPart{
 					NextPart: map[string]ClassPart{
-						"auto": {
+						"auto": ClassPart{
 							NextPart:     map[string]ClassPart{},
 							Validators:   []ClassGroupValidator{},
 							ClassGroupId: "accent",
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsAny,
 							ClassGroupId: "accent",
 						},
 					},
 				},
-				"appearance": {
+				"appearance": ClassPart{
 					NextPart: map[string]ClassPart{
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "appearance",
 						},
-						"auto": {
+						"auto": ClassPart{
 							ClassGroupId: "appearance",
 						},
 					},
 				},
-				"cursor": {
+				"cursor": ClassPart{
 					NextPart: map[string]ClassPart{
-						"auto": {
+						"auto": ClassPart{
 							ClassGroupId: "cursor",
 						},
-						"default": {
+						"default": ClassPart{
 							ClassGroupId: "cursor",
 						},
-						"pointer": {
+						"pointer": ClassPart{
 							ClassGroupId: "cursor",
 						},
-						"wait": {
+						"wait": ClassPart{
 							ClassGroupId: "cursor",
 						},
-						"text": {
+						"text": ClassPart{
 							ClassGroupId: "cursor",
 						},
-						"move": {
+						"move": ClassPart{
 							ClassGroupId: "cursor",
 						},
-						"help": {
+						"help": ClassPart{
 							ClassGroupId: "cursor",
 						},
-						"not": {
+						"not": ClassPart{
 							NextPart: map[string]ClassPart{
-								"allowed": {
+								"allowed": ClassPart{
 									ClassGroupId: "cursor",
 								},
 							},
 						},
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "cursor",
 						},
-						"context": {
+						"context": ClassPart{
 							NextPart: map[string]ClassPart{
-								"menu": {
+								"menu": ClassPart{
 									ClassGroupId: "cursor",
 								},
 							},
 						},
-						"progress": {
+						"progress": ClassPart{
 							ClassGroupId: "cursor",
 						},
-						"cell": {
+						"cell": ClassPart{
 							ClassGroupId: "cursor",
 						},
-						"crosshair": {
+						"crosshair": ClassPart{
 							ClassGroupId: "cursor",
 						},
-						"vertical": {
+						"vertical": ClassPart{
 							NextPart: map[string]ClassPart{
-								"text": {
+								"text": ClassPart{
 									ClassGroupId: "cursor",
 								},
 							},
 						},
-						"alias": {
+						"alias": ClassPart{
 							ClassGroupId: "cursor",
 						},
-						"copy": {
+						"copy": ClassPart{
 							ClassGroupId: "cursor",
 						},
-						"no": {
+						"no": ClassPart{
 							NextPart: map[string]ClassPart{
-								"drop": {
+								"drop": ClassPart{
 									ClassGroupId: "cursor",
 								},
 							},
 						},
-						"grab": {
+						"grab": ClassPart{
 							ClassGroupId: "cursor",
 						},
-						"grabbing": {
+						"grabbing": ClassPart{
 							ClassGroupId: "cursor",
 						},
-						"all": {
+						"all": ClassPart{
 							NextPart: map[string]ClassPart{
-								"scroll": {
+								"scroll": ClassPart{
 									ClassGroupId: "cursor",
 								},
 							},
 						},
-						"col": {
+						"col": ClassPart{
 							NextPart: map[string]ClassPart{
-								"resize": {
+								"resize": ClassPart{
 									ClassGroupId: "cursor",
 								},
 							},
 						},
-						"row": {
+						"row": ClassPart{
 							NextPart: map[string]ClassPart{
-								"resize": {
+								"resize": ClassPart{
 									ClassGroupId: "cursor",
 								},
 							},
 						},
-						"n": {
+						"n": ClassPart{
 							NextPart: map[string]ClassPart{
-								"resize": {
+								"resize": ClassPart{
 									ClassGroupId: "cursor",
 								},
 							},
 						},
-						"e": {
+						"e": ClassPart{
 							NextPart: map[string]ClassPart{
-								"resize": {
+								"resize": ClassPart{
 									ClassGroupId: "cursor",
 								},
 							},
 						},
-						"s": {
+						"s": ClassPart{
 							NextPart: map[string]ClassPart{
-								"resize": {
+								"resize": ClassPart{
 									ClassGroupId: "cursor",
 								},
 							},
 						},
-						"w": {
+						"w": ClassPart{
 							NextPart: map[string]ClassPart{
-								"resize": {
+								"resize": ClassPart{
 									ClassGroupId: "cursor",
 								},
 							},
 						},
-						"ne": {
+						"ne": ClassPart{
 							NextPart: map[string]ClassPart{
-								"resize": {
+								"resize": ClassPart{
 									ClassGroupId: "cursor",
 								},
 							},
 						},
-						"nw": {
+						"nw": ClassPart{
 							NextPart: map[string]ClassPart{
-								"resize": {
+								"resize": ClassPart{
 									ClassGroupId: "cursor",
 								},
 							},
 						},
-						"se": {
+						"se": ClassPart{
 							NextPart: map[string]ClassPart{
-								"resize": {
+								"resize": ClassPart{
 									ClassGroupId: "cursor",
 								},
 							},
 						},
-						"sw": {
+						"sw": ClassPart{
 							NextPart: map[string]ClassPart{
-								"resize": {
+								"resize": ClassPart{
 									ClassGroupId: "cursor",
 								},
 							},
 						},
-						"ew": {
+						"ew": ClassPart{
 							NextPart: map[string]ClassPart{
-								"resize": {
+								"resize": ClassPart{
 									ClassGroupId: "cursor",
 								},
 							},
 						},
-						"ns": {
+						"ns": ClassPart{
 							NextPart: map[string]ClassPart{
-								"resize": {
+								"resize": ClassPart{
 									ClassGroupId: "cursor",
 								},
 							},
 						},
-						"nesw": {
+						"nesw": ClassPart{
 							NextPart: map[string]ClassPart{
-								"resize": {
+								"resize": ClassPart{
 									ClassGroupId: "cursor",
 								},
 							},
 						},
-						"nwse": {
+						"nwse": ClassPart{
 							NextPart: map[string]ClassPart{
-								"resize": {
+								"resize": ClassPart{
 									ClassGroupId: "cursor",
 								},
 							},
 						},
-						"zoom": {
+						"zoom": ClassPart{
 							NextPart: map[string]ClassPart{
-								"in": {
+								"in": ClassPart{
 									ClassGroupId: "cursor",
 								},
-								"out": {
+								"out": ClassPart{
 									ClassGroupId: "cursor",
 								},
 							},
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryValue,
 							ClassGroupId: "cursor",
 						},
 					},
 				},
-				"caret": {
+				"caret": ClassPart{
 					NextPart: map[string]ClassPart{},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsAny,
 							ClassGroupId: "caret-color",
 						},
 					},
 				},
-				"pointer": {
+				"pointer": ClassPart{
 					NextPart: map[string]ClassPart{
-						"events": {
+						"events": ClassPart{
 							NextPart: map[string]ClassPart{
-								"none": {
+								"none": ClassPart{
 									ClassGroupId: "pointer-events",
 								},
-								"auto": {
+								"auto": ClassPart{
 									ClassGroupId: "pointer-events",
 								},
 							},
 						},
 					},
 				},
-				"resize": {
+				"resize": ClassPart{
 					NextPart: map[string]ClassPart{
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "resize",
 						},
-						"y": {
+						"y": ClassPart{
 							ClassGroupId: "resize",
 						},
-						"x": {
+						"x": ClassPart{
 							ClassGroupId: "resize",
 						},
 					},
 					ClassGroupId: "resize",
 				},
-				"scroll": {
+				"scroll": ClassPart{
 					NextPart: map[string]ClassPart{
-						"auto": {
+						"auto": ClassPart{
 							ClassGroupId: "scroll-behavior",
 						},
-						"smooth": {
+						"smooth": ClassPart{
 							ClassGroupId: "scroll-behavior",
 						},
-						"m": {
+						"m": ClassPart{
 							Validators: []ClassGroupValidator{
 								{
 									Fn:           IsArbitraryValue,
@@ -4550,7 +4550,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 								},
 							},
 						},
-						"mx": {
+						"mx": ClassPart{
 							Validators: []ClassGroupValidator{
 								{
 									Fn:           IsArbitraryValue,
@@ -4566,7 +4566,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 								},
 							},
 						},
-						"my": {
+						"my": ClassPart{
 							Validators: []ClassGroupValidator{
 								{
 									Fn:           IsArbitraryValue,
@@ -4582,7 +4582,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 								},
 							},
 						},
-						"ms": {
+						"ms": ClassPart{
 							Validators: []ClassGroupValidator{
 								{
 									Fn:           IsArbitraryValue,
@@ -4598,7 +4598,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 								},
 							},
 						},
-						"me": {
+						"me": ClassPart{
 							Validators: []ClassGroupValidator{
 								{
 									Fn:           IsArbitraryValue,
@@ -4614,7 +4614,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 								},
 							},
 						},
-						"mt": {
+						"mt": ClassPart{
 							Validators: []ClassGroupValidator{
 								{
 									Fn:           IsArbitraryValue,
@@ -4630,7 +4630,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 								},
 							},
 						},
-						"mr": {
+						"mr": ClassPart{
 							Validators: []ClassGroupValidator{
 								{
 									Fn:           IsArbitraryValue,
@@ -4646,7 +4646,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 								},
 							},
 						},
-						"mb": {
+						"mb": ClassPart{
 							Validators: []ClassGroupValidator{
 								{
 									Fn:           IsArbitraryValue,
@@ -4662,7 +4662,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 								},
 							},
 						},
-						"ml": {
+						"ml": ClassPart{
 							Validators: []ClassGroupValidator{
 								{
 									Fn:           IsArbitraryValue,
@@ -4678,7 +4678,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 								},
 							},
 						},
-						"p": {
+						"p": ClassPart{
 							Validators: []ClassGroupValidator{
 								{
 									Fn:           IsArbitraryValue,
@@ -4694,7 +4694,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 								},
 							},
 						},
-						"px": {
+						"px": ClassPart{
 							Validators: []ClassGroupValidator{
 								{
 									Fn:           IsArbitraryValue,
@@ -4710,7 +4710,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 								},
 							},
 						},
-						"py": {
+						"py": ClassPart{
 							Validators: []ClassGroupValidator{
 								{
 									Fn:           IsArbitraryValue,
@@ -4726,7 +4726,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 								},
 							},
 						},
-						"ps": {
+						"ps": ClassPart{
 							Validators: []ClassGroupValidator{
 								{
 									Fn:           IsArbitraryValue,
@@ -4742,7 +4742,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 								},
 							},
 						},
-						"pe": {
+						"pe": ClassPart{
 							Validators: []ClassGroupValidator{
 								{
 									Fn:           IsArbitraryValue,
@@ -4758,7 +4758,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 								},
 							},
 						},
-						"pt": {
+						"pt": ClassPart{
 							Validators: []ClassGroupValidator{
 								{
 									Fn:           IsArbitraryValue,
@@ -4774,7 +4774,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 								},
 							},
 						},
-						"pr": {
+						"pr": ClassPart{
 							Validators: []ClassGroupValidator{
 								{
 									Fn:           IsArbitraryValue,
@@ -4790,7 +4790,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 								},
 							},
 						},
-						"pb": {
+						"pb": ClassPart{
 							Validators: []ClassGroupValidator{
 								{
 									Fn:           IsArbitraryValue,
@@ -4806,7 +4806,7 @@ func MakeDefaultConfig() *TwMergeConfig {
 								},
 							},
 						},
-						"pl": {
+						"pl": ClassPart{
 							Validators: []ClassGroupValidator{
 								{
 									Fn:           IsArbitraryValue,
@@ -4824,128 +4824,128 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"snap": {
+				"snap": ClassPart{
 					NextPart: map[string]ClassPart{
-						"start": {
+						"start": ClassPart{
 							ClassGroupId: "snap-align",
 						},
-						"end": {
+						"end": ClassPart{
 							ClassGroupId: "snap-align",
 						},
-						"center": {
+						"center": ClassPart{
 							ClassGroupId: "snap-align",
 						},
-						"align": {
+						"align": ClassPart{
 							NextPart: map[string]ClassPart{
-								"none": {
+								"none": ClassPart{
 									ClassGroupId: "snap-align",
 								},
 							},
 						},
-						"normal": {
+						"normal": ClassPart{
 							ClassGroupId: "snap-stop",
 						},
-						"always": {
+						"always": ClassPart{
 							ClassGroupId: "snap-stop",
 						},
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "snap-type",
 						},
-						"x": {
+						"x": ClassPart{
 							ClassGroupId: "snap-type",
 						},
-						"y": {
+						"y": ClassPart{
 							ClassGroupId: "snap-type",
 						},
-						"both": {
+						"both": ClassPart{
 							ClassGroupId: "snap-type",
 						},
-						"mandatory": {
+						"mandatory": ClassPart{
 							ClassGroupId: "snap-strictness",
 						},
-						"proximity": {
+						"proximity": ClassPart{
 							ClassGroupId: "snap-strictness",
 						},
 					},
 				},
-				"touch": {
+				"touch": ClassPart{
 					NextPart: map[string]ClassPart{
-						"auto": {
+						"auto": ClassPart{
 							ClassGroupId: "touch",
 						},
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "touch",
 						},
-						"manipulation": {
+						"manipulation": ClassPart{
 							ClassGroupId: "touch",
 						},
-						"pan": {
+						"pan": ClassPart{
 							NextPart: map[string]ClassPart{
-								"x": {
+								"x": ClassPart{
 									ClassGroupId: "touch-x",
 								},
-								"left": {
+								"left": ClassPart{
 									ClassGroupId: "touch-x",
 								},
-								"right": {
+								"right": ClassPart{
 									ClassGroupId: "touch-x",
 								},
-								"y": {
+								"y": ClassPart{
 									ClassGroupId: "touch-y",
 								},
-								"up": {
+								"up": ClassPart{
 									ClassGroupId: "touch-y",
 								},
-								"down": {
+								"down": ClassPart{
 									ClassGroupId: "touch-y",
 								},
 							},
 						},
-						"pinch": {
+						"pinch": ClassPart{
 							NextPart: map[string]ClassPart{
-								"zoom": {
+								"zoom": ClassPart{
 									ClassGroupId: "touch-pz",
 								},
 							},
 						},
 					},
 				},
-				"select": {
+				"select": ClassPart{
 					NextPart: map[string]ClassPart{
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "select",
 						},
-						"text": {
+						"text": ClassPart{
 							ClassGroupId: "select",
 						},
-						"all": {
+						"all": ClassPart{
 							ClassGroupId: "select",
 						},
-						"auto": {
+						"auto": ClassPart{
 							ClassGroupId: "select",
 						},
 					},
 					Validators: []ClassGroupValidator{},
 				},
-				"will": {
+				"will": ClassPart{
 					NextPart: map[string]ClassPart{
-						"change": {
+						"change": ClassPart{
 							NextPart: map[string]ClassPart{
-								"auto": {
+								"auto": ClassPart{
 									ClassGroupId: "will-change",
 								},
-								"scroll": {
+								"scroll": ClassPart{
 									ClassGroupId: "will-change",
 								},
-								"contents": {
+								"contents": ClassPart{
 									ClassGroupId: "will-change",
 								},
-								"transform": {
+								"transform": ClassPart{
 									ClassGroupId: "will-change",
 								},
 							},
 							Validators: []ClassGroupValidator{
-								{
+								ClassGroupValidator{
 									Fn:           IsArbitraryValue,
 									ClassGroupId: "will-change",
 								},
@@ -4953,61 +4953,61 @@ func MakeDefaultConfig() *TwMergeConfig {
 						},
 					},
 				},
-				"fill": {
+				"fill": ClassPart{
 					NextPart: map[string]ClassPart{
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "fill",
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsAny,
 							ClassGroupId: "fill",
 						},
 					},
 				},
-				"stroke": {
+				"stroke": ClassPart{
 					NextPart: map[string]ClassPart{
-						"none": {
+						"none": ClassPart{
 							ClassGroupId: "stroke",
 						},
 					},
 					Validators: []ClassGroupValidator{
-						{
+						ClassGroupValidator{
 							Fn:           IsLength,
 							ClassGroupId: "stroke-w",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryLength,
 							ClassGroupId: "stroke-w",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsArbitraryNumber,
 							ClassGroupId: "stroke-w",
 						},
-						{
+						ClassGroupValidator{
 							Fn:           IsAny,
 							ClassGroupId: "stroke",
 						},
 					},
 				},
-				"sr": {
+				"sr": ClassPart{
 					NextPart: map[string]ClassPart{
-						"only": {
+						"only": ClassPart{
 							ClassGroupId: "sr",
 						},
 					},
 				},
-				"forced": {
+				"forced": ClassPart{
 					NextPart: map[string]ClassPart{
-						"color": {
+						"color": ClassPart{
 							NextPart: map[string]ClassPart{
-								"adjust": {
+								"adjust": ClassPart{
 									NextPart: map[string]ClassPart{
-										"auto": {
+										"auto": ClassPart{
 											ClassGroupId: "forced-color-adjust",
 										},
-										"none": {
+										"none": ClassPart{
 											ClassGroupId: "forced-color-adjust",
 										},
 									},

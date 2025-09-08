@@ -6,16 +6,25 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/FACorreiaa/go-templui/app/observability/metrics"
-	"github.com/FACorreiaa/go-templui/app/pkg/domain/auth"
-	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.uber.org/zap"
+
+	"github.com/FACorreiaa/go-templui/app/observability/metrics"
+	"github.com/FACorreiaa/go-templui/app/pkg/domain/auth"
+	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 )
+
+// Define typed context keys
+type contextKey string
+
+const UserIDKey contextKey = "userID"
+const UserRoleKey contextKey = "userRole"
+const UserPlanKey contextKey = "userPlan"
+const UserSubStatusKey contextKey = "userSubStatus"
 
 // LoggerMiddleware logs all HTTP requests using zap
 func LoggerMiddleware() gin.HandlerFunc {
@@ -212,7 +221,26 @@ func GetUserIDFromContext(c *gin.Context) string {
 	if userID, exists := c.Get("user_id"); exists {
 		return userID.(string)
 	}
+
 	return "anonymous"
+}
+
+// CreateContextWithUser creates a context.Context with user information for LLM services
+func CreateContextWithUser(c *gin.Context) context.Context {
+	ctx := c.Request.Context()
+
+	// Add user information to context for LLM services that expect the old pattern
+	if userID, exists := c.Get("user_id"); exists {
+		ctx = context.WithValue(ctx, UserIDKey, userID.(string))
+	}
+	if userEmail, exists := c.Get("user_email"); exists {
+		ctx = context.WithValue(ctx, "userEmail", userEmail.(string))
+	}
+	if userName, exists := c.Get("user_name"); exists {
+		ctx = context.WithValue(ctx, "userName", userName.(string))
+	}
+
+	return ctx
 }
 
 // GetDBFromContext extracts the database pool from context

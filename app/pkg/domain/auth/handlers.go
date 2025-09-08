@@ -73,43 +73,46 @@ func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Demo user for testing
-	if email == "demo@crunchbase.com" && password == "password123" {
-		token, err := h.authService.GenerateToken("demo-user-id", email, "Demo User")
-		if err != nil {
-			logger.Log.Error("Failed to generate token", zap.Error(err))
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-
-		// Set cookie
-		http.SetCookie(w, &http.Cookie{
-			Name:     "auth_token",
-			Value:    token,
-			Expires:  time.Now().Add(24 * time.Hour),
-			HttpOnly: true,
-			Secure:   false, // Set to true in production with HTTPS
-			SameSite: http.SameSiteLaxMode,
-			Path:     "/",
-		})
-
-		logger.Log.Info("Successful login",
+	// Validate credentials
+	user, err := h.authService.GetUserByEmail(r.Context(), email)
+	if err != nil || user == nil || !h.authService.CheckPassword(user.Password, password) {
+		logger.Log.Warn("Invalid login credentials",
 			zap.String("email", email),
 		)
-
-		w.Header().Set("HX-Redirect", "/dashboard")
-		w.WriteHeader(http.StatusOK)
+		w.Header().Set("HX-Retarget", "#login-form")
+		w.WriteHeader(http.StatusUnauthorized)
+		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Invalid email or password</div>`)); err != nil {
+			logger.Log.Error("Failed to write response", zap.Error(err))
+		}
 		return
 	}
 
-	logger.Log.Warn("Invalid login credentials",
+	// Generate token
+	token, err := h.authService.GenerateToken(user.ID, user.Email, user.FullName)
+	if err != nil {
+		logger.Log.Error("Failed to generate token", zap.Error(err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Set cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "auth_token",
+		Value:    token,
+		Expires:  time.Now().Add(24 * time.Hour),
+		HttpOnly: true,
+		Secure:   false, // Set to true in production with HTTPS
+		SameSite: http.SameSiteLaxMode,
+		Path:     "/",
+	})
+
+	logger.Log.Info("Successful login",
+		zap.String("user_id", user.ID),
 		zap.String("email", email),
 	)
-	w.Header().Set("HX-Retarget", "#login-form")
-	w.WriteHeader(http.StatusUnauthorized)
-	if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Invalid email or password</div>`)); err != nil {
-		logger.Log.Error("Failed to write response", zap.Error(err))
-	}
+
+	w.Header().Set("HX-Redirect", "/dashboard")
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -154,9 +157,9 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Register user in database
+	// Register user in database and get user ID
 	fullName := firstName + " " + lastName
-	err = h.authService.Register(r.Context(), fullName, email, password, "user")
+	userID, err := h.authService.Register(r.Context(), fullName, email, password, "user")
 	if err != nil {
 		logger.Log.Error("Failed to register user", zap.Error(err))
 		w.Header().Set("HX-Retarget", "#register-form")
@@ -167,8 +170,7 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate token for new user
-	userID := email // Use email as unique identifier
+	// Generate token for new user using userID
 	token, err := h.authService.GenerateToken(userID, email, fullName)
 	if err != nil {
 		logger.Log.Error("Failed to generate token", zap.Error(err))
@@ -182,12 +184,13 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		Value:    token,
 		Expires:  time.Now().Add(24 * time.Hour),
 		HttpOnly: true,
-		Secure:   false,
+		Secure:   false, // Set to true in production with HTTPS
 		SameSite: http.SameSiteLaxMode,
 		Path:     "/",
 	})
 
 	logger.Log.Info("Successful registration",
+		zap.String("user_id", userID),
 		zap.String("email", email),
 		zap.String("name", fullName),
 	)

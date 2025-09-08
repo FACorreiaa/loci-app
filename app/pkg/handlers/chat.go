@@ -1,12 +1,9 @@
 package handlers
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -175,128 +172,77 @@ func (h *ChatHandlers) HandleSearch(c *gin.Context) {
 	`, string(domain)))
 }
 
-// streamLLMResponse calls the LLM streaming endpoint and processes the results
-func (h *ChatHandlers) streamLLMResponse(query, clientIP string) {
-	// Prepare request to LLM service
-	requestBody := map[string]interface{}{
-		"message":       query,
-		"user_location": nil,
-	}
-
-	jsonData, err := json.Marshal(requestBody)
-	if err != nil {
-		logger.Log.Error("Failed to marshal request", zap.Error(err))
-		return
-	}
-
-	// Make request to LLM streaming endpoint (free tier)
-	llmEndpoint := "http://localhost:8000/api/v1/llm/chat/stream/free"
-	if h.config != nil && h.config.LLM.StreamEndpoint != "" {
-		llmEndpoint = h.config.LLM.StreamEndpoint + "/api/v1/llm/chat/stream/free"
-	}
-
-	resp, err := http.Post(llmEndpoint, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		logger.Log.Error("Failed to call LLM service",
-			zap.Error(err),
-			zap.String("endpoint", llmEndpoint),
-			zap.String("query", query))
-		return
-	}
-	defer resp.Body.Close()
-
-	// Process streaming response
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		logger.Log.Error("Failed to read LLM response", zap.Error(err))
-		return
-	}
-
-	logger.Log.Info("LLM response received",
-		zap.String("query", query),
-		zap.String("client_ip", clientIP),
-		zap.Int("response_size", len(body)))
-}
-
-// callLLMStreamingServiceWithData calls the LLM service and returns both data and redirect URL
+// callLLMStreamingServiceWithData calls the internal LLM service and returns both data and redirect URL
 func (h *ChatHandlers) callLLMStreamingServiceWithData(query, userID string) (map[string]interface{}, string, error) {
-	// Prepare request to LLM streaming service
-	requestBody := map[string]interface{}{
-		"message":       query,
-		"user_location": nil,
-	}
+	ctx := context.Background()
 
-	jsonData, err := json.Marshal(requestBody)
+	// Parse user ID
+	userUUID, err := uuid.Parse(userID)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to marshal request: %w", err)
+		return nil, "", fmt.Errorf("invalid user ID: %w", err)
 	}
 
-	// Build LLM endpoint URL - use the streaming endpoint for authenticated users
-	llmEndpoint := "http://localhost:8000/api/v1/llm/prompt-response/chat/sessions/stream/" + userID
-	if h.config != nil && h.config.LLM.StreamEndpoint != "" {
-		llmEndpoint = h.config.LLM.StreamEndpoint + "/api/v1/llm/prompt-response/chat/sessions/stream/" + userID
-	}
-
-	// Make request to LLM streaming endpoint
-	resp, err := http.Post(llmEndpoint, "application/json", bytes.NewBuffer(jsonData))
+	// Get profile ID
+	profileID, err := h.getDefaultProfileID(ctx, userUUID)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to call LLM service: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, "", fmt.Errorf("LLM service returned status: %d", resp.StatusCode)
+		return nil, "", fmt.Errorf("failed to get user profile: %w", err)
 	}
 
-	// Process the streaming response to extract both data and domain classification
-	llmData, domain, err := h.extractDataAndDomainFromStream(resp.Body)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to extract data from stream: %w", err)
+	// Create event channel for streaming
+	eventCh := make(chan models.StreamEvent, 100)
+
+	// Process the request using internal service
+	go func() {
+		defer close(eventCh)
+
+		err := h.llmService.ProcessUnifiedChatMessageStream(
+			ctx,
+			userUUID,
+			profileID,
+			"", // cityName - empty for auto-detection
+			query,
+			nil, // userLocation
+			eventCh,
+		)
+		if err != nil {
+			logger.Log.Error("Internal LLM service error", zap.Error(err))
+		}
+	}()
+
+	// Collect all events to extract domain and data
+	var llmData map[string]interface{}
+	domain := "activities" // default
+
+	// Wait for events and extract data
+	for event := range eventCh {
+		switch event.Type {
+		case models.EventTypeDomainDetected:
+			if data, ok := event.Data.(map[string]interface{}); ok {
+				if detectedDomain, ok := data["domain"].(string); ok {
+					domain = strings.ToLower(detectedDomain)
+				}
+			}
+		case models.EventTypeItinerary:
+			if event.Data != nil {
+				// Use the data directly as map[string]interface{}
+				if itineraryMap, ok := event.Data.(map[string]interface{}); ok {
+					llmData = itineraryMap
+				}
+			}
+		case models.EventTypeHotels, models.EventTypeRestaurants:
+			if event.Data != nil {
+				llmData = event.Data.(map[string]interface{})
+			}
+		case models.EventTypeComplete:
+			if event.Navigation != nil {
+				domain = event.Navigation.RouteType
+			}
+		}
 	}
 
 	// Map domain to URL (legacy function for string domains)
 	redirectURL := h.mapDomainToURLLegacy(domain)
 	return llmData, redirectURL, nil
-}
-
-// extractDataAndDomainFromStream processes SSE stream to extract both LLM data and domain
-func (h *ChatHandlers) extractDataAndDomainFromStream(body io.Reader) (map[string]interface{}, string, error) {
-	scanner := bufio.NewScanner(body)
-
-	var llmData map[string]interface{}
-	domain := "activities" // default
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, "data: ") {
-			var event struct {
-				Type string                 `json:"type"`
-				Data map[string]interface{} `json:"data"`
-			}
-
-			eventData := strings.TrimPrefix(line, "data: ")
-			if err := json.Unmarshal([]byte(eventData), &event); err != nil {
-				continue // Skip malformed events
-			}
-
-			// Capture itinerary data (the main LLM response)
-			if event.Type == "itinerary" && event.Data != nil {
-				llmData = event.Data
-			}
-
-			// Look for domain or intent classification events
-			if event.Type == "intent_classified" || event.Type == "domain_detected" {
-				if detectedDomain, ok := event.Data["domain"].(string); ok {
-					domain = strings.ToLower(detectedDomain)
-				}
-				if intent, ok := event.Data["intent"].(string); ok {
-					domain = h.mapIntentToDomain(intent)
-				}
-			}
-		}
-	}
-
-	return llmData, domain, nil
 }
 
 // mapIntentToDomain maps intent types to domain strings
@@ -620,7 +566,7 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 	if message == "" {
 		message = c.PostForm("dashboard-search") // For dashboard searches
 	}
-	
+
 	if message == "" {
 		logger.Log.Warn("Empty message for chat stream")
 		c.String(http.StatusBadRequest, "Message parameter is required")
@@ -629,7 +575,17 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 
 	// Get user ID for authenticated users
 	userIDStr := middleware.GetUserIDFromContext(c)
-	
+	fmt.Printf("userIDStr: %s\n", userIDStr)
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		c.String(http.StatusBadRequest, "Invalid user ID")
+		return
+	}
+	profile, err := h.profileService.GetDefaultSearchProfile(c, userID)
+	profileIDStr := profile.ID.String()
+	fmt.Printf("profileIDStr: %s\n", profileIDStr)
+
 	// Set SSE headers
 	c.Header("Content-Type", "text/event-stream")
 	c.Header("Cache-Control", "no-cache")
@@ -648,19 +604,19 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 
 	// Create event channel for streaming
 	eventCh := make(chan models.StreamEvent, 100)
-	
+
 	// Process the request in a goroutine
 	go func() {
 		defer close(eventCh)
-		
-		if userIDStr != "" {
+
+		if profileIDStr != "" {
 			// Authenticated user path
-			userID, err := uuid.Parse(userIDStr)
+			userID, err := uuid.Parse(profileIDStr)
 			if err != nil {
-				logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+				logger.Log.Error("Invalid profile ID", zap.String("profile ID", profileIDStr), zap.Error(err))
 				eventCh <- models.StreamEvent{
 					Type:      models.EventTypeError,
-					Message:   "Invalid user ID",
+					Message:   "Invalid profile ID",
 					Error:     err.Error(),
 					Timestamp: time.Now(),
 					EventID:   uuid.New().String(),
@@ -762,7 +718,6 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 		}
 	}
 }
-
 
 // generateStreamingResponse creates the initial HTML response with streaming content
 func (h *ChatHandlers) generateStreamingResponse(query string) string {
@@ -902,7 +857,7 @@ func (h *ChatHandlers) generateStreamingResponse(query string) string {
 	`, query, query)
 }
 
-// HandleItineraryStream handles SSE streaming for itinerary queries
+// HandleItineraryStream handles SSE streaming for itinerary queries using internal service
 func (h *ChatHandlers) HandleItineraryStream(c *gin.Context) {
 	logger.Log.Info("Itinerary stream request received",
 		zap.String("ip", c.ClientIP()),
@@ -923,97 +878,107 @@ func (h *ChatHandlers) HandleItineraryStream(c *gin.Context) {
 	c.Header("Access-Control-Allow-Origin", "*")
 	c.Header("Access-Control-Allow-Headers", "Cache-Control")
 
-	// Prepare request to LLM service
-	requestBody := map[string]interface{}{
-		"message":       message,
-		"user_location": nil,
-	}
-
-	jsonData, err := json.Marshal(requestBody)
-	if err != nil {
-		logger.Log.Error("Failed to marshal request for itinerary stream", zap.Error(err))
-		fmt.Fprintf(c.Writer, "data: %s\n\n", `{"type":"error","content":"Failed to process request"}`)
-		c.Writer.Flush()
+	// Get user info (same logic as ProcessUnifiedChatMessageStream)
+	userIDStr := middleware.GetUserIDFromContext(c)
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		c.String(http.StatusInternalServerError, "Streaming unsupported")
 		return
 	}
 
-	// Make request to LLM streaming endpoint (free tier)
-	llmEndpoint := "http://localhost:8000/api/v1/llm/chat/stream/free"
-	if h.config != nil && h.config.LLM.StreamEndpoint != "" {
-		llmEndpoint = h.config.LLM.StreamEndpoint + "/api/v1/llm/chat/stream/free"
-	}
+	// Create event channel for streaming
+	eventCh := make(chan models.StreamEvent, 100)
 
-	resp, err := http.Post(llmEndpoint, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		logger.Log.Error("Failed to call LLM service for itinerary stream",
-			zap.Error(err),
-			zap.String("endpoint", llmEndpoint),
-			zap.String("message", message))
-		fmt.Fprintf(c.Writer, "data: %s\n\n", `{"type":"error","content":"Failed to connect to AI service"}`)
-		c.Writer.Flush()
-		return
-	}
-	defer resp.Body.Close()
+	// Process the request in a goroutine
+	go func() {
+		defer close(eventCh)
 
-	if resp.StatusCode != http.StatusOK {
-		logger.Log.Error("LLM service returned non-200 status for itinerary stream",
-			zap.Int("status", resp.StatusCode),
-			zap.String("message", message))
-		fmt.Fprintf(c.Writer, "data: %s\n\n", `{"type":"error","content":"AI service unavailable"}`)
-		c.Writer.Flush()
-		return
-	}
+		if userIDStr != "" && userIDStr != "anonymous" {
+			// Authenticated user path
+			userID, err := uuid.Parse(userIDStr)
+			if err != nil {
+				eventCh <- models.StreamEvent{
+					Type:    models.EventTypeError,
+					Message: "Invalid user ID",
+					Error:   err.Error(),
+				}
+				return
+			}
 
-	// Stream the response
-	scanner := bufio.NewScanner(resp.Body)
-	for scanner.Scan() {
-		line := scanner.Text()
+			// Get profile ID
+			profileID, err := h.getDefaultProfileID(c.Request.Context(), userID)
+			if err != nil {
+				eventCh <- models.StreamEvent{
+					Type:    models.EventTypeError,
+					Message: "Failed to get user profile",
+					Error:   err.Error(),
+				}
+				return
+			}
 
-		// Skip empty lines and non-data lines
-		if line == "" || !strings.HasPrefix(line, "data: ") {
-			continue
-		}
-
-		// Extract JSON data
-		jsonStr := strings.TrimPrefix(line, "data: ")
-		if jsonStr == "" || jsonStr == "[DONE]" {
-			break
-		}
-
-		// Parse the SSE data
-		var data map[string]interface{}
-		if err := json.Unmarshal([]byte(jsonStr), &data); err != nil {
-			continue
-		}
-
-		// Extract content from the streaming response
-		if choices, ok := data["choices"].([]interface{}); ok && len(choices) > 0 {
-			if choice, ok := choices[0].(map[string]interface{}); ok {
-				if delta, ok := choice["delta"].(map[string]interface{}); ok {
-					if content, ok := delta["content"].(string); ok {
-						// Forward the content to the client
-						eventData := map[string]string{
-							"type":    "content",
-							"content": content,
-						}
-						eventJSON, err := json.Marshal(eventData)
-						if err != nil {
-							continue
-						}
-						fmt.Fprintf(c.Writer, "data: %s\n\n", eventJSON)
-						c.Writer.Flush()
-					}
+			// Call the actual LLM service with profile
+			err = h.llmService.ProcessUnifiedChatMessageStream(
+				c.Request.Context(),
+				userID,
+				profileID,
+				"", // cityName - empty for auto-detection
+				message,
+				nil, // userLocation
+				eventCh,
+			)
+			if err != nil {
+				eventCh <- models.StreamEvent{
+					Type:    models.EventTypeError,
+					Message: "LLM service error",
+					Error:   err.Error(),
+				}
+			}
+		} else {
+			// Free/unauthenticated user path
+			err := h.llmService.ProcessUnifiedChatMessageStreamFree(
+				c.Request.Context(),
+				"", // cityName
+				message,
+				nil, // userLocation
+				eventCh,
+			)
+			if err != nil {
+				eventCh <- models.StreamEvent{
+					Type:    models.EventTypeError,
+					Message: "LLM service error",
+					Error:   err.Error(),
 				}
 			}
 		}
+	}()
+
+	// Stream events to client as they arrive
+	for {
+		select {
+		case event, ok := <-eventCh:
+			if !ok {
+				// Channel closed, streaming complete
+				logger.Log.Info("Itinerary stream completed",
+					zap.String("message", message),
+					zap.String("user", userIDStr),
+				)
+				return
+			}
+
+			// Convert event to JSON and send via SSE
+			eventData, err := json.Marshal(event)
+			if err != nil {
+				logger.Log.Error("Failed to marshal event", zap.Error(err))
+				continue
+			}
+
+			fmt.Fprintf(c.Writer, "data: %s\n\n", eventData)
+			flusher.Flush()
+
+		case <-c.Request.Context().Done():
+			// Client disconnected
+			logger.Log.Info("Client disconnected from itinerary stream")
+			return
+		}
 	}
-
-	// Send completion event
-	fmt.Fprintf(c.Writer, "data: %s\n\n", `{"type":"done"}`)
-	c.Writer.Flush()
-
-	logger.Log.Info("Itinerary stream completed",
-		zap.String("message", message),
-		zap.String("user", middleware.GetUserIDFromContext(c)),
-	)
 }

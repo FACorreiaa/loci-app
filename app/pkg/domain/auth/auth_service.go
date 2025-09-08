@@ -28,11 +28,12 @@ type AuthService interface {
 	Login(ctx context.Context, email, password string) (accessToken string, refreshToken string, err error)
 	Logout(ctx context.Context, refreshToken string) error
 	RefreshSession(ctx context.Context, refreshToken string) (accessToken string, newRefreshToken string, err error)
-	Register(ctx context.Context, username, email, password, role string) error
+	Register(ctx context.Context, username, email, password, role string) (string, error)
 	UpdatePassword(ctx context.Context, userID, oldPassword, newPassword string) error
 	InvalidateAllUserRefreshTokens(ctx context.Context, userID string) error
 	ValidateRefreshToken(ctx context.Context, refreshToken string) (string, error)
 	GetUserByID(ctx context.Context, userID string) (*models.UserAuth, error)
+	GetUserByEmail(ctx context.Context, email string) (*models.UserAuth, error)
 	VerifyPassword(ctx context.Context, userID, password string) error
 	GenerateTokens(ctx context.Context, user *models.UserAuth, sub *models.Subscription) (accessToken string, refreshToken string, err error)
 	GetOrCreateUserFromProvider(ctx context.Context, provider string, providerUser goth.User) (*models.UserAuth, error)
@@ -102,7 +103,7 @@ func (s *AuthServiceImpl) Login(ctx context.Context, email, password string) (st
 	return accessToken, refreshToken, nil
 }
 
-func (s *AuthServiceImpl) Register(ctx context.Context, username, email, password, _ string) error {
+func (s *AuthServiceImpl) Register(ctx context.Context, username, email, password, _ string) (string, error) {
 	l := s.logger.With(slog.String("method", "Register"), slog.String("email", email))
 	l.DebugContext(ctx, "Attempting registration")
 
@@ -122,7 +123,7 @@ func (s *AuthServiceImpl) Register(ctx context.Context, username, email, passwor
 		l.ErrorContext(ctx, "Failed to hash password", slog.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Password hashing failed")
-		return fmt.Errorf("could not process password")
+		return "", fmt.Errorf("could not process password")
 	}
 	hashedPassword := string(hashedPasswordBytes)
 
@@ -132,12 +133,12 @@ func (s *AuthServiceImpl) Register(ctx context.Context, username, email, passwor
 		l.ErrorContext(ctx, "Repository registration failed", slog.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Repository registration failed")
-		return fmt.Errorf("registration failed: %w", err)
+		return "", fmt.Errorf("registration failed: %w", err)
 	}
 
 	l.InfoContext(ctx, "Registration successful", slog.String("userID", userID))
 	span.SetStatus(codes.Ok, "User registered")
-	return nil
+	return userID, nil
 }
 
 // RefreshSession validates refresh token, generates new tokens, rotates refresh token.
@@ -267,6 +268,18 @@ func (s *AuthServiceImpl) GetUserByID(ctx context.Context, userID string) (*mode
 	user, err := s.repo.GetUserByID(ctx, userID)
 	if err != nil {
 		l.ErrorContext(ctx, "Failed to fetch user by ID", slog.Any("error", err))
+		return nil, fmt.Errorf("failed to fetch user: %w", err)
+	}
+	l.InfoContext(ctx, "User fetched successfully")
+	return user, nil
+}
+
+func (s *AuthServiceImpl) GetUserByEmail(ctx context.Context, email string) (*models.UserAuth, error) {
+	l := s.logger.With(slog.String("method", "GetUserByEmail"), slog.String("email", email))
+	l.DebugContext(ctx, "Fetching user by email")
+	user, err := s.repo.GetUserByID(ctx, email)
+	if err != nil {
+		l.ErrorContext(ctx, "Failed to fetch user by email", slog.Any("error", err))
 		return nil, fmt.Errorf("failed to fetch user: %w", err)
 	}
 	l.InfoContext(ctx, "User fetched successfully")

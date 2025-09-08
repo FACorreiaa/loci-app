@@ -68,6 +68,7 @@ func getUserFromContext(c *gin.Context) *models.User {
 //}
 
 func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
+	//r.Use(middleware.AuthMiddleware())
 	// Setup custom templ renderer
 	ginHTMLRenderer := r.HTMLRender
 	r.HTMLRender = &renderer.HTMLTemplRenderer{FallbackHTMLRenderer: ginHTMLRenderer}
@@ -631,6 +632,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 
 	// HTMX API routes
 	htmxGroup := r.Group("/")
+	htmxGroup.Use(middleware.AuthMiddleware())
 	{
 		// Search endpoint (public - no auth required)
 		htmxGroup.POST("/search", chatHandlers.HandleSearch)

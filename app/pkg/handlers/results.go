@@ -1,13 +1,8 @@
 package handlers
 
 import (
-	"bufio"
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -300,16 +295,8 @@ type LLMStreamResponse struct {
 }
 
 func (h *ResultsHandlers) callLLMForRestaurants(endpoint string, payload map[string]interface{}) ([]results.RestaurantDetailedInfo, error) {
-	restaurants, err := h.makeSSERequest(endpoint, payload)
-	if err != nil {
-		logger.Log.Error("Failed to get restaurants from LLM", zap.Error(err))
-		return h.getMockRestaurants(), nil // Fallback to mock data
-	}
-
-	if len(restaurants.Restaurants) > 0 {
-		return restaurants.Restaurants, nil
-	}
-
+	// Use mock data directly - no external calls
+	logger.Log.Info("Using mock restaurant data (no external LLM calls)")
 	return h.getMockRestaurants(), nil
 }
 
@@ -347,16 +334,8 @@ func (h *ResultsHandlers) getMockRestaurants() []results.RestaurantDetailedInfo 
 }
 
 func (h *ResultsHandlers) callLLMForActivities(endpoint string, payload map[string]interface{}) ([]results.POIDetailedInfo, error) {
-	response, err := h.makeSSERequest(endpoint, payload)
-	if err != nil {
-		logger.Log.Error("Failed to get activities from LLM", zap.Error(err))
-		return h.getMockActivities(), nil // Fallback to mock data
-	}
-
-	if len(response.Activities) > 0 {
-		return response.Activities, nil
-	}
-
+	// Use mock data directly - no external calls
+	logger.Log.Info("Using mock activities data (no external LLM calls)")
 	return h.getMockActivities(), nil
 }
 
@@ -387,16 +366,8 @@ func (h *ResultsHandlers) getMockActivities() []results.POIDetailedInfo {
 }
 
 func (h *ResultsHandlers) callLLMForHotels(endpoint string, payload map[string]interface{}) ([]results.HotelDetailedInfo, error) {
-	response, err := h.makeSSERequest(endpoint, payload)
-	if err != nil {
-		logger.Log.Error("Failed to get hotels from LLM", zap.Error(err))
-		return h.getMockHotels(), nil // Fallback to mock data
-	}
-
-	if len(response.Hotels) > 0 {
-		return response.Hotels, nil
-	}
-
+	// Use mock data directly - no external calls
+	logger.Log.Info("Using mock hotels data (no external LLM calls)")
 	return h.getMockHotels(), nil
 }
 
@@ -427,16 +398,8 @@ func (h *ResultsHandlers) getMockHotels() []results.HotelDetailedInfo {
 }
 
 func (h *ResultsHandlers) callLLMForItinerary(endpoint string, payload map[string]interface{}) (results.AIItineraryResponse, error) {
-	response, err := h.makeSSERequest(endpoint, payload)
-	if err != nil {
-		logger.Log.Error("Failed to get itinerary from LLM", zap.Error(err))
-		return h.getMockItinerary(), nil // Fallback to mock data
-	}
-
-	if response.Itinerary != nil {
-		return *response.Itinerary, nil
-	}
-
+	// Use mock data directly - no external calls
+	logger.Log.Info("Using mock itinerary data (no external LLM calls)")
 	return h.getMockItinerary(), nil
 }
 
@@ -491,258 +454,4 @@ func (h *ResultsHandlers) getMockItinerary() results.AIItineraryResponse {
 	}
 }
 
-// makeSSERequest handles the Server-Sent Events request to the LLM service
-func (h *ResultsHandlers) makeSSERequest(endpoint string, payload map[string]interface{}) (*LLMStreamResponse, error) {
-	// Convert payload to JSON
-	jsonData, err := json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal payload: %w", err)
-	}
 
-	// Create HTTP request
-	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "text/event-stream")
-	req.Header.Set("Cache-Control", "no-cache")
-
-	// Make request with timeout
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	// Parse SSE stream
-	return h.parseSSEStream(resp)
-}
-
-// parseSSEStream parses the Server-Sent Events stream from the LLM service
-func (h *ResultsHandlers) parseSSEStream(resp *http.Response) (*LLMStreamResponse, error) {
-	scanner := bufio.NewScanner(resp.Body)
-	result := &LLMStreamResponse{}
-
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-
-		if line == "" {
-			continue
-		}
-
-		if strings.HasPrefix(line, "data: ") {
-			data := strings.TrimPrefix(line, "data: ")
-
-			// Skip keep-alive messages
-			if data == "keep-alive" || data == "[DONE]" {
-				continue
-			}
-
-			// Try to parse JSON data
-			var streamData map[string]interface{}
-			if err := json.Unmarshal([]byte(data), &streamData); err != nil {
-				logger.Log.Warn("Failed to parse SSE data", zap.String("data", data), zap.Error(err))
-				continue
-			}
-
-			// Extract structured data from the stream
-			if restaurants, ok := streamData["restaurants"].([]interface{}); ok {
-				h.parseRestaurants(restaurants, result)
-			}
-
-			if activities, ok := streamData["activities"].([]interface{}); ok {
-				h.parseActivities(activities, result)
-			}
-
-			if hotels, ok := streamData["hotels"].([]interface{}); ok {
-				h.parseHotels(hotels, result)
-			}
-
-			if itinerary, ok := streamData["itinerary"].(map[string]interface{}); ok {
-				h.parseItinerary(itinerary, result)
-			}
-
-			if complete, ok := streamData["is_complete"].(bool); ok && complete {
-				break
-			}
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("error reading SSE stream: %w", err)
-	}
-
-	return result, nil
-}
-
-// Helper functions to parse different data types from the SSE stream
-func (h *ResultsHandlers) parseRestaurants(data []interface{}, result *LLMStreamResponse) {
-	for _, item := range data {
-		if restaurant, ok := item.(map[string]interface{}); ok {
-			parsed := h.parseRestaurantData(restaurant)
-			result.Restaurants = append(result.Restaurants, parsed)
-		}
-	}
-}
-
-func (h *ResultsHandlers) parseActivities(data []interface{}, result *LLMStreamResponse) {
-	for _, item := range data {
-		if activity, ok := item.(map[string]interface{}); ok {
-			parsed := h.parsePOIData(activity)
-			result.Activities = append(result.Activities, parsed)
-		}
-	}
-}
-
-func (h *ResultsHandlers) parseHotels(data []interface{}, result *LLMStreamResponse) {
-	for _, item := range data {
-		if hotel, ok := item.(map[string]interface{}); ok {
-			parsed := h.parseHotelData(hotel)
-			result.Hotels = append(result.Hotels, parsed)
-		}
-	}
-}
-
-func (h *ResultsHandlers) parseItinerary(data map[string]interface{}, result *LLMStreamResponse) {
-	itinerary := &results.AIItineraryResponse{}
-
-	if name, ok := data["name"].(string); ok {
-		itinerary.ItineraryName = name
-	}
-
-	if desc, ok := data["description"].(string); ok {
-		itinerary.OverallDescription = desc
-	}
-
-	if pois, ok := data["points_of_interest"].([]interface{}); ok {
-		for _, poi := range pois {
-			if poiData, ok := poi.(map[string]interface{}); ok {
-				itinerary.PointsOfInterest = append(itinerary.PointsOfInterest, h.parsePOIData(poiData))
-			}
-		}
-	}
-
-	result.Itinerary = itinerary
-}
-
-// Helper functions to convert map[string]interface{} to typed structs
-func (h *ResultsHandlers) parseRestaurantData(data map[string]interface{}) results.RestaurantDetailedInfo {
-	restaurant := results.RestaurantDetailedInfo{}
-
-	if name, ok := data["name"].(string); ok {
-		restaurant.Name = name
-	}
-	if desc, ok := data["description"].(string); ok {
-		restaurant.Description = desc
-	}
-	if rating, ok := data["rating"].(float64); ok {
-		restaurant.Rating = rating
-	}
-	if cuisine, ok := data["cuisine_type"].(string); ok {
-		restaurant.CuisineType = &cuisine
-	}
-	if addr, ok := data["address"].(string); ok {
-		restaurant.Address = &addr
-	}
-	if phone, ok := data["phone"].(string); ok {
-		restaurant.PhoneNumber = &phone
-	}
-	if price, ok := data["price_level"].(string); ok {
-		restaurant.PriceLevel = &price
-	}
-	if hours, ok := data["opening_hours"].(string); ok {
-		restaurant.OpeningHours = &hours
-	}
-	if website, ok := data["website"].(string); ok {
-		restaurant.Website = &website
-	}
-	if tags, ok := data["tags"].([]interface{}); ok {
-		for _, tag := range tags {
-			if tagStr, ok := tag.(string); ok {
-				restaurant.Tags = append(restaurant.Tags, tagStr)
-			}
-		}
-	}
-
-	return restaurant
-}
-
-func (h *ResultsHandlers) parsePOIData(data map[string]interface{}) results.POIDetailedInfo {
-	poi := results.POIDetailedInfo{}
-
-	if name, ok := data["name"].(string); ok {
-		poi.Name = name
-	}
-	if desc, ok := data["description"].(string); ok {
-		poi.Description = desc
-	}
-	if rating, ok := data["rating"].(float64); ok {
-		poi.Rating = rating
-	}
-	if category, ok := data["category"].(string); ok {
-		poi.Category = category
-	}
-	if addr, ok := data["address"].(string); ok {
-		poi.Address = addr
-	}
-	if timeToSpend, ok := data["time_to_spend"].(string); ok {
-		poi.TimeToSpend = timeToSpend
-	}
-	if budget, ok := data["budget"].(string); ok {
-		poi.Budget = budget
-	}
-	if website, ok := data["website"].(string); ok {
-		poi.Website = website
-	}
-	if tags, ok := data["tags"].([]interface{}); ok {
-		for _, tag := range tags {
-			if tagStr, ok := tag.(string); ok {
-				poi.Tags = append(poi.Tags, tagStr)
-			}
-		}
-	}
-
-	return poi
-}
-
-func (h *ResultsHandlers) parseHotelData(data map[string]interface{}) results.HotelDetailedInfo {
-	hotel := results.HotelDetailedInfo{}
-
-	if name, ok := data["name"].(string); ok {
-		hotel.Name = name
-	}
-	if desc, ok := data["description"].(string); ok {
-		hotel.Description = desc
-	}
-	if rating, ok := data["rating"].(float64); ok {
-		hotel.Rating = rating
-	}
-	if category, ok := data["category"].(string); ok {
-		hotel.Category = category
-	}
-	if addr, ok := data["address"].(string); ok {
-		hotel.Address = addr
-	}
-	if priceRange, ok := data["price_range"].(string); ok {
-		hotel.PriceRange = &priceRange
-	}
-	if tags, ok := data["tags"].([]interface{}); ok {
-		for _, tag := range tags {
-			if tagStr, ok := tag.(string); ok {
-				hotel.Tags = append(hotel.Tags, tagStr)
-			}
-		}
-	}
-
-	return hotel
-}
