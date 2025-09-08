@@ -139,10 +139,10 @@ func (h *ChatHandlers) streamLLMResponse(query, clientIP string) {
 		return
 	}
 
-	// Make request to LLM streaming endpoint
+	// Make request to LLM streaming endpoint (free tier)
 	llmEndpoint := "http://localhost:8000/api/v1/llm/chat/stream/free"
 	if h.config != nil && h.config.LLM.StreamEndpoint != "" {
-		llmEndpoint = h.config.LLM.StreamEndpoint + "/chat/stream/free"
+		llmEndpoint = h.config.LLM.StreamEndpoint + "/api/v1/llm/chat/stream/free"
 	}
 
 	resp, err := http.Post(llmEndpoint, "application/json", bytes.NewBuffer(jsonData))
@@ -191,7 +191,7 @@ func (h *ChatHandlers) callLLMStreamingServiceWithData(query, userID string) (ma
 	// Build LLM endpoint URL - use the streaming endpoint for authenticated users
 	llmEndpoint := "http://localhost:8000/api/v1/llm/prompt-response/chat/sessions/stream/" + userID
 	if h.config != nil && h.config.LLM.StreamEndpoint != "" {
-		llmEndpoint = h.config.LLM.StreamEndpoint + "/prompt-response/chat/sessions/stream/" + userID
+		llmEndpoint = h.config.LLM.StreamEndpoint + "/api/v1/llm/prompt-response/chat/sessions/stream/" + userID
 	}
 
 	// Make request to LLM streaming endpoint
@@ -744,10 +744,10 @@ func (h *ChatHandlers) HandleItineraryStream(c *gin.Context) {
 		return
 	}
 
-	// Make request to LLM streaming endpoint
+	// Make request to LLM streaming endpoint (free tier)
 	llmEndpoint := "http://localhost:8000/api/v1/llm/chat/stream/free"
 	if h.config != nil && h.config.LLM.StreamEndpoint != "" {
-		llmEndpoint = h.config.LLM.StreamEndpoint + "/chat/stream/free"
+		llmEndpoint = h.config.LLM.StreamEndpoint + "/api/v1/llm/chat/stream/free"
 	}
 
 	resp, err := http.Post(llmEndpoint, "application/json", bytes.NewBuffer(jsonData))

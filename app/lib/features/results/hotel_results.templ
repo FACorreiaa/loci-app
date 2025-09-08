@@ -1,0 +1,393 @@
+package results
+
+import (
+	"fmt"
+	"strings"
+)
+
+templ HotelResults(hotels []HotelDetailedInfo, compact bool, showToggle bool, initialLimit int, favorites []string) {
+	<div class="hotel-results">
+		<div class="space-y-4" id="hotel-list">
+			for i, hotel := range hotels {
+				if !showToggle || i < initialLimit {
+					@HotelCard(hotel, compact, contains(favorites, hotel.ID.String()))
+				} else {
+					<div class="hotel-card hidden">
+						@HotelCard(hotel, compact, contains(favorites, hotel.ID.String()))
+					</div>
+				}
+			}
+		</div>
+		
+		if showToggle && len(hotels) > initialLimit {
+			<div class="text-center mt-4">
+				<button 
+					id="toggle-hotels-btn"
+					class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+					onclick="toggleHotels()"
+				>
+					<i class="fas fa-chevron-down mr-2"></i>
+					<span id="toggle-hotels-text">Show { fmt.Sprintf("%d", len(hotels) - initialLimit) } more hotels</span>
+				</button>
+			</div>
+		}
+	</div>
+	
+	<script>
+		let hotelsExpanded = false;
+		
+		function toggleHotels() {
+			const hiddenHotels = document.querySelectorAll('.hotel-card.hidden');
+			const btn = document.getElementById('toggle-hotels-btn');
+			const toggleText = document.getElementById('toggle-hotels-text');
+			const chevron = btn.querySelector('i');
+			
+			if (!hotelsExpanded) {
+				hiddenHotels.forEach(card => card.classList.remove('hidden'));
+				toggleText.textContent = 'Show fewer hotels';
+				chevron.classList.remove('fa-chevron-down');
+				chevron.classList.add('fa-chevron-up');
+				hotelsExpanded = true;
+			} else {
+				hiddenHotels.forEach(card => card.classList.add('hidden'));
+				toggleText.textContent = `Show ${hiddenHotels.length} more hotels`;
+				chevron.classList.remove('fa-chevron-up');
+				chevron.classList.add('fa-chevron-down');
+				hotelsExpanded = false;
+			}
+		}
+		
+		function toggleHotelFavorite(hotelId) {
+			htmx.ajax('POST', `/favorites/hotels/${hotelId}`, {
+				target: `#favorite-btn-${hotelId}`,
+				swap: 'outerHTML'
+			});
+		}
+		
+		function shareHotel(hotelId) {
+			if (navigator.share) {
+				navigator.share({
+					title: 'Check out this hotel!',
+					url: window.location.origin + `/hotels/${hotelId}`
+				});
+			} else {
+				navigator.clipboard.writeText(window.location.origin + `/hotels/${hotelId}`);
+				showNotification('Link copied to clipboard!', 'success');
+			}
+		}
+	</script>
+}
+
+templ HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) {
+	<div class="hotel-card bg-card rounded-xl shadow-sm border p-4 hover:shadow-md transition-all duration-300">
+		<div class="flex items-start gap-4">
+			<div class="flex-shrink-0">
+				<div class="w-16 h-16 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center">
+					<span class="text-white text-2xl">{ getHotelEmoji(hotel.Category) }</span>
+				</div>
+			</div>
+			
+			<div class="flex-1 min-w-0">
+				<div class="flex items-start justify-between mb-2">
+					<div class="flex-1">
+						<h3 class="font-semibold text-xl text-foreground mb-1 cursor-pointer hover:text-primary transition-colors"
+							onclick="showHotelDetails('{ hotel.ID.String() }')">
+							{ hotel.Name }
+						</h3>
+						
+						if hotel.Category != "" {
+							<p class="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1">
+								{ hotel.Category }
+							</p>
+						}
+						
+						if hotel.Address != "" {
+							<p class="text-sm text-muted-foreground flex items-center mb-1">
+								<i class="fas fa-map-marker-alt mr-1"></i>
+								{ hotel.Address }
+							</p>
+						}
+						
+						if hotel.PhoneNumber != nil && *hotel.PhoneNumber != "" {
+							<p class="text-sm text-muted-foreground flex items-center mb-1">
+								<i class="fas fa-phone mr-1"></i>
+								{ *hotel.PhoneNumber }
+							</p>
+						}
+					</div>
+					
+					<div class="flex items-center gap-2 ml-4">
+						<div class="flex items-center gap-1">
+							<i class="fas fa-star text-yellow-500"></i>
+							<span class="text-sm font-medium text-yellow-600">
+								{ fmt.Sprintf("%.1f", hotel.Rating) }
+							</span>
+						</div>
+						
+						<button 
+							id={ fmt.Sprintf("favorite-btn-%s", hotel.ID.String()) }
+							class={ "p-2 rounded-full hover:bg-accent transition-colors", 
+								templ.KV("text-red-500", isFavorite), templ.KV("text-muted-foreground", !isFavorite) }
+							onclick="toggleHotelFavorite('{ hotel.ID.String() }')"
+							if isFavorite {
+					title="Remove from favorites"
+				} else {
+					title="Add to favorites"
+				}
+						>
+							<i class={ "fas", templ.KV("fa-heart", isFavorite), templ.KV("fa-heart-o", !isFavorite) }></i>
+						</button>
+						
+						<button class="p-2 rounded-full hover:bg-accent transition-colors text-muted-foreground"
+							onclick="shareHotel('{ hotel.ID.String() }')" title="Share">
+							<i class="fas fa-share-alt"></i>
+						</button>
+					</div>
+				</div>
+				
+				if !compact && hotel.Description != "" {
+					<p class="text-sm text-muted-foreground mb-4 line-clamp-3">
+						{ hotel.Description }
+					</p>
+				}
+				
+				<!-- Amenities Display -->
+				if len(hotel.Tags) > 0 {
+					<div class="flex flex-wrap gap-2 mb-4">
+						for i, amenity := range hotel.Tags {
+							if i < 4 {
+								<div class="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full">
+									<i class={ getAmenityIcon(amenity) }></i>
+									<span>{ amenity }</span>
+								</div>
+							} else if i == 4 && len(hotel.Tags) > 4 {
+								<span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+									+{ fmt.Sprintf("%d", len(hotel.Tags) - 4) } more
+								</span>
+								break
+							}
+						}
+					</div>
+				}
+				
+				<div class="flex items-center justify-between">
+					<div class="flex items-center gap-4">
+						if hotel.PriceRange != nil && *hotel.PriceRange != "" {
+							<div class="flex items-center gap-1">
+								<i class="fas fa-euro-sign text-muted-foreground"></i>
+								<span class={ "text-sm font-medium", getHotelPriceColor(*hotel.PriceRange) }>
+									{ *hotel.PriceRange }
+								</span>
+								<span class="text-xs text-muted-foreground">per night</span>
+							</div>
+						}
+						
+						if hotel.OpeningHours != nil && *hotel.OpeningHours != "" {
+							<div class="flex items-center gap-1">
+								<i class="fas fa-clock text-muted-foreground"></i>
+								<span class="text-sm text-muted-foreground">
+									{ *hotel.OpeningHours }
+								</span>
+							</div>
+						}
+					</div>
+					
+					<div class="flex gap-2">
+						<button 
+							class="px-3 py-2 border border-input rounded-lg text-sm hover:bg-accent transition-colors"
+							onclick="compareHotel('{ hotel.ID.String() }')"
+						>
+							<i class="fas fa-balance-scale mr-1"></i>
+							Compare
+						</button>
+						
+						<button 
+							class="px-3 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm hover:bg-secondary/80 transition-colors"
+							data-item-id="{ hotel.ID.String() }"
+							data-content-type="hotel"
+							data-item-name="{ hotel.Name }"
+						>
+							<i class="fas fa-plus mr-1"></i>
+							Add to List
+						</button>
+						
+						if hotel.Website != nil && *hotel.Website != "" {
+							<a href="{ *hotel.Website }" target="_blank" rel="noopener noreferrer"
+								class="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors">
+								<i class="fas fa-bed mr-1"></i>
+								Book Now
+							</a>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+// Compact version for use in small spaces
+templ HotelCardCompact(hotel HotelDetailedInfo, isFavorite bool) {
+	<div class="hotel-card-compact bg-card rounded-lg shadow-sm border p-3 hover:shadow-md transition-all duration-300">
+		<div class="flex items-center gap-3">
+			<div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-lg flex items-center justify-center">
+				<span class="text-white text-lg">{ getHotelEmoji(hotel.Category) }</span>
+			</div>
+			
+			<div class="flex-1 min-w-0">
+				<div class="flex items-start justify-between">
+					<div class="flex-1">
+						<h4 class="font-semibold text-foreground mb-1">{ hotel.Name }</h4>
+						<p class="text-xs text-muted-foreground">{ hotel.Category }</p>
+					</div>
+					
+					<div class="flex items-center gap-1">
+						<div class="flex items-center gap-1">
+							<i class="fas fa-star text-yellow-500 text-xs"></i>
+							<span class="text-xs font-medium">{ fmt.Sprintf("%.1f", hotel.Rating) }</span>
+						</div>
+						
+						<button class={ "p-1 rounded-full hover:bg-accent transition-colors", 
+							templ.KV("text-red-500", isFavorite), templ.KV("text-muted-foreground", !isFavorite) }>
+							<i class={ "fas text-xs", templ.KV("fa-heart", isFavorite), templ.KV("fa-heart-o", !isFavorite) }></i>
+						</button>
+					</div>
+				</div>
+				
+				<div class="flex items-center justify-between mt-2">
+					if hotel.PriceRange != nil && *hotel.PriceRange != "" {
+						<span class={ "text-xs font-medium", getHotelPriceColor(*hotel.PriceRange) }>
+							{ *hotel.PriceRange } per night
+						</span>
+					}
+					
+					<span class="text-xs text-green-600">Free cancellation</span>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+// Featured hotel card for special promotions
+templ FeaturedHotelCard(hotel HotelDetailedInfo, specialOffer string) {
+	<div class="featured-hotel-card bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-xl shadow-sm border-2 border-blue-200 dark:border-blue-800 p-6 hover:shadow-md transition-all duration-300">
+		<div class="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+			Featured
+		</div>
+		
+		<div class="flex items-start gap-4">
+			<div class="w-20 h-20 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center">
+				<span class="text-white text-3xl">{ getHotelEmoji(hotel.Category) }</span>
+			</div>
+			
+			<div class="flex-1">
+				<h3 class="text-xl font-bold text-foreground mb-2">{ hotel.Name }</h3>
+				<p class="text-blue-600 dark:text-blue-400 font-medium mb-2">{ hotel.Category }</p>
+				<p class="text-sm text-muted-foreground mb-4">{ hotel.Description }</p>
+				
+				if specialOffer != "" {
+					<div class="bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-3 py-2 rounded-lg mb-4">
+						<p class="text-sm font-medium">🎉 { specialOffer }</p>
+					</div>
+				}
+				
+				<div class="flex items-center justify-between">
+					<div class="flex items-center gap-2">
+						<div class="flex items-center gap-1">
+							<i class="fas fa-star text-yellow-500"></i>
+							<span class="font-medium">{ fmt.Sprintf("%.1f", hotel.Rating) }</span>
+						</div>
+						if hotel.PriceRange != nil {
+							<span class={ "font-semibold", getHotelPriceColor(*hotel.PriceRange) }>
+								{ *hotel.PriceRange }
+							</span>
+						}
+					</div>
+					
+					<button class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+						View Offer
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+// Utility functions for hotels
+func getHotelEmoji(category string) string {
+	hotelEmojis := map[string]string{
+		"luxury hotel": "🏨",
+		"boutique hotel": "🏩",
+		"business hotel": "🏢",
+		"historic hotel": "🏛️",
+		"resort": "🏖️",
+		"hostel": "🏠",
+		"guesthouse": "🏡",
+		"b&b": "🏠",
+		"apartment": "🏠",
+		"villa": "🏡",
+		"castle": "🏰",
+		"lodge": "🏘️",
+		"motel": "🏨",
+		"hotel": "🏨",
+		"inn": "🏠",
+		"spa": "🧖‍♀️",
+		"beach": "🏖️",
+		"mountain": "⛰️",
+		"city": "🏙️",
+		"airport": "✈️",
+	}
+	
+	if emoji, exists := hotelEmojis[strings.ToLower(category)]; exists {
+		return emoji
+	}
+	return "🏨"
+}
+
+func getHotelPriceColor(priceRange string) string {
+	switch strings.ToLower(priceRange) {
+	case "€", "$", "budget":
+		return "text-green-600"
+	case "€€", "$$", "moderate", "mid":
+		return "text-blue-600"
+	case "€€€", "$$$", "upscale":
+		return "text-orange-600"
+	case "€€€€", "$$$$", "luxury":
+		return "text-purple-600"
+	default:
+		return "text-gray-600"
+	}
+}
+
+func getAmenityIcon(amenity string) string {
+	amenityIcons := map[string]string{
+		"wifi": "fas fa-wifi",
+		"pool": "fas fa-swimming-pool",
+		"spa": "fas fa-spa",
+		"gym": "fas fa-dumbbell",
+		"restaurant": "fas fa-utensils",
+		"bar": "fas fa-glass-cheers",
+		"parking": "fas fa-parking",
+		"breakfast": "fas fa-coffee",
+		"room service": "fas fa-concierge-bell",
+		"airport shuttle": "fas fa-shuttle-van",
+		"pet friendly": "fas fa-paw",
+		"business center": "fas fa-briefcase",
+		"meeting rooms": "fas fa-users",
+		"concierge": "fas fa-concierge-bell",
+		"laundry": "fas fa-tshirt",
+		"air conditioning": "fas fa-snowflake",
+		"heating": "fas fa-fire",
+		"balcony": "fas fa-home",
+		"terrace": "fas fa-tree",
+		"garden": "fas fa-leaf",
+		"beach": "fas fa-umbrella-beach",
+		"ski": "fas fa-skiing",
+		"golf": "fas fa-golf-ball",
+		"tennis": "fas fa-table-tennis",
+	}
+	
+	if icon, exists := amenityIcons[strings.ToLower(amenity)]; exists {
+		return icon
+	}
+	return "fas fa-check"
+}

@@ -200,10 +200,11 @@ templ ItineraryPage() {
 						</button>
 					</div>
 				</div>
-				<!-- Current Itinerary Summary -->
+				<!-- Current Itinerary Results -->
 				<div class="bg-white border-t border-gray-200 p-4">
-					<h3 class="font-semibold text-gray-900 mb-3">Current Itinerary</h3>
+					<h3 class="font-semibold text-gray-900 mb-3">Your Itinerary</h3>
 					<div id="itinerary-summary" class="space-y-2">
+						<!-- Results will be loaded here via HTMX/SSE based on user query -->
 						@ItineraryEmptyState()
 					</div>
 				</div>
@@ -424,10 +425,10 @@ templ ItineraryWelcomeMessage() {
 }
 
 templ ItineraryChatMessage(message models.ChatMessage, isUser bool) {
-	<div class={ fmt.Sprintf("flex items-start space-x-3 %s", templ.KV("flex-row-reverse space-x-reverse", isUser)) }>
+	<div class={ "flex items-start space-x-3", templ.KV("flex-row-reverse space-x-reverse", isUser) }>
 		<div
-			class={ fmt.Sprintf("w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 %s", 
-			templ.KV("bg-blue-600", !isUser), templ.KV("bg-gray-600", isUser)) }
+			class={ "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0", 
+				templ.KV("bg-blue-600", !isUser), templ.KV("bg-gray-600", isUser) }
 		>
 			if isUser {
 				<i class="fas fa-user text-white text-sm"></i>
@@ -436,16 +437,16 @@ templ ItineraryChatMessage(message models.ChatMessage, isUser bool) {
 			}
 		</div>
 		<div
-			class={ fmt.Sprintf("rounded-lg p-4 max-w-md %s", 
-			templ.KV("bg-gray-100", !isUser), templ.KV("bg-blue-600 text-white", isUser)) }
+			class={ "rounded-lg p-4 max-w-md", 
+				templ.KV("bg-gray-100", !isUser), templ.KV("bg-blue-600 text-white", isUser) }
 		>
-			<p class={ fmt.Sprintf("%s", templ.KV("text-gray-800", !isUser)) }>
+			<p class={ templ.KV("text-gray-800", !isUser) }>
 				{ message.Content }
 			</p>
 			if message.Timestamp != "" {
 				<p
-					class={ fmt.Sprintf("text-xs mt-2 %s", 
-					templ.KV("text-gray-500", !isUser), templ.KV("text-blue-100", isUser)) }
+					class={ "text-xs mt-2", 
+						templ.KV("text-gray-500", !isUser), templ.KV("text-blue-100", isUser) }
 				>
 					{ message.Timestamp }
 				</p>

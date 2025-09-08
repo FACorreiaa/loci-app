@@ -41,15 +41,7 @@ func RestaurantsPage() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div></div><!-- Restaurants Grid --><div id=\"restaurants-results\">")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = RestaurantsGrid().Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div><!-- Load More Button --><div class=\"text-center mt-8\"><button class=\"px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors\" hx-get=\"/restaurants/load-more\" hx-target=\"#restaurants-results\" hx-swap=\"beforeend\">Load More Restaurants</button></div></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div></div><!-- Restaurants Results --><div id=\"restaurants-results\"><!-- Results will be loaded here via HTMX based on user query/preferences --><div class=\"text-center py-8\"><div class=\"animate-pulse\"><div class=\"w-12 h-12 bg-orange-400 rounded-full mx-auto mb-4\"></div><p class=\"text-muted-foreground\">Loading personalized restaurant recommendations...</p></div></div></div><!-- Load More Button --><div class=\"text-center mt-8\"><button class=\"px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors\" hx-get=\"/restaurants/load-more\" hx-target=\"#restaurants-results\" hx-swap=\"beforeend\">Load More Restaurants</button></div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -78,7 +70,7 @@ func RestaurantsGrid() templ.Component {
 			templ_7745c5c3_Var2 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"mb-6\"><h2 class=\"text-2xl font-bold text-foreground mb-4\">All Restaurants</h2><div class=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div class=\"mb-6\"><h2 class=\"text-2xl font-bold text-foreground mb-4\">All Restaurants</h2><div class=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -106,7 +98,7 @@ func RestaurantsGrid() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div></div><script>\n\t\t// Check if there's a query parameter and show the discover banner\n\t\tconst urlParams = new URLSearchParams(window.location.search);\n\t\tconst query = urlParams.get('q');\n\t\tif (query) {\n\t\t\tconst banner = document.getElementById('discover-banner');\n\t\t\tconst queryElement = document.getElementById('discover-query');\n\t\t\tif (banner && queryElement) {\n\t\t\t\tqueryElement.textContent = `Based on your request: \"${query}\"`;\n\t\t\t\tbanner.classList.remove('hidden');\n\t\t\t\t\n\t\t\t\t// Simulate loading and then hide spinner after 2 seconds\n\t\t\t\tsetTimeout(() => {\n\t\t\t\t\tconst spinner = banner.querySelector('.animate-spin');\n\t\t\t\t\tconst loadingText = banner.querySelector('.text-sm.font-medium');\n\t\t\t\t\tif (spinner && loadingText) {\n\t\t\t\t\t\tspinner.classList.add('hidden');\n\t\t\t\t\t\tloadingText.textContent = 'Here are personalized restaurant recommendations based on your request!';\n\t\t\t\t\t}\n\t\t\t\t}, 2000);\n\t\t\t\t\n\t\t\t\t// Auto-fill the search input with the query\n\t\t\t\tconst searchInput = document.querySelector('input[placeholder=\"Search restaurants...\"]');\n\t\t\t\tif (searchInput) {\n\t\t\t\t\tsearchInput.value = query;\n\t\t\t\t\t// Trigger search\n\t\t\t\t\tsearchInput.dispatchEvent(new Event('keyup'));\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</div></div><script>\n\t\t// Auto-load results based on query parameter or user intent\n\t\tdocument.addEventListener('DOMContentLoaded', function() {\n\t\t\tconst urlParams = new URLSearchParams(window.location.search);\n\t\t\tconst query = urlParams.get('q');\n\t\t\tconst city = urlParams.get('city');\n\t\t\tconst intent = urlParams.get('intent');\n\t\t\t\n\t\t\tif (query || city) {\n\t\t\t\tconst banner = document.getElementById('discover-banner');\n\t\t\t\tconst queryElement = document.getElementById('discover-query');\n\t\t\t\t\n\t\t\t\tif (banner && queryElement) {\n\t\t\t\t\tqueryElement.textContent = query ? `Based on your request: \"${query}\"` : `Showing restaurants in ${city}`;\n\t\t\t\t\tbanner.classList.remove('hidden');\n\t\t\t\t}\n\t\t\t\t\n\t\t\t\t// Load personalized results immediately\n\t\t\t\tloadRestaurantResults({\n\t\t\t\t\tquery: query || '',\n\t\t\t\t\tcity: city || '',\n\t\t\t\t\tintent: intent || 'dining'\n\t\t\t\t});\n\t\t\t}\n\t\t});\n\t\t\n\t\tfunction loadRestaurantResults(params) {\n\t\t\thtmx.ajax('POST', '/restaurants/search', {\n\t\t\t\tsource: {\n\t\t\t\t\tquery: params.query,\n\t\t\t\t\tcity: params.city,\n\t\t\t\t\tintent: params.intent,\n\t\t\t\t\tdomain: 'dining'\n\t\t\t\t},\n\t\t\t\ttarget: '#restaurants-results',\n\t\t\t\tswap: 'innerHTML'\n\t\t\t});\n\t\t}\n\t\t\n\t\t// Update banner state after results load\n\t\tdocument.body.addEventListener('htmx:afterSwap', function(evt) {\n\t\t\tif (evt.detail.target.id === 'restaurants-results') {\n\t\t\t\tconst banner = document.getElementById('discover-banner');\n\t\t\t\tif (banner) {\n\t\t\t\t\tconst spinner = banner.querySelector('.animate-spin');\n\t\t\t\t\tconst loadingText = banner.querySelector('.text-sm.font-medium');\n\t\t\t\t\tif (spinner && loadingText) {\n\t\t\t\t\t\tspinner.classList.add('hidden');\n\t\t\t\t\t\tloadingText.textContent = 'Here are personalized restaurant recommendations based on your request!';\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t});\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -135,72 +127,72 @@ func FeaturedRestaurantCard(name, cuisine, description, rating, price string) te
 			templ_7745c5c3_Var3 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"bg-card rounded-xl shadow-sm border p-6 hover:shadow-md transition-all duration-300\"><div class=\"flex items-start gap-4\"><div class=\"flex-shrink-0 w-16 h-16 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center\"><svg class=\"w-8 h-8 text-white\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.5 2.5L16 4m2.5 2.5L16 9l-2.5-2.5L16 4m2.5 2.5L21 7M14 17v4m-2-2h4M3 21h18\"></path></svg></div><div class=\"flex-1\"><div class=\"flex items-start justify-between mb-2\"><h3 class=\"text-xl font-semibold text-foreground\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<div class=\"bg-card rounded-xl shadow-sm border p-6 hover:shadow-md transition-all duration-300\"><div class=\"flex items-start gap-4\"><div class=\"flex-shrink-0 w-16 h-16 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center\"><svg class=\"w-8 h-8 text-white\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.5 2.5L16 4m2.5 2.5L16 9l-2.5-2.5L16 4m2.5 2.5L21 7M14 17v4m-2-2h4M3 21h18\"></path></svg></div><div class=\"flex-1\"><div class=\"flex items-start justify-between mb-2\"><h3 class=\"text-xl font-semibold text-foreground\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 167, Col: 61}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 196, Col: 61}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</h3><div class=\"flex items-center gap-1 text-sm\"><svg class=\"w-4 h-4 text-yellow-500 fill-current\" viewBox=\"0 0 20 20\"><path d=\"M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z\"></path></svg> <span class=\"font-medium\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</h3><div class=\"flex items-center gap-1 text-sm\"><svg class=\"w-4 h-4 text-yellow-500 fill-current\" viewBox=\"0 0 20 20\"><path d=\"M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z\"></path></svg> <span class=\"font-medium\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(rating)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 172, Col: 40}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 201, Col: 40}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</span></div></div><p class=\"text-orange-600 dark:text-orange-400 text-sm font-medium mb-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</span></div></div><p class=\"text-orange-600 dark:text-orange-400 text-sm font-medium mb-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(cuisine)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 175, Col: 86}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 204, Col: 86}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</p><p class=\"text-muted-foreground text-sm mb-4\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</p><p class=\"text-muted-foreground text-sm mb-4\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 176, Col: 63}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 205, Col: 63}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</p><div class=\"flex items-center justify-between\"><span class=\"text-lg font-semibold text-foreground\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</p><div class=\"flex items-center justify-between\"><span class=\"text-lg font-semibold text-foreground\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(price)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 178, Col: 64}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 207, Col: 64}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</span> <button class=\"px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors\">View Details</button></div></div></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</span> <button class=\"px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors\">View Details</button></div></div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -229,85 +221,85 @@ func RestaurantCard(name, cuisine, description, rating, price, tags string) temp
 			templ_7745c5c3_Var9 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<article class=\"group bg-card rounded-xl shadow-sm border hover:shadow-md transition-all duration-300\"><div class=\"aspect-video bg-gradient-to-br from-orange-100 to-red-100 dark:from-orange-900 dark:to-red-900 rounded-t-xl relative overflow-hidden\"><div class=\"absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors\"></div><div class=\"absolute top-3 left-3\"><span class=\"px-3 py-1 bg-white/90 dark:bg-black/90 text-sm font-medium rounded-full\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<article class=\"group bg-card rounded-xl shadow-sm border hover:shadow-md transition-all duration-300\"><div class=\"aspect-video bg-gradient-to-br from-orange-100 to-red-100 dark:from-orange-900 dark:to-red-900 rounded-t-xl relative overflow-hidden\"><div class=\"absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors\"></div><div class=\"absolute top-3 left-3\"><span class=\"px-3 py-1 bg-white/90 dark:bg-black/90 text-sm font-medium rounded-full\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(cuisine)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 194, Col: 14}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 223, Col: 14}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</span></div><div class=\"absolute top-3 right-3 flex gap-2\"><button class=\"p-2 bg-white/90 dark:bg-black/90 rounded-full hover:bg-white dark:hover:bg-black transition-colors\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z\"></path></svg></button></div></div><div class=\"p-6\"><div class=\"flex items-start justify-between mb-3\"><h3 class=\"text-lg font-semibold text-foreground group-hover:text-primary transition-colors\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</span></div><div class=\"absolute top-3 right-3 flex gap-2\"><button class=\"p-2 bg-white/90 dark:bg-black/90 rounded-full hover:bg-white dark:hover:bg-black transition-colors\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z\"></path></svg></button></div></div><div class=\"p-6\"><div class=\"flex items-start justify-between mb-3\"><h3 class=\"text-lg font-semibold text-foreground group-hover:text-primary transition-colors\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 208, Col: 11}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 237, Col: 11}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</h3><div class=\"flex items-center gap-1 text-sm\"><svg class=\"w-4 h-4 text-yellow-500 fill-current\" viewBox=\"0 0 20 20\"><path d=\"M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z\"></path></svg> <span class=\"font-medium\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</h3><div class=\"flex items-center gap-1 text-sm\"><svg class=\"w-4 h-4 text-yellow-500 fill-current\" viewBox=\"0 0 20 20\"><path d=\"M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z\"></path></svg> <span class=\"font-medium\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(rating)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 214, Col: 39}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 243, Col: 39}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</span></div></div><p class=\"text-muted-foreground text-sm mb-4 line-clamp-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</span></div></div><p class=\"text-muted-foreground text-sm mb-4 line-clamp-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 218, Col: 17}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 247, Col: 17}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</p><div class=\"flex flex-wrap gap-1 mb-4\"><span class=\"px-2 py-1 bg-accent text-accent-foreground text-xs rounded-full\">Traditional</span> <span class=\"px-2 py-1 bg-accent text-accent-foreground text-xs rounded-full\">Historic</span> <span class=\"px-2 py-1 bg-accent text-accent-foreground text-xs rounded-full\">Outdoor</span></div><div class=\"flex items-center justify-between\"><div class=\"flex flex-col gap-1\"><div class=\"flex items-center gap-2 text-sm font-medium\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</p><div class=\"flex flex-wrap gap-1 mb-4\"><span class=\"px-2 py-1 bg-accent text-accent-foreground text-xs rounded-full\">Traditional</span> <span class=\"px-2 py-1 bg-accent text-accent-foreground text-xs rounded-full\">Historic</span> <span class=\"px-2 py-1 bg-accent text-accent-foreground text-xs rounded-full\">Outdoor</span></div><div class=\"flex items-center justify-between\"><div class=\"flex flex-col gap-1\"><div class=\"flex items-center gap-2 text-sm font-medium\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(price)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 234, Col: 13}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 263, Col: 13}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, " <span class=\"text-muted-foreground font-normal\">per person</span></div><div class=\"text-xs text-muted-foreground\">Open until 11 PM</div></div><div class=\"flex gap-2\"><button class=\"px-3 py-2 border border-input rounded-lg hover:bg-accent transition-colors text-sm\">Reserve</button> <button class=\"px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm\" hx-get=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, " <span class=\"text-muted-foreground font-normal\">per person</span></div><div class=\"text-xs text-muted-foreground\">Open until 11 PM</div></div><div class=\"flex gap-2\"><button class=\"px-3 py-2 border border-input rounded-lg hover:bg-accent transition-colors text-sm\">Reserve</button> <button class=\"px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm\" hx-get=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var15 string
 		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs("/restaurants/" + name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 247, Col: 37}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/lib/features/restaurants/restaurants.templ`, Line: 276, Col: 37}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "\" hx-target=\"#modal-content\" hx-trigger=\"click\">View Menu</button></div></div></div></article>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "\" hx-target=\"#modal-content\" hx-trigger=\"click\">View Menu</button></div></div></div></article>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

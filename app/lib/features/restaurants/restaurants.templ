@@ -90,9 +90,15 @@ templ RestaurantsPage() {
 					@FeaturedRestaurantCard("Taberna do Real Fado", "Traditional Portuguese", "Authentic Portuguese cuisine with live Fado performances in an intimate historic setting.", "4.8", "€€€")
 				</div>
 			</div>
-			<!-- Restaurants Grid -->
+			<!-- Restaurants Results -->
 			<div id="restaurants-results">
-				@RestaurantsGrid()
+				<!-- Results will be loaded here via HTMX based on user query/preferences -->
+				<div class="text-center py-8">
+					<div class="animate-pulse">
+						<div class="w-12 h-12 bg-orange-400 rounded-full mx-auto mb-4"></div>
+						<p class="text-muted-foreground">Loading personalized restaurant recommendations...</p>
+					</div>
+				</div>
 			</div>
 			<!-- Load More Button -->
 			<div class="text-center mt-8">
@@ -122,35 +128,58 @@ templ RestaurantsGrid() {
 		</div>
 	</div>
 	<script>
-		// Check if there's a query parameter and show the discover banner
-		const urlParams = new URLSearchParams(window.location.search);
-		const query = urlParams.get('q');
-		if (query) {
-			const banner = document.getElementById('discover-banner');
-			const queryElement = document.getElementById('discover-query');
-			if (banner && queryElement) {
-				queryElement.textContent = `Based on your request: "${query}"`;
-				banner.classList.remove('hidden');
+		// Auto-load results based on query parameter or user intent
+		document.addEventListener('DOMContentLoaded', function() {
+			const urlParams = new URLSearchParams(window.location.search);
+			const query = urlParams.get('q');
+			const city = urlParams.get('city');
+			const intent = urlParams.get('intent');
+			
+			if (query || city) {
+				const banner = document.getElementById('discover-banner');
+				const queryElement = document.getElementById('discover-query');
 				
-				// Simulate loading and then hide spinner after 2 seconds
-				setTimeout(() => {
+				if (banner && queryElement) {
+					queryElement.textContent = query ? `Based on your request: "${query}"` : `Showing restaurants in ${city}`;
+					banner.classList.remove('hidden');
+				}
+				
+				// Load personalized results immediately
+				loadRestaurantResults({
+					query: query || '',
+					city: city || '',
+					intent: intent || 'dining'
+				});
+			}
+		});
+		
+		function loadRestaurantResults(params) {
+			htmx.ajax('POST', '/restaurants/search', {
+				source: {
+					query: params.query,
+					city: params.city,
+					intent: params.intent,
+					domain: 'dining'
+				},
+				target: '#restaurants-results',
+				swap: 'innerHTML'
+			});
+		}
+		
+		// Update banner state after results load
+		document.body.addEventListener('htmx:afterSwap', function(evt) {
+			if (evt.detail.target.id === 'restaurants-results') {
+				const banner = document.getElementById('discover-banner');
+				if (banner) {
 					const spinner = banner.querySelector('.animate-spin');
 					const loadingText = banner.querySelector('.text-sm.font-medium');
 					if (spinner && loadingText) {
 						spinner.classList.add('hidden');
 						loadingText.textContent = 'Here are personalized restaurant recommendations based on your request!';
 					}
-				}, 2000);
-				
-				// Auto-fill the search input with the query
-				const searchInput = document.querySelector('input[placeholder="Search restaurants..."]');
-				if (searchInput) {
-					searchInput.value = query;
-					// Trigger search
-					searchInput.dispatchEvent(new Event('keyup'));
 				}
 			}
-		}
+		});
 	</script>
 }
 

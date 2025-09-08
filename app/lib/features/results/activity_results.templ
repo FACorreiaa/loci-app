@@ -1,0 +1,321 @@
+package results
+
+import (
+	"fmt"
+	"strings"
+)
+
+templ ActivityResults(activities []POIDetailedInfo, compact bool, showToggle bool, initialLimit int, favorites []string) {
+	<div class="activity-results">
+		<div class="space-y-4" id="activity-list">
+			for i, activity := range activities {
+				if !showToggle || i < initialLimit {
+					@ActivityCard(activity, compact, contains(favorites, activity.ID.String()))
+				} else {
+					<div class="activity-card hidden">
+						@ActivityCard(activity, compact, contains(favorites, activity.ID.String()))
+					</div>
+				}
+			}
+		</div>
+		
+		if showToggle && len(activities) > initialLimit {
+			<div class="text-center mt-4">
+				<button 
+					id="toggle-activities-btn"
+					class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+					onclick="toggleActivities()"
+				>
+					<i class="fas fa-chevron-down mr-2"></i>
+					<span id="toggle-activities-text">Show { fmt.Sprintf("%d", len(activities) - initialLimit) } more activities</span>
+				</button>
+			</div>
+		}
+	</div>
+	
+	<script>
+		let activitiesExpanded = false;
+		
+		function toggleActivities() {
+			const hiddenActivities = document.querySelectorAll('.activity-card.hidden');
+			const btn = document.getElementById('toggle-activities-btn');
+			const toggleText = document.getElementById('toggle-activities-text');
+			const chevron = btn.querySelector('i');
+			
+			if (!activitiesExpanded) {
+				hiddenActivities.forEach(card => card.classList.remove('hidden'));
+				toggleText.textContent = 'Show fewer activities';
+				chevron.classList.remove('fa-chevron-down');
+				chevron.classList.add('fa-chevron-up');
+				activitiesExpanded = true;
+			} else {
+				hiddenActivities.forEach(card => card.classList.add('hidden'));
+				toggleText.textContent = `Show ${hiddenActivities.length} more activities`;
+				chevron.classList.remove('fa-chevron-up');
+				chevron.classList.add('fa-chevron-down');
+				activitiesExpanded = false;
+			}
+		}
+		
+		function toggleActivityFavorite(activityId) {
+			htmx.ajax('POST', `/favorites/activities/${activityId}`, {
+				target: `#favorite-btn-${activityId}`,
+				swap: 'outerHTML'
+			});
+		}
+		
+		function shareActivity(activityId) {
+			if (navigator.share) {
+				navigator.share({
+					title: 'Check out this activity!',
+					url: window.location.origin + `/activities/${activityId}`
+				});
+			} else {
+				navigator.clipboard.writeText(window.location.origin + `/activities/${activityId}`);
+				showNotification('Link copied to clipboard!', 'success');
+			}
+		}
+	</script>
+}
+
+templ ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) {
+	<div class="activity-card bg-card rounded-xl shadow-sm border p-4 hover:shadow-md transition-all duration-300">
+		<div class="flex items-start gap-4">
+			<div class="flex-shrink-0">
+				<div class="w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center">
+					<span class="text-white text-2xl">{ getActivityEmoji(activity.Category) }</span>
+				</div>
+			</div>
+			
+			<div class="flex-1 min-w-0">
+				<div class="flex items-start justify-between mb-2">
+					<div class="flex-1">
+						<h3 class="font-semibold text-xl text-foreground mb-1 cursor-pointer hover:text-primary transition-colors"
+							onclick="showActivityDetails('{ activity.ID.String() }')">
+							{ activity.Name }
+						</h3>
+						
+						if activity.Category != "" {
+							<p class="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1 flex items-center gap-1">
+								<span>{ getActivityEmoji(activity.Category) }</span>
+								{ activity.Category }
+							</p>
+						}
+						
+						if activity.Address != "" {
+							<p class="text-sm text-muted-foreground flex items-center mb-1">
+								<i class="fas fa-map-marker-alt mr-1"></i>
+								{ activity.Address }
+							</p>
+						}
+					</div>
+					
+					<div class="flex items-center gap-2 ml-4">
+						if activity.Rating > 0 {
+							<div class="flex items-center gap-1">
+								<i class="fas fa-star text-yellow-500"></i>
+								<span class="text-sm font-medium text-yellow-600">
+									{ fmt.Sprintf("%.1f", activity.Rating) }
+								</span>
+							</div>
+						}
+						
+						<button 
+							id={ fmt.Sprintf("favorite-btn-%s", activity.ID.String()) }
+							class={ "p-2 rounded-full hover:bg-accent transition-colors", 
+								templ.KV("text-blue-500", isFavorite), templ.KV("text-muted-foreground", !isFavorite) }
+							onclick="toggleActivityFavorite('{ activity.ID.String() }')"
+							if isFavorite {
+						title="Remove from favorites"
+					} else {
+						title="Add to favorites"
+					}
+						>
+							<i class={ "fas", templ.KV("fa-heart", isFavorite), templ.KV("fa-heart-o", !isFavorite) }></i>
+						</button>
+						
+						<button class="p-2 rounded-full hover:bg-accent transition-colors text-muted-foreground"
+							onclick="shareActivity('{ activity.ID.String() }')" title="Share">
+							<i class="fas fa-share-alt"></i>
+						</button>
+					</div>
+				</div>
+				
+				if !compact && activity.Description != "" {
+					<p class="text-sm text-muted-foreground mb-4 line-clamp-3">
+						{ activity.Description }
+					</p>
+				}
+				
+				<div class="flex flex-wrap gap-2 mb-4">
+					for _, tag := range activity.Tags {
+						<span class="px-2 py-1 bg-accent text-accent-foreground text-xs rounded-full">
+							{ tag }
+						</span>
+					}
+				</div>
+				
+				<div class="flex items-center justify-between">
+					<div class="flex items-center gap-4 text-sm text-muted-foreground">
+						if activity.TimeToSpend != "" {
+							<div class="flex items-center gap-1">
+								<i class="fas fa-clock"></i>
+								<span>{ activity.TimeToSpend }</span>
+							</div>
+						}
+						
+						if activity.Budget != "" {
+							<div class="flex items-center gap-1">
+								<i class="fas fa-euro-sign"></i>
+								<span class={ getActivityBudgetColor(activity.Budget) }>
+									{ activity.Budget }
+								</span>
+							</div>
+						}
+						
+						if activity.OpeningHours != "" {
+							<div class="flex items-center gap-1">
+								<i class="fas fa-clock"></i>
+								<span>{ activity.OpeningHours }</span>
+							</div>
+						}
+					</div>
+					
+					<div class="flex gap-2">
+						<button 
+							class="px-3 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm hover:bg-secondary/80 transition-colors"
+							data-item-id="{ activity.ID.String() }"
+							data-content-type="activity"
+							data-item-name="{ activity.Name }"
+						>
+							<i class="fas fa-plus mr-1"></i>
+							Add to List
+						</button>
+						
+						if activity.Website != "" {
+							<a href="{ activity.Website }" target="_blank" rel="noopener noreferrer"
+								class="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors">
+								<i class="fas fa-external-link-alt mr-1"></i>
+								Book Now
+							</a>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+// Compact version for use in small spaces
+templ ActivityCardCompact(activity POIDetailedInfo, isFavorite bool) {
+	<div class="activity-card-compact bg-card rounded-lg shadow-sm border p-3 hover:shadow-md transition-all duration-300">
+		<div class="flex items-center gap-3">
+			<div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg flex items-center justify-center">
+				<span class="text-white text-lg">{ getActivityEmoji(activity.Category) }</span>
+			</div>
+			
+			<div class="flex-1 min-w-0">
+				<div class="flex items-start justify-between">
+					<div class="flex-1">
+						<h4 class="font-semibold text-foreground mb-1">{ activity.Name }</h4>
+						<p class="text-xs text-muted-foreground">{ activity.Category }</p>
+					</div>
+					
+					<div class="flex items-center gap-1">
+						if activity.Rating > 0 {
+							<div class="flex items-center gap-1">
+								<i class="fas fa-star text-yellow-500 text-xs"></i>
+								<span class="text-xs font-medium">{ fmt.Sprintf("%.1f", activity.Rating) }</span>
+							</div>
+						}
+						
+						<button class={ "p-1 rounded-full hover:bg-accent transition-colors", 
+							templ.KV("text-blue-500", isFavorite), templ.KV("text-muted-foreground", !isFavorite) }>
+							<i class={ "fas text-xs", templ.KV("fa-heart", isFavorite), templ.KV("fa-heart-o", !isFavorite) }></i>
+						</button>
+					</div>
+				</div>
+				
+				<div class="flex items-center justify-between mt-2">
+					if activity.Budget != "" {
+						<span class={ "text-xs font-medium", getActivityBudgetColor(activity.Budget) }>
+							{ activity.Budget }
+						</span>
+					}
+					
+					if activity.TimeToSpend != "" {
+						<span class="text-xs text-muted-foreground">{ activity.TimeToSpend }</span>
+					}
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+// Utility functions for activities
+func getActivityEmoji(category string) string {
+	activityEmojis := map[string]string{
+		"museum": "🏛️",
+		"art": "🎨",
+		"cultural": "🎭",
+		"historic": "🏛️",
+		"entertainment": "🎪",
+		"adventure": "⛰️",
+		"outdoor": "🌳",
+		"sightseeing": "👀",
+		"tour": "🚌",
+		"walking": "🚶",
+		"bike": "🚴",
+		"boat": "⛵",
+		"water": "🏊",
+		"beach": "🏖️",
+		"park": "🌳",
+		"garden": "🌺",
+		"zoo": "🦁",
+		"aquarium": "🐠",
+		"shopping": "🛍️",
+		"market": "🛒",
+		"nightlife": "🌙",
+		"bar": "🍸",
+		"music": "🎵",
+		"theater": "🎭",
+		"cinema": "🎬",
+		"festival": "🎉",
+		"sport": "⚽",
+		"fitness": "💪",
+		"spa": "🧖‍♀️",
+		"food": "🍽️",
+		"cooking": "👨‍🍳",
+		"photography": "📷",
+		"nature": "🌿",
+		"wildlife": "🦌",
+		"architecture": "🏗️",
+		"religious": "⛪",
+		"educational": "📚",
+		"family": "👨‍👩‍👧‍👦",
+		"romantic": "💕",
+		"luxury": "💎",
+		"budget": "💰",
+		"free": "🆓",
+	}
+	
+	if emoji, exists := activityEmojis[strings.ToLower(category)]; exists {
+		return emoji
+	}
+	return "🎯"
+}
+
+func getActivityBudgetColor(budget string) string {
+	switch strings.ToLower(budget) {
+	case "free", "€":
+		return "text-green-600"
+	case "low", "budget", "€€":
+		return "text-blue-600"
+	case "mid", "moderate", "€€€":
+		return "text-orange-600"
+	case "high", "expensive", "€€€€":
+		return "text-red-600"
+	default:
+		return "text-gray-600"
+	}
+}

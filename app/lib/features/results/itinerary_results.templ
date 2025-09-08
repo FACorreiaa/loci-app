@@ -1,0 +1,423 @@
+package results
+
+import (
+	"fmt"
+	"strings"
+)
+
+templ ItineraryResults(itinerary AIItineraryResponse, compact bool, showToggle bool, initialLimit int, favorites []string) {
+	<div class="itinerary-results">
+		<!-- Itinerary Header -->
+		<div class="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 mb-6 border">
+			<div class="flex items-center gap-4">
+				<div class="text-4xl">🗺️</div>
+				<div class="flex-1">
+					<h2 class="text-2xl font-bold text-card-foreground mb-2">{ getItineraryName(itinerary.ItineraryName) }</h2>
+					if itinerary.OverallDescription != "" {
+						<p class="text-muted-foreground mb-4">{ itinerary.OverallDescription }</p>
+					}
+					<div class="flex items-center gap-4 text-sm text-muted-foreground">
+						<div class="flex items-center gap-1">
+							<i class="fas fa-map-marker-alt"></i>
+							<span>{ fmt.Sprintf("%d", len(itinerary.PointsOfInterest)) } Points of Interest</span>
+						</div>
+						if len(itinerary.Restaurants) > 0 {
+							<div class="flex items-center gap-1">
+								<i class="fas fa-utensils"></i>
+								<span>{ fmt.Sprintf("%d", len(itinerary.Restaurants)) } Restaurants</span>
+							</div>
+						}
+						if len(itinerary.Bars) > 0 {
+							<div class="flex items-center gap-1">
+								<i class="fas fa-glass-cheers"></i>
+								<span>{ fmt.Sprintf("%d", len(itinerary.Bars)) } Bars</span>
+							</div>
+						}
+					</div>
+				</div>
+				<div class="flex gap-2">
+					<button class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+						<i class="fas fa-heart mr-2"></i>
+						Save Itinerary
+					</button>
+					<button class="px-4 py-2 border border-input rounded-lg hover:bg-accent transition-colors">
+						<i class="fas fa-share-alt mr-2"></i>
+						Share
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Points of Interest -->
+		if len(itinerary.PointsOfInterest) > 0 {
+			<div class="mb-8">
+				<h3 class="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+					<i class="fas fa-map-marker-alt text-blue-600"></i>
+					Points of Interest
+				</h3>
+				<div class="space-y-4" id="poi-list">
+					for i, poi := range itinerary.PointsOfInterest {
+						if !showToggle || i < initialLimit {
+							@ItineraryPOICard(poi, i+1, contains(favorites, poi.ID.String()))
+						} else {
+							<div class="poi-card hidden">
+								@ItineraryPOICard(poi, i+1, contains(favorites, poi.ID.String()))
+							</div>
+						}
+					}
+				</div>
+			</div>
+		}
+
+		<!-- Restaurants -->
+		if len(itinerary.Restaurants) > 0 {
+			<div class="mb-8">
+				<h3 class="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+					<i class="fas fa-utensils text-orange-600"></i>
+					Recommended Restaurants
+				</h3>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					for _, restaurant := range itinerary.Restaurants {
+						@ItineraryRestaurantCard(restaurant, contains(favorites, restaurant.ID.String()))
+					}
+				</div>
+			</div>
+		}
+
+		<!-- Bars & Nightlife -->
+		if len(itinerary.Bars) > 0 {
+			<div class="mb-8">
+				<h3 class="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+					<i class="fas fa-glass-cheers text-purple-600"></i>
+					Bars & Nightlife
+				</h3>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					for _, bar := range itinerary.Bars {
+						@ItineraryBarCard(bar, contains(favorites, bar.ID.String()))
+					}
+				</div>
+			</div>
+		}
+
+		if showToggle && len(itinerary.PointsOfInterest) > initialLimit {
+			<div class="text-center mt-6">
+				<button 
+					id="toggle-poi-btn"
+					class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+					onclick="togglePOIs()"
+				>
+					<i class="fas fa-chevron-down mr-2"></i>
+					<span id="toggle-poi-text">Show { fmt.Sprintf("%d", len(itinerary.PointsOfInterest) - initialLimit) } more places</span>
+				</button>
+			</div>
+		}
+	</div>
+
+	<script>
+		let poisExpanded = false;
+		
+		function togglePOIs() {
+			const hiddenPOIs = document.querySelectorAll('.poi-card.hidden');
+			const btn = document.getElementById('toggle-poi-btn');
+			const toggleText = document.getElementById('toggle-poi-text');
+			const chevron = btn.querySelector('i');
+			
+			if (!poisExpanded) {
+				hiddenPOIs.forEach(card => card.classList.remove('hidden'));
+				toggleText.textContent = 'Show fewer places';
+				chevron.classList.remove('fa-chevron-down');
+				chevron.classList.add('fa-chevron-up');
+				poisExpanded = true;
+			} else {
+				hiddenPOIs.forEach(card => card.classList.add('hidden'));
+				toggleText.textContent = `Show ${hiddenPOIs.length} more places`;
+				chevron.classList.remove('fa-chevron-up');
+				chevron.classList.add('fa-chevron-down');
+				poisExpanded = false;
+			}
+		}
+		
+		function addToItinerary(poiId) {
+			htmx.ajax('POST', `/itinerary/add/${poiId}`, {
+				target: 'body',
+				swap: 'none'
+			});
+			showNotification('Added to your itinerary!', 'success');
+		}
+		
+		function togglePOIFavorite(poiId) {
+			htmx.ajax('POST', `/favorites/poi/${poiId}`, {
+				target: `#favorite-btn-${poiId}`,
+				swap: 'outerHTML'
+			});
+		}
+	</script>
+}
+
+templ ItineraryPOICard(poi POIDetailedInfo, priority int, isFavorite bool) {
+	<div class="poi-card bg-card rounded-xl shadow-sm border p-4 hover:shadow-md transition-all duration-300">
+		<div class="flex items-start gap-4">
+			<div class="flex-shrink-0">
+				<div class={ "w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg",
+					getPriorityColor(priority) }>
+					{ fmt.Sprintf("%d", priority) }
+				</div>
+			</div>
+			
+			<div class="flex-1 min-w-0">
+				<div class="flex items-start justify-between mb-2">
+					<div class="flex-1">
+						<h4 class="font-semibold text-lg text-foreground mb-1 cursor-pointer hover:text-primary transition-colors">
+							{ poi.Name }
+						</h4>
+						
+						if poi.Category != "" {
+							<p class="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1 flex items-center gap-1">
+								<span>{ getCategoryEmoji(poi.Category) }</span>
+								{ poi.Category }
+							</p>
+						}
+						
+						if poi.Address != "" {
+							<p class="text-sm text-muted-foreground flex items-center mb-1">
+								<i class="fas fa-map-marker-alt mr-1"></i>
+								{ poi.Address }
+							</p>
+						}
+					</div>
+					
+					<div class="flex items-center gap-2 ml-4">
+						if poi.Rating > 0 {
+							<div class="flex items-center gap-1">
+								<i class="fas fa-star text-yellow-500"></i>
+								<span class="text-sm font-medium text-yellow-600">
+									{ fmt.Sprintf("%.1f", poi.Rating) }
+								</span>
+							</div>
+						}
+						
+						<button 
+							id={ fmt.Sprintf("favorite-btn-%s", poi.ID.String()) }
+							class={ "p-2 rounded-full hover:bg-accent transition-colors", 
+								templ.KV("text-yellow-500", isFavorite), templ.KV("text-muted-foreground", !isFavorite) }
+							onclick="togglePOIFavorite('{ poi.ID.String() }')"
+							if isFavorite {
+				title="Remove from favorites"
+			} else {
+				title="Add to favorites"
+			}
+						>
+							<i class={ "fas", templ.KV("fa-star", isFavorite), templ.KV("fa-star-o", !isFavorite) }></i>
+						</button>
+					</div>
+				</div>
+				
+				if poi.Description != "" {
+					<p class="text-sm text-muted-foreground mb-3 line-clamp-2">
+						{ poi.Description }
+					</p>
+				}
+				
+				<div class="flex flex-wrap gap-2 mb-4">
+					for _, tag := range poi.Tags {
+						<span class="px-2 py-1 bg-accent text-accent-foreground text-xs rounded-full">
+							{ tag }
+						</span>
+					}
+				</div>
+				
+				<div class="flex items-center justify-between">
+					<div class="flex items-center gap-4 text-sm text-muted-foreground">
+						if poi.TimeToSpend != "" {
+							<div class="flex items-center gap-1">
+								<i class="fas fa-clock"></i>
+								<span>{ poi.TimeToSpend }</span>
+							</div>
+						}
+						
+						if poi.Budget != "" {
+							<div class="flex items-center gap-1">
+								<i class="fas fa-euro-sign"></i>
+								<span class={ getBudgetColor(poi.Budget) }>{ poi.Budget }</span>
+							</div>
+						}
+					</div>
+					
+					<div class="flex gap-2">
+						<button 
+							class="px-3 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm hover:bg-secondary/80 transition-colors"
+							onclick="addToItinerary('{ poi.ID.String() }')"
+						>
+							<i class="fas fa-plus mr-1"></i>
+							Add to Trip
+						</button>
+						
+						if poi.Website != "" {
+							<a href="{ poi.Website }" target="_blank" rel="noopener noreferrer"
+								class="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors">
+								<i class="fas fa-external-link-alt mr-1"></i>
+								Details
+							</a>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+templ ItineraryRestaurantCard(restaurant POIDetailedInfo, isFavorite bool) {
+	<div class="bg-card rounded-lg shadow-sm border p-4 hover:shadow-md transition-all duration-300">
+		<div class="flex items-start gap-3">
+			<div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-500 rounded-lg flex items-center justify-center">
+				<i class="fas fa-utensils text-white"></i>
+			</div>
+			
+			<div class="flex-1 min-w-0">
+				<div class="flex items-start justify-between mb-2">
+					<h4 class="font-semibold text-foreground">{ restaurant.Name }</h4>
+					if restaurant.Rating > 0 {
+						<div class="flex items-center gap-1">
+							<i class="fas fa-star text-yellow-500"></i>
+							<span class="text-sm font-medium">{ fmt.Sprintf("%.1f", restaurant.Rating) }</span>
+						</div>
+					}
+				</div>
+				
+				if restaurant.Description != "" {
+					<p class="text-sm text-muted-foreground mb-2 line-clamp-2">{ restaurant.Description }</p>
+				}
+				
+				if restaurant.Address != "" {
+					<p class="text-xs text-muted-foreground mb-2">{ restaurant.Address }</p>
+				}
+				
+				<div class="flex justify-between items-center">
+					if restaurant.Budget != "" {
+						<span class={ "text-sm font-medium", getBudgetColor(restaurant.Budget) }>
+							{ restaurant.Budget }
+						</span>
+					}
+					<button class="text-xs px-2 py-1 bg-primary text-primary-foreground rounded">
+						View Menu
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+templ ItineraryBarCard(bar POIDetailedInfo, isFavorite bool) {
+	<div class="bg-card rounded-lg shadow-sm border p-4 hover:shadow-md transition-all duration-300">
+		<div class="flex items-start gap-3">
+			<div class="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-lg flex items-center justify-center">
+				<i class="fas fa-glass-cheers text-white"></i>
+			</div>
+			
+			<div class="flex-1 min-w-0">
+				<div class="flex items-start justify-between mb-2">
+					<h4 class="font-semibold text-foreground">{ bar.Name }</h4>
+					if bar.Rating > 0 {
+						<div class="flex items-center gap-1">
+							<i class="fas fa-star text-yellow-500"></i>
+							<span class="text-sm font-medium">{ fmt.Sprintf("%.1f", bar.Rating) }</span>
+						</div>
+					}
+				</div>
+				
+				if bar.Description != "" {
+					<p class="text-sm text-muted-foreground mb-2 line-clamp-2">{ bar.Description }</p>
+				}
+				
+				if bar.Address != "" {
+					<p class="text-xs text-muted-foreground mb-2">{ bar.Address }</p>
+				}
+				
+				<div class="flex justify-between items-center">
+					if bar.Budget != "" {
+						<span class={ "text-sm font-medium", getBudgetColor(bar.Budget) }>
+							{ bar.Budget }
+						</span>
+					}
+					<button class="text-xs px-2 py-1 bg-primary text-primary-foreground rounded">
+						More Info
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+// Utility functions for itinerary
+func getItineraryName(name string) string {
+	if name == "" {
+		return "Your Personalized Itinerary"
+	}
+	// Handle JSON string format if needed
+	if strings.HasPrefix(name, "{") && strings.HasSuffix(name, "}") {
+		return "Personalized Travel Plan"
+	}
+	return name
+}
+
+func getPriorityColor(priority int) string {
+	switch {
+	case priority == 1:
+		return "bg-green-500"
+	case priority <= 3:
+		return "bg-blue-500"
+	case priority <= 5:
+		return "bg-yellow-500"
+	case priority <= 7:
+		return "bg-orange-500"
+	default:
+		return "bg-gray-500"
+	}
+}
+
+func getCategoryEmoji(category string) string {
+	categoryEmojis := map[string]string{
+		"museum": "🏛️",
+		"park": "🌳",
+		"restaurant": "🍽️",
+		"bar": "🍸",
+		"attraction": "🎯",
+		"historical": "🏛️",
+		"cultural": "🎭",
+		"entertainment": "🎪",
+		"shopping": "🛍️",
+		"beach": "🏖️",
+		"monument": "🗿",
+		"church": "⛪",
+		"cathedral": "🏰",
+		"palace": "🏰",
+		"castle": "🏰",
+		"tower": "🗼",
+		"bridge": "🌉",
+		"gallery": "🖼️",
+		"theater": "🎭",
+		"market": "🛍️",
+		"viewpoint": "👀",
+		"garden": "🌺",
+	}
+	
+	if emoji, exists := categoryEmojis[strings.ToLower(category)]; exists {
+		return emoji
+	}
+	return "📍"
+}
+
+func getBudgetColor(budget string) string {
+	switch strings.ToLower(budget) {
+	case "free", "€":
+		return "text-green-600"
+	case "budget", "€€":
+		return "text-blue-600"
+	case "moderate", "€€€":
+		return "text-orange-600"
+	case "expensive", "€€€€":
+		return "text-red-600"
+	default:
+		return "text-gray-600"
+	}
+}

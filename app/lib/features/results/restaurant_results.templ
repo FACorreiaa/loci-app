@@ -1,0 +1,286 @@
+package results
+
+import (
+	"fmt"
+	"strings"
+)
+
+templ RestaurantResults(restaurants []RestaurantDetailedInfo, compact bool, showToggle bool, initialLimit int, favorites []string, isLoadingFavorites bool) {
+	<div class="restaurant-results">
+		<div class="space-y-3" id="restaurant-list">
+			for i, restaurant := range restaurants {
+				if !showToggle || i < initialLimit {
+					@RestaurantCard(restaurant, compact, contains(favorites, restaurant.ID.String()), isLoadingFavorites)
+				} else {
+					<div class="restaurant-card hidden">
+						@RestaurantCard(restaurant, compact, contains(favorites, restaurant.ID.String()), isLoadingFavorites)
+					</div>
+				}
+			}
+		</div>
+		
+		if showToggle && len(restaurants) > initialLimit {
+			<div class="text-center mt-4">
+				<button 
+					id="toggle-restaurants-btn"
+					class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+					onclick="toggleRestaurants()"
+				>
+					<i class="fas fa-chevron-down mr-2"></i>
+					<span id="toggle-text">Show { fmt.Sprintf("%d", len(restaurants) - initialLimit) } more restaurants</span>
+				</button>
+			</div>
+		}
+	</div>
+	
+	<script>
+		let restaurantsExpanded = false;
+		
+		function toggleRestaurants() {
+			const hiddenRestaurants = document.querySelectorAll('.restaurant-card.hidden');
+			const btn = document.getElementById('toggle-restaurants-btn');
+			const toggleText = document.getElementById('toggle-text');
+			const chevron = btn.querySelector('i');
+			
+			if (!restaurantsExpanded) {
+				hiddenRestaurants.forEach(card => card.classList.remove('hidden'));
+				toggleText.textContent = 'Show fewer restaurants';
+				chevron.classList.remove('fa-chevron-down');
+				chevron.classList.add('fa-chevron-up');
+				restaurantsExpanded = true;
+			} else {
+				hiddenRestaurants.forEach(card => card.classList.add('hidden'));
+				toggleText.textContent = `Show ${hiddenRestaurants.length} more restaurants`;
+				chevron.classList.remove('fa-chevron-up');
+				chevron.classList.add('fa-chevron-down');
+				restaurantsExpanded = false;
+			}
+		}
+		
+		function toggleRestaurantFavorite(restaurantId) {
+			htmx.ajax('POST', `/favorites/restaurants/${restaurantId}`, {
+				target: `#favorite-btn-${restaurantId}`,
+				swap: 'outerHTML'
+			});
+		}
+		
+		function shareRestaurant(restaurantId) {
+			if (navigator.share) {
+				navigator.share({
+					title: 'Check out this restaurant!',
+					url: window.location.origin + `/restaurants/${restaurantId}`
+				});
+			} else {
+				navigator.clipboard.writeText(window.location.origin + `/restaurants/${restaurantId}`);
+				showNotification('Link copied to clipboard!', 'success');
+			}
+		}
+	</script>
+}
+
+templ RestaurantCard(restaurant RestaurantDetailedInfo, compact bool, isFavorite bool, isLoadingFavorites bool) {
+	<div class="restaurant-card bg-card rounded-xl shadow-sm border p-4 hover:shadow-md transition-all duration-300">
+		<div class="flex items-start gap-4">
+			<div class="flex-shrink-0">
+				<div class="w-16 h-16 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center">
+					<span class="text-white text-2xl">{ getCuisineEmoji(restaurant.CuisineType) }</span>
+				</div>
+			</div>
+			
+			<div class="flex-1 min-w-0">
+				<div class="flex items-start justify-between mb-2">
+					<div class="flex-1">
+						<h3 class="font-semibold text-xl text-foreground mb-1 cursor-pointer hover:text-primary transition-colors"
+							onclick="showRestaurantDetails('{ restaurant.ID.String() }')">
+							{ restaurant.Name }
+						</h3>
+						
+						if restaurant.CuisineType != nil && *restaurant.CuisineType != "" {
+							<p class="text-sm text-orange-600 dark:text-orange-400 font-medium mb-1">
+								{ *restaurant.CuisineType }
+							</p>
+						}
+						
+						if restaurant.Address != nil && *restaurant.Address != "" {
+							<p class="text-sm text-muted-foreground flex items-center mb-1">
+								<i class="fas fa-map-marker-alt mr-1"></i>
+								{ *restaurant.Address }
+							</p>
+						}
+						
+						if restaurant.PhoneNumber != nil && *restaurant.PhoneNumber != "" {
+							<p class="text-sm text-muted-foreground flex items-center mb-1">
+								<i class="fas fa-phone mr-1"></i>
+								{ *restaurant.PhoneNumber }
+							</p>
+						}
+					</div>
+					
+					<div class="flex items-center gap-2 ml-4">
+						<div class="flex items-center gap-1">
+							<i class="fas fa-star text-yellow-500"></i>
+							<span class={ "text-sm font-medium", getRatingColor(restaurant.Rating) }>
+								{ fmt.Sprintf("%.1f", restaurant.Rating) }
+							</span>
+						</div>
+						
+						<div class="flex gap-1">
+							if !isLoadingFavorites {
+								<button 
+									id={ fmt.Sprintf("favorite-btn-%s", restaurant.ID.String()) }
+									class={ "p-2 rounded-full hover:bg-accent transition-colors", 
+										templ.KV("text-red-500", isFavorite), templ.KV("text-muted-foreground", !isFavorite) }
+									onclick="toggleRestaurantFavorite('{ restaurant.ID.String() }')"
+									if isFavorite {
+						title="Remove from favorites"
+					} else {
+						title="Add to favorites"
+					}
+								>
+									<i class={ "fas", templ.KV("fa-heart", isFavorite), templ.KV("fa-heart-o", !isFavorite) }></i>
+								</button>
+							} else {
+								<div class="p-2">
+									<div class="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+								</div>
+							}
+							
+							<button class="p-2 rounded-full hover:bg-accent transition-colors text-muted-foreground"
+								onclick="shareRestaurant('{ restaurant.ID.String() }')" title="Share">
+								<i class="fas fa-share-alt"></i>
+							</button>
+						</div>
+					</div>
+				</div>
+				
+				if !compact && restaurant.Description != "" {
+					<p class="text-sm text-muted-foreground mb-4 line-clamp-3">
+						{ restaurant.Description }
+					</p>
+				}
+				
+				<div class="flex flex-wrap gap-2 mb-4">
+					for _, tag := range restaurant.Tags {
+						<span class="px-2 py-1 bg-accent text-accent-foreground text-xs rounded-full">
+							{ tag }
+						</span>
+					}
+				</div>
+				
+				<div class="flex items-center justify-between">
+					<div class="flex items-center gap-4">
+						if restaurant.PriceLevel != nil && *restaurant.PriceLevel != "" {
+							<div class="flex items-center gap-1">
+								<i class="fas fa-euro-sign text-muted-foreground"></i>
+								<span class={ "text-sm font-medium", getPriceColor(*restaurant.PriceLevel) }>
+									{ *restaurant.PriceLevel }
+								</span>
+							</div>
+						}
+						
+						if restaurant.OpeningHours != nil && *restaurant.OpeningHours != "" {
+							<div class="flex items-center gap-1">
+								<i class="fas fa-clock text-muted-foreground"></i>
+								<span class="text-sm text-muted-foreground">
+									{ *restaurant.OpeningHours }
+								</span>
+							</div>
+						}
+					</div>
+					
+					<div class="flex gap-2">
+						<button 
+							class="add-to-list-btn px-3 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm hover:bg-secondary/80 transition-colors"
+							data-item-id="{ restaurant.ID.String() }"
+							data-content-type="restaurant"
+							data-item-name="{ restaurant.Name }"
+						>
+							<i class="fas fa-plus mr-1"></i>
+							Add to List
+						</button>
+						
+						if restaurant.Website != nil && *restaurant.Website != "" {
+							<a href="{ *restaurant.Website }" target="_blank" rel="noopener noreferrer"
+								class="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors">
+								<i class="fas fa-external-link-alt mr-1"></i>
+								Website
+							</a>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+// Utility functions
+func getRatingColor(rating float64) string {
+	if rating >= 4.5 {
+		return "text-green-600"
+	} else if rating >= 4.0 {
+		return "text-blue-600" 
+	} else if rating >= 3.5 {
+		return "text-yellow-600"
+	}
+	return "text-gray-600"
+}
+
+func getPriceColor(priceRange string) string {
+	switch strings.ToLower(priceRange) {
+	case "€", "$", "budget":
+		return "text-green-600"
+	case "€€", "$$", "moderate":
+		return "text-blue-600"
+	case "€€€", "$$$", "upscale":
+		return "text-orange-600"
+	case "€€€€", "$$$$", "luxury":
+		return "text-purple-600"
+	default:
+		return "text-gray-600"
+	}
+}
+
+func getCuisineEmoji(cuisineType *string) string {
+	if cuisineType == nil {
+		return "🍽️"
+	}
+	
+	cuisineEmojis := map[string]string{
+		"portuguese": "🇵🇹",
+		"seafood": "🦐", 
+		"italian": "🍝",
+		"japanese": "🍣",
+		"mexican": "🌮",
+		"french": "🥐",
+		"indian": "🍛",
+		"chinese": "🥢",
+		"thai": "🌶️",
+		"american": "🍔",
+		"mediterranean": "🫒",
+		"vegetarian": "🥗",
+		"vegan": "🌱",
+		"fine-dining": "🍾",
+		"fast-food": "🍟",
+		"cafe": "☕",
+		"bakery": "🥖",
+		"pizza": "🍕",
+		"barbecue": "🍖",
+		"sushi": "🍣",
+		"tapas": "🍤",
+		"steakhouse": "🥩",
+	}
+	
+	if emoji, exists := cuisineEmojis[strings.ToLower(*cuisineType)]; exists {
+		return emoji
+	}
+	return "🍽️"
+}
+
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}

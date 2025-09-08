@@ -129,9 +129,15 @@ templ HotelsPage() {
 					</div>
 				</div>
 			</div>
-			<!-- Hotels Grid -->
+			<!-- Hotels Results -->
 			<div id="hotels-results">
-				@HotelsGrid()
+				<!-- Results will be loaded here via HTMX based on user query/preferences -->
+				<div class="text-center py-8">
+					<div class="animate-pulse">
+						<div class="w-12 h-12 bg-indigo-400 rounded-full mx-auto mb-4"></div>
+						<p class="text-muted-foreground">Loading personalized hotel recommendations...</p>
+					</div>
+				</div>
 			</div>
 			<!-- Load More Button -->
 			<div class="text-center mt-8">
@@ -146,6 +152,45 @@ templ HotelsPage() {
 			</div>
 		</div>
 	</div>
+	
+	<script>
+		// Auto-load results based on query parameter or user intent
+		document.addEventListener('DOMContentLoaded', function() {
+			const urlParams = new URLSearchParams(window.location.search);
+			const query = urlParams.get('q');
+			const city = urlParams.get('city');
+			const intent = urlParams.get('intent');
+			
+			if (query || city) {
+				// Show loading state and load results
+				loadHotelResults({
+					query: query || '',
+					city: city || '',
+					intent: intent || 'accommodation'
+				});
+			}
+		});
+		
+		function loadHotelResults(params) {
+			htmx.ajax('POST', '/hotels/search', {
+				source: {
+					query: params.query,
+					city: params.city,
+					intent: params.intent,
+					domain: 'accommodation'
+				},
+				target: '#hotels-results',
+				swap: 'innerHTML'
+			});
+		}
+		
+		// Update UI state after results load
+		document.body.addEventListener('htmx:afterSwap', function(evt) {
+			if (evt.detail.target.id === 'hotels-results') {
+				console.log('Hotels results loaded');
+			}
+		});
+	</script>
 }
 
 templ HotelsGrid() {

@@ -206,7 +206,8 @@ func TestRegister(t *testing.T) {
 		userID := "new-user-id"
 
 		// Set up expectations - we can't predict the exact hashed password, so use mock.AnythingOfType
-		mockRepo.On("Register", ctx, username, email, mock.AnythingOfType("string")).Return(userID, nil).Once()
+		// Also use mock.Anything for context since service adds tracing context
+		mockRepo.On("Register", mock.Anything, username, email, mock.AnythingOfType("string")).Return(userID, nil).Once()
 
 		// Call the service method
 		err := service.Register(ctx, username, email, password, "user")
@@ -224,7 +225,7 @@ func TestRegister(t *testing.T) {
 		password := "password123"
 
 		// Set up expectations
-		mockRepo.On("Register", ctx, username, email, mock.AnythingOfType("string")).Return("", models.ErrConflict).Once()
+		mockRepo.On("Register", mock.Anything, username, email, mock.AnythingOfType("string")).Return("", models.ErrConflict).Once()
 
 		// Call the service method
 		err := service.Register(ctx, username, email, password, "user")

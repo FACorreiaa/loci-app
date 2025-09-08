@@ -280,8 +280,8 @@ func TestForgotPasswordTemplate(t *testing.T) {
 
 				// Check HTMX target
 				htmxTarget, _ := form.Attr("hx-target")
-				if htmxTarget != "#reset-response" {
-					t.Errorf("Expected hx-target='#reset-response', got '%s'", htmxTarget)
+				if htmxTarget != "#forgot-response" {
+					t.Errorf("Expected hx-target='#forgot-response', got '%s'", htmxTarget)
 				}
 			},
 		},
@@ -304,9 +304,9 @@ func TestForgotPasswordTemplate(t *testing.T) {
 			name: "includes response container",
 			assert: func(t *testing.T, doc *goquery.Document) {
 				// Check for response container
-				responseContainer := doc.Find("#reset-response")
+				responseContainer := doc.Find("#forgot-response")
 				if responseContainer.Length() == 0 {
-					t.Error("Expected #reset-response container to be rendered")
+					t.Error("Expected #forgot-response container to be rendered")
 				}
 			},
 		},

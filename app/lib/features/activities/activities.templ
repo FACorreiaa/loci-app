@@ -97,9 +97,15 @@ templ ActivitiesPage() {
 					</div>
 				</div>
 			</div>
-			<!-- Activities Grid -->
+			<!-- Activities Results -->
 			<div id="activities-results">
-				@ActivitiesGrid()
+				<!-- Results will be loaded here via HTMX based on user query/preferences -->
+				<div class="text-center py-8">
+					<div class="animate-pulse">
+						<div class="w-12 h-12 bg-blue-400 rounded-full mx-auto mb-4"></div>
+						<p class="text-muted-foreground">Loading personalized activity recommendations...</p>
+					</div>
+				</div>
 			</div>
 			<!-- Load More Button -->
 			<div class="text-center mt-8">
@@ -115,35 +121,58 @@ templ ActivitiesPage() {
 		</div>
 	</div>
 	<script>
-		// Check if there's a query parameter and show the discover banner
-		const urlParams = new URLSearchParams(window.location.search);
-		const query = urlParams.get('q');
-		if (query) {
-			const banner = document.getElementById('discover-banner');
-			const queryElement = document.getElementById('discover-query');
-			if (banner && queryElement) {
-				queryElement.textContent = `Based on your request: "${query}"`;
-				banner.classList.remove('hidden');
+		// Auto-load results based on query parameter or user intent
+		document.addEventListener('DOMContentLoaded', function() {
+			const urlParams = new URLSearchParams(window.location.search);
+			const query = urlParams.get('q');
+			const city = urlParams.get('city');
+			const intent = urlParams.get('intent');
+			
+			if (query || city) {
+				const banner = document.getElementById('discover-banner');
+				const queryElement = document.getElementById('discover-query');
 				
-				// Simulate loading and then hide spinner after 2 seconds
-				setTimeout(() => {
+				if (banner && queryElement) {
+					queryElement.textContent = query ? `Based on your request: "${query}"` : `Showing activities in ${city}`;
+					banner.classList.remove('hidden');
+				}
+				
+				// Load personalized results immediately
+				loadActivityResults({
+					query: query || '',
+					city: city || '',
+					intent: intent || 'activities'
+				});
+			}
+		});
+		
+		function loadActivityResults(params) {
+			htmx.ajax('POST', '/activities/search', {
+				source: {
+					query: params.query,
+					city: params.city,
+					intent: params.intent,
+					domain: 'activities'
+				},
+				target: '#activities-results',
+				swap: 'innerHTML'
+			});
+		}
+		
+		// Update banner state after results load
+		document.body.addEventListener('htmx:afterSwap', function(evt) {
+			if (evt.detail.target.id === 'activities-results') {
+				const banner = document.getElementById('discover-banner');
+				if (banner) {
 					const spinner = banner.querySelector('.animate-spin');
 					const loadingText = banner.querySelector('.text-sm.font-medium');
 					if (spinner && loadingText) {
 						spinner.classList.add('hidden');
 						loadingText.textContent = 'Here are personalized activities based on your request!';
 					}
-				}, 2000);
-				
-				// Auto-fill the search input with the query
-				const searchInput = document.querySelector('input[placeholder="Search activities..."]');
-				if (searchInput) {
-					searchInput.value = query;
-					// Trigger search
-					searchInput.dispatchEvent(new Event('keyup'));
 				}
 			}
-		}
+		});
 	</script>
 }
 

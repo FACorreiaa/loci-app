@@ -67,44 +67,41 @@ func (m *MockinterestsRepo) GetInterestsForProfile(ctx context.Context, profileI
 }
 
 func TestCreateInterest(t *testing.T) {
-	// Setup
-	mockRepo := new(MockinterestsRepo)
-	logger := slog.Default()
-	service := NewinterestsService(mockRepo, logger)
-	ctx := context.Background()
-
 	// Test data
 	name := "Test Interest"
 	description := "Test Description"
 	isActive := true
 	userID := "user123"
 	active := isActive
-	expectedInterest := &models.Interest{
-		ID:          uuid.New(),
-		Name:        name,
-		Description: &description,
-		Active:      &active,
-		CreatedAt:   time.Now(),
-		Source:      "test",
-	}
+	ctx := context.Background()
 
 	// Test cases
 	tests := []struct {
 		name          string
-		setupMock     func()
+		setupMock     func(*MockinterestsRepo) *models.Interest
 		expectedError bool
 	}{
 		{
 			name: "Success",
-			setupMock: func() {
-				mockRepo.On("CreateInterest", mock.Anything, name, &description, isActive, userID).Return(expectedInterest, nil)
+			setupMock: func(mockRepo *MockinterestsRepo) *models.Interest {
+				expectedInterest := &models.Interest{
+					ID:          uuid.New(),
+					Name:        name,
+					Description: &description,
+					Active:      &active,
+					CreatedAt:   time.Now(),
+					Source:      "test",
+				}
+				mockRepo.On("CreateInterest", mock.Anything, name, &description, isActive, userID).Return(expectedInterest, nil).Once()
+				return expectedInterest
 			},
 			expectedError: false,
 		},
 		{
 			name: "Repository Error",
-			setupMock: func() {
-				mockRepo.On("CreateInterest", mock.Anything, name, &description, isActive, userID).Return(nil, errors.New("repository error"))
+			setupMock: func(mockRepo *MockinterestsRepo) *models.Interest {
+				mockRepo.On("CreateInterest", mock.Anything, name, &description, isActive, userID).Return(nil, errors.New("repository error")).Once()
+				return nil
 			},
 			expectedError: true,
 		},
@@ -113,8 +110,13 @@ func TestCreateInterest(t *testing.T) {
 	// Run tests
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			// Setup - create fresh mock and service for each test
+			mockRepo := new(MockinterestsRepo)
+			logger := slog.Default()
+			service := NewinterestsService(mockRepo, logger)
+			
 			// Setup mock
-			tc.setupMock()
+			expectedInterest := tc.setupMock(mockRepo)
 
 			// Call the method
 			interest, err := service.CreateInterest(ctx, name, &description, isActive, userID)
@@ -135,33 +137,28 @@ func TestCreateInterest(t *testing.T) {
 }
 
 func TestRemoveinterests(t *testing.T) {
-	// Setup
-	mockRepo := new(MockinterestsRepo)
-	logger := slog.Default()
-	service := NewinterestsService(mockRepo, logger)
-	ctx := context.Background()
-
 	// Test data
 	userID := uuid.New()
 	interestID := uuid.New()
+	ctx := context.Background()
 
 	// Test cases
 	tests := []struct {
 		name          string
-		setupMock     func()
+		setupMock     func(*MockinterestsRepo)
 		expectedError bool
 	}{
 		{
 			name: "Success",
-			setupMock: func() {
-				mockRepo.On("Removeinterests", mock.Anything, userID, interestID).Return(nil)
+			setupMock: func(mockRepo *MockinterestsRepo) {
+				mockRepo.On("Removeinterests", mock.Anything, userID, interestID).Return(nil).Once()
 			},
 			expectedError: false,
 		},
 		{
 			name: "Repository Error",
-			setupMock: func() {
-				mockRepo.On("Removeinterests", mock.Anything, userID, interestID).Return(errors.New("repository error"))
+			setupMock: func(mockRepo *MockinterestsRepo) {
+				mockRepo.On("Removeinterests", mock.Anything, userID, interestID).Return(errors.New("repository error")).Once()
 			},
 			expectedError: true,
 		},
@@ -170,8 +167,13 @@ func TestRemoveinterests(t *testing.T) {
 	// Run tests
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			// Setup - create fresh mock and service for each test
+			mockRepo := new(MockinterestsRepo)
+			logger := slog.Default()
+			service := NewinterestsService(mockRepo, logger)
+			
 			// Setup mock
-			tc.setupMock()
+			tc.setupMock(mockRepo)
 
 			// Call the method
 			err := service.Removeinterests(ctx, userID, interestID)
@@ -190,50 +192,47 @@ func TestRemoveinterests(t *testing.T) {
 }
 
 func TestGetAllInterests(t *testing.T) {
-	// Setup
-	mockRepo := new(MockinterestsRepo)
-	logger := slog.Default()
-	service := NewinterestsService(mockRepo, logger)
-	ctx := context.Background()
-
 	// Test data
 	active1 := true
 	active2 := true
 	now := time.Now()
-	expectedInterests := []*models.Interest{
-		{
-			ID:        uuid.New(),
-			Name:      "Interest 1",
-			Active:    &active1,
-			CreatedAt: now,
-			Source:    "test",
-		},
-		{
-			ID:        uuid.New(),
-			Name:      "Interest 2",
-			Active:    &active2,
-			CreatedAt: now,
-			Source:    "test",
-		},
-	}
+	ctx := context.Background()
 
 	// Test cases
 	tests := []struct {
 		name          string
-		setupMock     func()
+		setupMock     func(*MockinterestsRepo) []*models.Interest
 		expectedError bool
 	}{
 		{
 			name: "Success",
-			setupMock: func() {
-				mockRepo.On("GetAllInterests", mock.Anything).Return(expectedInterests, nil)
+			setupMock: func(mockRepo *MockinterestsRepo) []*models.Interest {
+				expectedInterests := []*models.Interest{
+					{
+						ID:        uuid.New(),
+						Name:      "Interest 1",
+						Active:    &active1,
+						CreatedAt: now,
+						Source:    "test",
+					},
+					{
+						ID:        uuid.New(),
+						Name:      "Interest 2",
+						Active:    &active2,
+						CreatedAt: now,
+						Source:    "test",
+					},
+				}
+				mockRepo.On("GetAllInterests", mock.Anything).Return(expectedInterests, nil).Once()
+				return expectedInterests
 			},
 			expectedError: false,
 		},
 		{
 			name: "Repository Error",
-			setupMock: func() {
-				mockRepo.On("GetAllInterests", mock.Anything).Return(nil, errors.New("repository error"))
+			setupMock: func(mockRepo *MockinterestsRepo) []*models.Interest {
+				mockRepo.On("GetAllInterests", mock.Anything).Return(nil, errors.New("repository error")).Once()
+				return nil
 			},
 			expectedError: true,
 		},
@@ -242,8 +241,13 @@ func TestGetAllInterests(t *testing.T) {
 	// Run tests
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			// Setup - create fresh mock and service for each test
+			mockRepo := new(MockinterestsRepo)
+			logger := slog.Default()
+			service := NewinterestsService(mockRepo, logger)
+			
 			// Setup mock
-			tc.setupMock()
+			expectedInterests := tc.setupMock(mockRepo)
 
 			// Call the method
 			interests, err := service.GetAllInterests(ctx)
@@ -264,12 +268,6 @@ func TestGetAllInterests(t *testing.T) {
 }
 
 func TestUpdateinterests(t *testing.T) {
-	// Setup
-	mockRepo := new(MockinterestsRepo)
-	logger := slog.Default()
-	service := NewinterestsService(mockRepo, logger)
-	ctx := context.Background()
-
 	// Test data
 	userID := uuid.New()
 	interestID := uuid.New()
@@ -281,24 +279,25 @@ func TestUpdateinterests(t *testing.T) {
 		Description: &description,
 		Active:      &active,
 	}
+	ctx := context.Background()
 
 	// Test cases
 	tests := []struct {
 		name          string
-		setupMock     func()
+		setupMock     func(*MockinterestsRepo)
 		expectedError bool
 	}{
 		{
 			name: "Success",
-			setupMock: func() {
-				mockRepo.On("Updateinterests", mock.Anything, userID, interestID, params).Return(nil)
+			setupMock: func(mockRepo *MockinterestsRepo) {
+				mockRepo.On("Updateinterests", mock.Anything, userID, interestID, params).Return(nil).Once()
 			},
 			expectedError: false,
 		},
 		{
 			name: "Repository Error",
-			setupMock: func() {
-				mockRepo.On("Updateinterests", mock.Anything, userID, interestID, params).Return(errors.New("repository error"))
+			setupMock: func(mockRepo *MockinterestsRepo) {
+				mockRepo.On("Updateinterests", mock.Anything, userID, interestID, params).Return(errors.New("repository error")).Once()
 			},
 			expectedError: true,
 		},
@@ -307,8 +306,13 @@ func TestUpdateinterests(t *testing.T) {
 	// Run tests
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			// Setup - create fresh mock and service for each test
+			mockRepo := new(MockinterestsRepo)
+			logger := slog.Default()
+			service := NewinterestsService(mockRepo, logger)
+			
 			// Setup mock
-			tc.setupMock()
+			tc.setupMock(mockRepo)
 
 			// Call the method
 			err := service.Updateinterests(ctx, userID, interestID, params)
