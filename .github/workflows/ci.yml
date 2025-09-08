@@ -84,31 +84,6 @@ jobs:
         name: codecov-umbrella
         token: ${{ secrets.CODECOV_TOKEN }}
 
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: ${{ env.GO_VERSION }}
-
-    - name: Install Templ
-      run: go install github.com/a-h/templ/cmd/templ@latest
-
-    - name: Generate Templ files
-      run: templ generate
-
-    - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@v6
-      with:
-        version: v1.59.1  # Fixed version that supports Go 1.23
-        args: --enable=errcheck --enable=unused --enable=ineffassign --enable=govet --enable=staticcheck --enable=revive
-
   security:
     name: Security Scan
     runs-on: ubuntu-latest

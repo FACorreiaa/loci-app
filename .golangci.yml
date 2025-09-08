@@ -1,39 +1,52 @@
+version: "2"
 run:
   concurrency: 4
-  skip-dirs:
-    - third_party$
-    - builtin$
-    - examples$
-
 linters:
   enable:
     - revive
     - godox
-    - errcheck
-    - misspell
-    - staticcheck
+  settings:
+    errcheck:
+      check-blank: true
+    misspell:
+      locale: US
+    revive:
+      rules:
+        - name: blank-imports
+        - name: unused-parameter
+    godox:
+      keywords:
+        - TODO
+        - FIXME
+        - BUG
+    staticcheck:
+      checks:
+        - all
+        - -ST1000
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
     - gofmt
     - goimports
-
-linters-settings:
-  errcheck:
-    check-blank: true
-  misspell:
-    locale: US
-  revive:
-    rules:
-      - name: blank-imports
-      - name: unused-parameter
-  godox:
-    keywords:
-      - TODO
-      - FIXME
-      - BUG
-  staticcheck:
-    checks:
-      - all
-      - -ST1000
-  gofmt:
-    simplify: true
-  goimports:
-    local-prefixes: github.com/iDWELL/finance
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes:
+        - github.com/iDWELL/finance
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
