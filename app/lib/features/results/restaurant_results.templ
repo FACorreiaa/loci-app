@@ -18,10 +18,9 @@ templ RestaurantResults(restaurants []RestaurantDetailedInfo, compact bool, show
 				}
 			}
 		</div>
-		
 		if showToggle && len(restaurants) > initialLimit {
 			<div class="text-center mt-4">
-				<button 
+				<button
 					id="toggle-restaurants-btn"
 					class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
 					onclick="toggleRestaurants()"
@@ -32,7 +31,6 @@ templ RestaurantResults(restaurants []RestaurantDetailedInfo, compact bool, show
 			</div>
 		}
 	</div>
-	
 	<script>
 		let restaurantsExpanded = false;
 		
@@ -86,28 +84,26 @@ templ RestaurantCard(restaurant RestaurantDetailedInfo, compact bool, isFavorite
 					<span class="text-white text-2xl">{ getCuisineEmoji(restaurant.CuisineType) }</span>
 				</div>
 			</div>
-			
 			<div class="flex-1 min-w-0">
 				<div class="flex items-start justify-between mb-2">
 					<div class="flex-1">
-						<h3 class="font-semibold text-xl text-foreground mb-1 cursor-pointer hover:text-primary transition-colors"
-							onclick="showRestaurantDetails('{ restaurant.ID.String() }')">
+						<h3
+							class="font-semibold text-xl text-foreground mb-1 cursor-pointer hover:text-primary transition-colors"
+							onclick="showRestaurantDetails('{ restaurant.ID.String() }')"
+						>
 							{ restaurant.Name }
 						</h3>
-						
 						if restaurant.CuisineType != nil && *restaurant.CuisineType != "" {
 							<p class="text-sm text-orange-600 dark:text-orange-400 font-medium mb-1">
 								{ *restaurant.CuisineType }
 							</p>
 						}
-						
 						if restaurant.Address != nil && *restaurant.Address != "" {
 							<p class="text-sm text-muted-foreground flex items-center mb-1">
 								<i class="fas fa-map-marker-alt mr-1"></i>
 								{ *restaurant.Address }
 							</p>
 						}
-						
 						if restaurant.PhoneNumber != nil && *restaurant.PhoneNumber != "" {
 							<p class="text-sm text-muted-foreground flex items-center mb-1">
 								<i class="fas fa-phone mr-1"></i>
@@ -115,7 +111,6 @@ templ RestaurantCard(restaurant RestaurantDetailedInfo, compact bool, isFavorite
 							</p>
 						}
 					</div>
-					
 					<div class="flex items-center gap-2 ml-4">
 						<div class="flex items-center gap-1">
 							<i class="fas fa-star text-yellow-500"></i>
@@ -123,19 +118,18 @@ templ RestaurantCard(restaurant RestaurantDetailedInfo, compact bool, isFavorite
 								{ fmt.Sprintf("%.1f", restaurant.Rating) }
 							</span>
 						</div>
-						
 						<div class="flex gap-1">
 							if !isLoadingFavorites {
-								<button 
+								<button
 									id={ fmt.Sprintf("favorite-btn-%s", restaurant.ID.String()) }
 									class={ "p-2 rounded-full hover:bg-accent transition-colors", 
 										templ.KV("text-red-500", isFavorite), templ.KV("text-muted-foreground", !isFavorite) }
 									onclick="toggleRestaurantFavorite('{ restaurant.ID.String() }')"
 									if isFavorite {
-						title="Remove from favorites"
-					} else {
-						title="Add to favorites"
-					}
+										title="Remove from favorites"
+									} else {
+										title="Add to favorites"
+									}
 								>
 									<i class={ "fas", templ.KV("fa-heart", isFavorite), templ.KV("fa-heart-o", !isFavorite) }></i>
 								</button>
@@ -144,21 +138,21 @@ templ RestaurantCard(restaurant RestaurantDetailedInfo, compact bool, isFavorite
 									<div class="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
 								</div>
 							}
-							
-							<button class="p-2 rounded-full hover:bg-accent transition-colors text-muted-foreground"
-								onclick="shareRestaurant('{ restaurant.ID.String() }')" title="Share">
+							<button
+								class="p-2 rounded-full hover:bg-accent transition-colors text-muted-foreground"
+								onclick="shareRestaurant('{ restaurant.ID.String() }')"
+								title="Share"
+							>
 								<i class="fas fa-share-alt"></i>
 							</button>
 						</div>
 					</div>
 				</div>
-				
 				if !compact && restaurant.Description != "" {
 					<p class="text-sm text-muted-foreground mb-4 line-clamp-3">
 						{ restaurant.Description }
 					</p>
 				}
-				
 				<div class="flex flex-wrap gap-2 mb-4">
 					for _, tag := range restaurant.Tags {
 						<span class="px-2 py-1 bg-accent text-accent-foreground text-xs rounded-full">
@@ -166,7 +160,6 @@ templ RestaurantCard(restaurant RestaurantDetailedInfo, compact bool, isFavorite
 						</span>
 					}
 				</div>
-				
 				<div class="flex items-center justify-between">
 					<div class="flex items-center gap-4">
 						if restaurant.PriceLevel != nil && *restaurant.PriceLevel != "" {
@@ -177,7 +170,6 @@ templ RestaurantCard(restaurant RestaurantDetailedInfo, compact bool, isFavorite
 								</span>
 							</div>
 						}
-						
 						if restaurant.OpeningHours != nil && *restaurant.OpeningHours != "" {
 							<div class="flex items-center gap-1">
 								<i class="fas fa-clock text-muted-foreground"></i>
@@ -187,9 +179,8 @@ templ RestaurantCard(restaurant RestaurantDetailedInfo, compact bool, isFavorite
 							</div>
 						}
 					</div>
-					
 					<div class="flex gap-2">
-						<button 
+						<button
 							class="add-to-list-btn px-3 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm hover:bg-secondary/80 transition-colors"
 							data-item-id="{ restaurant.ID.String() }"
 							data-content-type="restaurant"
@@ -198,10 +189,13 @@ templ RestaurantCard(restaurant RestaurantDetailedInfo, compact bool, isFavorite
 							<i class="fas fa-plus mr-1"></i>
 							Add to List
 						</button>
-						
 						if restaurant.Website != nil && *restaurant.Website != "" {
-							<a href="{ *restaurant.Website }" target="_blank" rel="noopener noreferrer"
-								class="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors">
+							<a
+								href="{ *restaurant.Website }"
+								target="_blank"
+								rel="noopener noreferrer"
+								class="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors"
+							>
 								<i class="fas fa-external-link-alt mr-1"></i>
 								Website
 							</a>
@@ -218,7 +212,7 @@ func getRatingColor(rating float64) string {
 	if rating >= 4.5 {
 		return "text-green-600"
 	} else if rating >= 4.0 {
-		return "text-blue-600" 
+		return "text-blue-600"
 	} else if rating >= 3.5 {
 		return "text-yellow-600"
 	}
@@ -244,32 +238,32 @@ func getCuisineEmoji(cuisineType *string) string {
 	if cuisineType == nil {
 		return "🍽️"
 	}
-	
+
 	cuisineEmojis := map[string]string{
-		"portuguese": "🇵🇹",
-		"seafood": "🦐", 
-		"italian": "🍝",
-		"japanese": "🍣",
-		"mexican": "🌮",
-		"french": "🥐",
-		"indian": "🍛",
-		"chinese": "🥢",
-		"thai": "🌶️",
-		"american": "🍔",
+		"portuguese":    "🇵🇹",
+		"seafood":       "🦐",
+		"italian":       "🍝",
+		"japanese":      "🍣",
+		"mexican":       "🌮",
+		"french":        "🥐",
+		"indian":        "🍛",
+		"chinese":       "🥢",
+		"thai":          "🌶️",
+		"american":      "🍔",
 		"mediterranean": "🫒",
-		"vegetarian": "🥗",
-		"vegan": "🌱",
-		"fine-dining": "🍾",
-		"fast-food": "🍟",
-		"cafe": "☕",
-		"bakery": "🥖",
-		"pizza": "🍕",
-		"barbecue": "🍖",
-		"sushi": "🍣",
-		"tapas": "🍤",
-		"steakhouse": "🥩",
+		"vegetarian":    "🥗",
+		"vegan":         "🌱",
+		"fine-dining":   "🍾",
+		"fast-food":     "🍟",
+		"cafe":          "☕",
+		"bakery":        "🥖",
+		"pizza":         "🍕",
+		"barbecue":      "🍖",
+		"sushi":         "🍣",
+		"tapas":         "🍤",
+		"steakhouse":    "🥩",
 	}
-	
+
 	if emoji, exists := cuisineEmojis[strings.ToLower(*cuisineType)]; exists {
 		return emoji
 	}

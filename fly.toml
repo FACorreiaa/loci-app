@@ -4,7 +4,7 @@
 #
 
 app = 'loci-app'
-primary_region = 'lhr'
+primary_region = 'fra'
 
 [build]
   dockerfile = "Dockerfile"
@@ -12,30 +12,30 @@ primary_region = 'lhr'
 
 [env]
   MODE="production"
-  APP_ENV=development
+  APP_ENV="development"
   ENABLE_PPROF=true
   PPROF_PORT=6060
   HTTP_PORT=8000
   RATE_LIMIT_ENABLED=true
-  LOG_LEVEL=debug
+  LOG_LEVEL="debug|
 
-  POSTGRES_HOST=localhost
+  POSTGRES_HOST="localhost"
   POSTGRES_PORT=5454
-  POSTGRES_USER=postgres
-  POSTGRES_PASSWORD=postgres
-  POSTGRES_DB=loci-dev
-  JWT_SECRET_KEY=replace_this_with_a_very_strong_random_32_byte_plus_secret_or_deez_nuts
+  POSTGRES_USER="postgres"
+  POSTGRES_PASSWORD="postgres"
+  POSTGRES_DB="loci-dev"
+  JWT_SECRET_KEY="replace_this_with_a_very_strong_random_32_byte_plus_secret_or_deez_nuts"
   JWT_ISSUER="loci"
   JWT_AUDIENCE="loci-app"
-  JWT_ACCESS_TOKEN_TTL=15m
-  JWT_REFRESH_TOKEN_TTL=168h
+  JWT_ACCESS_TOKEN_TTL="15m"
+  JWT_REFRESH_TOKEN_TTL="168h"
 
   # OpenTelemetry Configuration
-  OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
-  OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
-  OTEL_SERVICE_NAME=loci-templui
-  OTEL_RESOURCE_ATTRIBUTES=service.name=loci-templui,service.version=1.0.0
-  OTEL_LOG_LEVEL=info
+  OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318"
+  OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf"
+  OTEL_SERVICE_NAME="loci-templui"
+  OTEL_RESOURCE_ATTRIBUTES="service.name=loci-templui,service.version=1.0.0"
+  OTEL_LOG_LEVEL="info"
   OTEL_SDK_DISABLED=false
 
   # Metrics

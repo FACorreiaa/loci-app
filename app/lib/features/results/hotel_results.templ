@@ -18,10 +18,9 @@ templ HotelResults(hotels []HotelDetailedInfo, compact bool, showToggle bool, in
 				}
 			}
 		</div>
-		
 		if showToggle && len(hotels) > initialLimit {
 			<div class="text-center mt-4">
-				<button 
+				<button
 					id="toggle-hotels-btn"
 					class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
 					onclick="toggleHotels()"
@@ -32,7 +31,6 @@ templ HotelResults(hotels []HotelDetailedInfo, compact bool, showToggle bool, in
 			</div>
 		}
 	</div>
-	
 	<script>
 		let hotelsExpanded = false;
 		
@@ -86,28 +84,26 @@ templ HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) {
 					<span class="text-white text-2xl">{ getHotelEmoji(hotel.Category) }</span>
 				</div>
 			</div>
-			
 			<div class="flex-1 min-w-0">
 				<div class="flex items-start justify-between mb-2">
 					<div class="flex-1">
-						<h3 class="font-semibold text-xl text-foreground mb-1 cursor-pointer hover:text-primary transition-colors"
-							onclick="showHotelDetails('{ hotel.ID.String() }')">
+						<h3
+							class="font-semibold text-xl text-foreground mb-1 cursor-pointer hover:text-primary transition-colors"
+							onclick="showHotelDetails('{ hotel.ID.String() }')"
+						>
 							{ hotel.Name }
 						</h3>
-						
 						if hotel.Category != "" {
 							<p class="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1">
 								{ hotel.Category }
 							</p>
 						}
-						
 						if hotel.Address != "" {
 							<p class="text-sm text-muted-foreground flex items-center mb-1">
 								<i class="fas fa-map-marker-alt mr-1"></i>
 								{ hotel.Address }
 							</p>
 						}
-						
 						if hotel.PhoneNumber != nil && *hotel.PhoneNumber != "" {
 							<p class="text-sm text-muted-foreground flex items-center mb-1">
 								<i class="fas fa-phone mr-1"></i>
@@ -115,7 +111,6 @@ templ HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) {
 							</p>
 						}
 					</div>
-					
 					<div class="flex items-center gap-2 ml-4">
 						<div class="flex items-center gap-1">
 							<i class="fas fa-star text-yellow-500"></i>
@@ -123,34 +118,33 @@ templ HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) {
 								{ fmt.Sprintf("%.1f", hotel.Rating) }
 							</span>
 						</div>
-						
-						<button 
+						<button
 							id={ fmt.Sprintf("favorite-btn-%s", hotel.ID.String()) }
 							class={ "p-2 rounded-full hover:bg-accent transition-colors", 
 								templ.KV("text-red-500", isFavorite), templ.KV("text-muted-foreground", !isFavorite) }
 							onclick="toggleHotelFavorite('{ hotel.ID.String() }')"
 							if isFavorite {
-					title="Remove from favorites"
-				} else {
-					title="Add to favorites"
-				}
+								title="Remove from favorites"
+							} else {
+								title="Add to favorites"
+							}
 						>
 							<i class={ "fas", templ.KV("fa-heart", isFavorite), templ.KV("fa-heart-o", !isFavorite) }></i>
 						</button>
-						
-						<button class="p-2 rounded-full hover:bg-accent transition-colors text-muted-foreground"
-							onclick="shareHotel('{ hotel.ID.String() }')" title="Share">
+						<button
+							class="p-2 rounded-full hover:bg-accent transition-colors text-muted-foreground"
+							onclick="shareHotel('{ hotel.ID.String() }')"
+							title="Share"
+						>
 							<i class="fas fa-share-alt"></i>
 						</button>
 					</div>
 				</div>
-				
 				if !compact && hotel.Description != "" {
 					<p class="text-sm text-muted-foreground mb-4 line-clamp-3">
 						{ hotel.Description }
 					</p>
 				}
-				
 				<!-- Amenities Display -->
 				if len(hotel.Tags) > 0 {
 					<div class="flex flex-wrap gap-2 mb-4">
@@ -169,7 +163,6 @@ templ HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) {
 						}
 					</div>
 				}
-				
 				<div class="flex items-center justify-between">
 					<div class="flex items-center gap-4">
 						if hotel.PriceRange != nil && *hotel.PriceRange != "" {
@@ -181,7 +174,6 @@ templ HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) {
 								<span class="text-xs text-muted-foreground">per night</span>
 							</div>
 						}
-						
 						if hotel.OpeningHours != nil && *hotel.OpeningHours != "" {
 							<div class="flex items-center gap-1">
 								<i class="fas fa-clock text-muted-foreground"></i>
@@ -191,17 +183,15 @@ templ HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) {
 							</div>
 						}
 					</div>
-					
 					<div class="flex gap-2">
-						<button 
+						<button
 							class="px-3 py-2 border border-input rounded-lg text-sm hover:bg-accent transition-colors"
 							onclick="compareHotel('{ hotel.ID.String() }')"
 						>
 							<i class="fas fa-balance-scale mr-1"></i>
 							Compare
 						</button>
-						
-						<button 
+						<button
 							class="px-3 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm hover:bg-secondary/80 transition-colors"
 							data-item-id="{ hotel.ID.String() }"
 							data-content-type="hotel"
@@ -210,10 +200,13 @@ templ HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) {
 							<i class="fas fa-plus mr-1"></i>
 							Add to List
 						</button>
-						
 						if hotel.Website != nil && *hotel.Website != "" {
-							<a href="{ *hotel.Website }" target="_blank" rel="noopener noreferrer"
-								class="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors">
+							<a
+								href="{ *hotel.Website }"
+								target="_blank"
+								rel="noopener noreferrer"
+								class="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors"
+							>
 								<i class="fas fa-bed mr-1"></i>
 								Book Now
 							</a>
@@ -232,34 +225,31 @@ templ HotelCardCompact(hotel HotelDetailedInfo, isFavorite bool) {
 			<div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-lg flex items-center justify-center">
 				<span class="text-white text-lg">{ getHotelEmoji(hotel.Category) }</span>
 			</div>
-			
 			<div class="flex-1 min-w-0">
 				<div class="flex items-start justify-between">
 					<div class="flex-1">
 						<h4 class="font-semibold text-foreground mb-1">{ hotel.Name }</h4>
 						<p class="text-xs text-muted-foreground">{ hotel.Category }</p>
 					</div>
-					
 					<div class="flex items-center gap-1">
 						<div class="flex items-center gap-1">
 							<i class="fas fa-star text-yellow-500 text-xs"></i>
 							<span class="text-xs font-medium">{ fmt.Sprintf("%.1f", hotel.Rating) }</span>
 						</div>
-						
-						<button class={ "p-1 rounded-full hover:bg-accent transition-colors", 
-							templ.KV("text-red-500", isFavorite), templ.KV("text-muted-foreground", !isFavorite) }>
+						<button
+							class={ "p-1 rounded-full hover:bg-accent transition-colors", 
+							templ.KV("text-red-500", isFavorite), templ.KV("text-muted-foreground", !isFavorite) }
+						>
 							<i class={ "fas text-xs", templ.KV("fa-heart", isFavorite), templ.KV("fa-heart-o", !isFavorite) }></i>
 						</button>
 					</div>
 				</div>
-				
 				<div class="flex items-center justify-between mt-2">
 					if hotel.PriceRange != nil && *hotel.PriceRange != "" {
 						<span class={ "text-xs font-medium", getHotelPriceColor(*hotel.PriceRange) }>
 							{ *hotel.PriceRange } per night
 						</span>
 					}
-					
 					<span class="text-xs text-green-600">Free cancellation</span>
 				</div>
 			</div>
@@ -273,23 +263,19 @@ templ FeaturedHotelCard(hotel HotelDetailedInfo, specialOffer string) {
 		<div class="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
 			Featured
 		</div>
-		
 		<div class="flex items-start gap-4">
 			<div class="w-20 h-20 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center">
 				<span class="text-white text-3xl">{ getHotelEmoji(hotel.Category) }</span>
 			</div>
-			
 			<div class="flex-1">
 				<h3 class="text-xl font-bold text-foreground mb-2">{ hotel.Name }</h3>
 				<p class="text-blue-600 dark:text-blue-400 font-medium mb-2">{ hotel.Category }</p>
 				<p class="text-sm text-muted-foreground mb-4">{ hotel.Description }</p>
-				
 				if specialOffer != "" {
 					<div class="bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-3 py-2 rounded-lg mb-4">
 						<p class="text-sm font-medium">🎉 { specialOffer }</p>
 					</div>
 				}
-				
 				<div class="flex items-center justify-between">
 					<div class="flex items-center gap-2">
 						<div class="flex items-center gap-1">
@@ -302,7 +288,6 @@ templ FeaturedHotelCard(hotel HotelDetailedInfo, specialOffer string) {
 							</span>
 						}
 					</div>
-					
 					<button class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
 						View Offer
 					</button>
@@ -315,28 +300,28 @@ templ FeaturedHotelCard(hotel HotelDetailedInfo, specialOffer string) {
 // Utility functions for hotels
 func getHotelEmoji(category string) string {
 	hotelEmojis := map[string]string{
-		"luxury hotel": "🏨",
+		"luxury hotel":   "🏨",
 		"boutique hotel": "🏩",
 		"business hotel": "🏢",
 		"historic hotel": "🏛️",
-		"resort": "🏖️",
-		"hostel": "🏠",
-		"guesthouse": "🏡",
-		"b&b": "🏠",
-		"apartment": "🏠",
-		"villa": "🏡",
-		"castle": "🏰",
-		"lodge": "🏘️",
-		"motel": "🏨",
-		"hotel": "🏨",
-		"inn": "🏠",
-		"spa": "🧖‍♀️",
-		"beach": "🏖️",
-		"mountain": "⛰️",
-		"city": "🏙️",
-		"airport": "✈️",
+		"resort":         "🏖️",
+		"hostel":         "🏠",
+		"guesthouse":     "🏡",
+		"b&b":            "🏠",
+		"apartment":      "🏠",
+		"villa":          "🏡",
+		"castle":         "🏰",
+		"lodge":          "🏘️",
+		"motel":          "🏨",
+		"hotel":          "🏨",
+		"inn":            "🏠",
+		"spa":            "🧖‍♀️",
+		"beach":          "🏖️",
+		"mountain":       "⛰️",
+		"city":           "🏙️",
+		"airport":        "✈️",
 	}
-	
+
 	if emoji, exists := hotelEmojis[strings.ToLower(category)]; exists {
 		return emoji
 	}
@@ -360,32 +345,32 @@ func getHotelPriceColor(priceRange string) string {
 
 func getAmenityIcon(amenity string) string {
 	amenityIcons := map[string]string{
-		"wifi": "fas fa-wifi",
-		"pool": "fas fa-swimming-pool",
-		"spa": "fas fa-spa",
-		"gym": "fas fa-dumbbell",
-		"restaurant": "fas fa-utensils",
-		"bar": "fas fa-glass-cheers",
-		"parking": "fas fa-parking",
-		"breakfast": "fas fa-coffee",
-		"room service": "fas fa-concierge-bell",
-		"airport shuttle": "fas fa-shuttle-van",
-		"pet friendly": "fas fa-paw",
-		"business center": "fas fa-briefcase",
-		"meeting rooms": "fas fa-users",
-		"concierge": "fas fa-concierge-bell",
-		"laundry": "fas fa-tshirt",
+		"wifi":             "fas fa-wifi",
+		"pool":             "fas fa-swimming-pool",
+		"spa":              "fas fa-spa",
+		"gym":              "fas fa-dumbbell",
+		"restaurant":       "fas fa-utensils",
+		"bar":              "fas fa-glass-cheers",
+		"parking":          "fas fa-parking",
+		"breakfast":        "fas fa-coffee",
+		"room service":     "fas fa-concierge-bell",
+		"airport shuttle":  "fas fa-shuttle-van",
+		"pet friendly":     "fas fa-paw",
+		"business center":  "fas fa-briefcase",
+		"meeting rooms":    "fas fa-users",
+		"concierge":        "fas fa-concierge-bell",
+		"laundry":          "fas fa-tshirt",
 		"air conditioning": "fas fa-snowflake",
-		"heating": "fas fa-fire",
-		"balcony": "fas fa-home",
-		"terrace": "fas fa-tree",
-		"garden": "fas fa-leaf",
-		"beach": "fas fa-umbrella-beach",
-		"ski": "fas fa-skiing",
-		"golf": "fas fa-golf-ball",
-		"tennis": "fas fa-table-tennis",
+		"heating":          "fas fa-fire",
+		"balcony":          "fas fa-home",
+		"terrace":          "fas fa-tree",
+		"garden":           "fas fa-leaf",
+		"beach":            "fas fa-umbrella-beach",
+		"ski":              "fas fa-skiing",
+		"golf":             "fas fa-golf-ball",
+		"tennis":           "fas fa-table-tennis",
 	}
-	
+
 	if icon, exists := amenityIcons[strings.ToLower(amenity)]; exists {
 		return icon
 	}

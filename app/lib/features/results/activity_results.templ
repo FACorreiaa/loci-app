@@ -18,10 +18,9 @@ templ ActivityResults(activities []POIDetailedInfo, compact bool, showToggle boo
 				}
 			}
 		</div>
-		
 		if showToggle && len(activities) > initialLimit {
 			<div class="text-center mt-4">
-				<button 
+				<button
 					id="toggle-activities-btn"
 					class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
 					onclick="toggleActivities()"
@@ -32,7 +31,6 @@ templ ActivityResults(activities []POIDetailedInfo, compact bool, showToggle boo
 			</div>
 		}
 	</div>
-	
 	<script>
 		let activitiesExpanded = false;
 		
@@ -86,22 +84,21 @@ templ ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) {
 					<span class="text-white text-2xl">{ getActivityEmoji(activity.Category) }</span>
 				</div>
 			</div>
-			
 			<div class="flex-1 min-w-0">
 				<div class="flex items-start justify-between mb-2">
 					<div class="flex-1">
-						<h3 class="font-semibold text-xl text-foreground mb-1 cursor-pointer hover:text-primary transition-colors"
-							onclick="showActivityDetails('{ activity.ID.String() }')">
+						<h3
+							class="font-semibold text-xl text-foreground mb-1 cursor-pointer hover:text-primary transition-colors"
+							onclick="showActivityDetails('{ activity.ID.String() }')"
+						>
 							{ activity.Name }
 						</h3>
-						
 						if activity.Category != "" {
 							<p class="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1 flex items-center gap-1">
 								<span>{ getActivityEmoji(activity.Category) }</span>
 								{ activity.Category }
 							</p>
 						}
-						
 						if activity.Address != "" {
 							<p class="text-sm text-muted-foreground flex items-center mb-1">
 								<i class="fas fa-map-marker-alt mr-1"></i>
@@ -109,7 +106,6 @@ templ ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) {
 							</p>
 						}
 					</div>
-					
 					<div class="flex items-center gap-2 ml-4">
 						if activity.Rating > 0 {
 							<div class="flex items-center gap-1">
@@ -119,34 +115,33 @@ templ ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) {
 								</span>
 							</div>
 						}
-						
-						<button 
+						<button
 							id={ fmt.Sprintf("favorite-btn-%s", activity.ID.String()) }
 							class={ "p-2 rounded-full hover:bg-accent transition-colors", 
 								templ.KV("text-blue-500", isFavorite), templ.KV("text-muted-foreground", !isFavorite) }
 							onclick="toggleActivityFavorite('{ activity.ID.String() }')"
 							if isFavorite {
-						title="Remove from favorites"
-					} else {
-						title="Add to favorites"
-					}
+								title="Remove from favorites"
+							} else {
+								title="Add to favorites"
+							}
 						>
 							<i class={ "fas", templ.KV("fa-heart", isFavorite), templ.KV("fa-heart-o", !isFavorite) }></i>
 						</button>
-						
-						<button class="p-2 rounded-full hover:bg-accent transition-colors text-muted-foreground"
-							onclick="shareActivity('{ activity.ID.String() }')" title="Share">
+						<button
+							class="p-2 rounded-full hover:bg-accent transition-colors text-muted-foreground"
+							onclick="shareActivity('{ activity.ID.String() }')"
+							title="Share"
+						>
 							<i class="fas fa-share-alt"></i>
 						</button>
 					</div>
 				</div>
-				
 				if !compact && activity.Description != "" {
 					<p class="text-sm text-muted-foreground mb-4 line-clamp-3">
 						{ activity.Description }
 					</p>
 				}
-				
 				<div class="flex flex-wrap gap-2 mb-4">
 					for _, tag := range activity.Tags {
 						<span class="px-2 py-1 bg-accent text-accent-foreground text-xs rounded-full">
@@ -154,7 +149,6 @@ templ ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) {
 						</span>
 					}
 				</div>
-				
 				<div class="flex items-center justify-between">
 					<div class="flex items-center gap-4 text-sm text-muted-foreground">
 						if activity.TimeToSpend != "" {
@@ -163,7 +157,6 @@ templ ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) {
 								<span>{ activity.TimeToSpend }</span>
 							</div>
 						}
-						
 						if activity.Budget != "" {
 							<div class="flex items-center gap-1">
 								<i class="fas fa-euro-sign"></i>
@@ -172,7 +165,6 @@ templ ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) {
 								</span>
 							</div>
 						}
-						
 						if activity.OpeningHours != "" {
 							<div class="flex items-center gap-1">
 								<i class="fas fa-clock"></i>
@@ -180,9 +172,8 @@ templ ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) {
 							</div>
 						}
 					</div>
-					
 					<div class="flex gap-2">
-						<button 
+						<button
 							class="px-3 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm hover:bg-secondary/80 transition-colors"
 							data-item-id="{ activity.ID.String() }"
 							data-content-type="activity"
@@ -191,10 +182,13 @@ templ ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) {
 							<i class="fas fa-plus mr-1"></i>
 							Add to List
 						</button>
-						
 						if activity.Website != "" {
-							<a href="{ activity.Website }" target="_blank" rel="noopener noreferrer"
-								class="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors">
+							<a
+								href="{ activity.Website }"
+								target="_blank"
+								rel="noopener noreferrer"
+								class="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors"
+							>
 								<i class="fas fa-external-link-alt mr-1"></i>
 								Book Now
 							</a>
@@ -213,14 +207,12 @@ templ ActivityCardCompact(activity POIDetailedInfo, isFavorite bool) {
 			<div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg flex items-center justify-center">
 				<span class="text-white text-lg">{ getActivityEmoji(activity.Category) }</span>
 			</div>
-			
 			<div class="flex-1 min-w-0">
 				<div class="flex items-start justify-between">
 					<div class="flex-1">
 						<h4 class="font-semibold text-foreground mb-1">{ activity.Name }</h4>
 						<p class="text-xs text-muted-foreground">{ activity.Category }</p>
 					</div>
-					
 					<div class="flex items-center gap-1">
 						if activity.Rating > 0 {
 							<div class="flex items-center gap-1">
@@ -228,21 +220,20 @@ templ ActivityCardCompact(activity POIDetailedInfo, isFavorite bool) {
 								<span class="text-xs font-medium">{ fmt.Sprintf("%.1f", activity.Rating) }</span>
 							</div>
 						}
-						
-						<button class={ "p-1 rounded-full hover:bg-accent transition-colors", 
-							templ.KV("text-blue-500", isFavorite), templ.KV("text-muted-foreground", !isFavorite) }>
+						<button
+							class={ "p-1 rounded-full hover:bg-accent transition-colors", 
+							templ.KV("text-blue-500", isFavorite), templ.KV("text-muted-foreground", !isFavorite) }
+						>
 							<i class={ "fas text-xs", templ.KV("fa-heart", isFavorite), templ.KV("fa-heart-o", !isFavorite) }></i>
 						</button>
 					</div>
 				</div>
-				
 				<div class="flex items-center justify-between mt-2">
 					if activity.Budget != "" {
 						<span class={ "text-xs font-medium", getActivityBudgetColor(activity.Budget) }>
 							{ activity.Budget }
 						</span>
 					}
-					
 					if activity.TimeToSpend != "" {
 						<span class="text-xs text-muted-foreground">{ activity.TimeToSpend }</span>
 					}
@@ -255,50 +246,50 @@ templ ActivityCardCompact(activity POIDetailedInfo, isFavorite bool) {
 // Utility functions for activities
 func getActivityEmoji(category string) string {
 	activityEmojis := map[string]string{
-		"museum": "🏛️",
-		"art": "🎨",
-		"cultural": "🎭",
-		"historic": "🏛️",
+		"museum":        "🏛️",
+		"art":           "🎨",
+		"cultural":      "🎭",
+		"historic":      "🏛️",
 		"entertainment": "🎪",
-		"adventure": "⛰️",
-		"outdoor": "🌳",
-		"sightseeing": "👀",
-		"tour": "🚌",
-		"walking": "🚶",
-		"bike": "🚴",
-		"boat": "⛵",
-		"water": "🏊",
-		"beach": "🏖️",
-		"park": "🌳",
-		"garden": "🌺",
-		"zoo": "🦁",
-		"aquarium": "🐠",
-		"shopping": "🛍️",
-		"market": "🛒",
-		"nightlife": "🌙",
-		"bar": "🍸",
-		"music": "🎵",
-		"theater": "🎭",
-		"cinema": "🎬",
-		"festival": "🎉",
-		"sport": "⚽",
-		"fitness": "💪",
-		"spa": "🧖‍♀️",
-		"food": "🍽️",
-		"cooking": "👨‍🍳",
-		"photography": "📷",
-		"nature": "🌿",
-		"wildlife": "🦌",
-		"architecture": "🏗️",
-		"religious": "⛪",
-		"educational": "📚",
-		"family": "👨‍👩‍👧‍👦",
-		"romantic": "💕",
-		"luxury": "💎",
-		"budget": "💰",
-		"free": "🆓",
+		"adventure":     "⛰️",
+		"outdoor":       "🌳",
+		"sightseeing":   "👀",
+		"tour":          "🚌",
+		"walking":       "🚶",
+		"bike":          "🚴",
+		"boat":          "⛵",
+		"water":         "🏊",
+		"beach":         "🏖️",
+		"park":          "🌳",
+		"garden":        "🌺",
+		"zoo":           "🦁",
+		"aquarium":      "🐠",
+		"shopping":      "🛍️",
+		"market":        "🛒",
+		"nightlife":     "🌙",
+		"bar":           "🍸",
+		"music":         "🎵",
+		"theater":       "🎭",
+		"cinema":        "🎬",
+		"festival":      "🎉",
+		"sport":         "⚽",
+		"fitness":       "💪",
+		"spa":           "🧖‍♀️",
+		"food":          "🍽️",
+		"cooking":       "👨‍🍳",
+		"photography":   "📷",
+		"nature":        "🌿",
+		"wildlife":      "🦌",
+		"architecture":  "🏗️",
+		"religious":     "⛪",
+		"educational":   "📚",
+		"family":        "👨‍👩‍👧‍👦",
+		"romantic":      "💕",
+		"luxury":        "💎",
+		"budget":        "💰",
+		"free":          "🆓",
 	}
-	
+
 	if emoji, exists := activityEmojis[strings.ToLower(category)]; exists {
 		return emoji
 	}

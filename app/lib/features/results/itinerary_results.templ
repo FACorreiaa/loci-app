@@ -47,7 +47,6 @@ templ ItineraryResults(itinerary AIItineraryResponse, compact bool, showToggle b
 				</div>
 			</div>
 		</div>
-
 		<!-- Points of Interest -->
 		if len(itinerary.PointsOfInterest) > 0 {
 			<div class="mb-8">
@@ -68,7 +67,6 @@ templ ItineraryResults(itinerary AIItineraryResponse, compact bool, showToggle b
 				</div>
 			</div>
 		}
-
 		<!-- Restaurants -->
 		if len(itinerary.Restaurants) > 0 {
 			<div class="mb-8">
@@ -83,7 +81,6 @@ templ ItineraryResults(itinerary AIItineraryResponse, compact bool, showToggle b
 				</div>
 			</div>
 		}
-
 		<!-- Bars & Nightlife -->
 		if len(itinerary.Bars) > 0 {
 			<div class="mb-8">
@@ -98,10 +95,9 @@ templ ItineraryResults(itinerary AIItineraryResponse, compact bool, showToggle b
 				</div>
 			</div>
 		}
-
 		if showToggle && len(itinerary.PointsOfInterest) > initialLimit {
 			<div class="text-center mt-6">
-				<button 
+				<button
 					id="toggle-poi-btn"
 					class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
 					onclick="togglePOIs()"
@@ -112,7 +108,6 @@ templ ItineraryResults(itinerary AIItineraryResponse, compact bool, showToggle b
 			</div>
 		}
 	</div>
-
 	<script>
 		let poisExpanded = false;
 		
@@ -158,26 +153,25 @@ templ ItineraryPOICard(poi POIDetailedInfo, priority int, isFavorite bool) {
 	<div class="poi-card bg-card rounded-xl shadow-sm border p-4 hover:shadow-md transition-all duration-300">
 		<div class="flex items-start gap-4">
 			<div class="flex-shrink-0">
-				<div class={ "w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg",
-					getPriorityColor(priority) }>
+				<div
+					class={ "w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg",
+					getPriorityColor(priority) }
+				>
 					{ fmt.Sprintf("%d", priority) }
 				</div>
 			</div>
-			
 			<div class="flex-1 min-w-0">
 				<div class="flex items-start justify-between mb-2">
 					<div class="flex-1">
 						<h4 class="font-semibold text-lg text-foreground mb-1 cursor-pointer hover:text-primary transition-colors">
 							{ poi.Name }
 						</h4>
-						
 						if poi.Category != "" {
 							<p class="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1 flex items-center gap-1">
 								<span>{ getCategoryEmoji(poi.Category) }</span>
 								{ poi.Category }
 							</p>
 						}
-						
 						if poi.Address != "" {
 							<p class="text-sm text-muted-foreground flex items-center mb-1">
 								<i class="fas fa-map-marker-alt mr-1"></i>
@@ -185,7 +179,6 @@ templ ItineraryPOICard(poi POIDetailedInfo, priority int, isFavorite bool) {
 							</p>
 						}
 					</div>
-					
 					<div class="flex items-center gap-2 ml-4">
 						if poi.Rating > 0 {
 							<div class="flex items-center gap-1">
@@ -195,29 +188,26 @@ templ ItineraryPOICard(poi POIDetailedInfo, priority int, isFavorite bool) {
 								</span>
 							</div>
 						}
-						
-						<button 
+						<button
 							id={ fmt.Sprintf("favorite-btn-%s", poi.ID.String()) }
 							class={ "p-2 rounded-full hover:bg-accent transition-colors", 
 								templ.KV("text-yellow-500", isFavorite), templ.KV("text-muted-foreground", !isFavorite) }
 							onclick="togglePOIFavorite('{ poi.ID.String() }')"
 							if isFavorite {
-				title="Remove from favorites"
-			} else {
-				title="Add to favorites"
-			}
+								title="Remove from favorites"
+							} else {
+								title="Add to favorites"
+							}
 						>
 							<i class={ "fas", templ.KV("fa-star", isFavorite), templ.KV("fa-star-o", !isFavorite) }></i>
 						</button>
 					</div>
 				</div>
-				
 				if poi.Description != "" {
 					<p class="text-sm text-muted-foreground mb-3 line-clamp-2">
 						{ poi.Description }
 					</p>
 				}
-				
 				<div class="flex flex-wrap gap-2 mb-4">
 					for _, tag := range poi.Tags {
 						<span class="px-2 py-1 bg-accent text-accent-foreground text-xs rounded-full">
@@ -225,7 +215,6 @@ templ ItineraryPOICard(poi POIDetailedInfo, priority int, isFavorite bool) {
 						</span>
 					}
 				</div>
-				
 				<div class="flex items-center justify-between">
 					<div class="flex items-center gap-4 text-sm text-muted-foreground">
 						if poi.TimeToSpend != "" {
@@ -234,7 +223,6 @@ templ ItineraryPOICard(poi POIDetailedInfo, priority int, isFavorite bool) {
 								<span>{ poi.TimeToSpend }</span>
 							</div>
 						}
-						
 						if poi.Budget != "" {
 							<div class="flex items-center gap-1">
 								<i class="fas fa-euro-sign"></i>
@@ -242,19 +230,21 @@ templ ItineraryPOICard(poi POIDetailedInfo, priority int, isFavorite bool) {
 							</div>
 						}
 					</div>
-					
 					<div class="flex gap-2">
-						<button 
+						<button
 							class="px-3 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm hover:bg-secondary/80 transition-colors"
 							onclick="addToItinerary('{ poi.ID.String() }')"
 						>
 							<i class="fas fa-plus mr-1"></i>
 							Add to Trip
 						</button>
-						
 						if poi.Website != "" {
-							<a href="{ poi.Website }" target="_blank" rel="noopener noreferrer"
-								class="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors">
+							<a
+								href="{ poi.Website }"
+								target="_blank"
+								rel="noopener noreferrer"
+								class="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors"
+							>
 								<i class="fas fa-external-link-alt mr-1"></i>
 								Details
 							</a>
@@ -272,7 +262,6 @@ templ ItineraryRestaurantCard(restaurant POIDetailedInfo, isFavorite bool) {
 			<div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-500 rounded-lg flex items-center justify-center">
 				<i class="fas fa-utensils text-white"></i>
 			</div>
-			
 			<div class="flex-1 min-w-0">
 				<div class="flex items-start justify-between mb-2">
 					<h4 class="font-semibold text-foreground">{ restaurant.Name }</h4>
@@ -283,15 +272,12 @@ templ ItineraryRestaurantCard(restaurant POIDetailedInfo, isFavorite bool) {
 						</div>
 					}
 				</div>
-				
 				if restaurant.Description != "" {
 					<p class="text-sm text-muted-foreground mb-2 line-clamp-2">{ restaurant.Description }</p>
 				}
-				
 				if restaurant.Address != "" {
 					<p class="text-xs text-muted-foreground mb-2">{ restaurant.Address }</p>
 				}
-				
 				<div class="flex justify-between items-center">
 					if restaurant.Budget != "" {
 						<span class={ "text-sm font-medium", getBudgetColor(restaurant.Budget) }>
@@ -313,7 +299,6 @@ templ ItineraryBarCard(bar POIDetailedInfo, isFavorite bool) {
 			<div class="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-lg flex items-center justify-center">
 				<i class="fas fa-glass-cheers text-white"></i>
 			</div>
-			
 			<div class="flex-1 min-w-0">
 				<div class="flex items-start justify-between mb-2">
 					<h4 class="font-semibold text-foreground">{ bar.Name }</h4>
@@ -324,15 +309,12 @@ templ ItineraryBarCard(bar POIDetailedInfo, isFavorite bool) {
 						</div>
 					}
 				</div>
-				
 				if bar.Description != "" {
 					<p class="text-sm text-muted-foreground mb-2 line-clamp-2">{ bar.Description }</p>
 				}
-				
 				if bar.Address != "" {
 					<p class="text-xs text-muted-foreground mb-2">{ bar.Address }</p>
 				}
-				
 				<div class="flex justify-between items-center">
 					if bar.Budget != "" {
 						<span class={ "text-sm font-medium", getBudgetColor(bar.Budget) }>
@@ -377,30 +359,30 @@ func getPriorityColor(priority int) string {
 
 func getCategoryEmoji(category string) string {
 	categoryEmojis := map[string]string{
-		"museum": "🏛️",
-		"park": "🌳",
-		"restaurant": "🍽️",
-		"bar": "🍸",
-		"attraction": "🎯",
-		"historical": "🏛️",
-		"cultural": "🎭",
+		"museum":        "🏛️",
+		"park":          "🌳",
+		"restaurant":    "🍽️",
+		"bar":           "🍸",
+		"attraction":    "🎯",
+		"historical":    "🏛️",
+		"cultural":      "🎭",
 		"entertainment": "🎪",
-		"shopping": "🛍️",
-		"beach": "🏖️",
-		"monument": "🗿",
-		"church": "⛪",
-		"cathedral": "🏰",
-		"palace": "🏰",
-		"castle": "🏰",
-		"tower": "🗼",
-		"bridge": "🌉",
-		"gallery": "🖼️",
-		"theater": "🎭",
-		"market": "🛍️",
-		"viewpoint": "👀",
-		"garden": "🌺",
+		"shopping":      "🛍️",
+		"beach":         "🏖️",
+		"monument":      "🗿",
+		"church":        "⛪",
+		"cathedral":     "🏰",
+		"palace":        "🏰",
+		"castle":        "🏰",
+		"tower":         "🗼",
+		"bridge":        "🌉",
+		"gallery":       "🖼️",
+		"theater":       "🎭",
+		"market":        "🛍️",
+		"viewpoint":     "👀",
+		"garden":        "🌺",
 	}
-	
+
 	if emoji, exists := categoryEmojis[strings.ToLower(category)]; exists {
 		return emoji
 	}
