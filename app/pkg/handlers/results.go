@@ -1,10 +1,8 @@
 package handlers
 
 import (
-	"encoding/json"
+	"fmt"
 	"net/http"
-	"strconv"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -56,16 +54,18 @@ func (h *ResultsHandlers) HandleRestaurantSearch(c *gin.Context) {
 
 	// Get user favorites (if authenticated)
 	userID := middleware.GetUserIDFromContext(c)
+
+	fmt.Printf("User ID: %s\n", userID)
 	favorites := []string{} // TODO: fetch from service
 	isLoadingFavorites := false
 
 	// Render results using the new restaurant results component
 	c.HTML(http.StatusOK, "", results.RestaurantResults(
 		restaurants,
-		false,        // compact
-		true,         // showToggle
-		5,            // initialLimit
-		favorites,    // favorites
+		false,     // compact
+		true,      // showToggle
+		5,         // initialLimit
+		favorites, // favorites
 		isLoadingFavorites,
 	))
 }
@@ -284,7 +284,7 @@ func (h *ResultsHandlers) callLLMForRestaurants(endpoint string, payload map[str
 	// TODO: Implement actual LLM service call and SSE parsing
 	// This is where you'd make the HTTP request to your LLM service,
 	// parse the SSE stream, and extract restaurant data
-	
+
 	// For now, return mock data to demonstrate the structure
 	mockRestaurants := []results.RestaurantDetailedInfo{
 		{
@@ -295,7 +295,7 @@ func (h *ResultsHandlers) callLLMForRestaurants(endpoint string, payload map[str
 			// ... other fields
 		},
 	}
-	
+
 	return mockRestaurants, nil
 }
 
@@ -303,18 +303,18 @@ func (h *ResultsHandlers) callLLMForActivities(endpoint string, payload map[stri
 	// TODO: Implement actual LLM service call and SSE parsing
 	mockActivities := []results.POIDetailedInfo{
 		{
-			Name:        "Sample Activity", 
+			Name:        "Sample Activity",
 			Description: "A fun activity to do",
 			Rating:      4.2,
 			Category:    "Entertainment",
 		},
 	}
-	
+
 	return mockActivities, nil
 }
 
 func (h *ResultsHandlers) callLLMForHotels(endpoint string, payload map[string]interface{}) ([]results.HotelDetailedInfo, error) {
-	// TODO: Implement actual LLM service call and SSE parsing  
+	// TODO: Implement actual LLM service call and SSE parsing
 	mockHotels := []results.HotelDetailedInfo{
 		{
 			Name:        "Sample Hotel",
@@ -323,7 +323,7 @@ func (h *ResultsHandlers) callLLMForHotels(endpoint string, payload map[string]i
 			Category:    "Luxury Hotel",
 		},
 	}
-	
+
 	return mockHotels, nil
 }
 
@@ -341,6 +341,6 @@ func (h *ResultsHandlers) callLLMForItinerary(endpoint string, payload map[strin
 			},
 		},
 	}
-	
+
 	return mockItinerary, nil
 }
