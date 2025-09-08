@@ -26,7 +26,10 @@ var testService POIService // Use the interface
 func TestMain(m *testing.M) {
 	// Load .env.test or similar for test database credentials
 	if err := godotenv.Load("../../../.env.test"); err != nil { // Adjust path to your .env.test
-		log.Println("Warning: .env.test file not found, relying on system environment variables for integration tests.")
+		log.Println("Warning: .env.test file not found, attempting to load .env")
+		if err := godotenv.Load("../../../.env"); err != nil {
+			log.Println("Warning: .env file not found, relying on system environment variables for integration tests.")
+		}
 	}
 
 	dbURL := os.Getenv("TEST_DATABASE_URL")

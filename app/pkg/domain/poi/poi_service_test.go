@@ -9,6 +9,7 @@ import (
 
 	generativeAI "github.com/FACorreiaa/go-genai-sdk/lib"
 	"github.com/google/uuid"
+	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -410,4 +411,14 @@ func TestPOIServiceImpl_AddPoiToFavourites(t *testing.T) {
 		assert.Contains(t, err.Error(), expectedErr.Error()) // Service just passes through the error
 		mockRepo.AssertExpectations(t)
 	})
+}
+
+func TestMain(m *testing.M) {
+	// Load .env file for tests
+	if err := godotenv.Load(); err != nil {
+		slog.Error("Error loading .env file in tests", "error", err)
+	}
+
+	// Run tests
+	os.Exit(m.Run())
 }
