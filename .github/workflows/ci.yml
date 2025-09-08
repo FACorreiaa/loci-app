@@ -107,7 +107,7 @@ jobs:
       uses: golangci/golangci-lint-action@v6
       with:
         version: v1.59.1  # Fixed version that supports Go 1.23
-        args: --config .golangci.yml
+        args: --enable=errcheck --enable=unused --enable=ineffassign --enable=govet --enable=staticcheck --enable=revive
 
   security:
     name: Security Scan
