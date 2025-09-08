@@ -10,8 +10,8 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
-	"github.com/FACorreiaa/go-templui/app/lib/features/nearby"
-	"github.com/FACorreiaa/go-templui/app/lib/models"
+	"github.com/FACorreiaa/go-templui/app/internal/features/nearby"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"

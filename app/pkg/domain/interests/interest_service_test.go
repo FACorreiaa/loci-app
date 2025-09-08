@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/FACorreiaa/go-templui/app/lib/models"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
 )
 
 // MockinterestsRepo is a mock implementation of interestsRepo

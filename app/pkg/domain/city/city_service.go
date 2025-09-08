@@ -9,7 +9,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
-	"github.com/FACorreiaa/go-templui/app/lib/models"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
 )
 
 type Service interface {

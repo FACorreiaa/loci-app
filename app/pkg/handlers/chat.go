@@ -3,34 +3,68 @@ package handlers
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"github.com/FACorreiaa/go-templui/app/pkg/config"
+	llmchat "github.com/FACorreiaa/go-templui/app/pkg/domain/chat_prompt"
+	"github.com/FACorreiaa/go-templui/app/pkg/domain/profiles"
 	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
 )
 
 type ChatHandlers struct {
-	config *config.Config
+	config         *config.Config
+	llmService     llmchat.LlmInteractiontService
+	profileService profiles.Service
 }
 
-func NewChatHandlers() *ChatHandlers {
+func NewChatHandlers(llmService llmchat.LlmInteractiontService, profileService profiles.Service) *ChatHandlers {
 	cfg, err := config.Load()
 	if err != nil {
 		// Use default config if loading fails
 		cfg = &config.Config{}
 	}
 	return &ChatHandlers{
-		config: cfg,
+		config:         cfg,
+		llmService:     llmService,
+		profileService: profileService,
 	}
+}
+
+// getDefaultProfileID gets the user's default profile ID
+func (h *ChatHandlers) getDefaultProfileID(ctx context.Context, userID uuid.UUID) (uuid.UUID, error) {
+	// Get user's profiles
+	profilesResp, err := h.profileService.GetSearchProfiles(ctx, userID)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to get user profiles: %w", err)
+	}
+
+	// Find default profile or return the first one
+	for _, profile := range profilesResp {
+		if profile.IsDefault {
+			return profile.ID, nil
+		}
+	}
+
+	// If no default profile found, use the first one
+	if len(profilesResp) > 0 {
+		return profilesResp[0].ID, nil
+	}
+
+	// If no profiles exist, return error (should create a default profile)
+	return uuid.Nil, fmt.Errorf("no profiles found for user")
 }
 
 func (h *ChatHandlers) SendMessage(c *gin.Context) {
@@ -87,7 +121,7 @@ func (h *ChatHandlers) SendMessage(c *gin.Context) {
 	)
 }
 
-// HandleSearch processes search requests from the landing page and returns streaming AI responses
+// HandleSearch processes search requests from the landing page and redirects to appropriate domain
 func (h *ChatHandlers) HandleSearch(c *gin.Context) {
 	logger.Log.Info("Search request received",
 		zap.String("ip", c.ClientIP()),
@@ -115,14 +149,30 @@ func (h *ChatHandlers) HandleSearch(c *gin.Context) {
 		zap.String("ip", c.ClientIP()),
 	)
 
-	// Call the LLM streaming service
-	go func() {
-		time.Sleep(100 * time.Millisecond) // Small delay to ensure client receives the response
-		h.streamLLMResponse(query, c.ClientIP())
-	}()
+	// Detect domain using DomainDetector
+	domainDetector := &models.DomainDetector{}
+	domain := domainDetector.DetectDomain(context.Background(), query)
 
-	// Return immediate response with streaming placeholder
-	c.String(http.StatusOK, h.generateStreamingResponse(query))
+	logger.Log.Info("Domain detected",
+		zap.String("query", query),
+		zap.String("detected_domain", string(domain)),
+	)
+
+	// Map domain to appropriate URL and redirect
+	redirectURL := h.mapDomainToURL(domain, query)
+
+	// Return HTMX redirect response
+	c.Header("HX-Redirect", redirectURL)
+	c.String(http.StatusOK, fmt.Sprintf(`
+		<div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4 mb-4">
+			<div class="flex items-center gap-2">
+				<svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+				</svg>
+				<span class="text-green-700 dark:text-green-300 text-sm">Redirecting to %s results...</span>
+			</div>
+		</div>
+	`, string(domain)))
 }
 
 // streamLLMResponse calls the LLM streaming endpoint and processes the results
@@ -204,8 +254,8 @@ func (h *ChatHandlers) callLLMStreamingServiceWithData(query, userID string) (ma
 		return nil, "", fmt.Errorf("failed to extract data from stream: %w", err)
 	}
 
-	// Map domain to URL
-	redirectURL := h.mapDomainToURL(domain)
+	// Map domain to URL (legacy function for string domains)
+	redirectURL := h.mapDomainToURLLegacy(domain)
 	return llmData, redirectURL, nil
 }
 
@@ -237,7 +287,7 @@ func (h *ChatHandlers) extractDataAndDomainFromStream(body io.Reader) (map[strin
 			// Look for domain or intent classification events
 			if event.Type == "intent_classified" || event.Type == "domain_detected" {
 				if detectedDomain, ok := event.Data["domain"].(string); ok {
-					domain = detectedDomain
+					domain = strings.ToLower(detectedDomain)
 				}
 				if intent, ok := event.Data["intent"].(string); ok {
 					domain = h.mapIntentToDomain(intent)
@@ -251,28 +301,55 @@ func (h *ChatHandlers) extractDataAndDomainFromStream(body io.Reader) (map[strin
 
 // mapIntentToDomain maps intent types to domain strings
 func (h *ChatHandlers) mapIntentToDomain(intent string) string {
+	intent = strings.ToLower(intent)
 	switch intent {
-	case "find_restaurants":
+	case "find_restaurants", "restaurants", "food", "dining", "eat":
 		return "dining"
-	case "find_hotels":
+	case "find_hotels", "hotels", "accommodation", "stay", "book_hotel":
 		return "accommodation"
-	case "modify_itinerary", "change_date":
+	case "modify_itinerary", "change_date", "create_itinerary", "plan_trip", "plan_itinerary", "generate_itinerary":
 		return "itinerary"
+	case "activities", "activity", "attractions", "things_to_do":
+		return "activities"
 	default:
 		return "activities"
 	}
 }
 
-// mapDomainToURL maps domain types to appropriate URLs
-func (h *ChatHandlers) mapDomainToURL(domain string) string {
+// mapDomainToURL maps domain types to appropriate URLs with query parameters
+func (h *ChatHandlers) mapDomainToURL(domain models.DomainType, query string) string {
+	// URL encode the query
+	encodedQuery := url.QueryEscape(query)
+
 	switch domain {
-	case "dining":
+	case models.DomainAccommodation:
+		return fmt.Sprintf("/hotels?q=%s", encodedQuery)
+	case models.DomainDining:
+		return fmt.Sprintf("/restaurants?q=%s", encodedQuery)
+	case models.DomainActivities:
+		return fmt.Sprintf("/activities?q=%s", encodedQuery)
+	case models.DomainItinerary:
+		return fmt.Sprintf("/itinerary?q=%s", encodedQuery)
+	case models.DomainGeneral:
+		// For general queries, default to itinerary planning
+		return fmt.Sprintf("/itinerary?q=%s", encodedQuery)
+	default:
+		// Default fallback to activities
+		return fmt.Sprintf("/activities?q=%s", encodedQuery)
+	}
+}
+
+// Legacy mapDomainToURL for string-based domains (used by other functions)
+func (h *ChatHandlers) mapDomainToURLLegacy(domain string) string {
+	d := strings.ToLower(domain)
+	switch d {
+	case "dining", "restaurants", "food", "restaurant":
 		return "/restaurants"
-	case "accommodation":
+	case "accommodation", "hotels", "hotel", "stay":
 		return "/hotels"
-	case "itinerary":
+	case "itinerary", "planning", "plan":
 		return "/itinerary"
-	case "activities":
+	case "activities", "activity", "attractions", "things_to_do":
 		return "/activities"
 	default:
 		return "/activities"
@@ -530,6 +607,162 @@ func (h *ChatHandlers) generateDiscoveryResponseByURL(query, redirectURL string)
 		</div>
 	`, icon, intentLabel, query)
 }
+
+// ProcessUnifiedChatMessageStream handles unified chat message streaming - equivalent to your old REST API method
+func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
+	logger.Log.Info("Unified chat message stream request received",
+		zap.String("ip", c.ClientIP()),
+		zap.String("user", middleware.GetUserIDFromContext(c)),
+	)
+
+	// Get message from form data (HTMX post)
+	message := c.PostForm("message")
+	if message == "" {
+		message = c.PostForm("dashboard-search") // For dashboard searches
+	}
+	
+	if message == "" {
+		logger.Log.Warn("Empty message for chat stream")
+		c.String(http.StatusBadRequest, "Message parameter is required")
+		return
+	}
+
+	// Get user ID for authenticated users
+	userIDStr := middleware.GetUserIDFromContext(c)
+	
+	// Set SSE headers
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("Access-Control-Allow-Origin", "*")
+	c.Header("Access-Control-Allow-Headers", "Cache-Control")
+	c.Header("X-Accel-Buffering", "no") // Disable nginx buffering
+
+	// Set up flusher for real-time streaming
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		logger.Log.Error("Response writer does not support flushing")
+		c.String(http.StatusInternalServerError, "Streaming not supported")
+		return
+	}
+
+	// Create event channel for streaming
+	eventCh := make(chan models.StreamEvent, 100)
+	
+	// Process the request in a goroutine
+	go func() {
+		defer close(eventCh)
+		
+		if userIDStr != "" {
+			// Authenticated user path
+			userID, err := uuid.Parse(userIDStr)
+			if err != nil {
+				logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+				eventCh <- models.StreamEvent{
+					Type:      models.EventTypeError,
+					Message:   "Invalid user ID",
+					Error:     err.Error(),
+					Timestamp: time.Now(),
+					EventID:   uuid.New().String(),
+				}
+				return
+			}
+
+			// Get user's default profile ID (you may need to fetch this from your profiles service)
+			// For now, using a placeholder - you should replace this with actual profile lookup
+			profileID, err := h.getDefaultProfileID(c.Request.Context(), userID)
+			if err != nil {
+				logger.Log.Error("Failed to get default profile", zap.Error(err))
+				eventCh <- models.StreamEvent{
+					Type:      models.EventTypeError,
+					Message:   "Failed to get user profile",
+					Error:     err.Error(),
+					Timestamp: time.Now(),
+					EventID:   uuid.New().String(),
+				}
+				return
+			}
+
+			logger.Log.Info("Processing authenticated user request",
+				zap.String("userID", userID.String()),
+				zap.String("profileID", profileID.String()),
+				zap.String("message", message))
+
+			// Call the actual LLM service with profile
+			err = h.llmService.ProcessUnifiedChatMessageStream(
+				c.Request.Context(),
+				userID,
+				profileID,
+				"", // cityName - empty for auto-detection
+				message,
+				nil, // userLocation - could be added later
+				eventCh,
+			)
+			if err != nil {
+				logger.Log.Error("Failed to process authenticated chat stream", zap.Error(err))
+				eventCh <- models.StreamEvent{
+					Type:      models.EventTypeError,
+					Message:   "Failed to process request",
+					Error:     err.Error(),
+					Timestamp: time.Now(),
+					EventID:   uuid.New().String(),
+				}
+			}
+		} else {
+			// Free/unauthenticated user path
+			logger.Log.Info("Processing free user request", zap.String("message", message))
+
+			err := h.llmService.ProcessUnifiedChatMessageStreamFree(
+				c.Request.Context(),
+				"", // cityName - empty for auto-detection
+				message,
+				nil, // userLocation - could be added later
+				eventCh,
+			)
+			if err != nil {
+				logger.Log.Error("Failed to process free chat stream", zap.Error(err))
+				eventCh <- models.StreamEvent{
+					Type:      models.EventTypeError,
+					Message:   "Failed to process request",
+					Error:     err.Error(),
+					Timestamp: time.Now(),
+					EventID:   uuid.New().String(),
+				}
+			}
+		}
+	}()
+
+	// Stream events to client as they arrive
+	for {
+		select {
+		case event, ok := <-eventCh:
+			if !ok {
+				logger.Log.Info("Event channel closed, ending stream")
+				return
+			}
+
+			eventData, err := json.Marshal(event)
+			if err != nil {
+				logger.Log.Error("Failed to marshal event", zap.Error(err))
+				continue
+			}
+
+			fmt.Fprintf(c.Writer, "data: %s\n\n", eventData)
+			flusher.Flush()
+
+			// End stream on complete or error
+			if event.Type == models.EventTypeComplete || event.Type == models.EventTypeError {
+				logger.Log.Info("Stream completed", zap.String("eventType", event.Type))
+				return
+			}
+
+		case <-c.Request.Context().Done():
+			logger.Log.Info("Client disconnected")
+			return
+		}
+	}
+}
+
 
 // generateStreamingResponse creates the initial HTML response with streaming content
 func (h *ChatHandlers) generateStreamingResponse(query string) string {

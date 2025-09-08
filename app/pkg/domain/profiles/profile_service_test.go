@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/FACorreiaa/go-templui/app/lib/models"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"github.com/google/uuid" // For mocking transaction
 
 	// For mocking transaction

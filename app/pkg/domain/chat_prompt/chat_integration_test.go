@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	generativeAI "github.com/FACorreiaa/go-genai-sdk/lib"
-	"github.com/FACorreiaa/go-templui/app/lib/models"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"

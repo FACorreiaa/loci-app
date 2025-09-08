@@ -6,14 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"github.com/FACorreiaa/go-templui/app/lib/features/results"
+	"github.com/FACorreiaa/go-templui/app/internal/features/results"
 	"github.com/FACorreiaa/go-templui/app/pkg/config"
 	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
@@ -291,13 +290,13 @@ type SSEEvent struct {
 }
 
 type LLMStreamResponse struct {
-	Content      string `json:"content"`
-	Type         string `json:"type"`
-	IsComplete   bool   `json:"is_complete"`
-	Restaurants  []results.RestaurantDetailedInfo `json:"restaurants"`
-	Activities   []results.POIDetailedInfo        `json:"activities"`
-	Hotels       []results.HotelDetailedInfo      `json:"hotels"`
-	Itinerary    *results.AIItineraryResponse     `json:"itinerary"`
+	Content     string                           `json:"content"`
+	Type        string                           `json:"type"`
+	IsComplete  bool                             `json:"is_complete"`
+	Restaurants []results.RestaurantDetailedInfo `json:"restaurants"`
+	Activities  []results.POIDetailedInfo        `json:"activities"`
+	Hotels      []results.HotelDetailedInfo      `json:"hotels"`
+	Itinerary   *results.AIItineraryResponse     `json:"itinerary"`
 }
 
 func (h *ResultsHandlers) callLLMForRestaurants(endpoint string, payload map[string]interface{}) ([]results.RestaurantDetailedInfo, error) {
@@ -306,11 +305,11 @@ func (h *ResultsHandlers) callLLMForRestaurants(endpoint string, payload map[str
 		logger.Log.Error("Failed to get restaurants from LLM", zap.Error(err))
 		return h.getMockRestaurants(), nil // Fallback to mock data
 	}
-	
+
 	if len(restaurants.Restaurants) > 0 {
 		return restaurants.Restaurants, nil
 	}
-	
+
 	return h.getMockRestaurants(), nil
 }
 
@@ -321,7 +320,7 @@ func (h *ResultsHandlers) getMockRestaurants() []results.RestaurantDetailedInfo 
 	priceLevel := "€€"
 	hours := "12:00 - 24:00"
 	website := "https://sample-restaurant.pt"
-	
+
 	return []results.RestaurantDetailedInfo{
 		{
 			Name:         "Taberna do Bacalhau",
@@ -353,11 +352,11 @@ func (h *ResultsHandlers) callLLMForActivities(endpoint string, payload map[stri
 		logger.Log.Error("Failed to get activities from LLM", zap.Error(err))
 		return h.getMockActivities(), nil // Fallback to mock data
 	}
-	
+
 	if len(response.Activities) > 0 {
 		return response.Activities, nil
 	}
-	
+
 	return h.getMockActivities(), nil
 }
 
@@ -378,7 +377,7 @@ func (h *ResultsHandlers) getMockActivities() []results.POIDetailedInfo {
 			Name:        "Jerónimos Monastery",
 			Description: "Magnificent Manueline monastery showcasing Portugal's maritime discoveries and religious heritage",
 			Rating:      4.6,
-			Category:    "Religious Monument", 
+			Category:    "Religious Monument",
 			Address:     "Praça do Império 1400-206 Lisboa",
 			TimeToSpend: "2-3 hours",
 			Budget:      "€€",
@@ -393,15 +392,18 @@ func (h *ResultsHandlers) callLLMForHotels(endpoint string, payload map[string]i
 		logger.Log.Error("Failed to get hotels from LLM", zap.Error(err))
 		return h.getMockHotels(), nil // Fallback to mock data
 	}
-	
+
 	if len(response.Hotels) > 0 {
 		return response.Hotels, nil
 	}
-	
+
 	return h.getMockHotels(), nil
 }
 
 func (h *ResultsHandlers) getMockHotels() []results.HotelDetailedInfo {
+	priceRange1 := "€€€"
+	priceRange2 := "€€€€"
+	
 	return []results.HotelDetailedInfo{
 		{
 			Name:        "Pousada de Lisboa",
@@ -409,8 +411,7 @@ func (h *ResultsHandlers) getMockHotels() []results.HotelDetailedInfo {
 			Rating:      4.5,
 			Category:    "Boutique Hotel",
 			Address:     "Rua das Flores 4, 1200-194 Lisboa",
-			PriceRange:  "€€€",
-			Amenities:   []string{"WiFi", "Restaurant", "Bar", "Concierge", "Historic Building"},
+			PriceRange:  &priceRange1,
 			Tags:        []string{"Historic", "Central Location", "Boutique", "Cultural"},
 		},
 		{
@@ -419,8 +420,7 @@ func (h *ResultsHandlers) getMockHotels() []results.HotelDetailedInfo {
 			Rating:      4.3,
 			Category:    "Luxury Hotel",
 			Address:     "Avenida da Liberdade 185, 1269-050 Lisboa",
-			PriceRange:  "€€€€",
-			Amenities:   []string{"WiFi", "Pool", "Spa", "Gym", "Restaurant", "Business Center"},
+			PriceRange:  &priceRange2,
 			Tags:        []string{"Luxury", "Shopping", "Modern", "Business"},
 		},
 	}
@@ -432,11 +432,11 @@ func (h *ResultsHandlers) callLLMForItinerary(endpoint string, payload map[strin
 		logger.Log.Error("Failed to get itinerary from LLM", zap.Error(err))
 		return h.getMockItinerary(), nil // Fallback to mock data
 	}
-	
+
 	if response.Itinerary != nil {
 		return *response.Itinerary, nil
 	}
-	
+
 	return h.getMockItinerary(), nil
 }
 
@@ -456,7 +456,7 @@ func (h *ResultsHandlers) getMockItinerary() results.AIItineraryResponse {
 				Tags:        []string{"UNESCO", "Historical", "Architecture"},
 			},
 			{
-				Name:        "Jerónimos Monastery", 
+				Name:        "Jerónimos Monastery",
 				Description: "Magnificent monastery showcasing Manueline architecture",
 				Rating:      4.6,
 				Category:    "Religious Monument",
@@ -532,56 +532,56 @@ func (h *ResultsHandlers) makeSSERequest(endpoint string, payload map[string]int
 func (h *ResultsHandlers) parseSSEStream(resp *http.Response) (*LLMStreamResponse, error) {
 	scanner := bufio.NewScanner(resp.Body)
 	result := &LLMStreamResponse{}
-	
+
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		
+
 		if line == "" {
 			continue
 		}
-		
+
 		if strings.HasPrefix(line, "data: ") {
 			data := strings.TrimPrefix(line, "data: ")
-			
+
 			// Skip keep-alive messages
 			if data == "keep-alive" || data == "[DONE]" {
 				continue
 			}
-			
+
 			// Try to parse JSON data
 			var streamData map[string]interface{}
 			if err := json.Unmarshal([]byte(data), &streamData); err != nil {
 				logger.Log.Warn("Failed to parse SSE data", zap.String("data", data), zap.Error(err))
 				continue
 			}
-			
+
 			// Extract structured data from the stream
 			if restaurants, ok := streamData["restaurants"].([]interface{}); ok {
 				h.parseRestaurants(restaurants, result)
 			}
-			
+
 			if activities, ok := streamData["activities"].([]interface{}); ok {
 				h.parseActivities(activities, result)
 			}
-			
+
 			if hotels, ok := streamData["hotels"].([]interface{}); ok {
 				h.parseHotels(hotels, result)
 			}
-			
+
 			if itinerary, ok := streamData["itinerary"].(map[string]interface{}); ok {
 				h.parseItinerary(itinerary, result)
 			}
-			
+
 			if complete, ok := streamData["is_complete"].(bool); ok && complete {
 				break
 			}
 		}
 	}
-	
+
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("error reading SSE stream: %w", err)
 	}
-	
+
 	return result, nil
 }
 
@@ -615,15 +615,15 @@ func (h *ResultsHandlers) parseHotels(data []interface{}, result *LLMStreamRespo
 
 func (h *ResultsHandlers) parseItinerary(data map[string]interface{}, result *LLMStreamResponse) {
 	itinerary := &results.AIItineraryResponse{}
-	
+
 	if name, ok := data["name"].(string); ok {
 		itinerary.ItineraryName = name
 	}
-	
+
 	if desc, ok := data["description"].(string); ok {
 		itinerary.OverallDescription = desc
 	}
-	
+
 	if pois, ok := data["points_of_interest"].([]interface{}); ok {
 		for _, poi := range pois {
 			if poiData, ok := poi.(map[string]interface{}); ok {
@@ -631,14 +631,14 @@ func (h *ResultsHandlers) parseItinerary(data map[string]interface{}, result *LL
 			}
 		}
 	}
-	
+
 	result.Itinerary = itinerary
 }
 
 // Helper functions to convert map[string]interface{} to typed structs
 func (h *ResultsHandlers) parseRestaurantData(data map[string]interface{}) results.RestaurantDetailedInfo {
 	restaurant := results.RestaurantDetailedInfo{}
-	
+
 	if name, ok := data["name"].(string); ok {
 		restaurant.Name = name
 	}
@@ -673,13 +673,13 @@ func (h *ResultsHandlers) parseRestaurantData(data map[string]interface{}) resul
 			}
 		}
 	}
-	
+
 	return restaurant
 }
 
 func (h *ResultsHandlers) parsePOIData(data map[string]interface{}) results.POIDetailedInfo {
 	poi := results.POIDetailedInfo{}
-	
+
 	if name, ok := data["name"].(string); ok {
 		poi.Name = name
 	}
@@ -711,13 +711,13 @@ func (h *ResultsHandlers) parsePOIData(data map[string]interface{}) results.POID
 			}
 		}
 	}
-	
+
 	return poi
 }
 
 func (h *ResultsHandlers) parseHotelData(data map[string]interface{}) results.HotelDetailedInfo {
 	hotel := results.HotelDetailedInfo{}
-	
+
 	if name, ok := data["name"].(string); ok {
 		hotel.Name = name
 	}
@@ -734,14 +734,7 @@ func (h *ResultsHandlers) parseHotelData(data map[string]interface{}) results.Ho
 		hotel.Address = addr
 	}
 	if priceRange, ok := data["price_range"].(string); ok {
-		hotel.PriceRange = priceRange
-	}
-	if amenities, ok := data["amenities"].([]interface{}); ok {
-		for _, amenity := range amenities {
-			if amenityStr, ok := amenity.(string); ok {
-				hotel.Amenities = append(hotel.Amenities, amenityStr)
-			}
-		}
+		hotel.PriceRange = &priceRange
 	}
 	if tags, ok := data["tags"].([]interface{}); ok {
 		for _, tag := range tags {
@@ -750,6 +743,6 @@ func (h *ResultsHandlers) parseHotelData(data map[string]interface{}) results.Ho
 			}
 		}
 	}
-	
+
 	return hotel
 }

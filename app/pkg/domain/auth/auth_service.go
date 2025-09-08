@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/FACorreiaa/go-templui/app/lib/models"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"github.com/FACorreiaa/go-templui/app/pkg/config"
 )
 

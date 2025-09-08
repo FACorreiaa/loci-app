@@ -1,0 +1,335 @@
+package restaurants
+
+templ RestaurantsPage() {
+	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+			<!-- Header -->
+			<div class="text-center mb-8">
+				<h1 class="text-3xl lg:text-4xl font-bold text-foreground mb-4">
+					Restaurants & Dining
+				</h1>
+				<p class="text-lg text-muted-foreground max-w-3xl mx-auto">
+					Discover exceptional dining experiences from traditional Portuguese cuisine to international flavors
+				</p>
+			</div>
+			<!-- Personalized Query Banner (shown when coming from discover) -->
+			<div id="discover-banner" class="hidden mb-6">
+				<div class="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 border">
+					<div class="flex items-center gap-4">
+						<div class="text-4xl">🍽️</div>
+						<div class="flex-1">
+							<h3 class="font-semibold text-card-foreground mb-1">AI-Powered Dining Recommendations</h3>
+							<p class="text-sm text-muted-foreground" id="discover-query"></p>
+							<div class="mt-3">
+								<div class="flex items-center gap-2 text-blue-600">
+									<div class="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+									<span class="text-sm font-medium">Loading personalized restaurant recommendations...</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<!-- Search and Filter Section -->
+			<div class="bg-card rounded-xl shadow-sm border p-6 mb-8">
+				<div class="flex flex-col lg:flex-row gap-4 items-center justify-between mb-4">
+					<div class="flex-1 w-full lg:max-w-md">
+						<div class="relative">
+							<input
+								type="text"
+								placeholder="Search restaurants, cuisine, or dishes..."
+								class="w-full pl-10 pr-4 py-3 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+								hx-post="/restaurants/search"
+								hx-trigger="keyup changed delay:300ms"
+								hx-target="#restaurants-results"
+								hx-include="[name='filters']"
+							/>
+							<svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+							</svg>
+						</div>
+					</div>
+					<div class="flex flex-wrap gap-3">
+						<select name="cuisine" class="px-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-primary">
+							<option value="">All Cuisines</option>
+							<option value="portuguese">Portuguese</option>
+							<option value="seafood">Seafood</option>
+							<option value="international">International</option>
+							<option value="vegetarian">Vegetarian</option>
+							<option value="fine-dining">Fine Dining</option>
+						</select>
+						<select name="price" class="px-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-primary">
+							<option value="">Any Price</option>
+							<option value="budget">€ (Budget)</option>
+							<option value="moderate">€€ (Moderate)</option>
+							<option value="upscale">€€€ (Fine Dining)</option>
+							<option value="luxury">€€€€ (Luxury)</option>
+						</select>
+					</div>
+				</div>
+				<div class="flex flex-wrap gap-2">
+					<button class="px-4 py-2 bg-accent text-accent-foreground rounded-full text-sm hover:bg-accent/80 transition-colors">
+						Open Now
+					</button>
+					<button class="px-4 py-2 bg-accent text-accent-foreground rounded-full text-sm hover:bg-accent/80 transition-colors">
+						Outdoor Seating
+					</button>
+					<button class="px-4 py-2 bg-accent text-accent-foreground rounded-full text-sm hover:bg-accent/80 transition-colors">
+						Reservations Available
+					</button>
+					<button class="px-4 py-2 bg-accent text-accent-foreground rounded-full text-sm hover:bg-accent/80 transition-colors">
+						Vegetarian Options
+					</button>
+				</div>
+			</div>
+			<!-- Featured Section -->
+			<div class="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950 rounded-xl p-6 mb-8">
+				<h2 class="text-2xl font-bold text-foreground mb-4">🏆 Today's Featured Restaurants</h2>
+				<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+					@FeaturedRestaurantCard("Ramiro", "Traditional Seafood", "Famous for its prawns and percebes, this iconic Lisbon restaurant has been serving exceptional seafood since 1956.", "4.9", "€€€")
+					@FeaturedRestaurantCard("Taberna do Real Fado", "Traditional Portuguese", "Authentic Portuguese cuisine with live Fado performances in an intimate historic setting.", "4.8", "€€€")
+				</div>
+			</div>
+			<!-- Restaurants Results -->
+			<div id="restaurants-results">
+				<!-- Results will be loaded here via HTMX based on user query/preferences -->
+				<div class="text-center py-8">
+					<div class="animate-pulse">
+						<div class="w-12 h-12 bg-orange-400 rounded-full mx-auto mb-4"></div>
+						<p class="text-muted-foreground">Loading personalized restaurant recommendations...</p>
+					</div>
+				</div>
+			</div>
+			<!-- Load More Button -->
+			<div class="text-center mt-8">
+				<button
+					class="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+					hx-get="/restaurants/load-more"
+					hx-target="#restaurants-results"
+					hx-swap="beforeend"
+				>
+					Load More Restaurants
+				</button>
+			</div>
+		</div>
+	</div>
+}
+
+templ RestaurantsGrid() {
+	<div class="mb-6">
+		<h2 class="text-2xl font-bold text-foreground mb-4">All Restaurants</h2>
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+			@RestaurantCard("Pastéis de Belém", "Traditional Portuguese", "Home of the original Pastéis de Nata since 1837", "4.7", "€€", "Pastry, Traditional, Historic")
+			@RestaurantCard("Fortaleza do Guincho", "Fine Dining", "Michelin-starred restaurant overlooking the Atlantic Ocean", "4.9", "€€€€", "Michelin Star, Ocean View, Fine Dining")
+			@RestaurantCard("Taberna Real do Fado", "Traditional Portuguese", "Authentic Fado restaurant with traditional Portuguese cuisine", "4.6", "€€€", "Fado, Traditional, Live Music")
+			@RestaurantCard("Pharmacia", "Contemporary Portuguese", "Modern twist on traditional Portuguese flavors in a unique pharmacy-themed setting", "4.5", "€€€", "Contemporary, Unique Decor, Modern")
+			@RestaurantCard("Time Out Market", "Food Court", "Iconic food market with dozens of vendors offering various cuisines", "4.4", "€€", "Food Court, Variety, Market")
+			@RestaurantCard("Café A Brasileira", "Café & Light Meals", "Historic café in Chiado, famous for its coffee and traditional atmosphere", "4.3", "€", "Historic, Coffee, Traditional")
+		</div>
+	</div>
+	<script>
+		// Auto-load results based on query parameter or user intent
+		document.addEventListener('DOMContentLoaded', function() {
+			const urlParams = new URLSearchParams(window.location.search);
+			const query = urlParams.get('q');
+			const city = urlParams.get('city');
+			const intent = urlParams.get('intent');
+			
+			if (query || city) {
+				const banner = document.getElementById('discover-banner');
+				const queryElement = document.getElementById('discover-query');
+				
+				if (banner && queryElement) {
+					queryElement.textContent = query ? `Based on your request: "${query}"` : `Showing restaurants in ${city}`;
+					banner.classList.remove('hidden');
+				}
+				
+				// Load personalized results immediately
+				loadRestaurantResults({
+					query: query || '',
+					city: city || '',
+					intent: intent || 'dining'
+				});
+			}
+		});
+		
+		function loadRestaurantResults(params) {
+			htmx.ajax('POST', '/restaurants/search', {
+				source: {
+					query: params.query,
+					city: params.city,
+					intent: params.intent,
+					domain: 'dining'
+				},
+				target: '#restaurants-results',
+				swap: 'innerHTML'
+			});
+		}
+		
+		// Update banner state after results load
+		document.body.addEventListener('htmx:afterSwap', function(evt) {
+			if (evt.detail.target.id === 'restaurants-results') {
+				const banner = document.getElementById('discover-banner');
+				if (banner) {
+					const spinner = banner.querySelector('.animate-spin');
+					const loadingText = banner.querySelector('.text-sm.font-medium');
+					if (spinner && loadingText) {
+						spinner.classList.add('hidden');
+						loadingText.textContent = 'Here are personalized restaurant recommendations based on your request!';
+					}
+				}
+			}
+		});
+	</script>
+}
+
+templ FeaturedRestaurantCard(name, cuisine, description, rating, price string) {
+	<div class="bg-card rounded-xl shadow-sm border p-6 hover:shadow-md transition-all duration-300">
+		<div class="flex items-start gap-4">
+			<div class="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center">
+				<svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.5 2.5L16 4m2.5 2.5L16 9l-2.5-2.5L16 4m2.5 2.5L21 7M14 17v4m-2-2h4M3 21h18"></path>
+				</svg>
+			</div>
+			<div class="flex-1">
+				<div class="flex items-start justify-between mb-2">
+					<h3 class="text-xl font-semibold text-foreground">{ name }</h3>
+					<div class="flex items-center gap-1 text-sm">
+						<svg class="w-4 h-4 text-yellow-500 fill-current" viewBox="0 0 20 20">
+							<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+						</svg>
+						<span class="font-medium">{ rating }</span>
+					</div>
+				</div>
+				<p class="text-orange-600 dark:text-orange-400 text-sm font-medium mb-2">{ cuisine }</p>
+				<p class="text-muted-foreground text-sm mb-4">{ description }</p>
+				<div class="flex items-center justify-between">
+					<span class="text-lg font-semibold text-foreground">{ price }</span>
+					<button class="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+						View Details
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+templ RestaurantCard(name, cuisine, description, rating, price, tags string) {
+	<article class="group bg-card rounded-xl shadow-sm border hover:shadow-md transition-all duration-300">
+		<div class="aspect-video bg-gradient-to-br from-orange-100 to-red-100 dark:from-orange-900 dark:to-red-900 rounded-t-xl relative overflow-hidden">
+			<div class="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
+			<div class="absolute top-3 left-3">
+				<span class="px-3 py-1 bg-white/90 dark:bg-black/90 text-sm font-medium rounded-full">
+					{ cuisine }
+				</span>
+			</div>
+			<div class="absolute top-3 right-3 flex gap-2">
+				<button class="p-2 bg-white/90 dark:bg-black/90 rounded-full hover:bg-white dark:hover:bg-black transition-colors">
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+					</svg>
+				</button>
+			</div>
+		</div>
+		<div class="p-6">
+			<div class="flex items-start justify-between mb-3">
+				<h3 class="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+					{ name }
+				</h3>
+				<div class="flex items-center gap-1 text-sm">
+					<svg class="w-4 h-4 text-yellow-500 fill-current" viewBox="0 0 20 20">
+						<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+					</svg>
+					<span class="font-medium">{ rating }</span>
+				</div>
+			</div>
+			<p class="text-muted-foreground text-sm mb-4 line-clamp-2">
+				{ description }
+			</p>
+			<div class="flex flex-wrap gap-1 mb-4">
+				<span class="px-2 py-1 bg-accent text-accent-foreground text-xs rounded-full">
+					Traditional
+				</span>
+				<span class="px-2 py-1 bg-accent text-accent-foreground text-xs rounded-full">
+					Historic
+				</span>
+				<span class="px-2 py-1 bg-accent text-accent-foreground text-xs rounded-full">
+					Outdoor
+				</span>
+			</div>
+			<div class="flex items-center justify-between">
+				<div class="flex flex-col gap-1">
+					<div class="flex items-center gap-2 text-sm font-medium">
+						{ price }
+						<span class="text-muted-foreground font-normal">per person</span>
+					</div>
+					<div class="text-xs text-muted-foreground">
+						Open until 11 PM
+					</div>
+				</div>
+				<div class="flex gap-2">
+					<button class="px-3 py-2 border border-input rounded-lg hover:bg-accent transition-colors text-sm">
+						Reserve
+					</button>
+					<button
+						class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm"
+						hx-get={ "/restaurants/" + name }
+						hx-target="#modal-content"
+						hx-trigger="click"
+					>
+						View Menu
+					</button>
+				</div>
+			</div>
+		</div>
+	</article>
+}
+
+// RestaurantsPageWithQuery renders the restaurants page with a query parameter for LLM streaming
+templ RestaurantsPageWithQuery(query string) {
+	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+			<!-- Header -->
+			<div class="text-center mb-8">
+				<h1 class="text-3xl lg:text-4xl font-bold text-foreground mb-4">
+					Restaurant Recommendations
+				</h1>
+				<p class="text-lg text-muted-foreground max-w-3xl mx-auto">
+					AI-powered restaurant suggestions for: <span class="font-semibold">{ query }</span>
+				</p>
+			</div>
+			
+			<!-- Loading/Streaming Banner -->
+			<div class="mb-6">
+				<div class="bg-gradient-to-r from-orange-50 to-red-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 border">
+					<div class="flex items-center gap-4">
+						<div class="text-4xl">🍽️</div>
+						<div class="flex-1">
+							<h3 class="font-semibold text-card-foreground mb-1">Finding Perfect Restaurants</h3>
+							<p class="text-sm text-muted-foreground">Analyzing your request: { query }</p>
+							<div class="mt-3">
+								<div class="flex items-center gap-2 text-orange-600">
+									<div class="w-4 h-4 border-2 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
+									<span class="text-sm font-medium">Loading personalized restaurant recommendations...</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			
+			<!-- Results Container - This will be populated by HTMX -->
+			<div id="restaurant-results" class="space-y-6"
+				hx-post="/restaurants/search" 
+				hx-trigger="load"
+				hx-vals={ "{\"query\":\"" + query + "\", \"city\":\"\"}" }
+				hx-swap="innerHTML">
+				<!-- Results will be loaded here -->
+				<div class="text-center py-8">
+					<div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+					<p class="mt-4 text-muted-foreground">Searching for restaurants...</p>
+				</div>
+			</div>
+		</div>
+	</div>
+}

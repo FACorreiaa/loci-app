@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/FACorreiaa/go-templui/app/lib/models"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
 )
 
 func (s *ServiceImpl) enrichAndFilterLLMResponse(rawPOIs []models.POIDetailedInfo, userLat, userLon, searchRadius float64) []models.POIDetailedInfo {

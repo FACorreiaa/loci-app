@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/FACorreiaa/go-templui/app/lib/models"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"github.com/google/uuid"
 )
 

@@ -3,7 +3,7 @@ package poi
 import (
 	"fmt"
 
-	"github.com/FACorreiaa/go-templui/app/lib/models"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
 )
 
 func getRestaurantsNearbyPrompt(userLocation models.UserLocation) string {

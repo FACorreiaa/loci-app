@@ -28,7 +28,7 @@ import (
 
 	generativeAI "github.com/FACorreiaa/go-genai-sdk/lib"
 
-	"github.com/FACorreiaa/go-templui/app/lib/models"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"github.com/FACorreiaa/go-templui/app/pkg/domain/city"
 	"github.com/FACorreiaa/go-templui/app/pkg/domain/interests"
 	"github.com/FACorreiaa/go-templui/app/pkg/domain/poi"

@@ -6,34 +6,41 @@ import (
 
 	"github.com/a-h/templ"
 
-	"github.com/FACorreiaa/go-templui/app/lib/models"
-	"github.com/FACorreiaa/go-templui/app/lib/renderer"
+	"github.com/FACorreiaa/go-templui/app/internal/features"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
+	"github.com/FACorreiaa/go-templui/app/internal/renderer"
 	"github.com/FACorreiaa/go-templui/app/pkg/config"
 	authPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/auth"
+	llmchat "github.com/FACorreiaa/go-templui/app/pkg/domain/chat_prompt"
+	cityPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/city"
+	interestsPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/interests"
+	poiPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/poi"
+	profilesPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/profiles"
+	tagsPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/tags"
 	handlers2 "github.com/FACorreiaa/go-templui/app/pkg/handlers"
 	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
 
-	features "github.com/FACorreiaa/go-templui/app/lib/features"
-	"github.com/FACorreiaa/go-templui/app/lib/features/about"
-	"github.com/FACorreiaa/go-templui/app/lib/features/activities"
-	"github.com/FACorreiaa/go-templui/app/lib/features/auth"
-	"github.com/FACorreiaa/go-templui/app/lib/features/billing"
-	"github.com/FACorreiaa/go-templui/app/lib/features/bookmarks"
-	"github.com/FACorreiaa/go-templui/app/lib/features/chat"
-	"github.com/FACorreiaa/go-templui/app/lib/features/discover"
-	"github.com/FACorreiaa/go-templui/app/lib/features/favorites"
-	"github.com/FACorreiaa/go-templui/app/lib/features/hotels"
-	"github.com/FACorreiaa/go-templui/app/lib/features/itinerary"
-	"github.com/FACorreiaa/go-templui/app/lib/features/lists"
-	"github.com/FACorreiaa/go-templui/app/lib/features/nearby"
-	"github.com/FACorreiaa/go-templui/app/lib/features/pricing"
-	"github.com/FACorreiaa/go-templui/app/lib/features/profile"
-	"github.com/FACorreiaa/go-templui/app/lib/features/recents"
-	"github.com/FACorreiaa/go-templui/app/lib/features/restaurants"
-	"github.com/FACorreiaa/go-templui/app/lib/features/reviews"
-	"github.com/FACorreiaa/go-templui/app/lib/features/settings"
-	"github.com/FACorreiaa/go-templui/app/lib/pages"
+	"github.com/FACorreiaa/go-templui/app/internal/features/about"
+	"github.com/FACorreiaa/go-templui/app/internal/features/activities"
+	"github.com/FACorreiaa/go-templui/app/internal/features/auth"
+	"github.com/FACorreiaa/go-templui/app/internal/features/billing"
+	"github.com/FACorreiaa/go-templui/app/internal/features/bookmarks"
+	"github.com/FACorreiaa/go-templui/app/internal/features/chat"
+	"github.com/FACorreiaa/go-templui/app/internal/features/discover"
+	"github.com/FACorreiaa/go-templui/app/internal/features/favorites"
+	"github.com/FACorreiaa/go-templui/app/internal/features/home"
+	"github.com/FACorreiaa/go-templui/app/internal/features/hotels"
+	"github.com/FACorreiaa/go-templui/app/internal/features/itinerary"
+	"github.com/FACorreiaa/go-templui/app/internal/features/lists"
+	"github.com/FACorreiaa/go-templui/app/internal/features/nearby"
+	"github.com/FACorreiaa/go-templui/app/internal/features/pricing"
+	"github.com/FACorreiaa/go-templui/app/internal/features/profile"
+	"github.com/FACorreiaa/go-templui/app/internal/features/recents"
+	"github.com/FACorreiaa/go-templui/app/internal/features/restaurants"
+	"github.com/FACorreiaa/go-templui/app/internal/features/reviews"
+	"github.com/FACorreiaa/go-templui/app/internal/features/settings"
+	"github.com/FACorreiaa/go-templui/app/internal/pages"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -78,16 +85,44 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		cfg = &config.Config{}
 	}
 
-	// Create auth handler with proper database connection
+	// Initialize repositories and services
 	authRepo := authPkg.NewPostgresAuthRepo(dbPool, slog.Default())
+
+	// Create repositories
+	profilesRepo := profilesPkg.NewPostgresUserRepo(dbPool, slog.Default())
+	interestsRepo := interestsPkg.NewRepositoryImpl(dbPool, slog.Default())
+	cityRepo := cityPkg.NewCityRepository(dbPool, slog.Default())
+	poiRepo := poiPkg.NewRepository(dbPool, slog.Default())
+	tagsRepo := tagsPkg.NewRepositoryImpl(dbPool, slog.Default())
+
+	// Create services
+	profilesService := profilesPkg.NewUserProfilesService(profilesRepo, interestsRepo, tagsRepo, slog.Default())
+
+	// Create handlers
 	authHandlers := authPkg.NewAuthHandlers(authRepo, cfg, slog.Default())
-	chatHandlers := handlers2.NewChatHandlers()
+	profilesHandlers := handlers2.NewProfilesHandler(profilesService)
+	interestsHandlers := handlers2.NewInterestsHandler(interestsRepo)
+	tagsHandlers := handlers2.NewTagsHandler(tagsRepo)
+	// Create chat LLM service
+	chatRepo := llmchat.NewRepositoryImpl(dbPool, slog.Default())
+	chatService := llmchat.NewLlmInteractiontService(
+		interestsRepo,
+		profilesRepo,
+		profilesService,
+		tagsRepo,
+		chatRepo,
+		cityRepo,
+		poiRepo,
+		slog.Default(),
+	)
+	chatHandlers := handlers2.NewChatHandlers(chatService, profilesService)
 	favoritesHandlers := handlers2.NewFavoritesHandlers()
 	bookmarksHandlers := handlers2.NewBookmarksHandlers()
 	discoverHandlers := handlers2.NewDiscoverHandlers()
 	nearbyHandlers := handlers2.NewNearbyHandlers()
 	itineraryHandlers := handlers2.NewItineraryHandlers()
 	settingsHandlers := handlers2.NewSettingsHandlers()
+	resultsHandlers := handlers2.NewResultsHandlers()
 
 	// Public routes (with optional auth)
 	r.GET("/", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
@@ -99,7 +134,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		user := getUserFromContext(c)
 		var content templ.Component
 		if user != nil {
-			content = features.LoggedInDashboard()
+			content = home.LoggedInDashboard()
 		} else {
 			content = features.PublicLandingPage()
 		}
@@ -159,10 +194,25 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 
 	// Activities (public but enhanced when authenticated)
 	r.GET("/activities", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
-		logger.Log.Info("Activities page accessed", zap.String("ip", c.ClientIP()))
+		query := c.Query("q")
+
+		logger.Log.Info("Activities page accessed",
+			zap.String("ip", c.ClientIP()),
+			zap.String("query", query))
+
+		// Create activities page with query context
+		var content templ.Component
+		if query != "" {
+			// Page accessed with a query - this should trigger LLM streaming for activities
+			content = activities.ActivitiesPageWithQuery(query)
+		} else {
+			// Regular activities page
+			content = activities.ActivitiesPage()
+		}
+
 		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 			Title:   "Activities - Loci",
-			Content: activities.ActivitiesPage(),
+			Content: content,
 			Nav: models.Navigation{
 				Items: []models.NavItem{
 					{Name: "Home", URL: "/"},
@@ -179,10 +229,25 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 
 	// Hotels (public but enhanced when authenticated)
 	r.GET("/hotels", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
-		logger.Log.Info("Hotels page accessed", zap.String("ip", c.ClientIP()))
+		query := c.Query("q")
+
+		logger.Log.Info("Hotels page accessed",
+			zap.String("ip", c.ClientIP()),
+			zap.String("query", query))
+
+		// Create hotel page with query context
+		var content templ.Component
+		if query != "" {
+			// Page accessed with a query - this should trigger LLM streaming for hotels
+			content = hotels.HotelsPageWithQuery(query)
+		} else {
+			// Regular hotel page
+			content = hotels.HotelsPage()
+		}
+
 		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 			Title:   "Hotels - Loci",
-			Content: hotels.HotelsPage(),
+			Content: content,
 			Nav: models.Navigation{
 				Items: []models.NavItem{
 					{Name: "Home", URL: "/"},
@@ -199,10 +264,25 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 
 	// Restaurants (public but enhanced when authenticated)
 	r.GET("/restaurants", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
-		logger.Log.Info("Restaurants page accessed", zap.String("ip", c.ClientIP()))
+		query := c.Query("q")
+
+		logger.Log.Info("Restaurants page accessed",
+			zap.String("ip", c.ClientIP()),
+			zap.String("query", query))
+
+		// Create restaurant page with query context
+		var content templ.Component
+		if query != "" {
+			// Page accessed with a query - this should trigger LLM streaming for restaurants
+			content = restaurants.RestaurantsPageWithQuery(query)
+		} else {
+			// Regular restaurant page
+			content = restaurants.RestaurantsPage()
+		}
+
 		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 			Title:   "Restaurants - Loci",
-			Content: restaurants.RestaurantsPage(),
+			Content: content,
 			Nav: models.Navigation{
 				Items: []models.NavItem{
 					{Name: "Home", URL: "/"},
@@ -303,7 +383,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 			logger.Log.Info("Dashboard accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Dashboard - Loci",
-				Content: features.LoggedInDashboard(),
+				Content: home.LoggedInDashboard(),
 				Nav: models.Navigation{
 					Items: []models.NavItem{
 						{Name: "Dashboard", URL: "/dashboard"},
@@ -560,6 +640,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 
 		// Chat endpoints
 		htmxGroup.POST("/chat/message", chatHandlers.SendMessage)
+		htmxGroup.POST("/chat/stream", middleware.OptionalAuthMiddleware(), chatHandlers.ProcessUnifiedChatMessageStream)
 
 		// Favorites endpoints
 		htmxGroup.POST("/favorites/add/:id", favoritesHandlers.AddFavorite)
@@ -574,6 +655,12 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		// Discover endpoints
 		htmxGroup.POST("/discover/search", discoverHandlers.Search)
 		htmxGroup.GET("/discover/category/:category", discoverHandlers.GetCategory)
+
+		// Results endpoints (LLM-backed searches)
+		htmxGroup.POST("/restaurants/search", resultsHandlers.HandleRestaurantSearch)
+		htmxGroup.POST("/activities/search", resultsHandlers.HandleActivitySearch)
+		htmxGroup.POST("/hotels/search", resultsHandlers.HandleHotelSearch)
+		htmxGroup.POST("/itinerary/search", resultsHandlers.HandleItinerarySearch)
 
 		// Nearby endpoints
 		htmxGroup.POST("/nearby/search", nearbyHandlers.SearchPOIs)
@@ -598,6 +685,39 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 			settingsGroup.POST("/notifications", settingsHandlers.UpdateNotifications)
 			settingsGroup.DELETE("/account", settingsHandlers.DeleteAccount)
 			settingsGroup.POST("/export", settingsHandlers.ExportData)
+		}
+	}
+
+	// API routes (JSON endpoints for settings UI)
+	apiGroup := r.Group("/api")
+	apiGroup.Use(middleware.AuthMiddleware())
+	{
+		// Profiles endpoints
+		profilesGroup := apiGroup.Group("/profiles")
+		{
+			profilesGroup.GET("", profilesHandlers.GetProfiles)
+			profilesGroup.POST("", profilesHandlers.CreateProfile)
+			profilesGroup.GET("/:id", profilesHandlers.GetProfile)
+			profilesGroup.PUT("/:id", profilesHandlers.UpdateProfile)
+			profilesGroup.DELETE("/:id", profilesHandlers.DeleteProfile)
+			profilesGroup.PUT("/:id/default", profilesHandlers.SetDefaultProfile)
+		}
+
+		// Interests endpoints
+		interestsGroup := apiGroup.Group("/interests")
+		{
+			interestsGroup.GET("", interestsHandlers.GetInterests)
+			interestsGroup.POST("", interestsHandlers.CreateInterest)
+			interestsGroup.DELETE("/:id", interestsHandlers.RemoveInterest)
+		}
+
+		// Tags endpoints
+		tagsGroup := apiGroup.Group("/tags")
+		{
+			tagsGroup.GET("", tagsHandlers.GetTags)
+			tagsGroup.POST("", tagsHandlers.CreateTag)
+			tagsGroup.PUT("/:id", tagsHandlers.UpdateTag)
+			tagsGroup.DELETE("/:id", tagsHandlers.DeleteTag)
 		}
 	}
 

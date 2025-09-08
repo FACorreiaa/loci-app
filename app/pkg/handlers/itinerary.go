@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/FACorreiaa/go-templui/app/lib/features/itinerary"
-	"github.com/FACorreiaa/go-templui/app/lib/models"
+	"github.com/FACorreiaa/go-templui/app/internal/features/itinerary"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 	"github.com/a-h/templ"
 	"github.com/gin-gonic/gin"

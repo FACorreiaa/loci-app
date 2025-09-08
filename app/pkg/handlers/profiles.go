@@ -1,0 +1,268 @@
+package handlers
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"go.uber.org/zap"
+
+	"github.com/FACorreiaa/go-templui/app/internal/models"
+	"github.com/FACorreiaa/go-templui/app/pkg/domain/profiles"
+	"github.com/FACorreiaa/go-templui/app/pkg/logger"
+	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
+)
+
+type ProfilesHandler struct {
+	profileService profiles.Service
+}
+
+func NewProfilesHandler(profileService profiles.Service) *ProfilesHandler {
+	return &ProfilesHandler{
+		profileService: profileService,
+	}
+}
+
+// GetProfiles godoc
+// @Summary Get all user profiles
+// @Description Retrieve all preference profiles for the authenticated user
+// @Tags profiles
+// @Produce json
+// @Success 200 {array} models.UserPreferenceProfileResponse
+// @Failure 401 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/profiles [get]
+func (h *ProfilesHandler) GetProfiles(c *gin.Context) {
+	userIDStr := middleware.GetUserIDFromContext(c)
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	profiles, err := h.profileService.GetSearchProfiles(c.Request.Context(), userID)
+	if err != nil {
+		logger.Log.Error("Failed to get profiles", zap.String("userID", userIDStr), zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve profiles"})
+		return
+	}
+
+	c.JSON(http.StatusOK, profiles)
+}
+
+// GetProfile godoc
+// @Summary Get a specific user profile
+// @Description Retrieve a specific preference profile by ID
+// @Tags profiles
+// @Produce json
+// @Param id path string true "Profile ID"
+// @Success 200 {object} models.UserPreferenceProfileResponse
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/profiles/{id} [get]
+func (h *ProfilesHandler) GetProfile(c *gin.Context) {
+	userIDStr := middleware.GetUserIDFromContext(c)
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	profileIDStr := c.Param("id")
+	profileID, err := uuid.Parse(profileIDStr)
+	if err != nil {
+		logger.Log.Error("Invalid profile ID", zap.String("profileID", profileIDStr), zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
+		return
+	}
+
+	profile, err := h.profileService.GetSearchProfile(c.Request.Context(), userID, profileID)
+	if err != nil {
+		logger.Log.Error("Failed to get profile", zap.String("userID", userIDStr), zap.String("profileID", profileIDStr), zap.Error(err))
+		if err == models.ErrNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve profile"})
+		return
+	}
+
+	c.JSON(http.StatusOK, profile)
+}
+
+// CreateProfile godoc
+// @Summary Create a new user profile
+// @Description Create a new preference profile for the authenticated user
+// @Tags profiles
+// @Accept json
+// @Produce json
+// @Param profile body models.CreateUserPreferenceProfileParams true "Profile data"
+// @Success 201 {object} models.UserPreferenceProfileResponse
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/profiles [post]
+func (h *ProfilesHandler) CreateProfile(c *gin.Context) {
+	userIDStr := middleware.GetUserIDFromContext(c)
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	var params models.CreateUserPreferenceProfileParams
+	if err := c.ShouldBindJSON(&params); err != nil {
+		logger.Log.Error("Invalid request body", zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	profile, err := h.profileService.CreateSearchProfile(c.Request.Context(), userID, params)
+	if err != nil {
+		logger.Log.Error("Failed to create profile", zap.String("userID", userIDStr), zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create profile"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, profile)
+}
+
+// UpdateProfile godoc
+// @Summary Update a user profile
+// @Description Update a specific preference profile
+// @Tags profiles
+// @Accept json
+// @Produce json
+// @Param id path string true "Profile ID"
+// @Param profile body models.UpdateSearchProfileParams true "Profile data"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/profiles/{id} [put]
+func (h *ProfilesHandler) UpdateProfile(c *gin.Context) {
+	userIDStr := middleware.GetUserIDFromContext(c)
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	profileIDStr := c.Param("id")
+	profileID, err := uuid.Parse(profileIDStr)
+	if err != nil {
+		logger.Log.Error("Invalid profile ID", zap.String("profileID", profileIDStr), zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
+		return
+	}
+
+	var params models.UpdateSearchProfileParams
+	if err := c.ShouldBindJSON(&params); err != nil {
+		logger.Log.Error("Invalid request body", zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	if err := h.profileService.UpdateSearchProfile(c.Request.Context(), userID, profileID, params); err != nil {
+		logger.Log.Error("Failed to update profile", zap.String("userID", userIDStr), zap.String("profileID", profileIDStr), zap.Error(err))
+		if err == models.ErrNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Profile updated successfully"})
+}
+
+// DeleteProfile godoc
+// @Summary Delete a user profile
+// @Description Delete a specific preference profile
+// @Tags profiles
+// @Produce json
+// @Param id path string true "Profile ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/profiles/{id} [delete]
+func (h *ProfilesHandler) DeleteProfile(c *gin.Context) {
+	userIDStr := middleware.GetUserIDFromContext(c)
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	profileIDStr := c.Param("id")
+	profileID, err := uuid.Parse(profileIDStr)
+	if err != nil {
+		logger.Log.Error("Invalid profile ID", zap.String("profileID", profileIDStr), zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
+		return
+	}
+
+	if err := h.profileService.DeleteSearchProfile(c.Request.Context(), userID, profileID); err != nil {
+		logger.Log.Error("Failed to delete profile", zap.String("userID", userIDStr), zap.String("profileID", profileIDStr), zap.Error(err))
+		if err == models.ErrNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete profile"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Profile deleted successfully"})
+}
+
+// SetDefaultProfile godoc
+// @Summary Set a profile as default
+// @Description Set a specific preference profile as the default for the user
+// @Tags profiles
+// @Produce json
+// @Param id path string true "Profile ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/profiles/{id}/default [put]
+func (h *ProfilesHandler) SetDefaultProfile(c *gin.Context) {
+	userIDStr := middleware.GetUserIDFromContext(c)
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	profileIDStr := c.Param("id")
+	profileID, err := uuid.Parse(profileIDStr)
+	if err != nil {
+		logger.Log.Error("Invalid profile ID", zap.String("profileID", profileIDStr), zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
+		return
+	}
+
+	if err := h.profileService.SetDefaultSearchProfile(c.Request.Context(), userID, profileID); err != nil {
+		logger.Log.Error("Failed to set default profile", zap.String("userID", userIDStr), zap.String("profileID", profileIDStr), zap.Error(err))
+		if err == models.ErrNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set default profile"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Default profile set successfully"})
+}

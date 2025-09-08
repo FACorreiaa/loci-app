@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/genai"
 
-	"github.com/FACorreiaa/go-templui/app/lib/models"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
 )
 
 func (l *ServiceImpl) GenerateCityDataWorker(wg *sync.WaitGroup,
