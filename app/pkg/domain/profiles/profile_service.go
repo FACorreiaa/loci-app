@@ -144,7 +144,7 @@ func (s *ServiceImpl) CreateSearchProfileCC(ctx context.Context, userID uuid.UUI
 	}
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
-			// Log but don't return error since defer should not fail parent function
+			s.logger.ErrorContext(ctx, "transaction rollback failed", slog.Any("error", err))
 		}
 	}()
 

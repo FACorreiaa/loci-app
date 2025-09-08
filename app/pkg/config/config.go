@@ -66,7 +66,7 @@ func Load() (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid JWT_ACCESS_TOKEN_TTL: %v", err)
 	}
-	
+
 	refreshTTL, err := time.ParseDuration(getEnvOrDefault("JWT_REFRESH_TOKEN_TTL", "168h"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid JWT_REFRESH_TOKEN_TTL: %v", err)

@@ -416,7 +416,7 @@ func (r *RepositoryImpl) AddChatToBookmark(ctx context.Context, itinerary *model
 	}
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
-			// Log but don't return error since defer should not fail parent function
+			r.logger.ErrorContext(ctx, "transaction rollback failed", slog.Any("error", err))
 		}
 	}()
 
@@ -634,7 +634,7 @@ func (r *RepositoryImpl) RemoveChatFromBookmark(ctx context.Context, userID, iti
 	}
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
-			// Log but don't return error since defer should not fail parent function
+			r.logger.ErrorContext(ctx, "transaction rollback failed", slog.Any("error", err))
 		}
 	}()
 
@@ -836,7 +836,7 @@ func (r *RepositoryImpl) CreateSession(ctx context.Context, session models.ChatS
 	}
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
-			// Log but don't return error since defer should not fail parent function
+			r.logger.ErrorContext(ctx, "transaction rollback failed", slog.Any("error", err))
 		}
 	}()
 
@@ -1498,7 +1498,7 @@ func (r *RepositoryImpl) SaveSinglePOI(ctx context.Context, poi models.POIDetail
 	}
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
-			// Log but don't return error since defer should not fail parent function
+			r.logger.ErrorContext(ctx, "transaction rollback failed", slog.Any("error", err))
 		}
 	}()
 

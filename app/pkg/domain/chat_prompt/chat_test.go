@@ -3,6 +3,7 @@ package llmchat
 import (
 	"context"
 	"fmt"
+	"testing"
 
 	"github.com/google/uuid"
 
@@ -33,4 +34,20 @@ func (m *mockPOIRepo) SavePOIDetailedInfos(_ context.Context, poi models.POIDeta
 	key := fmt.Sprintf("%s:%.6f:%.6f", cityID.String(), poi.Latitude, poi.Longitude)
 	m.pois[key] = &poi
 	return uuid.New(), nil
+}
+
+func TestMocksCompile(t *testing.T) {
+	ctx := context.Background()
+	m := &mockPOIRepo{pois: map[string]*models.POIDetailedInfo{}}
+	cityRepo := &mockCityRepo{}
+	if _, err := cityRepo.FindCityByNameAndCountry(ctx, "TestCity", "TC"); err != nil {
+		t.Fatalf("FindCityByNameAndCountry error: %v", err)
+	}
+	if _, err := m.SavePOIDetailedInfos(ctx, models.POIDetailedInfo{Latitude: 1.23, Longitude: 4.56}, uuid.New()); err != nil {
+		t.Fatalf("SavePOIDetailedInfos error: %v", err)
+	}
+	if _, err := m.FindPOIDetailedInfos(ctx, uuid.New(), 1.23, 4.56, 0.1); err != nil {
+		t.Fatalf("FindPOIDetailedInfos error: %v", err)
+	}
+	_ = mockAIClient{}
 }

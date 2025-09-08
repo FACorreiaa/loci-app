@@ -280,7 +280,7 @@ func (h *ResultsHandlers) fetchItineraryResults(query, city, intent string) (res
 // Placeholder implementations - you would implement these to call your actual LLM service
 // and parse the SSE stream to extract the relevant data structures
 
-func (h *ResultsHandlers) callLLMForRestaurants(_ string, payload map[string]interface{}) ([]results.RestaurantDetailedInfo, error) {
+func (h *ResultsHandlers) callLLMForRestaurants(_ string, _ map[string]interface{}) ([]results.RestaurantDetailedInfo, error) {
 	// This is where you'd make the HTTP request to your LLM service,
 	// parse the SSE stream, and extract restaurant data
 
@@ -298,7 +298,7 @@ func (h *ResultsHandlers) callLLMForRestaurants(_ string, payload map[string]int
 	return mockRestaurants, nil
 }
 
-func (h *ResultsHandlers) callLLMForActivities(_ string, payload map[string]interface{}) ([]results.POIDetailedInfo, error) {
+func (h *ResultsHandlers) callLLMForActivities(_ string, _ map[string]interface{}) ([]results.POIDetailedInfo, error) {
 
 	mockActivities := []results.POIDetailedInfo{
 		{
@@ -312,7 +312,7 @@ func (h *ResultsHandlers) callLLMForActivities(_ string, payload map[string]inte
 	return mockActivities, nil
 }
 
-func (h *ResultsHandlers) callLLMForHotels(_ string, payload map[string]interface{}) ([]results.HotelDetailedInfo, error) {
+func (h *ResultsHandlers) callLLMForHotels(_ string, _ map[string]interface{}) ([]results.HotelDetailedInfo, error) {
 
 	mockHotels := []results.HotelDetailedInfo{
 		{
@@ -326,7 +326,7 @@ func (h *ResultsHandlers) callLLMForHotels(_ string, payload map[string]interfac
 	return mockHotels, nil
 }
 
-func (h *ResultsHandlers) callLLMForItinerary(_ string, payload map[string]interface{}) (results.AIItineraryResponse, error) {
+func (h *ResultsHandlers) callLLMForItinerary(_ string, _ map[string]interface{}) (results.AIItineraryResponse, error) {
 
 	mockItinerary := results.AIItineraryResponse{
 		ItineraryName:      "Sample Itinerary",

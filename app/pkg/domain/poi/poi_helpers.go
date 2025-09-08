@@ -10,7 +10,7 @@ import (
 	"github.com/FACorreiaa/go-templui/app/lib/models"
 )
 
-func (l *ServiceImpl) enrichAndFilterLLMResponse(rawPOIs []models.POIDetailedInfo, userLat, userLon, searchRadius float64) []models.POIDetailedInfo {
+func (s *ServiceImpl) enrichAndFilterLLMResponse(rawPOIs []models.POIDetailedInfo, userLat, userLon, searchRadius float64) []models.POIDetailedInfo {
 	var processedPOIs []models.POIDetailedInfo
 	for _, p := range rawPOIs {
 		distanceKm := calculateDistance(userLat, userLon, p.Latitude, p.Longitude)

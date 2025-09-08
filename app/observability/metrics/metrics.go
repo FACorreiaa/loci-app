@@ -11,14 +11,14 @@ import (
 // AppMetrics holds the application's metric instruments.
 // Make fields public so they can be accessed from other packages.
 type AppMetrics struct {
-	HTTPRequestsTotal       metric.Int64Counter
-	HTTPRequestDuration     metric.Float64Histogram
-	AuthRequestsTotal       metric.Int64Counter
-	SearchRequestsTotal     metric.Int64Counter
-	DBQueryDurationSeconds  metric.Float64Histogram
-	DBQueryErrorsTotal      metric.Int64Counter
-	ActiveUsersGauge        metric.Int64Gauge
-	TemplateRenderDuration  metric.Float64Histogram
+	HTTPRequestsTotal      metric.Int64Counter
+	HTTPRequestDuration    metric.Float64Histogram
+	AuthRequestsTotal      metric.Int64Counter
+	SearchRequestsTotal    metric.Int64Counter
+	DBQueryDurationSeconds metric.Float64Histogram
+	DBQueryErrorsTotal     metric.Int64Counter
+	ActiveUsersGauge       metric.Int64Gauge
+	TemplateRenderDuration metric.Float64Histogram
 }
 
 var (

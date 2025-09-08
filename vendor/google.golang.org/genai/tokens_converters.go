@@ -16,8 +16,6 @@
 
 package genai
 
-import ()
-
 func liveConnectConstraintsToMldev(ac *apiClient, fromObject map[string]any, parentObject map[string]any) (toObject map[string]any, err error) {
 	toObject = make(map[string]any)
 

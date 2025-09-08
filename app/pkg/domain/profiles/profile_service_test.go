@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/FACorreiaa/go-templui/app/lib/models"
-	"github.com/google/uuid"                                     // For mocking transaction
+	"github.com/google/uuid" // For mocking transaction
 
 	// For mocking transaction
 	"github.com/pashagolub/pgxmock/v4" // pgxmock for transaction mocking
@@ -393,7 +393,6 @@ func TestProfilesServiceImpl_CreateSearchProfile(t *testing.T) {
 		// Mock GetSearchProfiles call to check if this is the first profile (for default setting)
 		mockPrefRepo.On("GetSearchProfiles", mock.Anything, userID).Return([]models.UserPreferenceProfileResponse{}, nil).Once()
 
-
 		// Mock repo.CreateSearchProfile - params will be modified by service to set IsDefault=true
 		expectedParams := params
 		defaultValue := true
@@ -408,7 +407,6 @@ func TestProfilesServiceImpl_CreateSearchProfile(t *testing.T) {
 		// For the simpler CreateSearchProfile (not CC version):
 		// It directly calls repo.CreateSearchProfile, then AddInterestToProfile, LinkPersonalTagToProfile
 		// THEN fetches. This order needs to be mocked.
-
 
 		// Mock transaction parts - this is where it gets hard if service has `s.prefRepo.(*PostgresprofilessRepo).pgpool.Begin(ctx)`
 		// If we are testing `CreateSearchProfile` (not `CreateSearchProfileCC` which has explicit Tx):
@@ -438,36 +436,36 @@ func TestProfilesServiceImpl_CreateSearchProfile(t *testing.T) {
 	t.Run("CreateSearchProfile - empty profile name", func(t *testing.T) {
 		// Mock GetSearchProfiles call - this will be called first
 		mockPrefRepo.On("GetSearchProfiles", mock.Anything, userID).Return([]models.UserPreferenceProfileResponse{}, nil).Once()
-		
+
 		emptyNameParams := models.CreateUserPreferenceProfileParams{ProfileName: ""}
 		expectedParams := emptyNameParams
 		defaultValue := true
 		expectedParams.IsDefault = &defaultValue
-		
+
 		// Mock CreateSearchProfile call - let repository handle validation and return error
 		mockPrefRepo.On("CreateSearchProfile", mock.Anything, userID, expectedParams).Return(nil, models.ErrBadRequest).Once()
-		
+
 		_, err := service.CreateSearchProfile(ctx, userID, emptyNameParams)
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, models.ErrBadRequest))
-		
+
 		mockPrefRepo.AssertExpectations(t)
 	})
 
 	t.Run("CreateSearchProfile - invalid interest ID", func(t *testing.T) {
 		// Mock GetSearchProfiles call - this will be called first
 		mockPrefRepo.On("GetSearchProfiles", mock.Anything, userID).Return([]models.UserPreferenceProfileResponse{}, nil).Once()
-		
+
 		invalidInterestID := uuid.New()
 		paramsWithInvalidInterest := models.CreateUserPreferenceProfileParams{
 			ProfileName: "TestInvalidInterest",
 			Interests:   []uuid.UUID{invalidInterestID},
 		}
-		
+
 		expectedParams := paramsWithInvalidInterest
 		defaultValue := true
 		expectedParams.IsDefault = &defaultValue
-		
+
 		// Mock CreateSearchProfile call - let repository handle validation and return error
 		repoErr := fmt.Errorf("invalid interest %s", invalidInterestID)
 		mockPrefRepo.On("CreateSearchProfile", mock.Anything, userID, expectedParams).Return(nil, repoErr).Once()
@@ -478,13 +476,12 @@ func TestProfilesServiceImpl_CreateSearchProfile(t *testing.T) {
 		mockPrefRepo.AssertExpectations(t)
 	})
 
-	
 }
 
 // Unit test for CreateSearchProfileCC (the transactional version)
 // Note: This is a simplified test that doesn't mock the transaction directly
 func TestProfilesServiceImpl_CreateSearchProfileCC(t *testing.T) {
 	// Skip this test for now as it requires more complex mocking of transactions
-	
+
 	t.Skip("Skipping test for CreateSearchProfileCC as it requires complex transaction mocking")
 }

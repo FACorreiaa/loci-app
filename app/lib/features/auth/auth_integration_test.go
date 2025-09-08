@@ -146,9 +146,9 @@ func TestSignInTemplate(t *testing.T) {
 			r, w := io.Pipe()
 			go func() {
 				if err := SignIn().Render(context.Background(), w); err != nil {
-				t.Errorf("Failed to render SignIn: %v", err)
-				return
-			}
+					t.Errorf("Failed to render SignIn: %v", err)
+					return
+				}
 				_ = w.Close()
 			}()
 
@@ -195,7 +195,7 @@ func TestSignUpTemplate(t *testing.T) {
 			assert: func(t *testing.T, doc *goquery.Document) {
 				requiredFields := map[string]string{
 					"firstname": "text",
-					"lastname":  "text", 
+					"lastname":  "text",
 					"email":     "email",
 					"password":  "password",
 				}
@@ -246,9 +246,9 @@ func TestSignUpTemplate(t *testing.T) {
 			r, w := io.Pipe()
 			go func() {
 				if err := SignUp().Render(context.Background(), w); err != nil {
-				t.Errorf("Failed to render SignUp: %v", err)
-				return
-			}
+					t.Errorf("Failed to render SignUp: %v", err)
+					return
+				}
 				_ = w.Close()
 			}()
 
@@ -327,9 +327,9 @@ func TestForgotPasswordTemplate(t *testing.T) {
 			r, w := io.Pipe()
 			go func() {
 				if err := ForgotPassword().Render(context.Background(), w); err != nil {
-				t.Errorf("Failed to render ForgotPassword: %v", err)
-				return
-			}
+					t.Errorf("Failed to render ForgotPassword: %v", err)
+					return
+				}
 				_ = w.Close()
 			}()
 

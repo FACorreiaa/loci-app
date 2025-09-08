@@ -7,6 +7,9 @@ import (
 	"strconv"
 	"strings"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"github.com/FACorreiaa/go-templui/app/lib/features/nearby"
 	"github.com/FACorreiaa/go-templui/app/lib/models"
 	"github.com/FACorreiaa/go-templui/app/pkg/logger"
@@ -239,7 +242,7 @@ func (h *NearbyHandlers) getMockPOIs(lat, lng float64, query, category string) [
 		poi := models.NearbyPOI{
 			ID:          fmt.Sprintf("poi_%d", i+1),
 			Name:        name,
-			Category:    strings.Title(strings.ReplaceAll(cat, "_", " ")),
+			Category:    cases.Title(language.English).String(strings.ReplaceAll(cat, "_", " ")),
 			Address:     fmt.Sprintf("%d Main St, Local City", 100+i*10),
 			Rating:      3.0 + float64(i%3) + (float64(i%10) / 10.0), // 3.0-5.9 range
 			PriceLevel:  1 + (i % 4),                                 // 1-4 price levels

@@ -912,22 +912,19 @@ func (l *ServiceImpl) GetPOIDetailedInfosResponse(ctx context.Context, userID uu
 	}()
 
 	var poiResult *models.POIDetailedInfo
-	for res := range resultCh {
-		if res.Err != nil {
-			l.logger.ErrorContext(ctx, "Error generating POI details", slog.Any("error", res.Err))
-			span.RecordError(res.Err)
-			span.SetStatus(codes.Error, "Failed to generate POI details")
-			return nil, res.Err
-		}
-		poiResult = &res
-		break
-	}
-
-	if poiResult == nil {
-		l.logger.WarnContext(ctx, "No response received for POI details")
+	res, ok := <-resultCh
+	if !ok {
+		l.logger.WarnContext(ctx, "No response received for POI details (channel closed)")
 		span.SetStatus(codes.Error, "No response received")
 		return nil, fmt.Errorf("no response received for POI details")
 	}
+	if res.Err != nil {
+		l.logger.ErrorContext(ctx, "Error generating POI details", slog.Any("error", res.Err))
+		span.RecordError(res.Err)
+		span.SetStatus(codes.Error, "Failed to generate POI details")
+		return nil, res.Err
+	}
+	poiResult = &res
 
 	// Save to database
 	_, err = l.poiRepo.SavePoi(ctx, *poiResult, cityID)
@@ -1322,8 +1319,6 @@ If no city is mentioned, use empty string for city.
 	return parsed.City, parsed.Message, nil
 }
 
-
-
 func (l *ServiceImpl) sendEvent(ctx context.Context, ch chan<- models.StreamEvent, event models.StreamEvent, retries int) bool {
 	for i := 0; i < retries; i++ {
 		if event.EventID == "" {
@@ -1360,7 +1355,7 @@ func (l *ServiceImpl) sendEvent(ctx context.Context, ch chan<- models.StreamEven
 func (l *ServiceImpl) processDeadLetterQueue() {
 	for event := range l.deadLetterCh {
 		l.logger.ErrorContext(context.Background(), "Unprocessed event sent to dead letter queue", slog.Any("event", event))
-		
+
 	}
 }
 

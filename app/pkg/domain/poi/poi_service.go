@@ -1087,7 +1087,6 @@ func (s *ServiceImpl) filterAttractions(attractions []models.POIDetailedInfo, at
 	return filtered
 }
 
-
 func (s *ServiceImpl) generateRestaurantsFromLLM(ctx context.Context, userID uuid.UUID, lat, lon, distance float64, _, _ string) (*models.GenAIResponse, error) {
 	resultCh := make(chan models.GenAIResponse, 1)
 	var wg sync.WaitGroup

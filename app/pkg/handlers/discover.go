@@ -6,6 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 
 	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
@@ -110,7 +112,8 @@ func (h *DiscoverHandlers) GetCategory(c *gin.Context) {
 	)
 
 	// Return category results HTML
-	html := `<div><h2 class="text-lg font-semibold text-foreground mb-4">` + strings.Title(category) + `s Near You</h2><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">`
+	tc := cases.Title(language.English)
+	html := `<div><h2 class="text-lg font-semibold text-foreground mb-4">` + tc.String(category) + `s Near You</h2><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">`
 
 	for _, result := range results {
 		html += `

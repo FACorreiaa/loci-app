@@ -94,7 +94,7 @@ type MockPOIRepository struct {
 	mock.Mock
 }
 
-func (m *MockPOIRepository) GetPOIsByLocationAndDistanceWithCategory(_ context.Context, lat, lon, radiusMeters float64, category string) ([]models.POIDetailedInfo, error) {
+func (m *MockPOIRepository) GetPOIsByLocationAndDistanceWithCategory(_ context.Context, _, _, _ float64, _ string) ([]models.POIDetailedInfo, error) {
 	panic("implement me")
 }
 

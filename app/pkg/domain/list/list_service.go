@@ -907,7 +907,3 @@ func (s *ServiceImpl) SearchLists(ctx context.Context, searchTerm, contentType s
 	span.SetStatus(codes.Ok, "Lists search completed")
 	return lists, nil
 }
-
-
-
-

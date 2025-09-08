@@ -114,7 +114,7 @@ func TestCreateInterest(t *testing.T) {
 			mockRepo := new(MockinterestsRepo)
 			logger := slog.Default()
 			service := NewinterestsService(mockRepo, logger)
-			
+
 			// Setup mock
 			expectedInterest := tc.setupMock(mockRepo)
 
@@ -171,7 +171,7 @@ func TestRemoveinterests(t *testing.T) {
 			mockRepo := new(MockinterestsRepo)
 			logger := slog.Default()
 			service := NewinterestsService(mockRepo, logger)
-			
+
 			// Setup mock
 			tc.setupMock(mockRepo)
 
@@ -245,7 +245,7 @@ func TestGetAllInterests(t *testing.T) {
 			mockRepo := new(MockinterestsRepo)
 			logger := slog.Default()
 			service := NewinterestsService(mockRepo, logger)
-			
+
 			// Setup mock
 			expectedInterests := tc.setupMock(mockRepo)
 
@@ -310,7 +310,7 @@ func TestUpdateinterests(t *testing.T) {
 			mockRepo := new(MockinterestsRepo)
 			logger := slog.Default()
 			service := NewinterestsService(mockRepo, logger)
-			
+
 			// Setup mock
 			tc.setupMock(mockRepo)
 

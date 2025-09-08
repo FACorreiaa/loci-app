@@ -36,7 +36,7 @@ type AuthService interface {
 	VerifyPassword(ctx context.Context, userID, password string) error
 	GenerateTokens(ctx context.Context, user *models.UserAuth, sub *models.Subscription) (accessToken string, refreshToken string, err error)
 	GetOrCreateUserFromProvider(ctx context.Context, provider string, providerUser goth.User) (*models.UserAuth, error)
-	
+
 	// Token and utility methods
 	GenerateToken(userID, email, name string) (string, error)
 	ValidateToken(tokenString string) (*jwt.MapClaims, error)
@@ -418,7 +418,7 @@ func (s *AuthServiceImpl) ValidateToken(tokenString string) (*jwt.MapClaims, err
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Convert Claims to jwt.MapClaims
 	mapClaims := jwt.MapClaims{
 		"user_id": claims.UserID,
@@ -429,7 +429,7 @@ func (s *AuthServiceImpl) ValidateToken(tokenString string) (*jwt.MapClaims, err
 		"iss":     claims.Issuer,
 		"aud":     claims.Audience,
 	}
-	
+
 	return &mapClaims, nil
 }
 

@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/FACorreiaa/go-templui/app/observability/metrics"
-	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 	"github.com/FACorreiaa/go-templui/app/pkg/domain/auth"
+	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/otel"
@@ -228,11 +228,11 @@ func ObservabilityMiddleware() gin.HandlerFunc {
 	tracer := otel.Tracer("loci-templui")
 	return gin.HandlerFunc(func(c *gin.Context) {
 		start := time.Now()
-		
+
 		// Start tracing span
 		ctx, span := tracer.Start(c.Request.Context(), c.Request.Method+" "+c.Request.URL.Path)
 		defer span.End()
-		
+
 		// Set span attributes
 		span.SetAttributes(
 			attribute.String("http.method", c.Request.Method),
@@ -240,38 +240,38 @@ func ObservabilityMiddleware() gin.HandlerFunc {
 			attribute.String("http.user_agent", c.Request.UserAgent()),
 			attribute.String("client.ip", c.ClientIP()),
 		)
-		
+
 		// Replace context with traced context
 		c.Request = c.Request.WithContext(ctx)
-		
+
 		// Process request
 		c.Next()
-		
+
 		// Record metrics
 		duration := time.Since(start).Seconds()
 		statusCode := c.Writer.Status()
-		
+
 		// Add status code to span
 		span.SetAttributes(
 			attribute.Int("http.status_code", statusCode),
 			attribute.Float64("http.duration", duration),
 		)
-		
+
 		// Record HTTP metrics
 		m := metrics.Get()
-		m.HTTPRequestsTotal.Add(context.Background(), 1, 
+		m.HTTPRequestsTotal.Add(context.Background(), 1,
 			metric.WithAttributes(
 				attribute.String("method", c.Request.Method),
 				attribute.String("path", c.Request.URL.Path),
 				attribute.String("status", strconv.Itoa(statusCode)),
 			))
-		
+
 		m.HTTPRequestDuration.Record(context.Background(), duration,
 			metric.WithAttributes(
 				attribute.String("method", c.Request.Method),
 				attribute.String("path", c.Request.URL.Path),
 			))
-		
+
 		// Record auth-specific metrics
 		if c.Request.URL.Path == "/auth/signin" || c.Request.URL.Path == "/auth/signup" {
 			m.AuthRequestsTotal.Add(context.Background(), 1,
@@ -280,7 +280,7 @@ func ObservabilityMiddleware() gin.HandlerFunc {
 					attribute.String("status", strconv.Itoa(statusCode)),
 				))
 		}
-		
+
 		// Record search-specific metrics
 		if c.Request.URL.Path == "/discover/search" || c.Request.URL.Path == "/search" {
 			m.SearchRequestsTotal.Add(context.Background(), 1,
