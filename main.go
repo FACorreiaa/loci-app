@@ -27,7 +27,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-	
+
 	// Initialize logger
 	err = logger.Init(zapcore.InfoLevel, zap.String("service", "loci-templui"))
 	if err != nil {
@@ -122,9 +122,9 @@ func setupDatabase(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, erro
 	return pool, nil
 }
 
-func getDBFromContext(c *gin.Context) *pgxpool.Pool {
-	if db, exists := c.Get("db"); exists {
-		return db.(*pgxpool.Pool)
-	}
-	return nil
-}
+//func getDBFromContext(c *gin.Context) *pgxpool.Pool {
+//	if db, exists := c.Get("db"); exists {
+//		return db.(*pgxpool.Pool)
+//	}
+//	return nil
+//}

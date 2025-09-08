@@ -5,33 +5,34 @@ import (
 	"net/http"
 
 	"github.com/a-h/templ"
+
 	"github.com/FACorreiaa/go-templui/app/lib/models"
 	"github.com/FACorreiaa/go-templui/app/lib/renderer"
+	"github.com/FACorreiaa/go-templui/app/pkg/config"
 	authPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/auth"
 	handlers2 "github.com/FACorreiaa/go-templui/app/pkg/handlers"
-	"github.com/FACorreiaa/go-templui/app/pkg/config"
 	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
 
 	features "github.com/FACorreiaa/go-templui/app/lib/features"
+	"github.com/FACorreiaa/go-templui/app/lib/features/about"
+	"github.com/FACorreiaa/go-templui/app/lib/features/activities"
 	"github.com/FACorreiaa/go-templui/app/lib/features/auth"
+	"github.com/FACorreiaa/go-templui/app/lib/features/billing"
 	"github.com/FACorreiaa/go-templui/app/lib/features/bookmarks"
 	"github.com/FACorreiaa/go-templui/app/lib/features/chat"
 	"github.com/FACorreiaa/go-templui/app/lib/features/discover"
 	"github.com/FACorreiaa/go-templui/app/lib/features/favorites"
-	"github.com/FACorreiaa/go-templui/app/lib/features/nearby"
+	"github.com/FACorreiaa/go-templui/app/lib/features/hotels"
 	"github.com/FACorreiaa/go-templui/app/lib/features/itinerary"
 	"github.com/FACorreiaa/go-templui/app/lib/features/lists"
+	"github.com/FACorreiaa/go-templui/app/lib/features/nearby"
+	"github.com/FACorreiaa/go-templui/app/lib/features/pricing"
 	"github.com/FACorreiaa/go-templui/app/lib/features/profile"
 	"github.com/FACorreiaa/go-templui/app/lib/features/recents"
-	"github.com/FACorreiaa/go-templui/app/lib/features/settings"
-	"github.com/FACorreiaa/go-templui/app/lib/features/pricing"
-	"github.com/FACorreiaa/go-templui/app/lib/features/billing"
-	"github.com/FACorreiaa/go-templui/app/lib/features/activities"
-	"github.com/FACorreiaa/go-templui/app/lib/features/hotels"
 	"github.com/FACorreiaa/go-templui/app/lib/features/restaurants"
-	"github.com/FACorreiaa/go-templui/app/lib/features/about"
 	"github.com/FACorreiaa/go-templui/app/lib/features/reviews"
+	"github.com/FACorreiaa/go-templui/app/lib/features/settings"
 	"github.com/FACorreiaa/go-templui/app/lib/pages"
 
 	"github.com/gin-gonic/gin"
@@ -52,12 +53,12 @@ func getUserFromContext(c *gin.Context) *models.User {
 	}
 }
 
-func getDBFromContext(c *gin.Context) *pgxpool.Pool {
-	if db, exists := c.Get("db"); exists {
-		return db.(*pgxpool.Pool)
-	}
-	return nil
-}
+//func getDBFromContext(c *gin.Context) *pgxpool.Pool {
+//	if db, exists := c.Get("db"); exists {
+//		return db.(*pgxpool.Pool)
+//	}
+//	return nil
+//}
 
 func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 	// Setup custom templ renderer
@@ -76,7 +77,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		// Use default config if loading fails
 		cfg = &config.Config{}
 	}
-	
+
 	// Create auth handler with proper database connection
 	authRepo := authPkg.NewPostgresAuthRepo(dbPool, slog.Default())
 	authHandlers := authPkg.NewAuthHandlers(authRepo, cfg, slog.Default())
@@ -94,7 +95,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 			zap.String("ip", c.ClientIP()),
 			zap.String("user_agent", c.GetHeader("User-Agent")),
 		)
-		
+
 		user := getUserFromContext(c)
 		var content templ.Component
 		if user != nil {
@@ -102,7 +103,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		} else {
 			content = features.PublicLandingPage()
 		}
-		
+
 		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 			Title:   "Loci - Discover Amazing Places",
 			Content: content,
@@ -358,12 +359,12 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 			}))
 		})
 
-		// Itinerary 
+		// Itinerary
 		protected.GET("/itinerary", func(c *gin.Context) {
 			userID := middleware.GetUserIDFromContext(c)
 			query := c.Query("q")
-			
-			logger.Log.Info("Itinerary page accessed", 
+
+			logger.Log.Info("Itinerary page accessed",
 				zap.String("user", userID),
 				zap.String("query", query))
 
@@ -376,7 +377,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 				// Regular itinerary page
 				content = itinerary.ItineraryPage()
 			}
-			
+
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Travel Planner - Loci",
 				Content: content,
@@ -553,10 +554,10 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 	{
 		// Search endpoint (public - no auth required)
 		htmxGroup.POST("/search", chatHandlers.HandleSearch)
-		
+
 		// Discover endpoint (requires auth)
 		htmxGroup.POST("/discover", middleware.AuthMiddleware(), chatHandlers.HandleDiscover)
-		
+
 		// Chat endpoints
 		htmxGroup.POST("/chat/message", chatHandlers.SendMessage)
 
@@ -602,12 +603,12 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 
 	// 404 handler - must be last
 	r.NoRoute(func(c *gin.Context) {
-		logger.Log.Info("404 - Page not found", 
+		logger.Log.Info("404 - Page not found",
 			zap.String("path", c.Request.URL.Path),
 			zap.String("method", c.Request.Method),
 			zap.String("ip", c.ClientIP()),
 		)
-		
+
 		user := getUserFromContext(c)
 		c.HTML(http.StatusNotFound, "", pages.LayoutPage(models.LayoutTempl{
 			Title:   "Page Not Found - Loci",

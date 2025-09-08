@@ -159,9 +159,9 @@ func (s *AuthServiceImpl) RefreshSession(ctx context.Context, refreshToken strin
 		// Invalidate the suspicious token?
 		err = s.repo.InvalidateRefreshToken(ctx, refreshToken)
 		if err != nil {
-			return "", "", fmt.Errorf("invalid or expired refresh token: %w", err)
+			return "", "", fmt.Errorf("invalid or expired refresh token: %w", models.ErrUnauthenticated)
 		}
-		return "", "", fmt.Errorf("internal error retrieving user during refresh")
+		return "", "", fmt.Errorf("internal error retrieving user during refresh: %w", models.ErrUnauthenticated)
 	}
 
 	// --- Fetch models.Subscription Here Later ---
@@ -188,6 +188,7 @@ func (s *AuthServiceImpl) RefreshSession(ctx context.Context, refreshToken strin
 	if err != nil {
 		l.WarnContext(ctx, "Failed to invalidate old refresh token during rotation", slog.String("userID", user.ID), slog.Any("error", err))
 		// Log, but proceed since new tokens were issued
+		return "", "", fmt.Errorf("failed to invalidate old refresh token: %w", err)
 	}
 
 	l.InfoContext(ctx, "Token refresh successful", slog.String("userID", user.ID))
@@ -202,7 +203,7 @@ func (s *AuthServiceImpl) Logout(ctx context.Context, refreshToken string) error
 	if err != nil {
 		l.ErrorContext(ctx, "Failed to invalidate refresh token", slog.Any("error", err))
 		// Decide if this should be an error back to client
-		// return fmt.Errorf("logout failed: %w", err)
+		return fmt.Errorf("logout failed: %w", err)
 	}
 	l.InfoContext(ctx, "Logout successful (token invalidated)")
 	return nil // Usually succeed logout even if invalidation had minor issues
@@ -240,6 +241,7 @@ func (s *AuthServiceImpl) UpdatePassword(ctx context.Context, userID, oldPasswor
 	if err != nil {
 		// Log as warning, password update succeeded but token invalidation failed
 		l.WarnContext(ctx, "Failed to invalidate refresh tokens after password update", slog.Any("error", err))
+		return err
 	}
 
 	l.InfoContext(ctx, "Password updated successfully")

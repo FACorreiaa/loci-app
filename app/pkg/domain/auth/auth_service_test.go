@@ -359,6 +359,7 @@ func TestRefreshSession(t *testing.T) {
 		// Set up expectations
 		mockRepo.On("ValidateRefreshTokenAndGetUserID", ctx, refreshToken).Return(userID, nil).Once()
 		mockRepo.On("GetUserByID", ctx, userID).Return(nil, models.ErrNotFound).Once()
+		mockRepo.On("InvalidateRefreshToken", ctx, refreshToken).Return(nil).Once()
 
 		// Call the service method
 		accessToken, newRefreshToken, err := service.RefreshSession(ctx, refreshToken)
@@ -388,6 +389,7 @@ func TestRefreshSession(t *testing.T) {
 		// Set up expectations
 		mockRepo.On("ValidateRefreshTokenAndGetUserID", ctx, refreshToken).Return(userID, nil).Once()
 		mockRepo.On("GetUserByID", ctx, userID).Return(user, nil).Once()
+		mockRepo.On("StoreRefreshToken", ctx, userID, mock.AnythingOfType("string"), mock.AnythingOfType("time.Time")).Return(nil).Once()
 		mockRepo.On("InvalidateRefreshToken", ctx, refreshToken).Return(expectedError).Once()
 
 		// Call the service method
@@ -418,7 +420,6 @@ func TestRefreshSession(t *testing.T) {
 		// Set up expectations
 		mockRepo.On("ValidateRefreshTokenAndGetUserID", ctx, refreshToken).Return(userID, nil).Once()
 		mockRepo.On("GetUserByID", ctx, userID).Return(user, nil).Once()
-		mockRepo.On("InvalidateRefreshToken", ctx, refreshToken).Return(nil).Once()
 		mockRepo.On("StoreRefreshToken", ctx, userID, mock.AnythingOfType("string"), mock.AnythingOfType("time.Time")).Return(expectedError).Once()
 
 		// Call the service method

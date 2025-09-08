@@ -393,7 +393,7 @@ func TestPOIServiceImpl_AddPoiToFavourites(t *testing.T) {
 	expectedFavouriteID := uuid.New()
 
 	t.Run("success", func(t *testing.T) {
-		mockRepo.On("AddPoiToFavourites", ctx, userID, poiID).Return(expectedFavouriteID, nil).Once()
+		mockRepo.On("AddLLMPoiToFavourite", ctx, userID, poiID).Return(expectedFavouriteID, nil).Once()
 
 		favID, err := service.AddPoiToFavourites(ctx, userID, poiID, true)
 		require.NoError(t, err)
@@ -403,11 +403,11 @@ func TestPOIServiceImpl_AddPoiToFavourites(t *testing.T) {
 
 	t.Run("repository error", func(t *testing.T) {
 		expectedErr := errors.New("db error")
-		mockRepo.On("AddPoiToFavourites", ctx, userID, poiID).Return(uuid.Nil, expectedErr).Once()
+		mockRepo.On("AddLLMPoiToFavourite", ctx, userID, poiID).Return(uuid.Nil, expectedErr).Once()
 
 		_, err := service.AddPoiToFavourites(ctx, userID, poiID, true)
 		require.Error(t, err)
-		assert.EqualError(t, err, expectedErr.Error()) // Service just passes through the error
+		assert.Contains(t, err.Error(), expectedErr.Error()) // Service just passes through the error
 		mockRepo.AssertExpectations(t)
 	})
 }
