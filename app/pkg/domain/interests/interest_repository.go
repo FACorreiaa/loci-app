@@ -85,7 +85,7 @@ func (r *RepositoryImpl) CreateInterest(ctx context.Context, name string, descri
 		&interest.UpdatedAt, // Scan the updated_at timestamp set by the query
 	)
 
-	// TODO also add to user_custom_interests
+	
 
 	if err != nil {
 		// Check for unique constraint violation (name already exists)

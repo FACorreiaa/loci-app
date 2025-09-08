@@ -88,9 +88,6 @@ func extractPOIName(message string) string {
 		return "Unknown POI"
 	}
 	// Capitalize each word for proper formatting
-	// cases.Title
-	// use this https://pkg.go.dev/golang.org/x/text/cases later and handle language as well
-	// TODO: Replace with golang.org/x/text/cases.Title for proper Unicode support
 	// For now, use a simple manual title case implementation
 	words = strings.Split(strings.Join(filtered, " "), " ")
 	for i, word := range words {

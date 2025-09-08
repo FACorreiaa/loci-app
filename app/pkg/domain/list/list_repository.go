@@ -42,7 +42,7 @@ type Repository interface {
 	GetListItemsByContentType(ctx context.Context, listID uuid.UUID, contentType models.ContentType) ([]*models.ListItem, error)
 
 	// Search and filtering
-	SearchLists(ctx context.Context, searchTerm, category, contentType, theme string, cityID *uuid.UUID) ([]*models.List, error)
+	SearchLists(ctx context.Context, searchTerm, contentType string, cityID *uuid.UUID) ([]*models.List, error)
 
 	// Legacy POI-specific methods (for backward compatibility)
 	GetListItem(ctx context.Context, listID, itemID uuid.UUID, contentType string) (models.ListItem, error)
@@ -533,7 +533,7 @@ func (r *RepositoryImpl) GetListItemsByContentType(ctx context.Context, listID u
 }
 
 // SearchLists searches for lists based on various criteria
-func (r *RepositoryImpl) SearchLists(ctx context.Context, searchTerm, category, contentType, theme string, cityID *uuid.UUID) ([]*models.List, error) {
+func (r *RepositoryImpl) SearchLists(ctx context.Context, searchTerm, contentType string, cityID *uuid.UUID) ([]*models.List, error) {
 	query := `
 		SELECT DISTINCT l.id, l.user_id, l.name, l.description, l.image_url, l.is_public, l.is_itinerary,
 		       l.parent_list_id, l.city_id, l.view_count, l.save_count, l.created_at, l.updated_at
@@ -543,24 +543,20 @@ func (r *RepositoryImpl) SearchLists(ctx context.Context, searchTerm, category, 
 	`
 
 	var args []interface{}
-	argIndex := 1
 
 	if searchTerm != "" {
-		query += fmt.Sprintf(" AND (l.name ILIKE $%d OR l.description ILIKE $%d)", argIndex, argIndex+1)
+		query += fmt.Sprintf(" AND (l.name ILIKE $%d OR l.description ILIKE $%d)", len(args)+1, len(args)+2)
 		args = append(args, "%"+searchTerm+"%", "%"+searchTerm+"%")
-		argIndex += 2
 	}
 
 	if cityID != nil {
-		query += fmt.Sprintf(" AND l.city_id = $%d", argIndex)
+		query += fmt.Sprintf(" AND l.city_id = $%d", len(args)+1)
 		args = append(args, *cityID)
-		argIndex++
 	}
 
 	if contentType != "" {
-		query += fmt.Sprintf(" AND li.content_type = $%d", argIndex)
+		query += fmt.Sprintf(" AND li.content_type = $%d", len(args)+1)
 		args = append(args, contentType)
-		argIndex++
 	}
 
 	query += " ORDER BY l.save_count DESC, l.created_at DESC"

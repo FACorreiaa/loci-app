@@ -33,7 +33,7 @@ func TestButton(t *testing.T) {
 		}
 
 		// Check the button's attributes
-		doc.Find("button").Each(func(i int, s *goquery.Selection) {
+		doc.Find("button").Each(func(_ int, s *goquery.Selection) {
 			if id, _ := s.Attr("id"); id != "my-button" {
 				t.Errorf(`expected id to be "my-button", but got "%s"`, id)
 			}
@@ -66,7 +66,7 @@ func TestButton(t *testing.T) {
 		}
 
 		// Check the anchor's attributes
-		doc.Find("a").Each(func(i int, s *goquery.Selection) {
+		doc.Find("a").Each(func(_ int, s *goquery.Selection) {
 			if id, _ := s.Attr("id"); id != "my-link-button" {
 				t.Errorf(`expected id to be "my-link-button", but got "%s"`, id)
 			}
@@ -95,7 +95,7 @@ func TestButton(t *testing.T) {
 
 		// Check that the correct classes are applied
 		expectedClasses := []string{"bg-destructive", "h-10"}
-		doc.Find("button").Each(func(i int, s *goquery.Selection) {
+		doc.Find("button").Each(func(_ int, s *goquery.Selection) {
 			for _, class := range expectedClasses {
 				if !s.HasClass(class) {
 					// Note: This is a simplified check. In a real scenario,

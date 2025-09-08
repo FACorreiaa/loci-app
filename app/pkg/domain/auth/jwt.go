@@ -16,6 +16,14 @@ import (
 
 var jwtSecret = []byte("your-secret-key-change-in-production")
 
+type contextKey string
+
+const (
+	UserIDKey    contextKey = "user_id"
+	UserEmailKey contextKey = "user_email"
+	UserNameKey  contextKey = "user_name"
+)
+
 type Claims struct {
 	UserID string `json:"user_id"`
 	Email  string `json:"email"`
@@ -124,9 +132,9 @@ func JWTMiddleware(next http.Handler) http.Handler {
 		}
 
 		// Add user info to request context
-		r = r.WithContext(context.WithValue(r.Context(), "user_id", claims.UserID))
-		r = r.WithContext(context.WithValue(r.Context(), "user_email", claims.Email))
-		r = r.WithContext(context.WithValue(r.Context(), "user_name", claims.Name))
+		r = r.WithContext(context.WithValue(r.Context(), UserIDKey, claims.UserID))
+		r = r.WithContext(context.WithValue(r.Context(), UserEmailKey, claims.Email))
+		r = r.WithContext(context.WithValue(r.Context(), UserNameKey, claims.Name))
 
 		next.ServeHTTP(w, r)
 	})

@@ -357,8 +357,10 @@ func TestAuthTemplatesAccessibility(t *testing.T) {
 			// Render the component
 			r, w := io.Pipe()
 			go func() {
-				_ = template().Render(context.Background(), w)
-				_ = w.Close()
+				defer w.Close()
+				if err := template().Render(context.Background(), w); err != nil {
+					t.Errorf("Failed to render template: %v", err)
+				}
 			}()
 
 			// Parse with goquery
@@ -369,7 +371,7 @@ func TestAuthTemplatesAccessibility(t *testing.T) {
 
 			// Check for proper labels
 			inputs := doc.Find("input[type='email'], input[type='password'], input[type='text']")
-			inputs.Each(func(i int, input *goquery.Selection) {
+			inputs.Each(func(_ int, input *goquery.Selection) {
 				inputID, exists := input.Attr("id")
 				if exists {
 					label := doc.Find(fmt.Sprintf("label[for='%s']", inputID))

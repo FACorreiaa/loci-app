@@ -1322,11 +1322,7 @@ If no city is mentioned, use empty string for city.
 	return parsed.City, parsed.Message, nil
 }
 
-// TODO For robustness, send unprocessed events to a dead letter queue (e.g., a separate channel or database table) for later analysis:
-// if !l.sendEvent(ctx, eventCh, event) {
-//     l.logger.ErrorContext(ctx, "Sending to dead letter queue", slog.Any("event", event))
-//     // Save to a persistent store
-// }
+
 
 func (l *ServiceImpl) sendEvent(ctx context.Context, ch chan<- models.StreamEvent, event models.StreamEvent, retries int) bool {
 	for i := 0; i < retries; i++ {
@@ -1364,7 +1360,7 @@ func (l *ServiceImpl) sendEvent(ctx context.Context, ch chan<- models.StreamEven
 func (l *ServiceImpl) processDeadLetterQueue() {
 	for event := range l.deadLetterCh {
 		l.logger.ErrorContext(context.Background(), "Unprocessed event sent to dead letter queue", slog.Any("event", event))
-		// TODO Save events to DB
+		
 	}
 }
 

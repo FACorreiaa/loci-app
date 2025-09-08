@@ -50,7 +50,7 @@ func (h *NearbyHandlers) SearchPOIs(c *gin.Context) {
 
 func (h *NearbyHandlers) GetPOIsByCategory(c *gin.Context) {
 	category := c.Param("category")
-	
+
 	latitude, err := strconv.ParseFloat(c.PostForm("latitude"), 64)
 	if err != nil {
 		latitude = 0.0
@@ -85,7 +85,7 @@ func (h *NearbyHandlers) GetPOIsByCategory(c *gin.Context) {
 
 	// Get POIs based on category and filters
 	pois := h.getMockPOIs(latitude, longitude, "", category)
-	
+
 	// Apply filters
 	filteredPOIs := h.applyFilters(pois, distance, minRating, priceLevel)
 
@@ -158,14 +158,14 @@ func (h *NearbyHandlers) GetMapData(c *gin.Context) {
 	markers := make([]map[string]interface{}, len(filteredPOIs))
 	for i, poi := range filteredPOIs {
 		markers[i] = map[string]interface{}{
-			"id":        poi.ID,
-			"name":      poi.Name,
-			"category":  poi.Category,
-			"lat":       poi.Latitude,
-			"lng":       poi.Longitude,
-			"rating":    poi.Rating,
-			"address":   poi.Address,
-			"imageUrl":  poi.ImageURL,
+			"id":       poi.ID,
+			"name":     poi.Name,
+			"category": poi.Category,
+			"lat":      poi.Latitude,
+			"lng":      poi.Longitude,
+			"rating":   poi.Rating,
+			"address":  poi.Address,
+			"imageUrl": poi.ImageURL,
 		}
 	}
 
@@ -182,8 +182,8 @@ func (h *NearbyHandlers) GetMapData(c *gin.Context) {
 func (h *NearbyHandlers) getMockPOIs(lat, lng float64, query, category string) []models.NearbyPOI {
 	// Generate mock POIs based on location and category
 	pois := []models.NearbyPOI{}
-	
-	categories := []string{}
+
+	var categories []string
 	switch category {
 	case "restaurants":
 		categories = []string{"restaurant", "cafe", "bar", "bakery"}
@@ -198,80 +198,80 @@ func (h *NearbyHandlers) getMockPOIs(lat, lng float64, query, category string) [
 	}
 
 	names := map[string][]string{
-		"restaurant": {"The Gourmet Spot", "Bella Vista Restaurant", "Local Flavors", "Downtown Diner", "Corner Bistro"},
-		"cafe": {"Coffee Central", "The Daily Grind", "Espresso Corner", "Morning Brew", "Café Delight"},
-		"bar": {"The Rooftop", "Local Pub", "Wine & Dine", "Sports Bar", "The Nightspot"},
+		"restaurant":    {"The Gourmet Spot", "Bella Vista Restaurant", "Local Flavors", "Downtown Diner", "Corner Bistro"},
+		"cafe":          {"Coffee Central", "The Daily Grind", "Espresso Corner", "Morning Brew", "Café Delight"},
+		"bar":           {"The Rooftop", "Local Pub", "Wine & Dine", "Sports Bar", "The Nightspot"},
 		"entertainment": {"Cinema Plaza", "The Gaming Lounge", "Live Music Venue", "Comedy Club", "Dance Studio"},
-		"shopping": {"Fashion District", "Local Market", "Tech Store", "Bookshop", "Artisan Crafts"},
-		"park": {"Central Park", "Riverside Walk", "Community Gardens", "Nature Reserve", "City Plaza"},
-		"hotel": {"Grand Hotel", "Business Inn", "Boutique Lodge", "City Center Hotel", "Luxury Resort"},
-		"museum": {"History Museum", "Art Gallery", "Science Center", "Cultural Center", "Heritage Site"},
+		"shopping":      {"Fashion District", "Local Market", "Tech Store", "Bookshop", "Artisan Crafts"},
+		"park":          {"Central Park", "Riverside Walk", "Community Gardens", "Nature Reserve", "City Plaza"},
+		"hotel":         {"Grand Hotel", "Business Inn", "Boutique Lodge", "City Center Hotel", "Luxury Resort"},
+		"museum":        {"History Museum", "Art Gallery", "Science Center", "Cultural Center", "Heritage Site"},
 	}
 
 	// Generate 6-12 POIs
-	numPOIs := 6 + int(math.Abs(lat+lng)) % 6
-	
+	numPOIs := 6 + int(math.Abs(lat+lng))%6
+
 	for i := 0; i < numPOIs; i++ {
 		cat := categories[i%len(categories)]
 		nameList := names[cat]
 		if nameList == nil {
 			nameList = []string{"Local Business", "Popular Spot", "Neighborhood Favorite"}
 		}
-		
+
 		name := nameList[i%len(nameList)]
-		
+
 		// Add query filtering
-		if query != "" && !strings.Contains(strings.ToLower(name), strings.ToLower(query)) && 
-		   !strings.Contains(strings.ToLower(cat), strings.ToLower(query)) {
+		if query != "" && !strings.Contains(strings.ToLower(name), strings.ToLower(query)) &&
+			!strings.Contains(strings.ToLower(cat), strings.ToLower(query)) {
 			continue
 		}
 
 		// Generate nearby coordinates (within ~5km)
 		latOffset := (float64(i%100) - 50) * 0.001 // ~100m variations
 		lngOffset := (float64((i*7)%100) - 50) * 0.001
-		
+
 		poiLat := lat + latOffset
 		poiLng := lng + lngOffset
-		
+
 		// Calculate distance
 		distance := h.calculateDistance(lat, lng, poiLat, poiLng)
-		
+
 		poi := models.NearbyPOI{
-			ID:         fmt.Sprintf("poi_%d", i+1),
-			Name:       name,
-			Category:   strings.Title(strings.ReplaceAll(cat, "_", " ")),
-			Address:    fmt.Sprintf("%d Main St, Local City", 100+i*10),
-			Rating:     3.0 + float64(i%3) + (float64(i%10) / 10.0), // 3.0-5.9 range
-			PriceLevel: 1 + (i % 4), // 1-4 price levels
-			Distance:   distance,
-			Latitude:   poiLat,
-			Longitude:  poiLng,
-			ImageURL:   fmt.Sprintf("https://picsum.photos/400/300?random=%d", i+1),
-			Website:    fmt.Sprintf("https://example.com/poi_%d", i+1),
+			ID:          fmt.Sprintf("poi_%d", i+1),
+			Name:        name,
+			Category:    strings.Title(strings.ReplaceAll(cat, "_", " ")),
+			Address:     fmt.Sprintf("%d Main St, Local City", 100+i*10),
+			Rating:      3.0 + float64(i%3) + (float64(i%10) / 10.0), // 3.0-5.9 range
+			PriceLevel:  1 + (i % 4),                                 // 1-4 price levels
+			Distance:    distance,
+			Latitude:    poiLat,
+			Longitude:   poiLng,
+			ImageURL:    fmt.Sprintf("https://picsum.photos/400/300?random=%d", i+1),
+			Website:     fmt.Sprintf("https://example.com/poi_%d", i+1),
 			PhoneNumber: fmt.Sprintf("+1-555-%03d-%04d", i+100, i*73%10000),
-			IsOpen:     i%4 != 0, // 75% are open
+			IsOpen:      i%4 != 0, // 75% are open
 		}
-		
+
 		pois = append(pois, poi)
 	}
-	
+
 	return pois
 }
 
 func (h *NearbyHandlers) applyFilters(pois []models.NearbyPOI, maxDistance, minRating float64, priceLevel string) []models.NearbyPOI {
 	filtered := []models.NearbyPOI{}
-	
+
 	for _, poi := range pois {
 		// Distance filter
 		if maxDistance > 0 && poi.Distance > maxDistance {
 			continue
 		}
-		
+
 		// Rating filter
 		if minRating > 0 && poi.Rating < minRating {
 			continue
 		}
-		
+
 		// Price filter
 		if priceLevel != "" {
 			targetPrice, err := strconv.Atoi(priceLevel)
@@ -279,25 +279,25 @@ func (h *NearbyHandlers) applyFilters(pois []models.NearbyPOI, maxDistance, minR
 				continue
 			}
 		}
-		
+
 		filtered = append(filtered, poi)
 	}
-	
+
 	return filtered
 }
 
 // Haversine formula to calculate distance between two points
 func (h *NearbyHandlers) calculateDistance(lat1, lng1, lat2, lng2 float64) float64 {
 	const R = 6371 // Earth's radius in kilometers
-	
+
 	dLat := (lat2 - lat1) * (math.Pi / 180)
 	dLng := (lng2 - lng1) * (math.Pi / 180)
-	
+
 	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
 		math.Cos(lat1*(math.Pi/180))*math.Cos(lat2*(math.Pi/180))*
-		math.Sin(dLng/2)*math.Sin(dLng/2)
-	
+			math.Sin(dLng/2)*math.Sin(dLng/2)
+
 	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
-	
+
 	return R * c
 }

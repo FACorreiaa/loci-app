@@ -133,8 +133,8 @@ func (m *MockListRepository) GetListItemsByContentType(ctx context.Context, list
 }
 
 // Search and filtering
-func (m *MockListRepository) SearchLists(ctx context.Context, searchTerm, category, contentType, theme string, cityID *uuid.UUID) ([]*models.List, error) {
-	args := m.Called(ctx, searchTerm, category, contentType, theme, cityID)
+func (m *MockListRepository) SearchLists(ctx context.Context, searchTerm, contentType string, cityID *uuid.UUID) ([]*models.List, error) {
+	args := m.Called(ctx, searchTerm, contentType, cityID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -156,7 +156,7 @@ func TestServiceImpl_CreateTopLevelList(t *testing.T) {
 
 	t.Run("success - with city", func(t *testing.T) {
 		service, mockRepo := setupListServiceTest()
-		
+
 		mockRepo.On("CreateList", mock.Anything, mock.AnythingOfType("models.List")).Return(nil).Once()
 
 		result, err := service.CreateTopLevelList(ctx, userID, "Test List", "Test Description", &cityID, false, true)
@@ -173,7 +173,7 @@ func TestServiceImpl_CreateTopLevelList(t *testing.T) {
 
 	t.Run("success - without city", func(t *testing.T) {
 		service, mockRepo := setupListServiceTest()
-		
+
 		mockRepo.On("CreateList", mock.Anything, mock.AnythingOfType("models.List")).Return(nil).Once()
 
 		result, err := service.CreateTopLevelList(ctx, userID, "Test List", "Test Description", nil, true, false)
@@ -187,7 +187,7 @@ func TestServiceImpl_CreateTopLevelList(t *testing.T) {
 
 	t.Run("repository error", func(t *testing.T) {
 		service, mockRepo := setupListServiceTest()
-		
+
 		repoErr := errors.New("db error")
 		mockRepo.On("CreateList", mock.Anything, mock.AnythingOfType("models.List")).Return(repoErr).Once()
 
@@ -216,7 +216,7 @@ func TestServiceImpl_CreateItineraryForList(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		service, mockRepo := setupListServiceTest()
-		
+
 		mockRepo.On("GetList", mock.Anything, parentListID).Return(parentList, nil).Once()
 		mockRepo.On("CreateList", mock.Anything, mock.AnythingOfType("models.List")).Return(nil).Once()
 
@@ -233,7 +233,7 @@ func TestServiceImpl_CreateItineraryForList(t *testing.T) {
 
 	t.Run("parent list not found", func(t *testing.T) {
 		service, mockRepo := setupListServiceTest()
-		
+
 		repoErr := errors.New("list not found")
 		mockRepo.On("GetList", mock.Anything, parentListID).Return(nil, repoErr).Once()
 
@@ -246,7 +246,7 @@ func TestServiceImpl_CreateItineraryForList(t *testing.T) {
 
 	t.Run("user does not own parent list", func(t *testing.T) {
 		service, mockRepo := setupListServiceTest()
-		
+
 		otherUserList := models.List{
 			ID:          parentListID,
 			UserID:      uuid.New(), // Different user
@@ -298,7 +298,7 @@ func TestServiceImpl_GetListDetails(t *testing.T) {
 
 	t.Run("success - owner access", func(t *testing.T) {
 		service, mockRepo := setupListServiceTest()
-		
+
 		mockRepo.On("GetList", mock.Anything, listID).Return(list, nil).Once()
 		mockRepo.On("GetListItems", mock.Anything, listID).Return(items, nil).Once()
 
@@ -313,7 +313,7 @@ func TestServiceImpl_GetListDetails(t *testing.T) {
 
 	t.Run("success - public list access", func(t *testing.T) {
 		service, mockRepo := setupListServiceTest()
-		
+
 		publicList := models.List{
 			ID:          listID,
 			UserID:      uuid.New(), // Different user
@@ -334,7 +334,7 @@ func TestServiceImpl_GetListDetails(t *testing.T) {
 
 	t.Run("access denied - private list", func(t *testing.T) {
 		service, mockRepo := setupListServiceTest()
-		
+
 		privateList := models.List{
 			ID:          listID,
 			UserID:      uuid.New(), // Different user
@@ -354,7 +354,7 @@ func TestServiceImpl_GetListDetails(t *testing.T) {
 
 	t.Run("list not found", func(t *testing.T) {
 		service, mockRepo := setupListServiceTest()
-		
+
 		repoErr := errors.New("list not found")
 		mockRepo.On("GetList", mock.Anything, listID).Return(nil, repoErr).Once()
 
@@ -405,7 +405,7 @@ func TestServiceImpl_UpdateListDetails(t *testing.T) {
 
 	t.Run("user does not own list", func(t *testing.T) {
 		service, mockRepo := setupListServiceTest()
-		
+
 		otherUserList := models.List{
 			ID:     listID,
 			UserID: uuid.New(), // Different user
@@ -460,7 +460,7 @@ func TestServiceImpl_AddPOIListItem(t *testing.T) {
 
 	t.Run("list is not an itinerary", func(t *testing.T) {
 		service, mockRepo := setupListServiceTest()
-		
+
 		nonItineraryList := models.List{
 			ID:          listID,
 			UserID:      userID,
@@ -499,7 +499,7 @@ func TestServiceImpl_GetUserLists(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		service, mockRepo := setupListServiceTest()
-		
+
 		mockRepo.On("GetUserLists", mock.Anything, userID, false).Return(expectedLists, nil).Once()
 
 		result, err := service.GetUserLists(ctx, userID, false)
@@ -512,7 +512,7 @@ func TestServiceImpl_GetUserLists(t *testing.T) {
 
 	t.Run("repository error", func(t *testing.T) {
 		service, mockRepo := setupListServiceTest()
-		
+
 		repoErr := errors.New("db error")
 		mockRepo.On("GetUserLists", mock.Anything, userID, true).Return(nil, repoErr).Once()
 
@@ -537,7 +537,7 @@ func TestServiceImpl_DeleteUserList(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		service, mockRepo := setupListServiceTest()
-		
+
 		mockRepo.On("GetList", mock.Anything, listID).Return(list, nil).Once()
 		mockRepo.On("DeleteList", mock.Anything, listID).Return(nil).Once()
 
@@ -549,7 +549,7 @@ func TestServiceImpl_DeleteUserList(t *testing.T) {
 
 	t.Run("user does not own list", func(t *testing.T) {
 		service, mockRepo := setupListServiceTest()
-		
+
 		otherUserList := models.List{
 			ID:     listID,
 			UserID: uuid.New(), // Different user
@@ -567,7 +567,7 @@ func TestServiceImpl_DeleteUserList(t *testing.T) {
 
 	t.Run("list not found", func(t *testing.T) {
 		service, mockRepo := setupListServiceTest()
-		
+
 		repoErr := errors.New("list not found")
 		mockRepo.On("GetList", mock.Anything, listID).Return(nil, repoErr).Once()
 

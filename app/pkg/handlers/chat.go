@@ -18,7 +18,7 @@ import (
 	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
 )
 
-type ChatHandlers struct{
+type ChatHandlers struct {
 	config *config.Config
 }
 
@@ -129,7 +129,7 @@ func (h *ChatHandlers) HandleSearch(c *gin.Context) {
 func (h *ChatHandlers) streamLLMResponse(query, clientIP string) {
 	// Prepare request to LLM service
 	requestBody := map[string]interface{}{
-		"message": query,
+		"message":       query,
 		"user_location": nil,
 	}
 
@@ -147,7 +147,7 @@ func (h *ChatHandlers) streamLLMResponse(query, clientIP string) {
 
 	resp, err := http.Post(llmEndpoint, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		logger.Log.Error("Failed to call LLM service", 
+		logger.Log.Error("Failed to call LLM service",
 			zap.Error(err),
 			zap.String("endpoint", llmEndpoint),
 			zap.String("query", query))
@@ -166,13 +166,6 @@ func (h *ChatHandlers) streamLLMResponse(query, clientIP string) {
 		zap.String("query", query),
 		zap.String("client_ip", clientIP),
 		zap.Int("response_size", len(body)))
-}
-
-// callLLMStreamingService calls the LLM streaming service and returns the appropriate redirect URL
-func (h *ChatHandlers) callLLMStreamingService(query, userID string) (string, error) {
-	// This is kept for backward compatibility, but now calls the enhanced version
-	_, redirectURL, err := h.callLLMStreamingServiceWithData(query, userID)
-	return redirectURL, err
 }
 
 // callLLMStreamingServiceWithData calls the LLM service and returns both data and redirect URL
@@ -216,46 +209,13 @@ func (h *ChatHandlers) callLLMStreamingServiceWithData(query, userID string) (ma
 	return llmData, redirectURL, nil
 }
 
-// extractDomainFromStream processes the SSE stream to extract domain classification
-func (h *ChatHandlers) extractDomainFromStream(body io.Reader) (string, error) {
-	scanner := bufio.NewScanner(body)
-	
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, "data: ") {
-			var event struct {
-				Type string                 `json:"type"`
-				Data map[string]interface{} `json:"data"`
-			}
-			
-			eventData := strings.TrimPrefix(line, "data: ")
-			if err := json.Unmarshal([]byte(eventData), &event); err != nil {
-				continue // Skip malformed events
-			}
-			
-			// Look for domain or intent classification events
-			if event.Type == "intent_classified" || event.Type == "domain_detected" {
-				if domain, ok := event.Data["domain"].(string); ok {
-					return domain, nil
-				}
-				if intent, ok := event.Data["intent"].(string); ok {
-					return h.mapIntentToDomain(intent), nil
-				}
-			}
-		}
-	}
-	
-	// If no domain detected, use fallback classification
-	return "activities", nil // Default domain
-}
-
 // extractDataAndDomainFromStream processes SSE stream to extract both LLM data and domain
 func (h *ChatHandlers) extractDataAndDomainFromStream(body io.Reader) (map[string]interface{}, string, error) {
 	scanner := bufio.NewScanner(body)
-	
+
 	var llmData map[string]interface{}
 	domain := "activities" // default
-	
+
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.HasPrefix(line, "data: ") {
@@ -263,17 +223,17 @@ func (h *ChatHandlers) extractDataAndDomainFromStream(body io.Reader) (map[strin
 				Type string                 `json:"type"`
 				Data map[string]interface{} `json:"data"`
 			}
-			
+
 			eventData := strings.TrimPrefix(line, "data: ")
 			if err := json.Unmarshal([]byte(eventData), &event); err != nil {
 				continue // Skip malformed events
 			}
-			
+
 			// Capture itinerary data (the main LLM response)
 			if event.Type == "itinerary" && event.Data != nil {
 				llmData = event.Data
 			}
-			
+
 			// Look for domain or intent classification events
 			if event.Type == "intent_classified" || event.Type == "domain_detected" {
 				if detectedDomain, ok := event.Data["domain"].(string); ok {
@@ -285,7 +245,7 @@ func (h *ChatHandlers) extractDataAndDomainFromStream(body io.Reader) (map[strin
 			}
 		}
 	}
-	
+
 	return llmData, domain, nil
 }
 
@@ -371,7 +331,7 @@ func (h *ChatHandlers) HandleDiscover(c *gin.Context) {
 	// Store LLM data in session for the destination page
 	sessionKey := fmt.Sprintf("llm_data_%s", userID)
 	// In a real app, you'd use Redis or similar. For now, we'll pass data via different means
-	logger.Log.Info("LLM data received", 
+	logger.Log.Info("LLM data received",
 		zap.String("query", query),
 		zap.String("redirect_url", redirectURL),
 		zap.Bool("has_data", llmData != nil))
@@ -384,7 +344,7 @@ func (h *ChatHandlers) HandleDiscover(c *gin.Context) {
 			// For simplicity, we'll pass a session identifier and store data server-side
 			// In production, use proper session management
 			encodedData = fmt.Sprintf("&session_data=%s", sessionKey)
-			// TODO: Store llmData in session store
+			
 		}
 	}
 
@@ -396,7 +356,7 @@ func (h *ChatHandlers) HandleDiscover(c *gin.Context) {
 // classifyIntent analyzes the query to determine user intent
 func (h *ChatHandlers) classifyIntent(query string) string {
 	queryLower := strings.ToLower(query)
-	
+
 	// Score-based approach to handle overlapping keywords
 	scores := map[string]int{
 		"restaurants": 0,
@@ -404,70 +364,70 @@ func (h *ChatHandlers) classifyIntent(query string) string {
 		"activities":  0,
 		"itinerary":   0,
 	}
-	
+
 	// Restaurant/food keywords (higher specificity scores)
 	restaurantKeywords := map[string]int{
 		"dinner": 3, "lunch": 3, "breakfast": 3, "restaurant": 3, "cafe": 3, "bar": 3,
 		"food": 2, "eat": 2, "dining": 2, "meal": 2, "kitchen": 2, "cuisine": 2, "taste": 2, "flavor": 2, "dish": 2, "menu": 2,
 		"cooking": 1, "chef": 1, "wine": 1, "beer": 1, "cocktail": 1,
 	}
-	
+
 	// Hotel/accommodation keywords
 	hotelKeywords := map[string]int{
 		"hotel": 3, "stay": 3, "accommodation": 3, "room": 3, "lodge": 3, "resort": 3, "inn": 3, "booking": 3,
 		"sleep": 2, "night": 1, "bed": 1,
 	}
-	
+
 	// Activity keywords
 	activityKeywords := map[string]int{
 		"museum": 3, "attraction": 3, "tour": 3, "adventure": 3, "entertainment": 3, "park": 3,
 		"visit": 2, "see": 2, "explore": 2, "activity": 2, "activities": 2, "experience": 2, "fun": 2,
 		"do": 1, "go": 1, "walk": 1, "hiking": 2, "cultural": 2, "art": 2, "history": 2,
 	}
-	
+
 	// Itinerary/planning keywords
 	itineraryKeywords := map[string]int{
 		"plan": 3, "itinerary": 3, "schedule": 3, "trip": 3, "journey": 3, "route": 3,
 		"day": 2, "weekend": 2, "guide": 2, "organize": 2,
 		"week": 1, "vacation": 2, "holiday": 2,
 	}
-	
+
 	// Calculate scores for each category
 	for keyword, weight := range restaurantKeywords {
 		if strings.Contains(queryLower, keyword) {
 			scores["restaurants"] += weight
 		}
 	}
-	
+
 	for keyword, weight := range hotelKeywords {
 		if strings.Contains(queryLower, keyword) {
 			scores["hotels"] += weight
 		}
 	}
-	
+
 	for keyword, weight := range activityKeywords {
 		if strings.Contains(queryLower, keyword) {
 			scores["activities"] += weight
 		}
 	}
-	
+
 	for keyword, weight := range itineraryKeywords {
 		if strings.Contains(queryLower, keyword) {
 			scores["itinerary"] += weight
 		}
 	}
-	
+
 	// Find the category with highest score
 	maxScore := 0
 	result := "activities" // default
-	
+
 	for category, score := range scores {
 		if score > maxScore {
 			maxScore = score
 			result = category
 		}
 	}
-	
+
 	return result
 }
 
@@ -488,10 +448,10 @@ func (h *ChatHandlers) getRedirectURL(intent string) string {
 }
 
 // generateDiscoveryResponse creates the response before redirect
-func (h *ChatHandlers) generateDiscoveryResponse(query, intent, redirectURL string) string {
+func (h *ChatHandlers) generateDiscoveryResponse(query, intent, _ string) string {
 	var intentLabel string
 	var icon string
-	
+
 	switch intent {
 	case "restaurants":
 		intentLabel = "Food & Dining"
@@ -509,7 +469,7 @@ func (h *ChatHandlers) generateDiscoveryResponse(query, intent, redirectURL stri
 		intentLabel = "Discovery"
 		icon = "✨"
 	}
-	
+
 	return fmt.Sprintf(`
 		<div class="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 border mb-4">
 			<div class="flex items-center gap-4">
@@ -533,7 +493,7 @@ func (h *ChatHandlers) generateDiscoveryResponse(query, intent, redirectURL stri
 func (h *ChatHandlers) generateDiscoveryResponseByURL(query, redirectURL string) string {
 	var intentLabel string
 	var icon string
-	
+
 	switch redirectURL {
 	case "/restaurants":
 		intentLabel = "Food & Dining"
@@ -551,7 +511,7 @@ func (h *ChatHandlers) generateDiscoveryResponseByURL(query, redirectURL string)
 		intentLabel = "Discovery"
 		icon = "✨"
 	}
-	
+
 	return fmt.Sprintf(`
 		<div class="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 border mb-4">
 			<div class="flex items-center gap-4">
@@ -662,7 +622,7 @@ func (h *ChatHandlers) generateStreamingResponse(query string) string {
 		setTimeout(() => {
 			const content = document.getElementById('llm-streaming-content');
 			if (content) {
-				content.innerHTML = ` + "`" + `
+				content.innerHTML = `+"`"+`
 					<div class="space-y-4">
 						<div class="border-l-4 border-blue-500 pl-4">
 							<h4 class="font-medium text-card-foreground mb-2">Top Recommendations</h4>
@@ -696,7 +656,7 @@ func (h *ChatHandlers) generateStreamingResponse(query string) string {
 							</div>
 						</div>
 					</div>
-				` + "`" + `;
+				`+"`"+`;
 			}
 			
 			// Hide placeholder results
@@ -732,7 +692,7 @@ func (h *ChatHandlers) HandleItineraryStream(c *gin.Context) {
 
 	// Prepare request to LLM service
 	requestBody := map[string]interface{}{
-		"message": message,
+		"message":       message,
 		"user_location": nil,
 	}
 
@@ -752,7 +712,7 @@ func (h *ChatHandlers) HandleItineraryStream(c *gin.Context) {
 
 	resp, err := http.Post(llmEndpoint, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		logger.Log.Error("Failed to call LLM service for itinerary stream", 
+		logger.Log.Error("Failed to call LLM service for itinerary stream",
 			zap.Error(err),
 			zap.String("endpoint", llmEndpoint),
 			zap.String("message", message))
@@ -775,7 +735,7 @@ func (h *ChatHandlers) HandleItineraryStream(c *gin.Context) {
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
 		line := scanner.Text()
-		
+
 		// Skip empty lines and non-data lines
 		if line == "" || !strings.HasPrefix(line, "data: ") {
 			continue
@@ -800,7 +760,7 @@ func (h *ChatHandlers) HandleItineraryStream(c *gin.Context) {
 					if content, ok := delta["content"].(string); ok {
 						// Forward the content to the client
 						eventData := map[string]string{
-							"type": "content",
+							"type":    "content",
 							"content": content,
 						}
 						eventJson, err := json.Marshal(eventData)

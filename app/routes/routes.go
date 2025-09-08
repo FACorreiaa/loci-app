@@ -62,8 +62,8 @@ func getUserFromContext(c *gin.Context) *models.User {
 
 func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 	// Setup custom templ renderer
-	ginHtmlRenderer := r.HTMLRender
-	r.HTMLRender = &renderer.HTMLTemplRenderer{FallbackHtmlRenderer: ginHtmlRenderer}
+	ginHTMLRenderer := r.HTMLRender
+	r.HTMLRender = &renderer.HTMLTemplRenderer{FallbackHTMLRenderer: ginHTMLRenderer}
 
 	// Assets
 	r.Static("/assets", "./assets")

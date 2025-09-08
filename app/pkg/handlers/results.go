@@ -56,7 +56,7 @@ func (h *ResultsHandlers) HandleRestaurantSearch(c *gin.Context) {
 	userID := middleware.GetUserIDFromContext(c)
 
 	fmt.Printf("User ID: %s\n", userID)
-	favorites := []string{} // TODO: fetch from service
+	favorites := []string{}
 	isLoadingFavorites := false
 
 	// Render results using the new restaurant results component
@@ -96,7 +96,7 @@ func (h *ResultsHandlers) HandleActivitySearch(c *gin.Context) {
 	}
 
 	// Get user favorites (if authenticated)
-	favorites := []string{} // TODO: fetch from service
+	favorites := []string{}
 
 	// Render results using the new activity results component
 	c.HTML(http.StatusOK, "", results.ActivityResults(
@@ -134,7 +134,7 @@ func (h *ResultsHandlers) HandleHotelSearch(c *gin.Context) {
 	}
 
 	// Get user favorites (if authenticated)
-	favorites := []string{} // TODO: fetch from service
+	favorites := []string{}
 
 	// Render results using the new hotel results component
 	c.HTML(http.StatusOK, "", results.HotelResults(
@@ -172,7 +172,7 @@ func (h *ResultsHandlers) HandleItinerarySearch(c *gin.Context) {
 	}
 
 	// Get user favorites (if authenticated)
-	favorites := []string{} // TODO: fetch from service
+	favorites := []string{}
 
 	// Render results using the new itinerary results component
 	c.HTML(http.StatusOK, "", results.ItineraryResults(
@@ -280,8 +280,7 @@ func (h *ResultsHandlers) fetchItineraryResults(query, city, intent string) (res
 // Placeholder implementations - you would implement these to call your actual LLM service
 // and parse the SSE stream to extract the relevant data structures
 
-func (h *ResultsHandlers) callLLMForRestaurants(endpoint string, payload map[string]interface{}) ([]results.RestaurantDetailedInfo, error) {
-	// TODO: Implement actual LLM service call and SSE parsing
+func (h *ResultsHandlers) callLLMForRestaurants(_ string, payload map[string]interface{}) ([]results.RestaurantDetailedInfo, error) {
 	// This is where you'd make the HTTP request to your LLM service,
 	// parse the SSE stream, and extract restaurant data
 
@@ -299,8 +298,8 @@ func (h *ResultsHandlers) callLLMForRestaurants(endpoint string, payload map[str
 	return mockRestaurants, nil
 }
 
-func (h *ResultsHandlers) callLLMForActivities(endpoint string, payload map[string]interface{}) ([]results.POIDetailedInfo, error) {
-	// TODO: Implement actual LLM service call and SSE parsing
+func (h *ResultsHandlers) callLLMForActivities(_ string, payload map[string]interface{}) ([]results.POIDetailedInfo, error) {
+
 	mockActivities := []results.POIDetailedInfo{
 		{
 			Name:        "Sample Activity",
@@ -313,8 +312,8 @@ func (h *ResultsHandlers) callLLMForActivities(endpoint string, payload map[stri
 	return mockActivities, nil
 }
 
-func (h *ResultsHandlers) callLLMForHotels(endpoint string, payload map[string]interface{}) ([]results.HotelDetailedInfo, error) {
-	// TODO: Implement actual LLM service call and SSE parsing
+func (h *ResultsHandlers) callLLMForHotels(_ string, payload map[string]interface{}) ([]results.HotelDetailedInfo, error) {
+
 	mockHotels := []results.HotelDetailedInfo{
 		{
 			Name:        "Sample Hotel",
@@ -327,8 +326,8 @@ func (h *ResultsHandlers) callLLMForHotels(endpoint string, payload map[string]i
 	return mockHotels, nil
 }
 
-func (h *ResultsHandlers) callLLMForItinerary(endpoint string, payload map[string]interface{}) (results.AIItineraryResponse, error) {
-	// TODO: Implement actual LLM service call and SSE parsing
+func (h *ResultsHandlers) callLLMForItinerary(_ string, payload map[string]interface{}) (results.AIItineraryResponse, error) {
+
 	mockItinerary := results.AIItineraryResponse{
 		ItineraryName:      "Sample Itinerary",
 		OverallDescription: "A wonderful travel plan",

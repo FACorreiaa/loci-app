@@ -252,7 +252,7 @@ func (h *AuthHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-func (h *AuthHandlers) LogoutHandler(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandlers) LogoutHandler(w http.ResponseWriter, _ *http.Request) {
 	logger.Log.Info("User logout")
 
 	// Clear auth cookie

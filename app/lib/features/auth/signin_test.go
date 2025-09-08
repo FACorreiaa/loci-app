@@ -13,7 +13,10 @@ func TestSignInPage(t *testing.T) {
 	t.Run("it renders the sign-in form", func(t *testing.T) {
 		// Render the component
 		var sb strings.Builder
-		SignIn().Render(context.Background(), &sb)
+		err := SignIn().Render(context.Background(), &sb)
+		if err != nil {
+			t.Fatalf("failed to render: %v", err)
+		}
 
 		// Parse the rendered HTML
 		doc, err := goquery.NewDocumentFromReader(strings.NewReader(sb.String()))
@@ -54,7 +57,10 @@ func TestSignInPage(t *testing.T) {
 	t.Run("it has a link to the sign-up page", func(t *testing.T) {
 		// Render the component
 		var sb strings.Builder
-		SignIn().Render(context.Background(), &sb)
+		err := SignIn().Render(context.Background(), &sb)
+		if err != nil {
+			t.Fatalf("failed to render: %v", err)
+		}
 
 		// Parse the rendered HTML
 		doc, err := goquery.NewDocumentFromReader(strings.NewReader(sb.String()))

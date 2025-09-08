@@ -162,7 +162,7 @@ func Init(connectionURL string, logger *zap.Logger) (*pgxpool.Pool, error) {
 	}
 
 	// Register UUID type HandlerImpl after connecting
-	cfg.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+	cfg.AfterConnect = func(_ context.Context, conn *pgx.Conn) error {
 		uuid.Register(conn.TypeMap())
 		logger.Debug("Registered UUID type for database connection")
 		return nil

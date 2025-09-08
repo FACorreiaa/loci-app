@@ -21,7 +21,7 @@ type mockPOIRepo struct {
 	pois map[string]*models.POIDetailedInfo
 }
 
-func (m *mockPOIRepo) FindPOIDetailedInfos(_ context.Context, cityID uuid.UUID, lat, lon float64, tolerance float64) (*models.POIDetailedInfo, error) {
+func (m *mockPOIRepo) FindPOIDetailedInfos(_ context.Context, cityID uuid.UUID, lat, lon float64, _ float64) (*models.POIDetailedInfo, error) {
 	key := fmt.Sprintf("%s:%.6f:%.6f", cityID.String(), lat, lon)
 	if poi, exists := m.pois[key]; exists {
 		return poi, nil

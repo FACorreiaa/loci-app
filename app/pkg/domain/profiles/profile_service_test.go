@@ -478,17 +478,13 @@ func TestProfilesServiceImpl_CreateSearchProfile(t *testing.T) {
 		mockPrefRepo.AssertExpectations(t)
 	})
 
-	// TODO: Add tests for CreateSearchProfileCC (the one with errgroup and explicit transaction)
-	// This will require more advanced mocking for the transaction flow (Begin, Commit, Rollback)
-	// using a library like pgxmock if your prefRepo exposes its pgxpool.Pool.
-	// Or, the transaction logic should ideally be *within* the repository method itself,
-	// making the service easier to test (service just calls repo.CreateProfileWithAssociations).
+	
 }
 
 // Unit test for CreateSearchProfileCC (the transactional version)
 // Note: This is a simplified test that doesn't mock the transaction directly
 func TestProfilesServiceImpl_CreateSearchProfileCC(t *testing.T) {
 	// Skip this test for now as it requires more complex mocking of transactions
-	// TODO: Implement proper transaction mocking for this test
+	
 	t.Skip("Skipping test for CreateSearchProfileCC as it requires complex transaction mocking")
 }

@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/a-h/templ"
 	"github.com/FACorreiaa/go-templui/app/lib/features/itinerary"
 	"github.com/FACorreiaa/go-templui/app/lib/models"
 	"github.com/FACorreiaa/go-templui/app/pkg/logger"
+	"github.com/a-h/templ"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -70,7 +70,7 @@ func (h *ItineraryHandlers) HandleChat(c *gin.Context) {
 	}
 
 	c.HTML(http.StatusOK, "", templ.Raw(
-		fmt.Sprintf(`%s%s`, 
+		fmt.Sprintf(`%s%s`,
 			renderChatMessage(userMessage, true),
 			renderChatMessage(aiMessage, false),
 		),
@@ -79,7 +79,7 @@ func (h *ItineraryHandlers) HandleChat(c *gin.Context) {
 
 func (h *ItineraryHandlers) AddPOI(c *gin.Context) {
 	poiID := c.Param("id")
-	
+
 	logger.Log.Info("Add POI to itinerary",
 		zap.String("poi_id", poiID),
 	)
@@ -95,7 +95,7 @@ func (h *ItineraryHandlers) AddPOI(c *gin.Context) {
 
 func (h *ItineraryHandlers) RemovePOI(c *gin.Context) {
 	poiID := c.Param("id")
-	
+
 	logger.Log.Info("Remove POI from itinerary",
 		zap.String("poi_id", poiID),
 	)
@@ -113,7 +113,7 @@ func (h *ItineraryHandlers) GetItinerarySummary(c *gin.Context) {
 			Rating:   4.8,
 		},
 		{
-			ID:       "poi_2", 
+			ID:       "poi_2",
 			Name:     "Louvre Museum",
 			Category: "Museum",
 			Rating:   4.7,
@@ -127,7 +127,7 @@ func (h *ItineraryHandlers) getDestinationSuggestions(query string) []string {
 	// Mock destination suggestions based on query
 	allDestinations := []string{
 		"Paris, France",
-		"Tokyo, Japan", 
+		"Tokyo, Japan",
 		"New York City, USA",
 		"London, England",
 		"Rome, Italy",
@@ -145,24 +145,24 @@ func (h *ItineraryHandlers) getDestinationSuggestions(query string) []string {
 
 	suggestions := []string{}
 	queryLower := strings.ToLower(query)
-	
+
 	for _, dest := range allDestinations {
 		if strings.Contains(strings.ToLower(dest), queryLower) {
 			suggestions = append(suggestions, dest)
 		}
 	}
-	
+
 	// Limit to 5 suggestions
 	if len(suggestions) > 5 {
 		suggestions = suggestions[:5]
 	}
-	
+
 	return suggestions
 }
 
 func (h *ItineraryHandlers) generateItineraryResponse(message, destination, duration, budget, style string) string {
 	messageLower := strings.ToLower(message)
-	
+
 	// Generate contextual responses based on message content
 	if strings.Contains(messageLower, "itinerary") || strings.Contains(messageLower, "plan") {
 		if destination == "" {
@@ -170,69 +170,69 @@ func (h *ItineraryHandlers) generateItineraryResponse(message, destination, dura
 		}
 		return fmt.Sprintf(
 			"Great! I'll create a %s-day %s itinerary for %s. Based on your %s budget and %s style preferences, here are my recommendations:\n\n"+
-			"🗓️ **Day 1**: Arrival and city center exploration\n"+
-			"🏛️ **Day 2**: Major attractions and cultural sites\n"+
-			"🍽️ **Day 3**: Local cuisine and neighborhood discovery\n\n"+
-			"Would you like me to add specific places or activities to any of these days?",
+				"🗓️ **Day 1**: Arrival and city center exploration\n"+
+				"🏛️ **Day 2**: Major attractions and cultural sites\n"+
+				"🍽️ **Day 3**: Local cuisine and neighborhood discovery\n\n"+
+				"Would you like me to add specific places or activities to any of these days?",
 			duration, budget, destination, budget, style,
 		)
 	}
-	
+
 	if strings.Contains(messageLower, "restaurant") || strings.Contains(messageLower, "food") || strings.Contains(messageLower, "eat") {
 		if destination == "" {
 			return "I'd be happy to recommend restaurants! Where are you planning to travel?"
 		}
 		return fmt.Sprintf(
 			"Here are some excellent restaurant recommendations for %s based on your %s budget:\n\n"+
-			"🍴 **Fine Dining**: Michelin-starred establishments\n"+
-			"🥘 **Local Cuisine**: Authentic traditional dishes\n"+
-			"☕ **Casual Dining**: Popular local favorites\n\n"+
-			"Would you like me to add any specific restaurants to your itinerary, or do you have dietary preferences I should consider?",
+				"🍴 **Fine Dining**: Michelin-starred establishments\n"+
+				"🥘 **Local Cuisine**: Authentic traditional dishes\n"+
+				"☕ **Casual Dining**: Popular local favorites\n\n"+
+				"Would you like me to add any specific restaurants to your itinerary, or do you have dietary preferences I should consider?",
 			destination, budget,
 		)
 	}
-	
+
 	if strings.Contains(messageLower, "hotel") || strings.Contains(messageLower, "accommodation") || strings.Contains(messageLower, "stay") {
 		if destination == "" {
 			return "I can help you find great accommodations! Which city are you visiting?"
 		}
 		return fmt.Sprintf(
 			"Here are some accommodation options in %s for your %s budget:\n\n"+
-			"🏨 **Luxury Hotels**: Premium service and amenities\n"+
-			"🏩 **Boutique Hotels**: Unique character and local charm\n"+
-			"🏠 **Alternative Stays**: Apartments and unique properties\n\n"+
-			"What area of the city would you prefer to stay in?",
+				"🏨 **Luxury Hotels**: Premium service and amenities\n"+
+				"🏩 **Boutique Hotels**: Unique character and local charm\n"+
+				"🏠 **Alternative Stays**: Apartments and unique properties\n\n"+
+				"What area of the city would you prefer to stay in?",
 			destination, budget,
 		)
 	}
-	
+
 	if strings.Contains(messageLower, "attraction") || strings.Contains(messageLower, "sightseeing") || strings.Contains(messageLower, "visit") {
 		if destination == "" {
 			return "I'd love to suggest attractions! What destination are you planning to visit?"
 		}
 		return fmt.Sprintf(
 			"Here are must-see attractions in %s perfect for %s travel:\n\n"+
-			"🎨 **Cultural Sites**: Museums, galleries, and historic landmarks\n"+
-			"🌳 **Outdoor Attractions**: Parks, gardens, and scenic viewpoints\n"+
-			"🎭 **Entertainment**: Shows, tours, and local experiences\n\n"+
-			"Which types of attractions interest you most?",
+				"🎨 **Cultural Sites**: Museums, galleries, and historic landmarks\n"+
+				"🌳 **Outdoor Attractions**: Parks, gardens, and scenic viewpoints\n"+
+				"🎭 **Entertainment**: Shows, tours, and local experiences\n\n"+
+				"Which types of attractions interest you most?",
 			destination, style,
 		)
 	}
-	
+
 	// Default response
 	if destination != "" {
 		return fmt.Sprintf(
 			"I understand you're planning a trip to %s! I can help you with:\n\n"+
-			"📅 Creating detailed daily itineraries\n"+
-			"🍽️ Finding amazing restaurants\n"+
-			"🏨 Recommending accommodations\n"+
-			"🎯 Suggesting attractions and activities\n\n"+
-			"What would you like to explore first?",
+				"📅 Creating detailed daily itineraries\n"+
+				"🍽️ Finding amazing restaurants\n"+
+				"🏨 Recommending accommodations\n"+
+				"🎯 Suggesting attractions and activities\n\n"+
+				"What would you like to explore first?",
 			destination,
 		)
 	}
-	
+
 	return "I'm here to help you plan an amazing trip! Please let me know your destination and I'll create a personalized itinerary for you. You can also ask me about specific aspects like restaurants, hotels, or attractions."
 }
 
@@ -243,7 +243,7 @@ func renderChatMessage(message models.ChatMessage, isUser bool) string {
 	textClass := "text-gray-800"
 	iconClass := "fa-robot"
 	iconBg := "bg-blue-600"
-	
+
 	if isUser {
 		userClass = "flex-row-reverse space-x-reverse"
 		bgClass = "bg-blue-600 text-white"
@@ -251,7 +251,7 @@ func renderChatMessage(message models.ChatMessage, isUser bool) string {
 		iconClass = "fa-user"
 		iconBg = "bg-gray-600"
 	}
-	
+
 	timestamp := ""
 	if message.Timestamp != "" {
 		timestampClass := "text-gray-500"
@@ -260,7 +260,7 @@ func renderChatMessage(message models.ChatMessage, isUser bool) string {
 		}
 		timestamp = fmt.Sprintf(`<p class="text-xs mt-2 %s">%s</p>`, timestampClass, message.Timestamp)
 	}
-	
+
 	return fmt.Sprintf(`
 		<div class="flex items-start space-x-3 %s">
 			<div class="w-8 h-8 %s rounded-full flex items-center justify-center flex-shrink-0">

@@ -38,7 +38,7 @@ type Service interface {
 	GetListItemsByContentType(ctx context.Context, userID, listID uuid.UUID, contentType models.ContentType) ([]*models.ListItem, error)
 
 	// Search and filtering
-	SearchLists(ctx context.Context, searchTerm, category, contentType, theme string, cityID *uuid.UUID) ([]*models.List, error)
+	SearchLists(ctx context.Context, searchTerm, contentType string, cityID *uuid.UUID) ([]*models.List, error)
 
 	// Legacy POI-specific methods (for backward compatibility)
 	AddPOIListItem(ctx context.Context, userID, listID, poiID uuid.UUID, params models.AddListItemRequest) (*models.ListItem, error)
@@ -877,20 +877,16 @@ func (s *ServiceImpl) GetListItemsByContentType(ctx context.Context, userID, lis
 	return items, nil
 }
 
-func (s *ServiceImpl) SearchLists(ctx context.Context, searchTerm, category, contentType, theme string, cityID *uuid.UUID) ([]*models.List, error) {
+func (s *ServiceImpl) SearchLists(ctx context.Context, searchTerm, contentType string, cityID *uuid.UUID) ([]*models.List, error) {
 	ctx, span := otel.Tracer("ItineraryListService").Start(ctx, "SearchLists", trace.WithAttributes(
 		attribute.String("search.term", searchTerm),
-		attribute.String("category", category),
 		attribute.String("content.type", contentType),
-		attribute.String("theme", theme),
 	))
 	defer span.End()
 
 	l := s.logger.With(slog.String("method", "SearchLists"),
 		slog.String("searchTerm", searchTerm),
-		slog.String("category", category),
-		slog.String("contentType", contentType),
-		slog.String("theme", theme))
+		slog.String("contentType", contentType))
 	l.DebugContext(ctx, "Searching lists")
 
 	if cityID != nil {
@@ -899,7 +895,7 @@ func (s *ServiceImpl) SearchLists(ctx context.Context, searchTerm, category, con
 	}
 
 	// Search lists using repository
-	lists, err := s.listRepository.SearchLists(ctx, searchTerm, category, contentType, theme, cityID)
+	lists, err := s.listRepository.SearchLists(ctx, searchTerm, contentType, cityID)
 	if err != nil {
 		l.ErrorContext(ctx, "Failed to search lists", slog.Any("error", err))
 		span.RecordError(err)
@@ -912,73 +908,6 @@ func (s *ServiceImpl) SearchLists(ctx context.Context, searchTerm, category, con
 	return lists, nil
 }
 
-// todo
-// func (r *RepositoryImpl) SaveItinerary(ctx context.Context, sessionID uuid.UUID, userID uuid.UUID, name, description string, isPublic bool, parentListID *uuid.UUID) (models.List, error) {
-// 	// Fetch session from chat_sessions
-// 	session, err := r.GetSession(ctx, sessionID) // Assume GetSession is available
-// 	if err != nil {
-// 		return models.List{}, fmt.Errorf("failed to get session: %w", err)
-// 	}
-// 	if session.UserID != userID {
-// 		return models.List{}, fmt.Errorf("user does not own session")
-// 	}
-// 	if session.CurrentItinerary == nil {
-// 		return models.List{}, fmt.Errorf("session has no itinerary")
-// 	}
 
-// 	// Get city_id from general_city_data
-// 	city, err := r.cityRepo.FindCityByNameAndCountry(ctx, session.CurrentItinerary.GeneralCityData.City, session.CurrentItinerary.GeneralCityData.Country)
-// 	if err != nil {
-// 		return models.List{}, fmt.Errorf("failed to find city: %w", err)
-// 	}
 
-// 	// Create list
-// 	list := models.List{
-// 		ID:           uuid.New(),
-// 		UserID:       userID,
-// 		Name:         name,
-// 		Description:  description,
-// 		IsPublic:     isPublic,
-// 		IsItinerary:  true,
-// 		CityID:       &city.ID,
-// 		ParentListID: parentListID,
-// 		CreatedAt:    time.Now(),
-// 		UpdatedAt:    time.Now(),
-// 	}
-// 	if err := r.CreateList(ctx, list); err != nil {
-// 		return models.List{}, fmt.Errorf("failed to create itinerary list: %w", err)
-// 	}
 
-// 	// Save POIs
-// 	for i, poi := range session.CurrentItinerary.AIItineraryResponse.PointsOfInterest {
-// 		poiID, err := r.SaveSinglePOI(ctx, poi, userID, city.ID, poi.LlmInteractionID)
-// 		if err != nil {
-// 			return models.List{}, fmt.Errorf("failed to save POI %s: %w", poi.Name, err)
-// 		}
-// 		listItem := models.ListItem{
-// 			ListID:    list.ID,
-// 			PoiID:     poiID,
-// 			Position:  i + 1,
-// 			Notes:     poi.DescriptionPOI,
-// 			CreatedAt: time.Now(),
-// 			UpdatedAt: time.Now(),
-// 		}
-// 		if err := r.AddListItem(ctx, listItem); err != nil {
-// 			return models.List{}, fmt.Errorf("failed to add POI to itinerary: %w", err)
-// 		}
-// 	}
-
-// 	return list, nil
-// }
-
-// TODO AI LIST OPTIMISATION
-// func (s *ItineraryListService) OptimizeItineraryList(ctx context.Context, listID uuid.UUID) error {
-// 	// Fetch the list
-// 	list, err := s.GetItineraryList(ctx, listID)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	// Apply AI logic to reorder POIs, suggest new ones, etc.
-// 	// Update the list via repo methods
-// 	return nil
-// }
