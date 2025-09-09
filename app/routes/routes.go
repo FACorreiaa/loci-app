@@ -531,16 +531,8 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 			logger.Log.Info("Itinerary page accessed",
 				zap.String("user", userID),
 				zap.String("query", query))
-			// Create itinerary page with query context
 			var content templ.Component
-			//content = results.ItineraryResults(sessionIdParam, "", query)
-			//if query != "" {
-			//	// Page accessed with a query - this should trigger LLM streaming
-			//	content = results.ItineraryResultsStream(sessionIdParam, "", query)
-			//} else {
-			//	// Regular itinerary page
-			//	content = itinerary.ItineraryPage()
-			//}
+
 			if sessionIdParam != "" {
 				logger.Log.Info("Attempting to load itinerary from cache",
 					zap.String("user", userID),
@@ -556,7 +548,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 				} else {
 					// Data not found in cache - try to retrieve from database
 					logger.Log.Info("Itinerary not found in cache, attempting to load from database", zap.String("sessionID", sessionIdParam))
-					
+
 					// Parse sessionID as UUID
 					sessionID, err := uuid.Parse(sessionIdParam)
 					if err != nil {
@@ -567,23 +559,23 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 						ctx := context.Background()
 						interaction, err := chatRepo.GetLatestInteractionBySessionID(ctx, sessionID)
 						if err != nil || interaction == nil {
-							logger.Log.Warn("No interaction found in database for session", 
-								zap.String("sessionID", sessionIdParam), 
+							logger.Log.Warn("No interaction found in database for session",
+								zap.String("sessionID", sessionIdParam),
 								zap.Error(err))
 							content = results.PageNotFound("Itinerary session expired. Please create a new itinerary.")
 						} else {
 							// Try to parse the stored response as itinerary data
 							itineraryData, err := parseItineraryFromResponse(interaction.ResponseText, slog.Default())
 							if err != nil || itineraryData == nil {
-								logger.Log.Warn("Could not parse itinerary from stored response", 
-									zap.String("sessionID", sessionIdParam), 
+								logger.Log.Warn("Could not parse itinerary from stored response",
+									zap.String("sessionID", sessionIdParam),
 									zap.Error(err))
 								content = results.PageNotFound("Could not load itinerary data. Please create a new itinerary.")
 							} else {
-								logger.Log.Info("Successfully loaded itinerary from database", 
+								logger.Log.Info("Successfully loaded itinerary from database",
 									zap.String("sessionID", sessionIdParam),
 									zap.Int("poisCount", len(itineraryData.PointsOfInterest)))
-								
+
 								// Render the results page with the database data
 								content = results.ItineraryResults(*itineraryData, true, true, 5, []string{})
 							}
@@ -781,7 +773,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		// Chat endpoints
 		htmxGroup.POST("/chat/message", chatHandlers.SendMessage)
 		htmxGroup.POST("/chat/stream/connect", middleware.OptionalAuthMiddleware(), chatHandlers.HandleChatStreamConnect)
-		
+
 		// SSE streaming endpoints
 		htmxGroup.GET("/chat/stream", middleware.OptionalAuthMiddleware(), chatHandlers.ProcessUnifiedChatMessageStream)
 		htmxGroup.POST("/chat/stream", middleware.OptionalAuthMiddleware(), chatHandlers.ProcessUnifiedChatMessageStream)

@@ -35,7 +35,7 @@ func ItineraryResults(itinerary models.AIItineraryResponse, compact bool, showTo
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"itinerary-results\" id=\"itinerary-container\"><!-- Itinerary Header --><div class=\"bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 mb-6 border\"><div class=\"flex items-center gap-4\"><div class=\"text-4xl\">🗺️</div><div class=\"flex-1\"><h2 class=\"text-2xl font-bold text-card-foreground mb-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"min-h-screen bg-gray-50 dark:bg-gray-900 itinerary-results\" id=\"itinerary-container\" x-data=\"itineraryPage()\"><!-- Itinerary Header --><div class=\"bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 mb-6 border\"><div class=\"flex items-center gap-4\"><div class=\"text-4xl\">🗺️</div><div class=\"flex-1\"><h2 class=\"text-2xl font-bold text-card-foreground mb-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
