@@ -26,9 +26,10 @@ type ChatHandlers struct {
 	config         *config.Config
 	llmService     llmchat.LlmInteractiontService
 	profileService profiles.Service
+	chatRepository llmchat.Repository
 }
 
-func NewChatHandlers(llmService llmchat.LlmInteractiontService, profileService profiles.Service) *ChatHandlers {
+func NewChatHandlers(llmService llmchat.LlmInteractiontService, profileService profiles.Service, chatRepository llmchat.Repository) *ChatHandlers {
 	cfg, err := config.Load()
 	if err != nil {
 		// Use default config if loading fails
@@ -38,6 +39,7 @@ func NewChatHandlers(llmService llmchat.LlmInteractiontService, profileService p
 		config:         cfg,
 		llmService:     llmService,
 		profileService: profileService,
+		chatRepository: chatRepository,
 	}
 }
 
@@ -51,7 +53,7 @@ func (h *ChatHandlers) HandleChatStreamConnect(c *gin.Context) {
 	// Get form parameters
 	query := c.PostForm("dashboard-search")
 	profileID := c.PostForm("profile-id")
-	
+
 	if query == "" {
 		c.Header("Content-Type", "text/html")
 		c.String(http.StatusBadRequest, `
@@ -69,22 +71,63 @@ func (h *ChatHandlers) HandleChatStreamConnect(c *gin.Context) {
 		return
 	}
 
-	// Generate a unique session ID for this search
-	sessionID := uuid.New().String()
+	// Get user ID for session management
+	userIDStr := middleware.GetUserIDFromContext(c)
+	var sessionID string
 	
+	if userIDStr != "" && userIDStr != "anonymous" {
+		userID, err := uuid.Parse(userIDStr)
+		if err == nil {
+			// Check for existing recent sessions for this user and query combination
+			sessionsResp, err := h.chatRepository.GetUserChatSessions(c.Request.Context(), userID, 1, 5) // Get recent 5 sessions
+			if err != nil {
+				logger.Log.Warn("Failed to get user sessions, creating new one", zap.Error(err))
+			} else {
+				// Look for a recent session with the same query (within last 10 minutes)
+				cutoffTime := time.Now().Add(-10 * time.Minute)
+				for _, session := range sessionsResp.Sessions {
+					if session.CreatedAt.After(cutoffTime) && session.Status == models.StatusActive {
+						// Check if the last message in conversation matches current query
+						if len(session.ConversationHistory) > 0 {
+							lastMsg := session.ConversationHistory[len(session.ConversationHistory)-1]
+							if lastMsg.Content == query && lastMsg.Role == models.RoleUser {
+								sessionID = session.ID.String()
+								logger.Log.Info("Reusing existing session",
+									zap.String("sessionID", sessionID),
+									zap.String("userID", userIDStr),
+									zap.String("query", query))
+								break
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	// If no existing session found, create a new one
+	if sessionID == "" {
+		sessionID = uuid.New().String()
+		logger.Log.Info("Creating new session",
+			zap.String("sessionID", sessionID),
+			zap.String("userID", userIDStr),
+			zap.String("query", query))
+	}
+
 	// Create the SSE connection URL with parameters
-	sseURL := fmt.Sprintf("/chat/stream?session_id=%s&dashboard-search=%s", 
-		sessionID, 
+	sseURL := fmt.Sprintf("/chat/stream?session_id=%s&dashboard-search=%s",
+		sessionID,
 		url.QueryEscape(query))
-	
+
 	if profileID != "" {
 		sseURL += "&profile-id=" + url.QueryEscape(profileID)
 	}
 
-	// Return HTML that sets up the SSE connection
+	// Return HTML that sets up the SSE connection with event listeners
 	c.Header("Content-Type", "text/html")
 	c.String(http.StatusOK, fmt.Sprintf(`
 		<div 
+			id="sse-container"
 			hx-ext="sse" 
 			sse-connect="%s"
 		>
@@ -127,6 +170,89 @@ func (h *ChatHandlers) HandleChatStreamConnect(c *gin.Context) {
 				hx-target="#status-text"
 			></div>
 		</div>
+		
+		<script>
+		(function() {
+			var isProcessingComplete = false;
+			var sseContainer = document.getElementById('sse-container');
+			
+			// Listen for SSE events
+			document.body.addEventListener('htmx:sseMessage', function(e) {
+				if (!e.detail || !e.detail.data) return;
+				
+				try {
+					var eventData = JSON.parse(e.detail.data);
+					console.log('SSE Event received:', eventData);
+					
+					// Handle completion event with navigation
+					if (eventData.type === 'complete' && eventData.navigation && !isProcessingComplete) {
+						isProcessingComplete = true;
+						console.log('Processing complete, navigating to:', eventData.navigation.url);
+						
+						// Update status to show completion
+						var statusText = document.getElementById('status-text');
+						if (statusText) {
+							statusText.textContent = 'Analysis complete! Redirecting to results...';
+						}
+						
+						// Close SSE connection before navigation
+						if (sseContainer) {
+							sseContainer.dispatchEvent(new CustomEvent('sse-close'));
+							sseContainer.removeAttribute('sse-connect');
+						}
+						
+						// Navigate to the results page after a short delay
+						setTimeout(function() {
+							window.location.href = eventData.navigation.url;
+						}, 1000);
+					}
+					
+					// Handle explicit SSE close event
+					if (eventData.type === 'sse-close' && !isProcessingComplete) {
+						isProcessingComplete = true;
+						console.log('SSE connection explicitly closed');
+						
+						// Remove SSE connection attributes to prevent reconnection
+						if (sseContainer) {
+							sseContainer.removeAttribute('sse-connect');
+						}
+					}
+				} catch (error) {
+					console.error('Error parsing SSE event:', error);
+				}
+			});
+			
+			// Handle SSE connection errors
+			document.body.addEventListener('htmx:sseError', function(e) {
+				console.error('SSE connection error:', e.detail);
+				if (!isProcessingComplete) {
+					var statusText = document.getElementById('status-text');
+					if (statusText) {
+						statusText.textContent = 'Connection error. Please try again.';
+					}
+				}
+			});
+			
+			// Handle SSE connection close
+			document.body.addEventListener('htmx:sseClose', function(e) {
+				console.log('SSE connection closed:', e.detail);
+				if (!isProcessingComplete) {
+					var statusText = document.getElementById('status-text');
+					if (statusText) {
+						statusText.textContent = 'Connection closed unexpectedly. Please refresh and try again.';
+					}
+				}
+			});
+			
+			// Prevent automatic reconnection after completion
+			document.body.addEventListener('htmx:sseBeforeMessage', function(e) {
+				if (isProcessingComplete) {
+					e.preventDefault();
+					return false;
+				}
+			});
+		})();
+		</script>
 	`, sseURL))
 }
 
@@ -284,7 +410,7 @@ func (h *ChatHandlers) callLLMStreamingServiceWithData(query, userID string) (ma
 	// Process the request using internal service
 	go func() {
 		// Don't close eventCh here - let the service handle it
-		
+
 		err := h.llmService.ProcessUnifiedChatMessageStream(
 			ctx,
 			userUUID,
@@ -698,15 +824,15 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 			c.String(http.StatusBadRequest, "Invalid profile ID")
 			return
 		}
-		
+
 		// Verify the profile belongs to this user
 		profile, err := h.profileService.GetSearchProfile(c, userID, parsedProfileID)
 		if err != nil {
-			logger.Log.Error("Profile not found or doesn't belong to user", 
+			logger.Log.Error("Profile not found or doesn't belong to user",
 				zap.String("userID", userID.String()),
 				zap.String("profileID", profileIDStr),
 				zap.Error(err))
-			
+
 			// Provide user-friendly error based on error type
 			if errors.Is(err, models.ErrNotFound) {
 				c.String(http.StatusNotFound, "Profile not found or you don't have access to it")
@@ -723,7 +849,7 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 		profile, err := h.profileService.GetDefaultSearchProfile(c, userID)
 		if err != nil {
 			logger.Log.Error("Failed to get default profile", zap.Error(err))
-			
+
 			// Provide specific error messages
 			if errors.Is(err, models.ErrNotFound) {
 				c.String(http.StatusNotFound, "No default profile found. Please create a profile first.")
@@ -800,12 +926,20 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 				continue
 			}
 
+			// Print streamed response to terminal
+			fmt.Printf("SSE >> %s\n", eventData)
+
 			fmt.Fprintf(c.Writer, "data: %s\n\n", eventData)
 			flusher.Flush()
 
 			// End stream on complete or error
 			if event.Type == models.EventTypeComplete || event.Type == models.EventTypeError {
 				logger.Log.Info("Stream completed", zap.String("eventType", event.Type))
+				
+				// Send a final SSE close message to help HTMX understand the connection is intentionally closed
+				fmt.Fprintf(c.Writer, "data: {\"type\":\"sse-close\"}\n\n")
+				flusher.Flush()
+				
 				return
 			}
 
@@ -989,7 +1123,7 @@ func (h *ChatHandlers) HandleItineraryStream(c *gin.Context) {
 	// Process the request in a goroutine
 	go func() {
 		// Don't close eventCh here - let the service handle it
-		
+
 		if userIDStr != "" && userIDStr != "anonymous" {
 			// Authenticated user path
 			userID, err := uuid.Parse(userIDStr)
@@ -1068,6 +1202,9 @@ func (h *ChatHandlers) HandleItineraryStream(c *gin.Context) {
 				logger.Log.Error("Failed to marshal event", zap.Error(err))
 				continue
 			}
+
+			// Print streamed response to terminal
+			fmt.Printf("SSE >> %s\n", eventData)
 
 			fmt.Fprintf(c.Writer, "data: %s\n\n", eventData)
 			flusher.Flush()

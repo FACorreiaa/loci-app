@@ -116,7 +116,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		poiRepo,
 		slog.Default(),
 	)
-	chatHandlers := handlers2.NewChatHandlers(chatService, profilesService)
+	chatHandlers := handlers2.NewChatHandlers(chatService, profilesService, chatRepo)
 	favoritesHandlers := handlers2.NewFavoritesHandlers()
 	bookmarksHandlers := handlers2.NewBookmarksHandlers()
 	discoverHandlers := handlers2.NewDiscoverHandlers()
@@ -665,6 +665,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		htmxGroup.POST("/activities/search", resultsHandlers.HandleActivitySearch)
 		htmxGroup.POST("/hotels/search", resultsHandlers.HandleHotelSearch)
 		htmxGroup.POST("/itinerary/search", resultsHandlers.HandleItinerarySearch)
+		htmxGroup.GET("/itinerary/stream/results", resultsHandlers.HandleItineraryStreamSearch)
 
 		// Nearby endpoints
 		htmxGroup.POST("/nearby/search", nearbyHandlers.SearchPOIs)

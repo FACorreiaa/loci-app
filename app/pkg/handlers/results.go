@@ -277,6 +277,34 @@ func (h *ResultsHandlers) fetchItineraryResults(query, city, intent string) (res
 	return itinerary, nil
 }
 
+// HandleItineraryStreamSearch serves the streaming itinerary results page
+func (h *ResultsHandlers) HandleItineraryStreamSearch(c *gin.Context) {
+	logger.Log.Info("Itinerary stream search request received",
+		zap.String("ip", c.ClientIP()),
+		zap.String("user", middleware.GetUserIDFromContext(c)),
+	)
+
+	sessionID := c.Query("session_id")
+	cityName := c.Query("city")
+	originalQuery := c.Query("query")
+
+	if sessionID == "" {
+		c.String(http.StatusBadRequest, `<div class="text-red-500">Session ID is required for streaming.</div>`)
+		return
+	}
+
+	if cityName == "" {
+		cityName = "Unknown City"
+	}
+
+	if originalQuery == "" {
+		originalQuery = "Itinerary planning"
+	}
+
+	// Render the streaming itinerary results page
+	c.HTML(http.StatusOK, "", results.ItineraryResultsStream(sessionID, cityName, originalQuery))
+}
+
 // SSE Response structures to match your backend
 type SSEEvent struct {
 	ID    string `json:"id"`
