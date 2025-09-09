@@ -7,6 +7,8 @@ import (
 	"github.com/a-h/templ"
 
 	"github.com/FACorreiaa/go-templui/app/internal/features"
+	"github.com/FACorreiaa/go-templui/app/internal/features/itinerary"
+	"github.com/FACorreiaa/go-templui/app/internal/features/results"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"github.com/FACorreiaa/go-templui/app/internal/renderer"
 	"github.com/FACorreiaa/go-templui/app/pkg/config"
@@ -31,7 +33,6 @@ import (
 	"github.com/FACorreiaa/go-templui/app/internal/features/favorites"
 	"github.com/FACorreiaa/go-templui/app/internal/features/home"
 	"github.com/FACorreiaa/go-templui/app/internal/features/hotels"
-	"github.com/FACorreiaa/go-templui/app/internal/features/itinerary"
 	"github.com/FACorreiaa/go-templui/app/internal/features/lists"
 	"github.com/FACorreiaa/go-templui/app/internal/features/nearby"
 	"github.com/FACorreiaa/go-templui/app/internal/features/pricing"
@@ -444,19 +445,44 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		protected.GET("/itinerary", func(c *gin.Context) {
 			userID := middleware.GetUserIDFromContext(c)
 			query := c.Query("q")
+			sessionIdParam := c.Query("sessionId")
 
 			logger.Log.Info("Itinerary page accessed",
 				zap.String("user", userID),
 				zap.String("query", query))
-
 			// Create itinerary page with query context
 			var content templ.Component
-			if query != "" {
-				// Page accessed with a query - this should trigger LLM streaming
-				content = itinerary.ItineraryPageWithQuery(query)
+			//content = results.ItineraryResults(sessionIdParam, "", query)
+			//if query != "" {
+			//	// Page accessed with a query - this should trigger LLM streaming
+			//	content = results.ItineraryResultsStream(sessionIdParam, "", query)
+			//} else {
+			//	// Regular itinerary page
+			//	content = itinerary.ItineraryPage()
+			//}
+			if sessionIdParam != "" {
+				logger.Log.Info("Attempting to load itinerary from cache",
+					zap.String("user", userID),
+					zap.String("sessionID", sessionIdParam))
+
+				// Try to get the data from the cache
+				if itineraryData, found := middleware.ItineraryCache.Get(sessionIdParam); found {
+					// DATA FOUND! Render the static results page with the data.
+					logger.Log.Info("Itinerary found in cache. Rendering results.")
+
+					// NOTE: Using ItineraryResults, NOT ItineraryResultsStream
+					content = results.ItineraryResults(itineraryData, true, true, 5, []string{}) // Adjust params as needed
+				} else {
+					// Data not found (e.g., expired or invalid ID).
+					// Show a page indicating the plan is gone and they should create a new one.
+					logger.Log.Warn("Itinerary not found in cache or expired.", zap.String("sessionID", sessionIdParam))
+					content = results.PageNotFound("Itinerary not found")
+				}
 			} else {
-				// Regular itinerary page
-				content = itinerary.ItineraryPage()
+				// No session ID in the URL. This means the user navigated here directly.
+				// Show the default page where they can start creating a new itinerary.
+				logger.Log.Info("Direct navigation to /itinerary. Showing default page.")
+				content = itinerary.ItineraryPage() // Your original default page
 			}
 
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{

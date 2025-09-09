@@ -3,9 +3,10 @@ package results
 import (
 	"fmt"
 	"strings"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
 )
 
-templ ActivityResults(activities []POIDetailedInfo, compact bool, showToggle bool, initialLimit int, favorites []string) {
+templ ActivityResults(activities []models.POIDetailedInfo, compact bool, showToggle bool, initialLimit int, favorites []string) {
 	<div class="activity-results">
 		<div class="space-y-4" id="activity-list">
 			for i, activity := range activities {
@@ -76,7 +77,7 @@ templ ActivityResults(activities []POIDetailedInfo, compact bool, showToggle boo
 	</script>
 }
 
-templ ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) {
+templ ActivityCard(activity models.POIDetailedInfo, compact bool, isFavorite bool) {
 	<div class="activity-card bg-card rounded-xl shadow-sm border p-4 hover:shadow-md transition-all duration-300">
 		<div class="flex items-start gap-4">
 			<div class="flex-shrink-0">
@@ -201,7 +202,7 @@ templ ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) {
 }
 
 // Compact version for use in small spaces
-templ ActivityCardCompact(activity POIDetailedInfo, isFavorite bool) {
+templ ActivityCardCompact(activity models.POIDetailedInfo, isFavorite bool) {
 	<div class="activity-card-compact bg-card rounded-lg shadow-sm border p-3 hover:shadow-md transition-all duration-300">
 		<div class="flex items-center gap-3">
 			<div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg flex items-center justify-center">

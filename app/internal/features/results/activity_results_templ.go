@@ -10,10 +10,11 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"fmt"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"strings"
 )
 
-func ActivityResults(activities []POIDetailedInfo, compact bool, showToggle bool, initialLimit int, favorites []string) templ.Component {
+func ActivityResults(activities []models.POIDetailedInfo, compact bool, showToggle bool, initialLimit int, favorites []string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -71,7 +72,7 @@ func ActivityResults(activities []POIDetailedInfo, compact bool, showToggle bool
 			var templ_7745c5c3_Var2 string
 			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", len(activities)-initialLimit))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 29, Col: 95}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 30, Col: 95}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 			if templ_7745c5c3_Err != nil {
@@ -90,7 +91,7 @@ func ActivityResults(activities []POIDetailedInfo, compact bool, showToggle bool
 	})
 }
 
-func ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) templ.Component {
+func ActivityCard(activity models.POIDetailedInfo, compact bool, isFavorite bool) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -118,7 +119,7 @@ func ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) templ
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(getActivityEmoji(activity.Category))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 84, Col: 76}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 85, Col: 76}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -131,7 +132,7 @@ func ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) templ
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(activity.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 94, Col: 22}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 95, Col: 22}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -149,7 +150,7 @@ func ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) templ
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(getActivityEmoji(activity.Category))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 98, Col: 51}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 99, Col: 51}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
@@ -162,7 +163,7 @@ func ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) templ
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(activity.Category)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 99, Col: 27}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 100, Col: 27}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
@@ -181,7 +182,7 @@ func ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) templ
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(activity.Address)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 105, Col: 26}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 106, Col: 26}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
@@ -204,7 +205,7 @@ func ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) templ
 			var templ_7745c5c3_Var9 string
 			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.1f", activity.Rating))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 114, Col: 47}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 115, Col: 47}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {
@@ -228,7 +229,7 @@ func ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) templ
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("favorite-btn-%s", activity.ID.String()))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 119, Col: 64}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 120, Col: 64}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -296,7 +297,7 @@ func ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) templ
 			var templ_7745c5c3_Var15 string
 			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(activity.Description)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 142, Col: 28}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 143, Col: 28}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
@@ -319,7 +320,7 @@ func ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) templ
 			var templ_7745c5c3_Var16 string
 			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(tag)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 148, Col: 12}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 149, Col: 12}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 			if templ_7745c5c3_Err != nil {
@@ -342,7 +343,7 @@ func ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) templ
 			var templ_7745c5c3_Var17 string
 			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(activity.TimeToSpend)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 157, Col: 36}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 158, Col: 36}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 			if templ_7745c5c3_Err != nil {
@@ -383,7 +384,7 @@ func ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) templ
 			var templ_7745c5c3_Var20 string
 			templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(activity.Budget)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 164, Col: 26}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 165, Col: 26}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 			if templ_7745c5c3_Err != nil {
@@ -402,7 +403,7 @@ func ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) templ
 			var templ_7745c5c3_Var21 string
 			templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(activity.OpeningHours)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 171, Col: 37}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 172, Col: 37}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 			if templ_7745c5c3_Err != nil {
@@ -432,7 +433,7 @@ func ActivityCard(activity POIDetailedInfo, compact bool, isFavorite bool) templ
 }
 
 // Compact version for use in small spaces
-func ActivityCardCompact(activity POIDetailedInfo, isFavorite bool) templ.Component {
+func ActivityCardCompact(activity models.POIDetailedInfo, isFavorite bool) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -460,7 +461,7 @@ func ActivityCardCompact(activity POIDetailedInfo, isFavorite bool) templ.Compon
 		var templ_7745c5c3_Var23 string
 		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(getActivityEmoji(activity.Category))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 208, Col: 74}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 209, Col: 74}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 		if templ_7745c5c3_Err != nil {
@@ -473,7 +474,7 @@ func ActivityCardCompact(activity POIDetailedInfo, isFavorite bool) templ.Compon
 		var templ_7745c5c3_Var24 string
 		templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(activity.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 213, Col: 68}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 214, Col: 68}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 		if templ_7745c5c3_Err != nil {
@@ -486,7 +487,7 @@ func ActivityCardCompact(activity POIDetailedInfo, isFavorite bool) templ.Compon
 		var templ_7745c5c3_Var25 string
 		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(activity.Category)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 214, Col: 66}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 215, Col: 66}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 		if templ_7745c5c3_Err != nil {
@@ -504,7 +505,7 @@ func ActivityCardCompact(activity POIDetailedInfo, isFavorite bool) templ.Compon
 			var templ_7745c5c3_Var26 string
 			templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.1f", activity.Rating))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 220, Col: 80}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 221, Col: 80}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 			if templ_7745c5c3_Err != nil {
@@ -586,7 +587,7 @@ func ActivityCardCompact(activity POIDetailedInfo, isFavorite bool) templ.Compon
 			var templ_7745c5c3_Var33 string
 			templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(activity.Budget)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 234, Col: 24}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 235, Col: 24}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 			if templ_7745c5c3_Err != nil {
@@ -605,7 +606,7 @@ func ActivityCardCompact(activity POIDetailedInfo, isFavorite bool) templ.Compon
 			var templ_7745c5c3_Var34 string
 			templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinStringErrs(activity.TimeToSpend)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 238, Col: 72}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 239, Col: 72}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var34))
 			if templ_7745c5c3_Err != nil {

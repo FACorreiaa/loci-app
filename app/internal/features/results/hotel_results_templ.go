@@ -10,10 +10,11 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"fmt"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"strings"
 )
 
-func HotelResults(hotels []HotelDetailedInfo, compact bool, showToggle bool, initialLimit int, favorites []string) templ.Component {
+func HotelResults(hotels []models.HotelDetailedInfo, compact bool, showToggle bool, initialLimit int, favorites []string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -71,7 +72,7 @@ func HotelResults(hotels []HotelDetailedInfo, compact bool, showToggle bool, ini
 			var templ_7745c5c3_Var2 string
 			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", len(hotels)-initialLimit))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 29, Col: 87}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 30, Col: 87}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 			if templ_7745c5c3_Err != nil {
@@ -90,7 +91,7 @@ func HotelResults(hotels []HotelDetailedInfo, compact bool, showToggle bool, ini
 	})
 }
 
-func HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) templ.Component {
+func HotelCard(hotel models.HotelDetailedInfo, compact bool, isFavorite bool) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -118,7 +119,7 @@ func HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) templ.Com
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(getHotelEmoji(hotel.Category))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 84, Col: 70}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 85, Col: 70}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -131,7 +132,7 @@ func HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) templ.Com
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(hotel.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 94, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 95, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -149,7 +150,7 @@ func HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) templ.Com
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(hotel.Category)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 98, Col: 24}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 99, Col: 24}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
@@ -168,7 +169,7 @@ func HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) templ.Com
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(hotel.Address)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 104, Col: 23}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 105, Col: 23}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
@@ -187,7 +188,7 @@ func HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) templ.Com
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(*hotel.PhoneNumber)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 110, Col: 28}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 111, Col: 28}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
@@ -205,7 +206,7 @@ func HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) templ.Com
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.1f", hotel.Rating))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 118, Col: 43}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 119, Col: 43}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -228,7 +229,7 @@ func HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) templ.Com
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("favorite-btn-%s", hotel.ID.String()))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 122, Col: 61}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 123, Col: 61}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -296,7 +297,7 @@ func HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) templ.Com
 			var templ_7745c5c3_Var15 string
 			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(hotel.Description)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 145, Col: 25}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 146, Col: 25}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
@@ -347,7 +348,7 @@ func HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) templ.Com
 					var templ_7745c5c3_Var18 string
 					templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(amenity)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 155, Col: 24}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 156, Col: 24}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 					if templ_7745c5c3_Err != nil {
@@ -365,7 +366,7 @@ func HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) templ.Com
 					var templ_7745c5c3_Var19 string
 					templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", len(hotel.Tags)-4))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 159, Col: 50}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 160, Col: 50}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 					if templ_7745c5c3_Err != nil {
@@ -416,7 +417,7 @@ func HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) templ.Com
 			var templ_7745c5c3_Var22 string
 			templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(*hotel.PriceRange)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 172, Col: 28}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 173, Col: 28}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 			if templ_7745c5c3_Err != nil {
@@ -435,7 +436,7 @@ func HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) templ.Com
 			var templ_7745c5c3_Var23 string
 			templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(*hotel.OpeningHours)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 181, Col: 30}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 182, Col: 30}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 			if templ_7745c5c3_Err != nil {
@@ -465,7 +466,7 @@ func HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) templ.Com
 }
 
 // Compact version for use in small spaces
-func HotelCardCompact(hotel HotelDetailedInfo, isFavorite bool) templ.Component {
+func HotelCardCompact(hotel models.HotelDetailedInfo, isFavorite bool) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -493,7 +494,7 @@ func HotelCardCompact(hotel HotelDetailedInfo, isFavorite bool) templ.Component 
 		var templ_7745c5c3_Var25 string
 		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(getHotelEmoji(hotel.Category))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 226, Col: 68}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 227, Col: 68}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 		if templ_7745c5c3_Err != nil {
@@ -506,7 +507,7 @@ func HotelCardCompact(hotel HotelDetailedInfo, isFavorite bool) templ.Component 
 		var templ_7745c5c3_Var26 string
 		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(hotel.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 231, Col: 65}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 232, Col: 65}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 		if templ_7745c5c3_Err != nil {
@@ -519,7 +520,7 @@ func HotelCardCompact(hotel HotelDetailedInfo, isFavorite bool) templ.Component 
 		var templ_7745c5c3_Var27 string
 		templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(hotel.Category)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 232, Col: 63}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 233, Col: 63}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 		if templ_7745c5c3_Err != nil {
@@ -532,7 +533,7 @@ func HotelCardCompact(hotel HotelDetailedInfo, isFavorite bool) templ.Component 
 		var templ_7745c5c3_Var28 string
 		templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.1f", hotel.Rating))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 237, Col: 76}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 238, Col: 76}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 		if templ_7745c5c3_Err != nil {
@@ -613,7 +614,7 @@ func HotelCardCompact(hotel HotelDetailedInfo, isFavorite bool) templ.Component 
 			var templ_7745c5c3_Var35 string
 			templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(*hotel.PriceRange)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 250, Col: 26}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 251, Col: 26}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 			if templ_7745c5c3_Err != nil {
@@ -633,7 +634,7 @@ func HotelCardCompact(hotel HotelDetailedInfo, isFavorite bool) templ.Component 
 }
 
 // Featured hotel card for special promotions
-func FeaturedHotelCard(hotel HotelDetailedInfo, specialOffer string) templ.Component {
+func FeaturedHotelCard(hotel models.HotelDetailedInfo, specialOffer string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -661,7 +662,7 @@ func FeaturedHotelCard(hotel HotelDetailedInfo, specialOffer string) templ.Compo
 		var templ_7745c5c3_Var37 string
 		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(getHotelEmoji(hotel.Category))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 268, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 269, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 		if templ_7745c5c3_Err != nil {
@@ -674,7 +675,7 @@ func FeaturedHotelCard(hotel HotelDetailedInfo, specialOffer string) templ.Compo
 		var templ_7745c5c3_Var38 string
 		templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(hotel.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 271, Col: 67}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 272, Col: 67}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 		if templ_7745c5c3_Err != nil {
@@ -687,7 +688,7 @@ func FeaturedHotelCard(hotel HotelDetailedInfo, specialOffer string) templ.Compo
 		var templ_7745c5c3_Var39 string
 		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(hotel.Category)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 272, Col: 81}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 273, Col: 81}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 		if templ_7745c5c3_Err != nil {
@@ -700,7 +701,7 @@ func FeaturedHotelCard(hotel HotelDetailedInfo, specialOffer string) templ.Compo
 		var templ_7745c5c3_Var40 string
 		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(hotel.Description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 273, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 274, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 		if templ_7745c5c3_Err != nil {
@@ -718,7 +719,7 @@ func FeaturedHotelCard(hotel HotelDetailedInfo, specialOffer string) templ.Compo
 			var templ_7745c5c3_Var41 string
 			templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(specialOffer)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 276, Col: 56}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 277, Col: 56}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 			if templ_7745c5c3_Err != nil {
@@ -736,7 +737,7 @@ func FeaturedHotelCard(hotel HotelDetailedInfo, specialOffer string) templ.Compo
 		var templ_7745c5c3_Var42 string
 		templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.1f", hotel.Rating))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 283, Col: 68}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 284, Col: 68}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
 		if templ_7745c5c3_Err != nil {
@@ -772,7 +773,7 @@ func FeaturedHotelCard(hotel HotelDetailedInfo, specialOffer string) templ.Compo
 			var templ_7745c5c3_Var45 string
 			templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(*hotel.PriceRange)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 287, Col: 27}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/hotel_results.templ`, Line: 288, Col: 27}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
 			if templ_7745c5c3_Err != nil {

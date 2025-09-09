@@ -1995,6 +1995,10 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 	}
 
 	// Step 4: Cache Integration - Generate cache key based on session parameters
+	var finalItineraryResult models.AIItineraryResponse
+	var finalCityData models.GeneralCityData
+	var finalItineraryStream models.AIItineraryResponse
+	var finalPois []models.POIDetailedInfo
 	sessionID := uuid.New()
 
 	// Initialize session

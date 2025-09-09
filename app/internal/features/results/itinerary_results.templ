@@ -3,9 +3,10 @@ package results
 import (
 	"fmt"
 	"strings"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
 )
 
-templ ItineraryResults(itinerary AIItineraryResponse, compact bool, showToggle bool, initialLimit int, favorites []string) {
+templ ItineraryResults(itinerary models.AIItineraryResponse, compact bool, showToggle bool, initialLimit int, favorites []string) {
 	<div class="itinerary-results">
 		<!-- Itinerary Header -->
 		<div class="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 mb-6 border">
@@ -149,7 +150,7 @@ templ ItineraryResults(itinerary AIItineraryResponse, compact bool, showToggle b
 	</script>
 }
 
-templ ItineraryPOICard(poi POIDetailedInfo, priority int, isFavorite bool) {
+templ ItineraryPOICard(poi models.POIDetailedInfo, priority int, isFavorite bool) {
 	<div class="poi-card bg-card rounded-xl shadow-sm border p-4 hover:shadow-md transition-all duration-300">
 		<div class="flex items-start gap-4">
 			<div class="flex-shrink-0">
@@ -256,7 +257,7 @@ templ ItineraryPOICard(poi POIDetailedInfo, priority int, isFavorite bool) {
 	</div>
 }
 
-templ ItineraryRestaurantCard(restaurant POIDetailedInfo, isFavorite bool) {
+templ ItineraryRestaurantCard(restaurant models.POIDetailedInfo, isFavorite bool) {
 	<div class="bg-card rounded-lg shadow-sm border p-4 hover:shadow-md transition-all duration-300">
 		<div class="flex items-start gap-3">
 			<div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-500 rounded-lg flex items-center justify-center">
@@ -293,7 +294,7 @@ templ ItineraryRestaurantCard(restaurant POIDetailedInfo, isFavorite bool) {
 	</div>
 }
 
-templ ItineraryBarCard(bar POIDetailedInfo, isFavorite bool) {
+templ ItineraryBarCard(bar models.POIDetailedInfo, isFavorite bool) {
 	<div class="bg-card rounded-lg shadow-sm border p-4 hover:shadow-md transition-all duration-300">
 		<div class="flex items-start gap-3">
 			<div class="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-lg flex items-center justify-center">

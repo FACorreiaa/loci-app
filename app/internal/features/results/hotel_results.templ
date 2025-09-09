@@ -3,9 +3,10 @@ package results
 import (
 	"fmt"
 	"strings"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
 )
 
-templ HotelResults(hotels []HotelDetailedInfo, compact bool, showToggle bool, initialLimit int, favorites []string) {
+templ HotelResults(hotels []models.HotelDetailedInfo, compact bool, showToggle bool, initialLimit int, favorites []string) {
 	<div class="hotel-results">
 		<div class="space-y-4" id="hotel-list">
 			for i, hotel := range hotels {
@@ -76,7 +77,7 @@ templ HotelResults(hotels []HotelDetailedInfo, compact bool, showToggle bool, in
 	</script>
 }
 
-templ HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) {
+templ HotelCard(hotel models.HotelDetailedInfo, compact bool, isFavorite bool) {
 	<div class="hotel-card bg-card rounded-xl shadow-sm border p-4 hover:shadow-md transition-all duration-300">
 		<div class="flex items-start gap-4">
 			<div class="flex-shrink-0">
@@ -219,7 +220,7 @@ templ HotelCard(hotel HotelDetailedInfo, compact bool, isFavorite bool) {
 }
 
 // Compact version for use in small spaces
-templ HotelCardCompact(hotel HotelDetailedInfo, isFavorite bool) {
+templ HotelCardCompact(hotel models.HotelDetailedInfo, isFavorite bool) {
 	<div class="hotel-card-compact bg-card rounded-lg shadow-sm border p-3 hover:shadow-md transition-all duration-300">
 		<div class="flex items-center gap-3">
 			<div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-lg flex items-center justify-center">
@@ -258,7 +259,7 @@ templ HotelCardCompact(hotel HotelDetailedInfo, isFavorite bool) {
 }
 
 // Featured hotel card for special promotions
-templ FeaturedHotelCard(hotel HotelDetailedInfo, specialOffer string) {
+templ FeaturedHotelCard(hotel models.HotelDetailedInfo, specialOffer string) {
 	<div class="featured-hotel-card bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-xl shadow-sm border-2 border-blue-200 dark:border-blue-800 p-6 hover:shadow-md transition-all duration-300">
 		<div class="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
 			Featured
