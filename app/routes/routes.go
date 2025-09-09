@@ -1,10 +1,15 @@
 package routes
 
 import (
+	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
+	"regexp"
+	"strings"
 
 	"github.com/a-h/templ"
+	"github.com/google/uuid"
 
 	"github.com/FACorreiaa/go-templui/app/internal/features"
 	"github.com/FACorreiaa/go-templui/app/internal/features/itinerary"
@@ -59,6 +64,82 @@ func getUserFromContext(c *gin.Context) *models.User {
 		Email:    userEmail,
 		IsActive: true,
 	}
+}
+
+// parseItineraryFromResponse parses an AIItineraryResponse from a stored LLM response
+func parseItineraryFromResponse(responseText string, logger *slog.Logger) (*models.AIItineraryResponse, error) {
+	if responseText == "" {
+		return nil, nil
+	}
+
+	// Clean the JSON response (similar to existing parsePOIsFromResponse)
+	cleanedResponse := cleanJSONResponse(responseText)
+
+	// Try to parse as unified chat response format with "data" wrapper first
+	var unifiedResponse struct {
+		Data models.AiCityResponse `json:"data"`
+	}
+	err := json.Unmarshal([]byte(cleanedResponse), &unifiedResponse)
+	if err == nil && (unifiedResponse.Data.AIItineraryResponse.ItineraryName != "" || len(unifiedResponse.Data.AIItineraryResponse.PointsOfInterest) > 0) {
+		logger.Debug("parseItineraryFromResponse: Parsed as unified chat response")
+		return &unifiedResponse.Data.AIItineraryResponse, nil
+	}
+
+	// Try to parse as direct AiCityResponse
+	var cityResponse models.AiCityResponse
+	err = json.Unmarshal([]byte(cleanedResponse), &cityResponse)
+	if err == nil && (cityResponse.AIItineraryResponse.ItineraryName != "" || len(cityResponse.AIItineraryResponse.PointsOfInterest) > 0) {
+		logger.Debug("parseItineraryFromResponse: Parsed as AiCityResponse")
+		return &cityResponse.AIItineraryResponse, nil
+	}
+
+	// Try to parse directly as AIItineraryResponse
+	var itineraryResponse models.AIItineraryResponse
+	err = json.Unmarshal([]byte(cleanedResponse), &itineraryResponse)
+	if err == nil && (itineraryResponse.ItineraryName != "" || len(itineraryResponse.PointsOfInterest) > 0) {
+		logger.Debug("parseItineraryFromResponse: Parsed as direct AIItineraryResponse")
+		return &itineraryResponse, nil
+	}
+
+	logger.Debug("parseItineraryFromResponse: Could not parse response as itinerary", "error", err)
+	return nil, err
+}
+
+// cleanJSONResponse cleans the response text for JSON parsing (reused from existing code)
+func cleanJSONResponse(response string) string {
+	// Remove any leading/trailing whitespace
+	cleaned := strings.TrimSpace(response)
+
+	// Remove code block markers if present
+	if strings.HasPrefix(cleaned, "```json") {
+		cleaned = strings.TrimPrefix(cleaned, "```json")
+	}
+	if strings.HasPrefix(cleaned, "```") {
+		cleaned = strings.TrimPrefix(cleaned, "```")
+	}
+	if strings.HasSuffix(cleaned, "```") {
+		cleaned = strings.TrimSuffix(cleaned, "```")
+	}
+
+	// Remove any non-JSON text before the first {
+	startIndex := strings.Index(cleaned, "{")
+	if startIndex != -1 {
+		cleaned = cleaned[startIndex:]
+	}
+
+	// Remove any non-JSON text after the last }
+	endIndex := strings.LastIndex(cleaned, "}")
+	if endIndex != -1 {
+		cleaned = cleaned[:endIndex+1]
+	}
+
+	// Clean up any remaining non-JSON prefixes/suffixes
+	re := regexp.MustCompile(`^[^{]*({.*})[^}]*$`)
+	if matches := re.FindStringSubmatch(cleaned); len(matches) > 1 {
+		cleaned = matches[1]
+	}
+
+	return strings.TrimSpace(cleaned)
 }
 
 //func getDBFromContext(c *gin.Context) *pgxpool.Pool {
@@ -473,10 +554,41 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 					// NOTE: Using ItineraryResults, NOT ItineraryResultsStream
 					content = results.ItineraryResults(itineraryData, true, true, 5, []string{}) // Adjust params as needed
 				} else {
-					// Data not found (e.g., expired or invalid ID).
-					// Show a page indicating the plan is gone and they should create a new one.
-					logger.Log.Warn("Itinerary not found in cache or expired.", zap.String("sessionID", sessionIdParam))
-					content = results.PageNotFound("Itinerary not found")
+					// Data not found in cache - try to retrieve from database
+					logger.Log.Info("Itinerary not found in cache, attempting to load from database", zap.String("sessionID", sessionIdParam))
+					
+					// Parse sessionID as UUID
+					sessionID, err := uuid.Parse(sessionIdParam)
+					if err != nil {
+						logger.Log.Warn("Invalid session ID format", zap.String("sessionID", sessionIdParam), zap.Error(err))
+						content = results.PageNotFound("Invalid session ID")
+					} else {
+						// Try to get the latest interaction for this session from database
+						ctx := context.Background()
+						interaction, err := chatRepo.GetLatestInteractionBySessionID(ctx, sessionID)
+						if err != nil || interaction == nil {
+							logger.Log.Warn("No interaction found in database for session", 
+								zap.String("sessionID", sessionIdParam), 
+								zap.Error(err))
+							content = results.PageNotFound("Itinerary session expired. Please create a new itinerary.")
+						} else {
+							// Try to parse the stored response as itinerary data
+							itineraryData, err := parseItineraryFromResponse(interaction.ResponseText, slog.Default())
+							if err != nil || itineraryData == nil {
+								logger.Log.Warn("Could not parse itinerary from stored response", 
+									zap.String("sessionID", sessionIdParam), 
+									zap.Error(err))
+								content = results.PageNotFound("Could not load itinerary data. Please create a new itinerary.")
+							} else {
+								logger.Log.Info("Successfully loaded itinerary from database", 
+									zap.String("sessionID", sessionIdParam),
+									zap.Int("poisCount", len(itineraryData.PointsOfInterest)))
+								
+								// Render the results page with the database data
+								content = results.ItineraryResults(*itineraryData, true, true, 5, []string{})
+							}
+						}
+					}
 				}
 			} else {
 				// No session ID in the URL. This means the user navigated here directly.

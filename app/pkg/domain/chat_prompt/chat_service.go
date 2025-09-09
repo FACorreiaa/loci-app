@@ -34,6 +34,7 @@ import (
 	"github.com/FACorreiaa/go-templui/app/pkg/domain/poi"
 	"github.com/FACorreiaa/go-templui/app/pkg/domain/profiles"
 	"github.com/FACorreiaa/go-templui/app/pkg/domain/tags"
+	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
 )
 
 const (
@@ -1621,6 +1622,16 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 		Message:   finalResponseMessage,
 		Timestamp: time.Now(),
 	}, 3)
+	
+	// Cache the itinerary data for immediate access
+	if session.CurrentItinerary != nil && session.CurrentItinerary.AIItineraryResponse.ItineraryName != "" {
+		l.logger.InfoContext(ctx, "Caching itinerary data", 
+			slog.String("sessionID", sessionID.String()),
+			slog.String("itineraryName", session.CurrentItinerary.AIItineraryResponse.ItineraryName),
+			slog.Int("poisCount", len(session.CurrentItinerary.AIItineraryResponse.PointsOfInterest)))
+		middleware.ItineraryCache.Set(sessionID.String(), session.CurrentItinerary.AIItineraryResponse)
+	}
+	
 	l.sendEvent(ctx, eventCh, models.StreamEvent{
 		Type:    models.EventTypeComplete,
 		Data:    "Turn completed.",
@@ -2164,6 +2175,11 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 				baseURL = "/itinerary"
 			}
 
+			// Cache itinerary data if this was an itinerary request
+			if routeType == "itinerary" {
+				l.cacheItineraryIfAvailable(ctx, sessionID, responses, &responsesMutex)
+			}
+
 			l.sendEvent(ctx, eventCh, models.StreamEvent{
 				Type: models.EventTypeComplete,
 				Data: map[string]interface{}{"session_id": sessionID.String()},
@@ -2453,6 +2469,11 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStreamFree(ctx context.Context, c
 				baseURL = "/itinerary"
 			}
 
+			// Cache itinerary data if this was an itinerary request
+			if routeType == "itinerary" {
+				l.cacheItineraryIfAvailable(ctx, sessionID, responses, &responsesMutex)
+			}
+
 			l.sendEvent(ctx, eventCh, models.StreamEvent{
 				Type: models.EventTypeComplete,
 				Data: map[string]interface{}{"session_id": sessionID.String()},
@@ -2661,3 +2682,64 @@ func (l *ServiceImpl) streamWorkerWithResponseAndCache(ctx context.Context, prom
 		}
 	}
 }
+
+// cacheItineraryIfAvailable attempts to cache itinerary data from unified stream responses
+func (l *ServiceImpl) cacheItineraryIfAvailable(ctx context.Context, sessionID uuid.UUID, responses map[string]*strings.Builder, responsesMutex *sync.Mutex) {
+	responsesMutex.Lock()
+	defer responsesMutex.Unlock()
+	
+	if itineraryBuilder, exists := responses["itinerary"]; exists && itineraryBuilder != nil {
+		itineraryResponse := itineraryBuilder.String()
+		if parsedItinerary, err := parseItineraryFromResponse(itineraryResponse, l.logger); err == nil && parsedItinerary != nil {
+			l.logger.InfoContext(ctx, "Caching unified chat itinerary data", 
+				slog.String("sessionID", sessionID.String()),
+				slog.String("itineraryName", parsedItinerary.ItineraryName),
+				slog.Int("poisCount", len(parsedItinerary.PointsOfInterest)))
+			middleware.ItineraryCache.Set(sessionID.String(), *parsedItinerary)
+		} else {
+			l.logger.WarnContext(ctx, "Failed to parse unified chat itinerary for caching", 
+				slog.String("sessionID", sessionID.String()),
+				slog.Any("error", err))
+		}
+	}
+}
+
+// parseItineraryFromResponse parses an AIItineraryResponse from a stored LLM response
+func parseItineraryFromResponse(responseText string, logger *slog.Logger) (*models.AIItineraryResponse, error) {
+	if responseText == "" {
+		return nil, fmt.Errorf("empty response text")
+	}
+
+	// Clean the JSON response
+	cleanedResponse := cleanJSONResponse(responseText)
+
+	// Try to parse as unified chat response format with "data" wrapper first
+	var unifiedResponse struct {
+		Data models.AiCityResponse `json:"data"`
+	}
+	err := json.Unmarshal([]byte(cleanedResponse), &unifiedResponse)
+	if err == nil && (unifiedResponse.Data.AIItineraryResponse.ItineraryName != "" || len(unifiedResponse.Data.AIItineraryResponse.PointsOfInterest) > 0) {
+		logger.Debug("parseItineraryFromResponse: Parsed as unified chat response")
+		return &unifiedResponse.Data.AIItineraryResponse, nil
+	}
+
+	// Try to parse as direct AiCityResponse
+	var cityResponse models.AiCityResponse
+	err = json.Unmarshal([]byte(cleanedResponse), &cityResponse)
+	if err == nil && (cityResponse.AIItineraryResponse.ItineraryName != "" || len(cityResponse.AIItineraryResponse.PointsOfInterest) > 0) {
+		logger.Debug("parseItineraryFromResponse: Parsed as AiCityResponse")
+		return &cityResponse.AIItineraryResponse, nil
+	}
+
+	// Try to parse directly as AIItineraryResponse
+	var itineraryResponse models.AIItineraryResponse
+	err = json.Unmarshal([]byte(cleanedResponse), &itineraryResponse)
+	if err == nil && (itineraryResponse.ItineraryName != "" || len(itineraryResponse.PointsOfInterest) > 0) {
+		logger.Debug("parseItineraryFromResponse: Parsed as direct AIItineraryResponse")
+		return &itineraryResponse, nil
+	}
+
+	logger.Debug("parseItineraryFromResponse: Could not parse response as itinerary", "error", err)
+	return nil, fmt.Errorf("failed to parse itinerary: %w", err)
+}
+

@@ -1,0 +1,213 @@
+package results
+
+import (
+    "github.com/FACorreiaa/go-templui/app/internal/models"
+    "encoding/json"
+)
+
+// MapContainer displays the interactive Mapbox map with POI markers
+templ MapContainer(pois []models.POIDetailedInfo, cityData *models.GeneralCityData, sessionId string) {
+    <div class="relative w-full h-full bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+        <!-- Map Element -->
+        <div id="map" class="w-full h-full"></div>
+        
+        <!-- Map Controls -->
+        <div class="absolute top-4 right-4 z-10 flex flex-col gap-2">
+            <button @click="map.zoomIn()" 
+                    class="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg shadow-md flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+            </button>
+            <button @click="map.zoomOut()" 
+                    class="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg shadow-md flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
+                </svg>
+            </button>
+            <button @click="resetMapView()" 
+                    class="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg shadow-md flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Loading State -->
+        <div x-show="!mapLoaded" class="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+            <div class="flex flex-col items-center gap-3">
+                <div class="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <p class="text-sm text-gray-600 dark:text-gray-300">Loading map...</p>
+            </div>
+        </div>
+
+        <!-- Map Legend -->
+        <div class="absolute bottom-4 left-4 bg-white dark:bg-gray-800 rounded-lg shadow-md p-3 max-w-xs">
+            <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Legend</h4>
+            <div class="space-y-1">
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 bg-blue-600 rounded-full"></div>
+                    <span class="text-xs text-gray-600 dark:text-gray-300">Points of Interest</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 bg-red-600 rounded-full"></div>
+                    <span class="text-xs text-gray-600 dark:text-gray-300">Selected POI</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Initialization Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!window.mapboxgl) {
+                console.error('Mapbox GL JS not loaded');
+                return;
+            }
+
+            // POI data from server
+            const poisData = { templ.Raw(poisToJSON(pois)) };
+            const cityCenter = getCityCenter({ templ.Raw(cityDataToJSON(cityData)) });
+            
+            // Initialize map
+            window.map = new mapboxgl.Map({
+                container: 'map',
+                style: 'mapbox://styles/mapbox/streets-v11',
+                center: cityCenter,
+                zoom: 12
+            });
+
+            // Map load event
+            window.map.on('load', function() {
+                // Set map loaded state
+                if (window.Alpine && Alpine.store('itinerary')) {
+                    Alpine.store('itinerary').mapLoaded = true;
+                }
+
+                // Add POI markers
+                poisData.forEach(function(poi, index) {
+                    if (poi.latitude && poi.longitude) {
+                        // Create marker element
+                        const markerEl = document.createElement('div');
+                        markerEl.className = 'poi-marker';
+                        markerEl.style.cssText = `
+                            width: 24px;
+                            height: 24px;
+                            background-color: #2563eb;
+                            border: 2px solid white;
+                            border-radius: 50%;
+                            cursor: pointer;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                        `;
+
+                        // Create popup
+                        const popup = new mapboxgl.Popup({
+                            offset: 25,
+                            closeButton: true,
+                            closeOnClick: false
+                        }).setHTML(`
+                            <div class="p-2 max-w-xs">
+                                <h3 class="font-medium text-gray-900 mb-1">${poi.name}</h3>
+                                <p class="text-sm text-gray-600 mb-2">${poi.description || ''}</p>
+                                <div class="flex items-center gap-1 text-xs text-gray-500">
+                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    ${poi.category || 'Point of Interest'}
+                                </div>
+                                <button onclick="selectPOI(${index})" class="mt-2 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors">
+                                    View Details
+                                </button>
+                            </div>
+                        `);
+
+                        // Add marker to map
+                        const marker = new mapboxgl.Marker(markerEl)
+                            .setLngLat([poi.longitude, poi.latitude])
+                            .setPopup(popup)
+                            .addTo(window.map);
+
+                        // Click handler
+                        markerEl.addEventListener('click', function() {
+                            selectPOI(index);
+                        });
+                    }
+                });
+            });
+
+            // Reset map view function
+            window.resetMapView = function() {
+                if (window.map) {
+                    window.map.flyTo({
+                        center: cityCenter,
+                        zoom: 12,
+                        duration: 1000
+                    });
+                }
+            };
+
+            // Select POI function
+            window.selectPOI = function(index) {
+                if (window.Alpine && Alpine.store('itinerary')) {
+                    Alpine.store('itinerary').selectedPOI = poisData[index];
+                }
+            };
+        });
+
+        // Helper function to get city center
+        function getCityCenter(cityData) {
+            if (cityData && cityData.center_latitude && cityData.center_longitude) {
+                return [cityData.center_longitude, cityData.center_latitude];
+            }
+            // Default to a reasonable center if no city data
+            return [0, 0];
+        }
+    </script>
+}
+
+// Helper function to convert POIs to JSON
+func poisToJSON(pois []models.POIDetailedInfo) string {
+    type simplifiedPOI struct {
+        Name        string  `json:"name"`
+        Description string  `json:"description"`
+        Category    string  `json:"category"`
+        Latitude    float64 `json:"latitude"`
+        Longitude   float64 `json:"longitude"`
+        Images      []string `json:"images"`
+    }
+
+    var simplified []simplifiedPOI
+    for _, poi := range pois {
+        simplified = append(simplified, simplifiedPOI{
+            Name:        poi.Name,
+            Description: poi.Description,
+            Category:    poi.Category,
+            Latitude:    poi.Latitude,
+            Longitude:   poi.Longitude,
+            Images:      poi.Images,
+        })
+    }
+
+    jsonData, _ := json.Marshal(simplified)
+    return string(jsonData)
+}
+
+// Helper function to convert city data to JSON
+func cityDataToJSON(cityData *models.GeneralCityData) string {
+    if cityData == nil {
+        return "null"
+    }
+
+    type simplifiedCity struct {
+        Latitude  float64 `json:"center_latitude"`
+        Longitude float64 `json:"center_longitude"`
+    }
+
+    simplified := simplifiedCity{
+        Latitude:  cityData.CenterLatitude,
+        Longitude: cityData.CenterLongitude,
+    }
+
+    jsonData, _ := json.Marshal(simplified)
+    return string(jsonData)
+}

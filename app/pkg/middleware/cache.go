@@ -39,7 +39,7 @@ func (c *ResultCache) Set(key string, value models.AIItineraryResponse) {
 	}
 }
 
-// Get retrieves an item and deletes it (flash message style).
+// Get retrieves an item without deleting it (persistent cache).
 func (c *ResultCache) Get(key string) (models.AIItineraryResponse, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -47,8 +47,7 @@ func (c *ResultCache) Get(key string) (models.AIItineraryResponse, bool) {
 	if !found || time.Now().UnixNano() > item.expiration {
 		return models.AIItineraryResponse{}, false
 	}
-	// Delete the item after retrieving it so it can only be read once.
-	delete(c.items, key)
+	// Return the item without deleting it, allowing multiple reads
 	return item.value, true
 }
 

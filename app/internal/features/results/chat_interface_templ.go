@@ -8,29 +8,8 @@ package results
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-import (
-	"github.com/FACorreiaa/go-templui/app/internal/models"
-)
-
-// ChatInterfaceProps represents the properties for the chat interface
-type ChatInterfaceProps struct {
-	SessionID           string
-	Title               string
-	Placeholder         string
-	EmptyStateTitle     string
-	EmptyStateSubtitle  string
-	LoadingMessage      string
-	HeaderColor         string
-	UserMessageColor    string
-	FloatingButtonColor string
-	FocusRingColor      string
-	ShowChat            bool
-	ChatHistory         []models.ChatMessage
-	IsLoading           bool
-}
-
-// ChatInterface renders a chat interface with floating button for continuing itinerary planning
-func ChatInterface(props ChatInterfaceProps) templ.Component {
+// ChatInterface provides the floating chat panel for continued planning
+func ChatInterface(sessionId string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -51,237 +30,7 @@ func ChatInterface(props ChatInterfaceProps) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!-- Chat Interface Modal -->")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var2 = []any{"fixed inset-0 z-50", templ.KV("hidden", !props.ShowChat)}
-		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var2...)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<div id=\"chat-interface\" class=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var3 string
-		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var2).String())
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/chat_interface.templ`, Line: 1, Col: 0}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\"><!-- Backdrop --><div class=\"fixed inset-0 bg-black bg-opacity-50\" onclick=\"toggleChat(false)\"></div><!-- Chat Container --><div class=\"fixed bottom-6 right-6 w-96 h-[500px] bg-white rounded-lg shadow-2xl border border-gray-200 flex flex-col z-50\"><!-- Chat Header -->")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var4 = []any{"flex items-center justify-between p-4 border-b border-gray-200 text-white rounded-t-lg", getHeaderColorClass(props.HeaderColor)}
-		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var4...)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var5 string
-		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var4).String())
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/chat_interface.templ`, Line: 1, Col: 0}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\"><div class=\"flex items-center gap-2\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z\"></path></svg> <span class=\"font-medium\">")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var6 string
-		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(getChatTitle(props.Title))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/chat_interface.templ`, Line: 39, Col: 58}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</span></div><button onclick=\"toggleChat(false)\" class=\"p-1 hover:bg-black hover:bg-opacity-20 rounded\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M6 18L18 6M6 6l12 12\"></path></svg></button></div><!-- Chat Messages --><div id=\"chat-messages\" class=\"flex-1 overflow-y-auto p-4 space-y-4\">")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		if len(props.ChatHistory) == 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<div class=\"text-center text-gray-500 py-8\"><svg class=\"w-12 h-12 mx-auto mb-4 text-gray-300\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z\"></path></svg><p class=\"text-sm\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var7 string
-			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(getChatEmptyTitle(props.EmptyStateTitle))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/chat_interface.templ`, Line: 58, Col: 67}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</p><p class=\"text-xs mt-2 text-gray-400\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var8 string
-			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(getChatEmptySubtitle(props.EmptyStateSubtitle))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/chat_interface.templ`, Line: 60, Col: 55}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</p></div>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		for _, message := range props.ChatHistory {
-			templ_7745c5c3_Err = ChatMessageBubble(message, props.UserMessageColor).Render(ctx, templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		if props.IsLoading {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<div class=\"flex justify-start\"><div class=\"bg-gray-100 p-3 rounded-lg flex items-center gap-2 text-sm text-gray-600\"><div class=\"w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin\"></div><span>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var9 string
-			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(getChatLoadingMessage(props.LoadingMessage))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/chat_interface.templ`, Line: 73, Col: 58}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</span></div></div>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</div><!-- Chat Input --><div class=\"p-4 border-t border-gray-200\"><form id=\"chat-form\" hx-post=\"/htmx/chat/message\" hx-target=\"#chat-messages\" hx-swap=\"beforeend\" hx-trigger=\"submit\"><input type=\"hidden\" name=\"session_id\" value=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var10 string
-		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(props.SessionID)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/chat_interface.templ`, Line: 82, Col: 67}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\"><div class=\"flex items-end gap-2\">")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var11 = []any{"flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent", getFocusRingClass(props.FocusRingColor)}
-		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var11...)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<textarea id=\"chat-message\" name=\"message\" placeholder=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var12 string
-		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(getChatPlaceholder(props.Placeholder))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/chat_interface.templ`, Line: 87, Col: 58}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\" class=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var13 string
-		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var11).String())
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/chat_interface.templ`, Line: 1, Col: 0}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\" rows=\"2\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		if props.IsLoading {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, " disabled")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, " onkeydown=\"handleChatKeyPress(event)\"></textarea> ")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var14 = []any{"p-2 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed", getUserMessageColorClass(props.UserMessageColor)}
-		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var14...)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<button type=\"submit\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		if props.IsLoading {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, " disabled")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, " class=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var15 string
-		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var14).String())
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/chat_interface.templ`, Line: 1, Col: 0}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 19l9 2-9-18-9 18 9-2zm0 0v-8\"></path></svg></button></div></form></div></div></div><!-- Floating Chat Button -->")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var16 = []any{"fixed bottom-4 right-4 w-12 h-12 text-white rounded-full shadow-lg transition-all hover:scale-105 flex items-center justify-center z-40 sm:bottom-6 sm:right-6 sm:w-14 sm:h-14", getFloatingButtonClass(props.FloatingButtonColor), templ.KV("hidden", props.ShowChat)}
-		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var16...)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<button id=\"chat-button\" onclick=\"toggleChat(true)\" class=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var17 string
-		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var16).String())
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/chat_interface.templ`, Line: 1, Col: 0}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "\"><svg class=\"w-5 h-5 sm:w-6 sm:h-6\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z\"></path></svg></button><!-- Chat JavaScript --><script>\n\t\tlet chatVisible = false;\n\t\tlet isLoading = false;\n\t\tlet eventSource = null;\n\n\t\tfunction toggleChat(show) {\n\t\t\tchatVisible = show;\n\t\t\tconst chatInterface = document.getElementById('chat-interface');\n\t\t\tconst chatButton = document.getElementById('chat-button');\n\t\t\t\n\t\t\tif (show) {\n\t\t\t\tchatInterface.classList.remove('hidden');\n\t\t\t\tchatButton.classList.add('hidden');\n\t\t\t\tdocument.getElementById('chat-message').focus();\n\t\t\t} else {\n\t\t\t\tchatInterface.classList.add('hidden');\n\t\t\t\tchatButton.classList.remove('hidden');\n\t\t\t\t\n\t\t\t\t// Close any active SSE connection\n\t\t\t\tif (eventSource) {\n\t\t\t\t\teventSource.close();\n\t\t\t\t\teventSource = null;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\n\t\tfunction handleChatKeyPress(event) {\n\t\t\tif (event.key === 'Enter' && !event.shiftKey) {\n\t\t\t\tevent.preventDefault();\n\t\t\t\tif (!isLoading) {\n\t\t\t\t\tdocument.getElementById('chat-form').dispatchEvent(new Event('submit'));\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\n\t\t// Handle form submission\n\t\tdocument.getElementById('chat-form').addEventListener('submit', function(e) {\n\t\t\tconst messageInput = document.getElementById('chat-message');\n\t\t\tconst message = messageInput.value.trim();\n\t\t\t\n\t\t\tif (!message || isLoading) {\n\t\t\t\te.preventDefault();\n\t\t\t\treturn;\n\t\t\t}\n\n\t\t\t// Add user message immediately\n\t\t\tconst messagesContainer = document.getElementById('chat-messages');\n\t\t\tconst userMessage = document.createElement('div');\n\t\t\tuserMessage.className = 'flex justify-end mb-4';\n\t\t\tuserMessage.innerHTML = `\n\t\t\t\t<div class=\"max-w-[80%] p-3 rounded-lg text-sm bg-blue-600 text-white\">\n\t\t\t\t\t<p class=\"whitespace-pre-wrap\">${message}</p>\n\t\t\t\t\t<p class=\"text-xs mt-1 opacity-70 text-white text-opacity-70\">\n\t\t\t\t\t\t${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}\n\t\t\t\t\t</p>\n\t\t\t\t</div>\n\t\t\t`;\n\t\t\tmessagesContainer.appendChild(userMessage);\n\t\t\t\n\t\t\t// Clear input and show loading\n\t\t\tmessageInput.value = '';\n\t\t\tisLoading = true;\n\t\t\tmessageInput.disabled = true;\n\t\t\t\n\t\t\t// Scroll to bottom\n\t\t\tmessagesContainer.scrollTop = messagesContainer.scrollHeight;\n\n\t\t\t// Start SSE connection for real-time updates\n\t\t\tstartChatSSE(message);\n\t\t});\n\n\t\tfunction startChatSSE(message) {\n\t\t\t// Close existing connection if any\n\t\t\tif (eventSource) {\n\t\t\t\teventSource.close();\n\t\t\t}\n\n\t\t\tconst sessionId = document.querySelector('input[name=\"session_id\"]').value;\n\t\t\tconst sseUrl = `/chat/stream?message=${encodeURIComponent(message)}&session_id=${encodeURIComponent(sessionId)}`;\n\t\t\t\n\t\t\teventSource = new EventSource(sseUrl);\n\t\t\t\n\t\t\teventSource.onmessage = function(event) {\n\t\t\t\ttry {\n\t\t\t\t\tconst eventData = JSON.parse(event.data);\n\t\t\t\t\tconsole.log('Chat SSE Event:', eventData);\n\t\t\t\t\t\n\t\t\t\t\thandleChatSSEEvent(eventData);\n\t\t\t\t\t\n\t\t\t\t} catch (error) {\n\t\t\t\t\tconsole.error('Error parsing chat SSE event:', error);\n\t\t\t\t}\n\t\t\t};\n\n\t\t\teventSource.onerror = function(error) {\n\t\t\t\tconsole.error('Chat SSE error:', error);\n\t\t\t\tisLoading = false;\n\t\t\t\tdocument.getElementById('chat-message').disabled = false;\n\t\t\t\t\n\t\t\t\t// Add error message\n\t\t\t\taddAIMessage('Sorry, there was an error processing your request. Please try again.');\n\t\t\t\t\n\t\t\t\tif (eventSource) {\n\t\t\t\t\teventSource.close();\n\t\t\t\t\teventSource = null;\n\t\t\t\t}\n\t\t\t};\n\n\t\t\teventSource.onopen = function(event) {\n\t\t\t\tconsole.log('Chat SSE connection opened');\n\t\t\t};\n\t\t}\n\n\t\tfunction handleChatSSEEvent(eventData) {\n\t\t\tconst messagesContainer = document.getElementById('chat-messages');\n\n\t\t\tswitch (eventData.type) {\n\t\t\t\tcase 'poi_detail_chunk':\n\t\t\t\tcase 'chunk':\n\t\t\t\t\t// Handle streaming chunks for POI details\n\t\t\t\t\tupdateStreamingMessage(eventData.message || eventData.data?.chunk || '');\n\t\t\t\t\tbreak;\n\t\t\t\t\t\n\t\t\t\tcase 'itinerary':\n\t\t\t\t\t// Itinerary update complete\n\t\t\t\t\taddAIMessage('I\\'ve updated your itinerary based on your request!');\n\t\t\t\t\t\n\t\t\t\t\t// Update the main itinerary display\n\t\t\t\t\tif (eventData.data && eventData.data.itinerary_response) {\n\t\t\t\t\t\tupdateItineraryDisplay(eventData.data.itinerary_response);\n\t\t\t\t\t}\n\t\t\t\t\t\n\t\t\t\t\tisLoading = false;\n\t\t\t\t\tdocument.getElementById('chat-message').disabled = false;\n\t\t\t\t\tbreak;\n\t\t\t\t\t\n\t\t\t\tcase 'complete':\n\t\t\t\t\t// Processing complete\n\t\t\t\t\tif (!eventData.message || eventData.message === '') {\n\t\t\t\t\t\taddAIMessage('Done! Your itinerary has been updated.');\n\t\t\t\t\t} else {\n\t\t\t\t\t\taddAIMessage(eventData.message);\n\t\t\t\t\t}\n\t\t\t\t\t\n\t\t\t\t\tisLoading = false;\n\t\t\t\t\tdocument.getElementById('chat-message').disabled = false;\n\t\t\t\t\t\n\t\t\t\t\t// Close the connection\n\t\t\t\t\tif (eventSource) {\n\t\t\t\t\t\teventSource.close();\n\t\t\t\t\t\teventSource = null;\n\t\t\t\t\t}\n\t\t\t\t\tbreak;\n\t\t\t\t\t\n\t\t\t\tcase 'error':\n\t\t\t\t\taddAIMessage('Sorry, I encountered an error: ' + (eventData.message || 'Unknown error'));\n\t\t\t\t\tisLoading = false;\n\t\t\t\t\tdocument.getElementById('chat-message').disabled = false;\n\t\t\t\t\tbreak;\n\t\t\t\t\t\n\t\t\t\tcase 'sse-close':\n\t\t\t\t\tif (eventSource) {\n\t\t\t\t\t\teventSource.close();\n\t\t\t\t\t\teventSource = null;\n\t\t\t\t\t}\n\t\t\t\t\tbreak;\n\t\t\t}\n\t\t\t\n\t\t\t// Scroll to bottom after each update\n\t\t\tmessagesContainer.scrollTop = messagesContainer.scrollHeight;\n\t\t}\n\n\t\tlet streamingMessageElement = null;\n\n\t\tfunction updateStreamingMessage(chunk) {\n\t\t\tconst messagesContainer = document.getElementById('chat-messages');\n\t\t\t\n\t\t\tif (!streamingMessageElement) {\n\t\t\t\t// Create new streaming message bubble\n\t\t\t\tstreamingMessageElement = document.createElement('div');\n\t\t\t\tstreamingMessageElement.className = 'flex justify-start mb-4';\n\t\t\t\tstreamingMessageElement.innerHTML = `\n\t\t\t\t\t<div class=\"max-w-[80%] p-3 rounded-lg text-sm bg-gray-100 text-gray-800\">\n\t\t\t\t\t\t<p class=\"whitespace-pre-wrap streaming-content\"></p>\n\t\t\t\t\t\t<p class=\"text-xs mt-1 opacity-70 text-gray-500\">\n\t\t\t\t\t\t\tLoci AI • ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}\n\t\t\t\t\t\t</p>\n\t\t\t\t\t</div>\n\t\t\t\t`;\n\t\t\t\tmessagesContainer.appendChild(streamingMessageElement);\n\t\t\t}\n\t\t\t\n\t\t\t// Update the content\n\t\t\tconst contentElement = streamingMessageElement.querySelector('.streaming-content');\n\t\t\tcontentElement.textContent += chunk;\n\t\t\t\n\t\t\t// Scroll to bottom\n\t\t\tmessagesContainer.scrollTop = messagesContainer.scrollHeight;\n\t\t}\n\n\t\tfunction addAIMessage(message) {\n\t\t\tconst messagesContainer = document.getElementById('chat-messages');\n\t\t\t\n\t\t\t// Clear any streaming message\n\t\t\tstreamingMessageElement = null;\n\t\t\t\n\t\t\tconst aiMessage = document.createElement('div');\n\t\t\taiMessage.className = 'flex justify-start mb-4';\n\t\t\taiMessage.innerHTML = `\n\t\t\t\t<div class=\"max-w-[80%] p-3 rounded-lg text-sm bg-gray-100 text-gray-800\">\n\t\t\t\t\t<p class=\"whitespace-pre-wrap\">${message}</p>\n\t\t\t\t\t<p class=\"text-xs mt-1 opacity-70 text-gray-500\">\n\t\t\t\t\t\tLoci AI • ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}\n\t\t\t\t\t</p>\n\t\t\t\t</div>\n\t\t\t`;\n\t\t\tmessagesContainer.appendChild(aiMessage);\n\t\t\tmessagesContainer.scrollTop = messagesContainer.scrollHeight;\n\t\t}\n\n\t\tfunction updateItineraryDisplay(itineraryData) {\n\t\t\t// Find the main itinerary container and update it\n\t\t\tconst itineraryContainer = document.getElementById('itinerary-container');\n\t\t\tif (itineraryContainer && itineraryData) {\n\t\t\t\t// This would trigger a page refresh or HTMX update to show the new itinerary\n\t\t\t\t// For now, we'll just reload the page to show updates\n\t\t\t\tsetTimeout(() => {\n\t\t\t\t\twindow.location.reload();\n\t\t\t\t}, 2000);\n\t\t\t}\n\t\t}\n\n\t\t// Handle HTMX response (fallback for non-SSE)\n\t\tdocument.body.addEventListener('htmx:afterRequest', function(event) {\n\t\t\tif (event.detail.elt.id === 'chat-form') {\n\t\t\t\tisLoading = false;\n\t\t\t\tdocument.getElementById('chat-message').disabled = false;\n\t\t\t}\n\t\t});\n\n\t\t// Clean up on page unload\n\t\twindow.addEventListener('beforeunload', function() {\n\t\t\tif (eventSource) {\n\t\t\t\teventSource.close();\n\t\t\t}\n\t\t});\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!-- Chat Panel Overlay --><div x-show=\"showChat\" x-transition:enter=\"transition ease-out duration-300\" x-transition:enter-start=\"opacity-0\" x-transition:enter-end=\"opacity-100\" x-transition:leave=\"transition ease-in duration-200\" x-transition:leave-start=\"opacity-100\" x-transition:leave-end=\"opacity-0\" class=\"fixed inset-0 bg-black bg-opacity-50 z-40\" style=\"display: none;\" @click=\"showChat = false\"></div><!-- Chat Panel --><div x-show=\"showChat\" x-transition:enter=\"transition ease-out duration-300\" x-transition:enter-start=\"opacity-0 transform translate-x-full\" x-transition:enter-end=\"opacity-100 transform translate-x-0\" x-transition:leave=\"transition ease-in duration-200\" x-transition:leave-start=\"opacity-100 transform translate-x-0\" x-transition:leave-end=\"opacity-0 transform translate-x-full\" class=\"fixed right-0 top-0 h-full w-full sm:w-96 bg-white dark:bg-gray-800 shadow-xl z-50 flex flex-col\" style=\"display: none;\" @click.stop><!-- Chat Header --><div class=\"flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-600 to-blue-700\"><div class=\"flex items-center gap-3\"><div class=\"w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center\"><svg class=\"w-4 h-4 text-white\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.013 8.013 0 01-7.93-6.94c-.42-.51-.92-.92-1.43-1.25-.63-.41-.63-1.33 0-1.74.51-.33 1.01-.74 1.43-1.25A8.013 8.013 0 0113 4c4.418 0 8 3.582 8 8z\"></path></svg></div><div><h2 class=\"text-lg font-semibold text-white\">Continue Planning</h2><p class=\"text-xs text-blue-100\">Refine your itinerary with AI</p></div></div><button @click=\"showChat = false\" class=\"p-2 text-white hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M6 18L18 6M6 6l12 12\"></path></svg></button></div><!-- Chat Messages Area --><div class=\"flex-1 overflow-y-auto p-4 space-y-4\" x-ref=\"chatMessages\"><!-- Welcome Message --><div class=\"flex gap-3\"><div class=\"w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0\"><svg class=\"w-4 h-4 text-white\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z\"></path></svg></div><div class=\"flex-1\"><div class=\"bg-gray-100 dark:bg-gray-700 rounded-lg p-3\"><p class=\"text-sm text-gray-800 dark:text-gray-200\">Hi! I'm here to help you refine your itinerary. You can ask me to:</p><ul class=\"text-xs text-gray-600 dark:text-gray-300 mt-2 space-y-1\"><li>• Add more places to visit</li><li>• Remove or replace locations</li><li>• Get recommendations for specific activities</li><li>• Optimize your route</li><li>• Find places to eat nearby</li></ul></div></div></div><!-- Chat Messages Container --><div id=\"chat-messages-container\" class=\"space-y-4\"><!-- Messages will be dynamically added here --></div><!-- Loading Message --><div x-show=\"chatLoading\" class=\"flex gap-3\" style=\"display: none;\"><div class=\"w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0\"><div class=\"w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin\"></div></div><div class=\"flex-1\"><div class=\"bg-gray-100 dark:bg-gray-700 rounded-lg p-3\"><div class=\"flex items-center gap-2\"><div class=\"w-2 h-2 bg-gray-400 rounded-full animate-bounce\"></div><div class=\"w-2 h-2 bg-gray-400 rounded-full animate-bounce\" style=\"animation-delay: 0.1s\"></div><div class=\"w-2 h-2 bg-gray-400 rounded-full animate-bounce\" style=\"animation-delay: 0.2s\"></div></div></div></div></div></div><!-- Chat Input --><div class=\"border-t border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900\"><form @submit.prevent=\"sendChatMessage()\" class=\"flex gap-2\"><div class=\"flex-1 relative\"><textarea x-model=\"chatMessage\" x-ref=\"chatInput\" @keydown.enter.prevent=\"if(!$event.shiftKey) sendChatMessage()\" placeholder=\"Ask me to refine your itinerary...\" rows=\"2\" class=\"block w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-sm resize-none dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder-gray-400\" :disabled=\"chatLoading\"></textarea><div class=\"absolute bottom-2 right-2 text-xs text-gray-400\">Press Enter to send</div></div><button type=\"submit\" :disabled=\"!chatMessage.trim() || chatLoading\" class=\"px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0\"><svg x-show=\"!chatLoading\" class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 19l9 2-9-18-9 18 9-2zm0 0v-8\"></path></svg><div x-show=\"chatLoading\" class=\"w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin\" style=\"display: none;\"></div></button></form><!-- Quick Actions --><div class=\"flex flex-wrap gap-2 mt-3\"><button @click=\"setChatMessage('Add more restaurants to my itinerary')\" class=\"px-3 py-1 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors\">🍽️ Add restaurants</button> <button @click=\"setChatMessage('Find activities for the evening')\" class=\"px-3 py-1 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors\">🌙 Evening activities</button> <button @click=\"setChatMessage('Optimize the route between places')\" class=\"px-3 py-1 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors\">🗺️ Optimize route</button> <button @click=\"setChatMessage('Remove expensive activities')\" class=\"px-3 py-1 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors\">💰 Budget-friendly</button></div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -289,190 +38,162 @@ func ChatInterface(props ChatInterfaceProps) templ.Component {
 	})
 }
 
-func ChatMessageBubble(message models.ChatMessage, userMessageColor string) templ.Component {
-	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
-		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
-		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
-			return templ_7745c5c3_CtxErr
-		}
-		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
-		if !templ_7745c5c3_IsBuffer {
-			defer func() {
-				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
-				if templ_7745c5c3_Err == nil {
-					templ_7745c5c3_Err = templ_7745c5c3_BufErr
-				}
-			}()
-		}
-		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var18 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var18 == nil {
-			templ_7745c5c3_Var18 = templ.NopComponent
-		}
-		ctx = templ.ClearChildren(ctx)
-		var templ_7745c5c3_Var19 = []any{"flex", templ.KV("justify-end", message.Role == "user"), templ.KV("justify-start", message.Role != "user")}
-		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var19...)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<div class=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var20 string
-		templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var19).String())
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/chat_interface.templ`, Line: 1, Col: 0}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "\">")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var21 = []any{"max-w-[80%] p-3 rounded-lg text-sm",
-			templ.KV("bg-blue-600 text-white", message.Role == "user"),
-			templ.KV("bg-gray-100 text-gray-800", message.Role == "assistant"),
-			templ.KV("bg-red-100 text-red-800 border border-red-200", message.Role == "error")}
-		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var21...)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "<div class=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var22 string
-		templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var21).String())
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/chat_interface.templ`, Line: 1, Col: 0}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "\"><p class=\"whitespace-pre-wrap\">")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var23 string
-		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(message.Content)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/chat_interface.templ`, Line: 375, Col: 51}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "</p>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var24 = []any{"text-xs mt-1 opacity-70",
-			templ.KV("text-white text-opacity-70", message.Role == "user"),
-			templ.KV("text-gray-500", message.Role != "user")}
-		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var24...)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "<p class=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var25 string
-		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var24).String())
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/chat_interface.templ`, Line: 1, Col: 0}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "\">")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var26 string
-		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(message.Timestamp)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/chat_interface.templ`, Line: 379, Col: 23}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "</p></div></div>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		return nil
-	})
-}
+// Chat JavaScript for handling chat functionality
+func ChatScript(sessionId string) templ.ComponentScript {
+	return templ.ComponentScript{
+		Name: `__templ_ChatScript_bc0b`,
+		Function: `function __templ_ChatScript_bc0b(sessionId){// Initialize chat functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        // Chat message handling
+        window.sendChatMessage = function() {
+            const store = Alpine.store('itinerary');
+            const message = store.chatMessage.trim();
+            if (!message || store.chatLoading) return;
 
-// Utility functions for chat interface
-func getChatTitle(title string) string {
-	if title == "" {
-		return "Continue Planning"
-	}
-	return title
-}
+            // Add user message to chat
+            addChatMessage(message, 'user');
+            
+            // Clear input and set loading state
+            store.chatMessage = '';
+            store.chatLoading = true;
 
-func getChatPlaceholder(placeholder string) string {
-	if placeholder == "" {
-		return "Ask me to modify your itinerary..."
-	}
-	return placeholder
-}
+            // Send message to server
+            const sessionId = { templ.JSONString(sessionId) };
+            fetch('/api/chat/unified', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: message,
+                    session_id: sessionId,
+                    context: 'itinerary_refinement'
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                
+                // Handle streaming response
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let assistantMessage = '';
 
-func getChatEmptyTitle(title string) string {
-	if title == "" {
-		return "Ask me to modify your itinerary!"
-	}
-	return title
-}
+                function readStream() {
+                    return reader.read().then(({ done, value }) => {
+                        if (done) {
+                            store.chatLoading = false;
+                            return;
+                        }
 
-func getChatEmptySubtitle(subtitle string) string {
-	if subtitle == "" {
-		return `Try: "Add the Eiffel Tower" or "Remove expensive activities"`
-	}
-	return subtitle
-}
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
 
-func getChatLoadingMessage(message string) string {
-	if message == "" {
-		return "Updating your itinerary..."
-	}
-	return message
-}
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const data = JSON.parse(line.slice(6));
+                                    if (data.content) {
+                                        assistantMessage += data.content;
+                                        updateChatMessage(assistantMessage, 'assistant');
+                                    }
+                                    if (data.done) {
+                                        store.chatLoading = false;
+                                        return;
+                                    }
+                                } catch (e) {
+                                    console.log('Non-JSON line:', line);
+                                }
+                            }
+                        }
 
-func getHeaderColorClass(color string) string {
-	if color == "" {
-		return "bg-blue-600"
-	}
-	return color
-}
+                        return readStream();
+                    });
+                }
 
-func getUserMessageColorClass(color string) string {
-	if color == "" {
-		return "bg-blue-600 hover:bg-blue-700"
-	}
-	return color
-}
+                // Start reading the stream
+                addChatMessage('', 'assistant');
+                return readStream();
+            })
+            .catch(error => {
+                console.error('Chat error:', error);
+                addChatMessage('Sorry, I encountered an error. Please try again.', 'assistant');
+                store.chatLoading = false;
+            });
+        };
 
-func getFloatingButtonClass(color string) string {
-	if color == "" {
-		return "bg-blue-600 hover:bg-blue-700"
-	}
-	return color
-}
+        // Set chat message helper
+        window.setChatMessage = function(message) {
+            Alpine.store('itinerary').chatMessage = message;
+            const input = document.querySelector('[x-ref="chatInput"]');
+            if (input) input.focus();
+        };
 
-func getFocusRingClass(color string) string {
-	if color == "" {
-		return "focus:ring-blue-500"
+        // Add message to chat
+        function addChatMessage(message, sender) {
+            const container = document.getElementById('chat-messages-container');
+            if (!container) return;
+            
+            const messageId = 'msg-' + Date.now();
+            const messageDiv = document.createElement('div');
+            messageDiv.id = messageId;
+            messageDiv.className = 'flex gap-3';
+            
+            const isUser = sender === 'user';
+            messageDiv.innerHTML = ` + "`" + `
+                <div class="w-8 h-8 ${isUser ? 'bg-gray-600' : 'bg-blue-600'} rounded-full flex items-center justify-center flex-shrink-0">
+                    ${isUser ? 
+                        '<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>' :
+                        '<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"></path></svg>'
+                    }
+                </div>
+                <div class="flex-1">
+                    <div class="bg-${isUser ? 'blue-600 text-white' : 'gray-100 dark:bg-gray-700'} rounded-lg p-3">
+                        <p class="text-sm ${isUser ? 'text-white' : 'text-gray-800 dark:text-gray-200'}" id="${messageId}-content">
+                            ${message || (isUser ? '' : '<div class="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>')}
+                        </p>
+                    </div>
+                </div>
+            ` + "`" + `;
+            
+            container.appendChild(messageDiv);
+            scrollChatToBottom();
+            return messageId;
+        }
+
+        // Update existing message content
+        function updateChatMessage(message, sender) {
+            const containers = document.querySelectorAll('#chat-messages-container [id^="msg-"]');
+            if (containers.length > 0) {
+                const lastMessage = containers[containers.length - 1];
+                const contentElement = lastMessage.querySelector('[id$="-content"]');
+                if (contentElement) {
+                    contentElement.innerHTML = ` + "`" + `<span class="text-sm text-gray-800 dark:text-gray-200">${escapeHtml(message)}</span>` + "`" + `;
+                }
+            }
+            scrollChatToBottom();
+        }
+
+        // Scroll chat to bottom
+        function scrollChatToBottom() {
+            const chatMessages = document.querySelector('[x-ref="chatMessages"]');
+            if (chatMessages) {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+
+        // HTML escape function
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    });
+}`,
+		Call:       templ.SafeScript(`__templ_ChatScript_bc0b`, sessionId),
+		CallInline: templ.SafeScriptInline(`__templ_ChatScript_bc0b`, sessionId),
 	}
-	return color
 }
 
 var _ = templruntime.GeneratedTemplate

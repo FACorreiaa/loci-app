@@ -157,21 +157,7 @@ templ ItineraryResults(itinerary models.AIItineraryResponse, compact bool, showT
 	</script>
 	
 	<!-- Chat Interface for Itinerary Planning -->
-	@ChatInterface(ChatInterfaceProps{
-		SessionID:              "itinerary-chat-session", // TODO: Generate proper session ID
-		Title:                  "Continue Planning",
-		Placeholder:            "Ask me to modify your itinerary...",
-		EmptyStateTitle:        "Ask me to modify your itinerary!",
-		EmptyStateSubtitle:     `Try: "Add the Eiffel Tower" or "Remove expensive activities"`,
-		LoadingMessage:         "Updating your itinerary...",
-		HeaderColor:            "bg-blue-600",
-		UserMessageColor:       "bg-blue-600",
-		FloatingButtonColor:    "bg-blue-600 hover:bg-blue-700",
-		FocusRingColor:         "focus:ring-blue-500",
-		ShowChat:               false,
-		ChatHistory:            []models.ChatMessage{},
-		IsLoading:              false,
-	})
+	@ChatInterface("itinerary-chat-session")
 }
 
 templ ItineraryPOICard(poi models.POIDetailedInfo, priority int, isFavorite bool) {
