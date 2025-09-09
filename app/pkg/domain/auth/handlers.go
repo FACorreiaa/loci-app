@@ -88,7 +88,7 @@ func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate token
-	token, err := h.authService.GenerateToken(user.ID, user.Email, user.FullName)
+	token, err := h.authService.GenerateToken(user.ID, user.Email, user.Username)
 	if err != nil {
 		logger.Log.Error("Failed to generate token", zap.Error(err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)

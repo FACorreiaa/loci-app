@@ -89,6 +89,19 @@ templ LoggedInDashboard() {
 						What would you like to discover?
 					</h2>
 					<form id="dashboard-search-form">
+						<div class="space-y-3 mb-4">
+							<!-- Profile Selection -->
+							<div>
+								<label for="profile-select" class="block text-sm font-medium text-card-foreground mb-2">Search Profile</label>
+								<select 
+									id="profile-select"
+									name="profile-id"
+									class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background text-card-foreground"
+								>
+									<option value="">Loading profiles...</option>
+								</select>
+							</div>
+						</div>
 						<div class="flex items-end gap-3">
 							<div class="flex-1">
 								@t.Textarea(t.Props{
@@ -117,9 +130,13 @@ templ LoggedInDashboard() {
 						document.addEventListener('DOMContentLoaded', function() {
 							const form = document.getElementById('dashboard-search-form');
 							const searchInput = document.getElementById('dashboard-search');
+							const profileSelect = document.getElementById('profile-select');
 							const searchBtn = document.getElementById('search-btn');
 							const searchText = document.getElementById('search-text');
 							const resultsDiv = document.getElementById('dashboard-results');
+							
+							// Load user profiles on page load
+							loadUserProfiles();
 							
 							form.addEventListener('submit', function(e) {
 								e.preventDefault();
@@ -148,7 +165,7 @@ templ LoggedInDashboard() {
 												<div class="space-y-2">
 													<div class="flex items-center gap-3 text-blue-700 dark:text-blue-300">
 														<div class="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-														<span class="text-sm" id="status-text">Processing your request...</span>
+														<span class="text-sm" id="status-text">Processing with Gemini AI (this may take 5-6 seconds)...</span>
 													</div>
 													<div id="streaming-content" class="text-sm text-blue-600 dark:text-blue-400 space-y-1">
 														<!-- Streaming content will appear here -->
@@ -166,6 +183,12 @@ templ LoggedInDashboard() {
 							function startStreaming(query) {
 								const formData = new FormData();
 								formData.append('dashboard-search', query);
+								
+								// Include selected profile ID if available
+								const selectedProfileId = profileSelect.value;
+								if (selectedProfileId) {
+									formData.append('profile-id', selectedProfileId);
+								}
 								
 								fetch('/chat/stream', {
 									method: 'POST',
@@ -312,6 +335,66 @@ templ LoggedInDashboard() {
 								searchBtn.disabled = false;
 								searchText.textContent = 'Search';
 								searchBtn.classList.remove('opacity-75');
+							}
+							
+							function loadUserProfiles() {
+								fetch('/api/profiles', {
+									method: 'GET',
+									credentials: 'same-origin',
+									headers: {
+										'Accept': 'application/json'
+									}
+								})
+								.then(response => {
+									if (!response.ok) {
+										console.error('Failed to load profiles:', response.status, response.statusText);
+										throw new Error(`Failed to load profiles: ${response.status} ${response.statusText}`);
+									}
+									return response.json();
+								})
+								.then(profiles => {
+									console.log('Received profiles:', profiles);
+									profileSelect.innerHTML = '';
+									
+									if (profiles && profiles.length > 0) {
+										// Add default "Auto-select" option
+										const defaultOption = document.createElement('option');
+										defaultOption.value = '';
+										defaultOption.textContent = 'Auto-select profile';
+										profileSelect.appendChild(defaultOption);
+										
+										// Add each profile as an option
+										profiles.forEach(profile => {
+											const option = document.createElement('option');
+											option.value = profile.id;
+											option.textContent = profile.profile_name + (profile.is_default ? ' (Default)' : '');
+											if (profile.is_default) {
+												option.selected = true;
+											}
+											profileSelect.appendChild(option);
+										});
+									} else {
+										// No profiles found - offer to create one
+										const noProfilesOption = document.createElement('option');
+										noProfilesOption.value = '';
+										noProfilesOption.textContent = 'No profiles found - create one in Settings';
+										profileSelect.appendChild(noProfilesOption);
+										
+										// Disable the selector since there are no profiles to select
+										profileSelect.disabled = true;
+									}
+								})
+								.catch(error => {
+									console.error('Error loading profiles:', error);
+									profileSelect.innerHTML = '';
+									const errorOption = document.createElement('option');
+									errorOption.value = '';
+									errorOption.textContent = 'Error loading profiles - check console';
+									profileSelect.appendChild(errorOption);
+									
+									// Disable the selector since we couldn't load profiles
+									profileSelect.disabled = true;
+								});
 							}
 						});
 					</script>

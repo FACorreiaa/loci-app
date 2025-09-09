@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -20,6 +22,59 @@ type ProfilesHandler struct {
 func NewProfilesHandler(profileService profiles.Service) *ProfilesHandler {
 	return &ProfilesHandler{
 		profileService: profileService,
+	}
+}
+
+// handleProfileError provides consistent error handling for profile operations
+func (h *ProfilesHandler) handleProfileError(c *gin.Context, err error, operation string) {
+	logger.Log.Error("Profile operation failed", zap.String("operation", operation), zap.Error(err))
+	
+	switch {
+	case errors.Is(err, models.ErrNotFound):
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Profile not found", 
+			"details": "The requested profile does not exist or you don't have permission to access it",
+		})
+	case errors.Is(err, models.ErrConflict):
+		c.JSON(http.StatusConflict, gin.H{
+			"error": "Profile name conflict", 
+			"details": "A profile with this name already exists for your account",
+		})
+	case errors.Is(err, models.ErrBadRequest):
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid profile data", 
+			"details": err.Error(),
+		})
+	case errors.Is(err, models.ErrProfileNameEmpty):
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Profile name required", 
+			"details": "Profile name cannot be empty",
+		})
+	case errors.Is(err, models.ErrProfileNameTooLong):
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Profile name too long", 
+			"details": "Profile name cannot exceed 100 characters",
+		})
+	case errors.Is(err, models.ErrCannotDeleteDefault):
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Cannot delete default profile", 
+			"details": "You must have at least one profile, and cannot delete your default profile",
+		})
+	case errors.Is(err, models.ErrForbidden):
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "Access denied", 
+			"details": "You don't have permission to perform this operation on this profile",
+		})
+	case errors.Is(err, models.ErrValidation):
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Validation failed", 
+			"details": err.Error(),
+		})
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": fmt.Sprintf("Failed to %s profile", operation), 
+			"details": "An internal error occurred. Please try again later.",
+		})
 	}
 }
 
@@ -124,8 +179,7 @@ func (h *ProfilesHandler) CreateProfile(c *gin.Context) {
 
 	profile, err := h.profileService.CreateSearchProfile(c.Request.Context(), userID, params)
 	if err != nil {
-		logger.Log.Error("Failed to create profile", zap.String("userID", userIDStr), zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create profile"})
+		h.handleProfileError(c, err, "create")
 		return
 	}
 
@@ -171,12 +225,7 @@ func (h *ProfilesHandler) UpdateProfile(c *gin.Context) {
 	}
 
 	if err := h.profileService.UpdateSearchProfile(c.Request.Context(), userID, profileID, params); err != nil {
-		logger.Log.Error("Failed to update profile", zap.String("userID", userIDStr), zap.String("profileID", profileIDStr), zap.Error(err))
-		if err == models.ErrNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
+		h.handleProfileError(c, err, "update")
 		return
 	}
 
@@ -213,12 +262,7 @@ func (h *ProfilesHandler) DeleteProfile(c *gin.Context) {
 	}
 
 	if err := h.profileService.DeleteSearchProfile(c.Request.Context(), userID, profileID); err != nil {
-		logger.Log.Error("Failed to delete profile", zap.String("userID", userIDStr), zap.String("profileID", profileIDStr), zap.Error(err))
-		if err == models.ErrNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete profile"})
+		h.handleProfileError(c, err, "delete")
 		return
 	}
 

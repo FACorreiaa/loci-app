@@ -415,6 +415,15 @@ func (s *AuthServiceImpl) GetOrCreateUserFromProvider(ctx context.Context, provi
 		return nil, err
 	}
 
+	// Create default profile for new user
+	err = s.createDefaultProfile(ctx, newUser.ID)
+	if err != nil {
+		// Log error but don't fail user creation
+		s.logger.WarnContext(ctx, "Failed to create default profile for new user", 
+			slog.String("userID", newUser.ID), 
+			slog.Any("error", err))
+	}
+
 	return newUser, nil
 }
 
@@ -454,4 +463,22 @@ func (s *AuthServiceImpl) HashPassword(password string) (string, error) {
 func (s *AuthServiceImpl) CheckPassword(hashedPassword, password string) bool {
 	jwtService := NewJWTService()
 	return jwtService.CheckPassword(hashedPassword, password)
+}
+
+// createDefaultProfile creates a default profile for a new user
+// This is a placeholder implementation - in a production system, you would
+// inject a ProfileService dependency into AuthServiceImpl
+func (s *AuthServiceImpl) createDefaultProfile(ctx context.Context, userIDStr string) error {
+	// For now, just log that we should create a default profile
+	// In a proper implementation, you would:
+	// 1. Parse userIDStr to uuid.UUID
+	// 2. Call profileService.CreateSearchProfile with default values
+	// 3. Handle any errors appropriately
+	
+	s.logger.InfoContext(ctx, "Default profile creation needed", 
+		slog.String("userID", userIDStr),
+		slog.String("note", "Profile service integration required"))
+	
+	// TODO: Implement actual profile creation when profile service is injected
+	return nil
 }

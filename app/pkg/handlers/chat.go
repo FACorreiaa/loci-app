@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -193,8 +194,8 @@ func (h *ChatHandlers) callLLMStreamingServiceWithData(query, userID string) (ma
 
 	// Process the request using internal service
 	go func() {
-		defer close(eventCh)
-
+		// Don't close eventCh here - let the service handle it
+		
 		err := h.llmService.ProcessUnifiedChatMessageStream(
 			ctx,
 			userUUID,
@@ -582,9 +583,54 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 		c.String(http.StatusBadRequest, "Invalid user ID")
 		return
 	}
-	profile, err := h.profileService.GetDefaultSearchProfile(c, userID)
-	profileIDStr := profile.ID.String()
-	fmt.Printf("profileIDStr: %s\n", profileIDStr)
+	// Check if a specific profile ID was provided in the form
+	var profileID uuid.UUID
+	profileIDStr := c.PostForm("profile-id")
+	if profileIDStr != "" {
+		// Use the provided profile ID
+		parsedProfileID, err := uuid.Parse(profileIDStr)
+		if err != nil {
+			logger.Log.Error("Invalid profile ID provided", zap.String("profileID", profileIDStr), zap.Error(err))
+			c.String(http.StatusBadRequest, "Invalid profile ID")
+			return
+		}
+		
+		// Verify the profile belongs to this user
+		profile, err := h.profileService.GetSearchProfile(c, userID, parsedProfileID)
+		if err != nil {
+			logger.Log.Error("Profile not found or doesn't belong to user", 
+				zap.String("userID", userID.String()),
+				zap.String("profileID", profileIDStr),
+				zap.Error(err))
+			
+			// Provide user-friendly error based on error type
+			if errors.Is(err, models.ErrNotFound) {
+				c.String(http.StatusNotFound, "Profile not found or you don't have access to it")
+			} else if errors.Is(err, models.ErrForbidden) {
+				c.String(http.StatusForbidden, "Access denied to this profile")
+			} else {
+				c.String(http.StatusInternalServerError, "Unable to verify profile access")
+			}
+			return
+		}
+		profileID = profile.ID
+	} else {
+		// Use default profile
+		profile, err := h.profileService.GetDefaultSearchProfile(c, userID)
+		if err != nil {
+			logger.Log.Error("Failed to get default profile", zap.Error(err))
+			
+			// Provide specific error messages
+			if errors.Is(err, models.ErrNotFound) {
+				c.String(http.StatusNotFound, "No default profile found. Please create a profile first.")
+			} else {
+				c.String(http.StatusInternalServerError, "Unable to retrieve user profile")
+			}
+			return
+		}
+		profileID = profile.ID
+	}
+	fmt.Printf("profileID: %s\n", profileID.String())
 
 	// Set SSE headers
 	c.Header("Content-Type", "text/event-stream")
@@ -602,88 +648,35 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 		return
 	}
 
-	// Create event channel for streaming
-	eventCh := make(chan models.StreamEvent, 100)
+	// Create event channel for streaming (larger buffer for Gemini SDK)
+	eventCh := make(chan models.StreamEvent, 200)
 
 	// Process the request in a goroutine
 	go func() {
-		defer close(eventCh)
+		// Don't close eventCh here - let the service handle it
+		logger.Log.Info("Processing authenticated user request",
+			zap.String("userID", userID.String()),
+			zap.String("profileID", profileID.String()),
+			zap.String("message", message))
 
-		if profileIDStr != "" {
-			// Authenticated user path
-			userID, err := uuid.Parse(profileIDStr)
-			if err != nil {
-				logger.Log.Error("Invalid profile ID", zap.String("profile ID", profileIDStr), zap.Error(err))
-				eventCh <- models.StreamEvent{
-					Type:      models.EventTypeError,
-					Message:   "Invalid profile ID",
-					Error:     err.Error(),
-					Timestamp: time.Now(),
-					EventID:   uuid.New().String(),
-				}
-				return
-			}
-
-			// Get user's default profile ID (you may need to fetch this from your profiles service)
-			// For now, using a placeholder - you should replace this with actual profile lookup
-			profileID, err := h.getDefaultProfileID(c.Request.Context(), userID)
-			if err != nil {
-				logger.Log.Error("Failed to get default profile", zap.Error(err))
-				eventCh <- models.StreamEvent{
-					Type:      models.EventTypeError,
-					Message:   "Failed to get user profile",
-					Error:     err.Error(),
-					Timestamp: time.Now(),
-					EventID:   uuid.New().String(),
-				}
-				return
-			}
-
-			logger.Log.Info("Processing authenticated user request",
-				zap.String("userID", userID.String()),
-				zap.String("profileID", profileID.String()),
-				zap.String("message", message))
-
-			// Call the actual LLM service with profile
-			err = h.llmService.ProcessUnifiedChatMessageStream(
-				c.Request.Context(),
-				userID,
-				profileID,
-				"", // cityName - empty for auto-detection
-				message,
-				nil, // userLocation - could be added later
-				eventCh,
-			)
-			if err != nil {
-				logger.Log.Error("Failed to process authenticated chat stream", zap.Error(err))
-				eventCh <- models.StreamEvent{
-					Type:      models.EventTypeError,
-					Message:   "Failed to process request",
-					Error:     err.Error(),
-					Timestamp: time.Now(),
-					EventID:   uuid.New().String(),
-				}
-			}
-		} else {
-			// Free/unauthenticated user path
-			logger.Log.Info("Processing free user request", zap.String("message", message))
-
-			err := h.llmService.ProcessUnifiedChatMessageStreamFree(
-				c.Request.Context(),
-				"", // cityName - empty for auto-detection
-				message,
-				nil, // userLocation - could be added later
-				eventCh,
-			)
-			if err != nil {
-				logger.Log.Error("Failed to process free chat stream", zap.Error(err))
-				eventCh <- models.StreamEvent{
-					Type:      models.EventTypeError,
-					Message:   "Failed to process request",
-					Error:     err.Error(),
-					Timestamp: time.Now(),
-					EventID:   uuid.New().String(),
-				}
+		// Call the LLM service with proper user and profile IDs
+		err := h.llmService.ProcessUnifiedChatMessageStream(
+			middleware.CreateContextWithUser(c),
+			userID,
+			profileID,
+			"", // cityName - empty for auto-detection
+			message,
+			nil, // userLocation
+			eventCh,
+		)
+		if err != nil {
+			logger.Log.Error("Failed to process authenticated chat stream", zap.Error(err))
+			eventCh <- models.StreamEvent{
+				Type:      models.EventTypeError,
+				Message:   "Failed to process request",
+				Error:     err.Error(),
+				Timestamp: time.Now(),
+				EventID:   uuid.New().String(),
 			}
 		}
 	}()
@@ -891,8 +884,8 @@ func (h *ChatHandlers) HandleItineraryStream(c *gin.Context) {
 
 	// Process the request in a goroutine
 	go func() {
-		defer close(eventCh)
-
+		// Don't close eventCh here - let the service handle it
+		
 		if userIDStr != "" && userIDStr != "anonymous" {
 			// Authenticated user path
 			userID, err := uuid.Parse(userIDStr)
