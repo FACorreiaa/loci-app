@@ -2683,23 +2683,40 @@ func (l *ServiceImpl) streamWorkerWithResponseAndCache(ctx context.Context, prom
 	}
 }
 
-// cacheItineraryIfAvailable attempts to cache itinerary data from unified stream responses
+// cacheItineraryIfAvailable attempts to cache complete response data from unified stream responses
 func (l *ServiceImpl) cacheItineraryIfAvailable(ctx context.Context, sessionID uuid.UUID, responses map[string]*strings.Builder, responsesMutex *sync.Mutex) {
 	responsesMutex.Lock()
 	defer responsesMutex.Unlock()
 
-	if itineraryBuilder, exists := responses["itinerary"]; exists && itineraryBuilder != nil {
-		itineraryResponse := itineraryBuilder.String()
-		if parsedItinerary, err := parseItineraryFromResponse(itineraryResponse, l.logger); err == nil && parsedItinerary != nil {
-			l.logger.InfoContext(ctx, "Caching unified chat itinerary data",
-				slog.String("sessionID", sessionID.String()),
-				slog.String("itineraryName", parsedItinerary.ItineraryName),
-				slog.Int("poisCount", len(parsedItinerary.PointsOfInterest)))
-			middleware.ItineraryCache.Set(sessionID.String(), *parsedItinerary)
-		} else {
-			l.logger.WarnContext(ctx, "Failed to parse unified chat itinerary for caching",
-				slog.String("sessionID", sessionID.String()),
-				slog.Any("error", err))
+	// Try to parse and cache complete response with all three parts
+	if completeResponse, err := l.parseCompleteResponseFromParts(responses, sessionID); err == nil && completeResponse != nil {
+		l.logger.InfoContext(ctx, "Caching complete unified chat response data",
+			slog.String("sessionID", sessionID.String()),
+			slog.String("cityName", completeResponse.GeneralCityData.City),
+			slog.Int("generalPOIsCount", len(completeResponse.PointsOfInterest)),
+			slog.String("itineraryName", completeResponse.AIItineraryResponse.ItineraryName),
+			slog.Int("itineraryPOIsCount", len(completeResponse.AIItineraryResponse.PointsOfInterest)))
+		
+		// Cache in both systems for backwards compatibility
+		middleware.CompleteItineraryCache.Set(sessionID.String(), *completeResponse)
+		if completeResponse.AIItineraryResponse.ItineraryName != "" || len(completeResponse.AIItineraryResponse.PointsOfInterest) > 0 {
+			middleware.ItineraryCache.Set(sessionID.String(), completeResponse.AIItineraryResponse)
+		}
+	} else {
+		l.logger.WarnContext(ctx, "Failed to parse complete unified chat response for caching",
+			slog.String("sessionID", sessionID.String()),
+			slog.Any("error", err))
+		
+		// Fallback: try to cache just the itinerary part
+		if itineraryBuilder, exists := responses["itinerary"]; exists && itineraryBuilder != nil {
+			itineraryResponse := itineraryBuilder.String()
+			if parsedItinerary, err := parseItineraryFromResponse(itineraryResponse, l.logger); err == nil && parsedItinerary != nil {
+				l.logger.InfoContext(ctx, "Caching fallback itinerary data",
+					slog.String("sessionID", sessionID.String()),
+					slog.String("itineraryName", parsedItinerary.ItineraryName),
+					slog.Int("poisCount", len(parsedItinerary.PointsOfInterest)))
+				middleware.ItineraryCache.Set(sessionID.String(), *parsedItinerary)
+			}
 		}
 	}
 }
@@ -2741,4 +2758,58 @@ func parseItineraryFromResponse(responseText string, logger *slog.Logger) (*mode
 
 	logger.Debug("parseItineraryFromResponse: Could not parse response as itinerary", "error", err)
 	return nil, fmt.Errorf("failed to parse itinerary: %w", err)
+}
+
+// parseCompleteResponseFromParts parses a complete AiCityResponse from individual SSE response parts
+func (l *ServiceImpl) parseCompleteResponseFromParts(responses map[string]*strings.Builder, sessionID uuid.UUID) (*models.AiCityResponse, error) {
+	completeResponse := &models.AiCityResponse{
+		SessionID: sessionID,
+	}
+	
+	// Parse city_data part
+	if cityDataBuilder, exists := responses["city_data"]; exists && cityDataBuilder != nil {
+		cityDataStr := cityDataBuilder.String()
+		if cityDataStr != "" {
+			cleanedCityData := cleanJSONResponse(cityDataStr)
+			var cityData models.GeneralCityData
+			if err := json.Unmarshal([]byte(cleanedCityData), &cityData); err != nil {
+				l.logger.Warn("Failed to parse city_data part", slog.Any("error", err))
+			} else {
+				completeResponse.GeneralCityData = cityData
+			}
+		}
+	}
+	
+	// Parse general_pois part
+	if poisBuilder, exists := responses["general_pois"]; exists && poisBuilder != nil {
+		poisStr := poisBuilder.String()
+		if poisStr != "" {
+			cleanedPOIs := cleanJSONResponse(poisStr)
+			var pois []models.POIDetailedInfo
+			if err := json.Unmarshal([]byte(cleanedPOIs), &pois); err != nil {
+				l.logger.Warn("Failed to parse general_pois part", slog.Any("error", err))
+			} else {
+				completeResponse.PointsOfInterest = pois
+			}
+		}
+	}
+	
+	// Parse itinerary part
+	if itineraryBuilder, exists := responses["itinerary"]; exists && itineraryBuilder != nil {
+		itineraryStr := itineraryBuilder.String()
+		if parsedItinerary, err := parseItineraryFromResponse(itineraryStr, l.logger); err == nil && parsedItinerary != nil {
+			completeResponse.AIItineraryResponse = *parsedItinerary
+		} else {
+			l.logger.Warn("Failed to parse itinerary part", slog.Any("error", err))
+		}
+	}
+	
+	// Validate that we have at least some data
+	if completeResponse.GeneralCityData.City == "" && 
+	   len(completeResponse.PointsOfInterest) == 0 && 
+	   completeResponse.AIItineraryResponse.ItineraryName == "" {
+		return nil, fmt.Errorf("no valid data found in any response parts")
+	}
+	
+	return completeResponse, nil
 }

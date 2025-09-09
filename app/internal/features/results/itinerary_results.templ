@@ -92,9 +92,6 @@ templ ItineraryResults(cityData models.GeneralCityData, generalPOIs []models.POI
 							</svg>
 							Continue Planning
 						</button>
-						<!-- Debug Status (Remove after testing) -->
-						<div class="text-xs text-gray-600 dark:text-gray-400" x-text="'Chat: ' + (showChat ? 'Open' : 'Closed')"></div>
-						<button @click="alert('Alpine.js is working! showChat=' + showChat)" class="text-xs px-2 py-1 bg-gray-200 rounded">Debug</button>
 						<button @click="toggleBookmark()"
 								:class="isBookmarked ? 'text-red-600 bg-red-50 hover:bg-red-100' : 'text-gray-700 hover:bg-gray-100'"
 								class="p-2 rounded-lg transition-colors">
@@ -156,7 +153,8 @@ templ ItineraryResults(cityData models.GeneralCityData, generalPOIs []models.POI
 				 x-transition:leave="transition ease-in duration-150" 
 				 x-transition:leave-start="opacity-100 transform translate-y-0" 
 				 x-transition:leave-end="opacity-0 transform -translate-y-2"
-				 class="sm:hidden border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+				 class="sm:hidden border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900"
+				 style="display: none;">
 				<div class="px-4 py-3 space-y-2">
 					<button @click="showChat = true; showMobileMenu = false" 
 							class="w-full flex items-center gap-3 px-3 py-2 text-left text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
@@ -452,6 +450,7 @@ templ ItineraryResults(cityData models.GeneralCityData, generalPOIs []models.POI
 		 x-transition:leave-start="opacity-100" 
 		 x-transition:leave-end="opacity-0"
 		 class="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50"
+		 style="display: none;" 
 		 @click="selectedPOI = null">
 		@POIDetailsModal()
 	</div>
