@@ -175,82 +175,148 @@ func (h *ChatHandlers) HandleChatStreamConnect(c *gin.Context) {
 		(function() {
 			var isProcessingComplete = false;
 			var sseContainer = document.getElementById('sse-container');
+			var eventSource = null;
 			
-			// Listen for SSE events
-			document.body.addEventListener('htmx:sseMessage', function(e) {
-				if (!e.detail || !e.detail.data) return;
+			console.log('SSE event handlers initialized');
+			
+			// Function to handle navigation
+			function handleNavigation(url) {
+				console.log('Handling navigation to:', url);
 				
-				try {
-					var eventData = JSON.parse(e.detail.data);
-					console.log('SSE Event received:', eventData);
+				// Update status to show completion
+				var statusText = document.getElementById('status-text');
+				if (statusText) {
+					statusText.textContent = 'Analysis complete! Redirecting to results...';
+				}
+				
+				// Close SSE connection before navigation
+				if (eventSource) {
+					console.log('Closing EventSource connection');
+					eventSource.close();
+					eventSource = null;
+				}
+				
+				if (sseContainer) {
+					console.log('Updating SSE container');
+					// Remove the sse-connect attribute to prevent reconnection
+					sseContainer.removeAttribute('sse-connect');
+					sseContainer.innerHTML = '<div class="text-center text-green-600">Redirecting to results...</div>';
+				}
+				
+				// Navigate to the results page
+				setTimeout(function() {
+					console.log('Navigating to:', url);
+					window.location.href = url;
+				}, 500);
+			}
+			
+			// Setup native EventSource connection for SSE
+			function setupEventSource() {
+				// Get the SSE URL from the container
+				var sseUrl = sseContainer ? sseContainer.getAttribute('sse-connect') : null;
+				if (!sseUrl) {
+					console.error('No SSE URL found in sse-connect attribute');
+					return;
+				}
+				
+				console.log('Setting up EventSource for URL:', sseUrl);
+				eventSource = new EventSource(sseUrl);
+				
+				eventSource.onmessage = function(event) {
+					if (isProcessingComplete) {
+						console.log('Ignoring message - processing already complete');
+						return;
+					}
 					
-					// Handle completion event with navigation
-					if (eventData.type === 'complete' && eventData.navigation && !isProcessingComplete) {
-						isProcessingComplete = true;
-						console.log('Processing complete, navigating to:', eventData.navigation.url);
+					try {
+						var eventData = JSON.parse(event.data);
+						console.log('Native SSE Event received:', eventData);
 						
-						// Update status to show completion
+						// Handle completion event with navigation
+						if (eventData.type === 'complete' && eventData.navigation && !isProcessingComplete) {
+							isProcessingComplete = true;
+							console.log('Processing complete detected, navigating to:', eventData.navigation.url);
+							handleNavigation(eventData.navigation.url);
+							return;
+						}
+						
+						// Handle explicit SSE close event
+						if (eventData.type === 'sse-close' && !isProcessingComplete) {
+							isProcessingComplete = true;
+							console.log('SSE connection explicitly closed');
+							
+							if (eventSource) {
+								eventSource.close();
+								eventSource = null;
+							}
+							return;
+						}
+						
+						// Update status for other events
+						if (eventData.type === 'start') {
+							var statusText = document.getElementById('status-text');
+							if (statusText) {
+								statusText.textContent = 'AI analysis started...';
+							}
+						} else if (eventData.type === 'chunk') {
+							var statusText = document.getElementById('status-text');
+							if (statusText) {
+								statusText.textContent = 'Generating recommendations...';
+							}
+						}
+						
+					} catch (error) {
+						console.error('Error parsing SSE event:', error);
+					}
+				};
+				
+				eventSource.onerror = function(error) {
+					console.error('EventSource error:', error);
+					if (!isProcessingComplete) {
 						var statusText = document.getElementById('status-text');
 						if (statusText) {
-							statusText.textContent = 'Analysis complete! Redirecting to results...';
+							statusText.textContent = 'Connection error. Please try again.';
 						}
-						
-						// Close SSE connection before navigation
-						if (sseContainer) {
-							sseContainer.dispatchEvent(new CustomEvent('sse-close'));
-							sseContainer.removeAttribute('sse-connect');
-						}
-						
-						// Navigate to the results page after a short delay
-						setTimeout(function() {
-							window.location.href = eventData.navigation.url;
-						}, 1000);
 					}
+				};
+				
+				eventSource.onopen = function(event) {
+					console.log('EventSource connection opened:', event);
+				};
+			}
+			
+			// Initialize EventSource if we have an SSE container
+			if (sseContainer) {
+				setupEventSource();
+			}
+			
+			// Also add fallback HTMX event listeners in case they're needed
+			function addHTMXEventListeners() {
+				document.body.addEventListener('htmx:sseMessage', function(e) {
+					console.log('HTMX SSE message received (fallback):', e);
+					if (!e.detail || !e.detail.data) return;
 					
-					// Handle explicit SSE close event
-					if (eventData.type === 'sse-close' && !isProcessingComplete) {
-						isProcessingComplete = true;
-						console.log('SSE connection explicitly closed');
-						
-						// Remove SSE connection attributes to prevent reconnection
-						if (sseContainer) {
-							sseContainer.removeAttribute('sse-connect');
+					try {
+						var eventData = JSON.parse(e.detail.data);
+						if (eventData.type === 'complete' && eventData.navigation && !isProcessingComplete) {
+							isProcessingComplete = true;
+							handleNavigation(eventData.navigation.url);
 						}
+					} catch (error) {
+						console.error('Error parsing HTMX SSE event:', error);
 					}
-				} catch (error) {
-					console.error('Error parsing SSE event:', error);
+				});
+			}
+			
+			addHTMXEventListeners();
+			
+			// Cleanup on page unload
+			window.addEventListener('beforeunload', function() {
+				if (eventSource) {
+					eventSource.close();
 				}
 			});
 			
-			// Handle SSE connection errors
-			document.body.addEventListener('htmx:sseError', function(e) {
-				console.error('SSE connection error:', e.detail);
-				if (!isProcessingComplete) {
-					var statusText = document.getElementById('status-text');
-					if (statusText) {
-						statusText.textContent = 'Connection error. Please try again.';
-					}
-				}
-			});
-			
-			// Handle SSE connection close
-			document.body.addEventListener('htmx:sseClose', function(e) {
-				console.log('SSE connection closed:', e.detail);
-				if (!isProcessingComplete) {
-					var statusText = document.getElementById('status-text');
-					if (statusText) {
-						statusText.textContent = 'Connection closed unexpectedly. Please refresh and try again.';
-					}
-				}
-			});
-			
-			// Prevent automatic reconnection after completion
-			document.body.addEventListener('htmx:sseBeforeMessage', function(e) {
-				if (isProcessingComplete) {
-					e.preventDefault();
-					return false;
-				}
-			});
 		})();
 		</script>
 	`, sseURL))

@@ -36,6 +36,9 @@ server:
 tailwind:
 	tailwindcss -i ./assets/css/input.css -o ./assets/css/output.css --watch
 
+tailwind-build:
+	tailwindcss -i ./assets/css/input.css -o ./assets/css/output.css --build
+
 #db up
 db-up:
 	docker compose up --build
