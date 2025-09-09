@@ -353,6 +353,8 @@ func (h *ChatHandlers) SendMessage(c *gin.Context) {
 	)
 
 	message := c.PostForm("message")
+	sessionID := c.PostForm("session_id")
+	
 	if message == "" {
 		logger.Log.Warn("Empty chat message received")
 		c.String(http.StatusBadRequest, `<div class="text-red-500">Message cannot be empty</div>`)
@@ -361,39 +363,87 @@ func (h *ChatHandlers) SendMessage(c *gin.Context) {
 
 	logger.Log.Info("Processing chat message",
 		zap.String("message", message),
+		zap.String("sessionID", sessionID),
 		zap.String("user", middleware.GetUserIDFromContext(c)),
 	)
 
-	// Simulate AI response (in real app, this would call your AI service)
-	response := "Thanks for your message! I'm here to help you discover amazing places. What would you like to explore?"
-
-	// Return HTMX response with user message and AI response
-	c.String(http.StatusOK, `
-		<!-- User Message -->
-		<div class="flex justify-end mb-4">
-			<div class="max-w-xs sm:max-w-lg">
-				<div class="bg-blue-600 text-white rounded-2xl rounded-tr-md p-3">
-					<p class="text-sm">`+message+`</p>
-				</div>
-				<p class="text-xs text-muted-foreground mt-1 mr-1 text-right">You • now</p>
+	// Get user ID for authenticated users
+	userIDStr := middleware.GetUserIDFromContext(c)
+	if userIDStr == "" || userIDStr == "anonymous" {
+		logger.Log.Warn("Chat message from unauthenticated user")
+		c.String(http.StatusUnauthorized, `
+			<div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-3 text-sm">
+				<p class="text-yellow-700 dark:text-yellow-300">Please sign in to use the chat feature.</p>
 			</div>
-		</div>
+		`)
+		return
+	}
 
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		c.String(http.StatusBadRequest, `<div class="text-red-500">Invalid user session</div>`)
+		return
+	}
+
+	// Get user's default profile
+	profile, err := h.profileService.GetDefaultSearchProfile(c, userID)
+	if err != nil {
+		logger.Log.Error("Failed to get user profile", zap.Error(err))
+		c.String(http.StatusInternalServerError, `<div class="text-red-500">Unable to process request</div>`)
+		return
+	}
+
+	// Process the message through AI service for itinerary modification
+	// Create event channel for potential streaming response
+	eventCh := make(chan models.StreamEvent, 100)
+	
+	// Process in goroutine
+	go func() {
+		err := h.llmService.ProcessUnifiedChatMessageStream(
+			c.Request.Context(),
+			userID,
+			profile.ID,
+			"", // cityName - empty for context-based
+			message,
+			nil, // userLocation
+			eventCh,
+		)
+		if err != nil {
+			logger.Log.Error("Failed to process chat message", zap.Error(err))
+			eventCh <- models.StreamEvent{
+				Type:      models.EventTypeError,
+				Message:   "Failed to process request",
+				Error:     err.Error(),
+				Timestamp: time.Now(),
+				EventID:   uuid.New().String(),
+			}
+		}
+	}()
+
+	// For chat interface, we want to return quick response and then handle streaming updates
+	// First return the AI response bubble
+	response := "I'm analyzing your request and updating your itinerary. Please wait a moment..."
+	
+	c.String(http.StatusOK, fmt.Sprintf(`
 		<!-- AI Response -->
-		<div class="flex items-start gap-3 mb-4">
-			<div class="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
-				<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
-				</svg>
-			</div>
-			<div class="flex-1 max-w-xs sm:max-w-lg">
-				<div class="bg-accent rounded-2xl rounded-tl-md p-3">
-					<p class="text-sm text-card-foreground">`+response+`</p>
-				</div>
-				<p class="text-xs text-muted-foreground mt-1 ml-1">Loci AI • now</p>
+		<div class="flex justify-start mb-4">
+			<div class="max-w-[80%%] p-3 rounded-lg text-sm bg-gray-100 text-gray-800">
+				<p class="whitespace-pre-wrap">%s</p>
+				<p class="text-xs mt-1 opacity-70 text-gray-500">
+					Loci AI • %s
+				</p>
 			</div>
 		</div>
-	`)
+
+		<!-- SSE Connection for streaming updates -->
+		<div id="chat-sse-container" 
+			hx-ext="sse" 
+			sse-connect="/chat/stream?message=%s&session_id=%s"
+			style="display: none;">
+			<div sse-swap="itinerary" hx-target="#itinerary-container" hx-swap="outerHTML"></div>
+		</div>
+	`, response, time.Now().Format("15:04"), message, sessionID))
 
 	logger.Log.Info("Chat message processed successfully",
 		zap.String("user", middleware.GetUserIDFromContext(c)),
@@ -1152,6 +1202,138 @@ func (h *ChatHandlers) generateStreamingResponse(query string) string {
 		}, 3000);
 		</script>
 	`, query, query)
+}
+
+// HandleChatStream handles SSE streaming for chat messages in itinerary modification
+func (h *ChatHandlers) HandleChatStream(c *gin.Context) {
+	logger.Log.Info("Chat stream request received",
+		zap.String("ip", c.ClientIP()),
+		zap.String("user", middleware.GetUserIDFromContext(c)),
+	)
+
+	// Support both parameter names for backward compatibility
+	message := c.Query("message")
+	if message == "" {
+		message = c.Query("dashboard-search")
+	}
+	
+	sessionID := c.Query("session_id")
+	
+	if message == "" {
+		logger.Log.Warn("Empty message for chat stream")
+		c.String(http.StatusBadRequest, "Message parameter is required (use 'message' or 'dashboard-search')")
+		return
+	}
+
+	// Get user ID for authenticated users
+	userIDStr := middleware.GetUserIDFromContext(c)
+	if userIDStr == "" || userIDStr == "anonymous" {
+		logger.Log.Warn("Chat stream from unauthenticated user")
+		c.String(http.StatusUnauthorized, "Authentication required")
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		c.String(http.StatusBadRequest, "Invalid user ID")
+		return
+	}
+
+	// Get user's default profile
+	profile, err := h.profileService.GetDefaultSearchProfile(c, userID)
+	if err != nil {
+		logger.Log.Error("Failed to get user profile", zap.Error(err))
+		c.String(http.StatusInternalServerError, "Unable to retrieve user profile")
+		return
+	}
+
+	// Set SSE headers
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("Access-Control-Allow-Origin", "*")
+	c.Header("Access-Control-Allow-Headers", "Cache-Control")
+	c.Header("X-Accel-Buffering", "no") // Disable nginx buffering
+
+	// Set up flusher for real-time streaming
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		logger.Log.Error("Response writer does not support flushing")
+		c.String(http.StatusInternalServerError, "Streaming not supported")
+		return
+	}
+
+	// Create event channel for streaming
+	eventCh := make(chan models.StreamEvent, 200)
+
+	// Process the request in a goroutine
+	go func() {
+		logger.Log.Info("Processing chat stream request",
+			zap.String("userID", userID.String()),
+			zap.String("profileID", profile.ID.String()),
+			zap.String("message", message),
+			zap.String("sessionID", sessionID))
+
+		// Call the LLM service for itinerary modification
+		err := h.llmService.ProcessUnifiedChatMessageStream(
+			c.Request.Context(),
+			userID,
+			profile.ID,
+			"", // cityName - empty for context-based
+			message,
+			nil, // userLocation
+			eventCh,
+		)
+		if err != nil {
+			logger.Log.Error("Failed to process chat stream", zap.Error(err))
+			eventCh <- models.StreamEvent{
+				Type:      models.EventTypeError,
+				Message:   "Failed to process request",
+				Error:     err.Error(),
+				Timestamp: time.Now(),
+				EventID:   uuid.New().String(),
+			}
+		}
+	}()
+
+	// Stream events to client as they arrive
+	for {
+		select {
+		case event, ok := <-eventCh:
+			if !ok {
+				logger.Log.Info("Chat stream channel closed, ending stream")
+				return
+			}
+
+			eventData, err := json.Marshal(event)
+			if err != nil {
+				logger.Log.Error("Failed to marshal chat event", zap.Error(err))
+				continue
+			}
+
+			// Print streamed response to terminal
+			fmt.Printf("Chat SSE >> %s\n", eventData)
+
+			fmt.Fprintf(c.Writer, "data: %s\n\n", eventData)
+			flusher.Flush()
+
+			// End stream on complete or error
+			if event.Type == models.EventTypeComplete || event.Type == models.EventTypeError {
+				logger.Log.Info("Chat stream completed", zap.String("eventType", event.Type))
+				
+				// Send a final SSE close message
+				fmt.Fprintf(c.Writer, "data: {\"type\":\"sse-close\"}\n\n")
+				flusher.Flush()
+				
+				return
+			}
+
+		case <-c.Request.Context().Done():
+			logger.Log.Info("Chat stream client disconnected")
+			return
+		}
+	}
 }
 
 // HandleItineraryStream handles SSE streaming for itinerary queries using internal service

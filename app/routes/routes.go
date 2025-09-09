@@ -669,6 +669,8 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		// Chat endpoints
 		htmxGroup.POST("/chat/message", chatHandlers.SendMessage)
 		htmxGroup.POST("/chat/stream/connect", middleware.OptionalAuthMiddleware(), chatHandlers.HandleChatStreamConnect)
+		
+		// SSE streaming endpoints
 		htmxGroup.GET("/chat/stream", middleware.OptionalAuthMiddleware(), chatHandlers.ProcessUnifiedChatMessageStream)
 		htmxGroup.POST("/chat/stream", middleware.OptionalAuthMiddleware(), chatHandlers.ProcessUnifiedChatMessageStream)
 
@@ -691,7 +693,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		htmxGroup.POST("/activities/search", resultsHandlers.HandleActivitySearch)
 		htmxGroup.POST("/hotels/search", resultsHandlers.HandleHotelSearch)
 		htmxGroup.POST("/itinerary/search", resultsHandlers.HandleItinerarySearch)
-		htmxGroup.GET("/itinerary/stream/results", resultsHandlers.HandleItineraryStreamSearch)
+		htmxGroup.GET("/itinerary/stream/results", resultsHandlers.HandleItinerarySearch)
 
 		// Nearby endpoints
 		htmxGroup.POST("/nearby/search", nearbyHandlers.SearchPOIs)

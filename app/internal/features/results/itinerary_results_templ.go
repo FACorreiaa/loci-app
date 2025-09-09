@@ -35,7 +35,7 @@ func ItineraryResults(itinerary models.AIItineraryResponse, compact bool, showTo
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"itinerary-results\"><!-- Itinerary Header --><div class=\"bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 mb-6 border\"><div class=\"flex items-center gap-4\"><div class=\"text-4xl\">🗺️</div><div class=\"flex-1\"><h2 class=\"text-2xl font-bold text-card-foreground mb-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"itinerary-results\" id=\"itinerary-container\"><!-- Itinerary Header --><div class=\"bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 mb-6 border\"><div class=\"flex items-center gap-4\"><div class=\"text-4xl\">🗺️</div><div class=\"flex-1\"><h2 class=\"text-2xl font-bold text-card-foreground mb-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -126,7 +126,7 @@ func ItineraryResults(itinerary models.AIItineraryResponse, compact bool, showTo
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</div></div><div class=\"flex gap-2\"><button class=\"px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors\"><i class=\"fas fa-heart mr-2\"></i> Save Itinerary</button> <button class=\"px-4 py-2 border border-input rounded-lg hover:bg-accent transition-colors\"><i class=\"fas fa-share-alt mr-2\"></i> Share</button></div></div></div><!-- Points of Interest -->")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</div></div><div class=\"flex gap-2\"><button onclick=\"toggleChat(true)\" class=\"px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center\"><i class=\"fas fa-comments mr-2\"></i> Continue Planning</button> <button class=\"px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors\"><i class=\"fas fa-heart mr-2\"></i> Save Itinerary</button> <button class=\"px-4 py-2 border border-input rounded-lg hover:bg-accent transition-colors\"><i class=\"fas fa-share-alt mr-2\"></i> Share</button></div></div></div><!-- Points of Interest -->")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -209,7 +209,7 @@ func ItineraryResults(itinerary models.AIItineraryResponse, compact bool, showTo
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", len(itinerary.PointsOfInterest)-initialLimit))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 107, Col: 104}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 114, Col: 104}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
@@ -220,7 +220,25 @@ func ItineraryResults(itinerary models.AIItineraryResponse, compact bool, showTo
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</div><script>\n\t\tlet poisExpanded = false;\n\t\t\n\t\tfunction togglePOIs() {\n\t\t\tconst hiddenPOIs = document.querySelectorAll('.poi-card.hidden');\n\t\t\tconst btn = document.getElementById('toggle-poi-btn');\n\t\t\tconst toggleText = document.getElementById('toggle-poi-text');\n\t\t\tconst chevron = btn.querySelector('i');\n\t\t\t\n\t\t\tif (!poisExpanded) {\n\t\t\t\thiddenPOIs.forEach(card => card.classList.remove('hidden'));\n\t\t\t\ttoggleText.textContent = 'Show fewer places';\n\t\t\t\tchevron.classList.remove('fa-chevron-down');\n\t\t\t\tchevron.classList.add('fa-chevron-up');\n\t\t\t\tpoisExpanded = true;\n\t\t\t} else {\n\t\t\t\thiddenPOIs.forEach(card => card.classList.add('hidden'));\n\t\t\t\ttoggleText.textContent = `Show ${hiddenPOIs.length} more places`;\n\t\t\t\tchevron.classList.remove('fa-chevron-up');\n\t\t\t\tchevron.classList.add('fa-chevron-down');\n\t\t\t\tpoisExpanded = false;\n\t\t\t}\n\t\t}\n\t\t\n\t\tfunction addToItinerary(poiId) {\n\t\t\thtmx.ajax('POST', `/itinerary/add/${poiId}`, {\n\t\t\t\ttarget: 'body',\n\t\t\t\tswap: 'none'\n\t\t\t});\n\t\t\tshowNotification('Added to your itinerary!', 'success');\n\t\t}\n\t\t\n\t\tfunction togglePOIFavorite(poiId) {\n\t\t\thtmx.ajax('POST', `/favorites/poi/${poiId}`, {\n\t\t\t\ttarget: `#favorite-btn-${poiId}`,\n\t\t\t\tswap: 'outerHTML'\n\t\t\t});\n\t\t}\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</div><script>\n\t\tlet poisExpanded = false;\n\t\t\n\t\tfunction togglePOIs() {\n\t\t\tconst hiddenPOIs = document.querySelectorAll('.poi-card.hidden');\n\t\t\tconst btn = document.getElementById('toggle-poi-btn');\n\t\t\tconst toggleText = document.getElementById('toggle-poi-text');\n\t\t\tconst chevron = btn.querySelector('i');\n\t\t\t\n\t\t\tif (!poisExpanded) {\n\t\t\t\thiddenPOIs.forEach(card => card.classList.remove('hidden'));\n\t\t\t\ttoggleText.textContent = 'Show fewer places';\n\t\t\t\tchevron.classList.remove('fa-chevron-down');\n\t\t\t\tchevron.classList.add('fa-chevron-up');\n\t\t\t\tpoisExpanded = true;\n\t\t\t} else {\n\t\t\t\thiddenPOIs.forEach(card => card.classList.add('hidden'));\n\t\t\t\ttoggleText.textContent = `Show ${hiddenPOIs.length} more places`;\n\t\t\t\tchevron.classList.remove('fa-chevron-up');\n\t\t\t\tchevron.classList.add('fa-chevron-down');\n\t\t\t\tpoisExpanded = false;\n\t\t\t}\n\t\t}\n\t\t\n\t\tfunction addToItinerary(poiId) {\n\t\t\thtmx.ajax('POST', `/itinerary/add/${poiId}`, {\n\t\t\t\ttarget: 'body',\n\t\t\t\tswap: 'none'\n\t\t\t});\n\t\t\tshowNotification('Added to your itinerary!', 'success');\n\t\t}\n\t\t\n\t\tfunction togglePOIFavorite(poiId) {\n\t\t\thtmx.ajax('POST', `/favorites/poi/${poiId}`, {\n\t\t\t\ttarget: `#favorite-btn-${poiId}`,\n\t\t\t\tswap: 'outerHTML'\n\t\t\t});\n\t\t}\n\t</script><!-- Chat Interface for Itinerary Planning -->")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = ChatInterface(ChatInterfaceProps{
+			SessionID:           "itinerary-chat-session", // TODO: Generate proper session ID
+			Title:               "Continue Planning",
+			Placeholder:         "Ask me to modify your itinerary...",
+			EmptyStateTitle:     "Ask me to modify your itinerary!",
+			EmptyStateSubtitle:  `Try: "Add the Eiffel Tower" or "Remove expensive activities"`,
+			LoadingMessage:      "Updating your itinerary...",
+			HeaderColor:         "bg-blue-600",
+			UserMessageColor:    "bg-blue-600",
+			FloatingButtonColor: "bg-blue-600 hover:bg-blue-700",
+			FocusRingColor:      "focus:ring-blue-500",
+			ShowChat:            false,
+			ChatHistory:         []models.ChatMessage{},
+			IsLoading:           false,
+		}).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -279,7 +297,7 @@ func ItineraryPOICard(poi models.POIDetailedInfo, priority int, isFavorite bool)
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", priority))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 161, Col: 34}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 185, Col: 34}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -292,7 +310,7 @@ func ItineraryPOICard(poi models.POIDetailedInfo, priority int, isFavorite bool)
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(poi.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 168, Col: 17}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 192, Col: 17}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
@@ -310,7 +328,7 @@ func ItineraryPOICard(poi models.POIDetailedInfo, priority int, isFavorite bool)
 			var templ_7745c5c3_Var13 string
 			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(getCategoryEmoji(poi.Category))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 172, Col: 46}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 196, Col: 46}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 			if templ_7745c5c3_Err != nil {
@@ -323,7 +341,7 @@ func ItineraryPOICard(poi models.POIDetailedInfo, priority int, isFavorite bool)
 			var templ_7745c5c3_Var14 string
 			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(poi.Category)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 173, Col: 22}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 197, Col: 22}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
@@ -342,7 +360,7 @@ func ItineraryPOICard(poi models.POIDetailedInfo, priority int, isFavorite bool)
 			var templ_7745c5c3_Var15 string
 			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(poi.Address)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 179, Col: 21}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 203, Col: 21}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
@@ -365,7 +383,7 @@ func ItineraryPOICard(poi models.POIDetailedInfo, priority int, isFavorite bool)
 			var templ_7745c5c3_Var16 string
 			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.1f", poi.Rating))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 188, Col: 42}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 212, Col: 42}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 			if templ_7745c5c3_Err != nil {
@@ -389,7 +407,7 @@ func ItineraryPOICard(poi models.POIDetailedInfo, priority int, isFavorite bool)
 		var templ_7745c5c3_Var18 string
 		templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("favorite-btn-%s", poi.ID.String()))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 193, Col: 59}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 217, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 		if templ_7745c5c3_Err != nil {
@@ -457,7 +475,7 @@ func ItineraryPOICard(poi models.POIDetailedInfo, priority int, isFavorite bool)
 			var templ_7745c5c3_Var22 string
 			templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(poi.Description)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 209, Col: 23}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 233, Col: 23}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 			if templ_7745c5c3_Err != nil {
@@ -480,7 +498,7 @@ func ItineraryPOICard(poi models.POIDetailedInfo, priority int, isFavorite bool)
 			var templ_7745c5c3_Var23 string
 			templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(tag)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 215, Col: 12}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 239, Col: 12}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 			if templ_7745c5c3_Err != nil {
@@ -503,7 +521,7 @@ func ItineraryPOICard(poi models.POIDetailedInfo, priority int, isFavorite bool)
 			var templ_7745c5c3_Var24 string
 			templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(poi.TimeToSpend)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 224, Col: 31}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 248, Col: 31}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 			if templ_7745c5c3_Err != nil {
@@ -544,7 +562,7 @@ func ItineraryPOICard(poi models.POIDetailedInfo, priority int, isFavorite bool)
 			var templ_7745c5c3_Var27 string
 			templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(poi.Budget)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 230, Col: 63}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 254, Col: 63}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 			if templ_7745c5c3_Err != nil {
@@ -601,7 +619,7 @@ func ItineraryRestaurantCard(restaurant models.POIDetailedInfo, isFavorite bool)
 		var templ_7745c5c3_Var29 string
 		templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(restaurant.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 268, Col: 64}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 292, Col: 64}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 		if templ_7745c5c3_Err != nil {
@@ -619,7 +637,7 @@ func ItineraryRestaurantCard(restaurant models.POIDetailedInfo, isFavorite bool)
 			var templ_7745c5c3_Var30 string
 			templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.1f", restaurant.Rating))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 272, Col: 81}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 296, Col: 81}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 			if templ_7745c5c3_Err != nil {
@@ -642,7 +660,7 @@ func ItineraryRestaurantCard(restaurant models.POIDetailedInfo, isFavorite bool)
 			var templ_7745c5c3_Var31 string
 			templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(restaurant.Description)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 277, Col: 88}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 301, Col: 88}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 			if templ_7745c5c3_Err != nil {
@@ -661,7 +679,7 @@ func ItineraryRestaurantCard(restaurant models.POIDetailedInfo, isFavorite bool)
 			var templ_7745c5c3_Var32 string
 			templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(restaurant.Address)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 280, Col: 71}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 304, Col: 71}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 			if templ_7745c5c3_Err != nil {
@@ -702,7 +720,7 @@ func ItineraryRestaurantCard(restaurant models.POIDetailedInfo, isFavorite bool)
 			var templ_7745c5c3_Var35 string
 			templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(restaurant.Budget)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 285, Col: 26}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 309, Col: 26}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 			if templ_7745c5c3_Err != nil {
@@ -749,7 +767,7 @@ func ItineraryBarCard(bar models.POIDetailedInfo, isFavorite bool) templ.Compone
 		var templ_7745c5c3_Var37 string
 		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(bar.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 305, Col: 57}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 329, Col: 57}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 		if templ_7745c5c3_Err != nil {
@@ -767,7 +785,7 @@ func ItineraryBarCard(bar models.POIDetailedInfo, isFavorite bool) templ.Compone
 			var templ_7745c5c3_Var38 string
 			templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.1f", bar.Rating))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 309, Col: 74}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 333, Col: 74}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 			if templ_7745c5c3_Err != nil {
@@ -790,7 +808,7 @@ func ItineraryBarCard(bar models.POIDetailedInfo, isFavorite bool) templ.Compone
 			var templ_7745c5c3_Var39 string
 			templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(bar.Description)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 314, Col: 81}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 338, Col: 81}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 			if templ_7745c5c3_Err != nil {
@@ -809,7 +827,7 @@ func ItineraryBarCard(bar models.POIDetailedInfo, isFavorite bool) templ.Compone
 			var templ_7745c5c3_Var40 string
 			templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(bar.Address)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 317, Col: 64}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 341, Col: 64}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 			if templ_7745c5c3_Err != nil {
@@ -850,7 +868,7 @@ func ItineraryBarCard(bar models.POIDetailedInfo, isFavorite bool) templ.Compone
 			var templ_7745c5c3_Var43 string
 			templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(bar.Budget)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 322, Col: 19}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results.templ`, Line: 346, Col: 19}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
 			if templ_7745c5c3_Err != nil {

@@ -166,10 +166,15 @@ templ ActivityCard(activity models.POIDetailedInfo, compact bool, isFavorite boo
 								</span>
 							</div>
 						}
-						if activity.OpeningHours != "" {
+						if len(activity.OpeningHours) > 0 {
 							<div class="flex items-center gap-1">
 								<i class="fas fa-clock"></i>
-								<span>{ activity.OpeningHours }</span>
+								for day, hours := range activity.OpeningHours {
+                                                <div>
+                                                    <span class="font-semibold">{ day }:</span>
+                                                    <span>{ hours }</span>
+                                                </div>
+                                            }
 							</div>
 						}
 					</div>

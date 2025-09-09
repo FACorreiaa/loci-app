@@ -7,7 +7,7 @@ import (
 )
 
 templ ItineraryResults(itinerary models.AIItineraryResponse, compact bool, showToggle bool, initialLimit int, favorites []string) {
-	<div class="itinerary-results">
+	<div class="itinerary-results" id="itinerary-container">
 		<!-- Itinerary Header -->
 		<div class="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 mb-6 border">
 			<div class="flex items-center gap-4">
@@ -37,6 +37,13 @@ templ ItineraryResults(itinerary models.AIItineraryResponse, compact bool, showT
 					</div>
 				</div>
 				<div class="flex gap-2">
+					<button 
+						onclick="toggleChat(true)" 
+						class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+					>
+						<i class="fas fa-comments mr-2"></i>
+						Continue Planning
+					</button>
 					<button class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
 						<i class="fas fa-heart mr-2"></i>
 						Save Itinerary
@@ -148,6 +155,23 @@ templ ItineraryResults(itinerary models.AIItineraryResponse, compact bool, showT
 			});
 		}
 	</script>
+	
+	<!-- Chat Interface for Itinerary Planning -->
+	@ChatInterface(ChatInterfaceProps{
+		SessionID:              "itinerary-chat-session", // TODO: Generate proper session ID
+		Title:                  "Continue Planning",
+		Placeholder:            "Ask me to modify your itinerary...",
+		EmptyStateTitle:        "Ask me to modify your itinerary!",
+		EmptyStateSubtitle:     `Try: "Add the Eiffel Tower" or "Remove expensive activities"`,
+		LoadingMessage:         "Updating your itinerary...",
+		HeaderColor:            "bg-blue-600",
+		UserMessageColor:       "bg-blue-600",
+		FloatingButtonColor:    "bg-blue-600 hover:bg-blue-700",
+		FocusRingColor:         "focus:ring-blue-500",
+		ShowChat:               false,
+		ChatHistory:            []models.ChatMessage{},
+		IsLoading:              false,
+	})
 }
 
 templ ItineraryPOICard(poi models.POIDetailedInfo, priority int, isFavorite bool) {

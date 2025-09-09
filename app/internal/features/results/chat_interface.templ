@@ -1,0 +1,447 @@
+package results
+
+import (
+	"github.com/FACorreiaa/go-templui/app/internal/models"
+)
+
+// ChatInterfaceProps represents the properties for the chat interface
+type ChatInterfaceProps struct {
+	SessionID               string
+	Title                   string
+	Placeholder             string
+	EmptyStateTitle         string
+	EmptyStateSubtitle      string
+	LoadingMessage          string
+	HeaderColor             string
+	UserMessageColor        string
+	FloatingButtonColor     string
+	FocusRingColor          string
+	ShowChat                bool
+	ChatHistory             []models.ChatMessage
+	IsLoading               bool
+}
+
+// ChatInterface renders a chat interface with floating button for continuing itinerary planning
+templ ChatInterface(props ChatInterfaceProps) {
+	<!-- Chat Interface Modal -->
+	<div id="chat-interface" class={ "fixed inset-0 z-50", templ.KV("hidden", !props.ShowChat) }>
+		<!-- Backdrop -->
+		<div class="fixed inset-0 bg-black bg-opacity-50" onclick="toggleChat(false)"></div>
+		
+		<!-- Chat Container -->
+		<div class="fixed bottom-6 right-6 w-96 h-[500px] bg-white rounded-lg shadow-2xl border border-gray-200 flex flex-col z-50">
+			<!-- Chat Header -->
+			<div class={ "flex items-center justify-between p-4 border-b border-gray-200 text-white rounded-t-lg", getHeaderColorClass(props.HeaderColor) }>
+				<div class="flex items-center gap-2">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+					</svg>
+					<span class="font-medium">{ getChatTitle(props.Title) }</span>
+				</div>
+				<button
+					onclick="toggleChat(false)"
+					class="p-1 hover:bg-black hover:bg-opacity-20 rounded"
+				>
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+					</svg>
+				</button>
+			</div>
+
+			<!-- Chat Messages -->
+			<div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4">
+				if len(props.ChatHistory) == 0 {
+					<div class="text-center text-gray-500 py-8">
+						<svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+						</svg>
+						<p class="text-sm">{ getChatEmptyTitle(props.EmptyStateTitle) }</p>
+						<p class="text-xs mt-2 text-gray-400">
+							{ getChatEmptySubtitle(props.EmptyStateSubtitle) }
+						</p>
+					</div>
+				}
+				
+				for _, message := range props.ChatHistory {
+					@ChatMessageBubble(message, props.UserMessageColor)
+				}
+
+				if props.IsLoading {
+					<div class="flex justify-start">
+						<div class="bg-gray-100 p-3 rounded-lg flex items-center gap-2 text-sm text-gray-600">
+							<div class="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+							<span>{ getChatLoadingMessage(props.LoadingMessage) }</span>
+						</div>
+					</div>
+				}
+			</div>
+
+			<!-- Chat Input -->
+			<div class="p-4 border-t border-gray-200">
+				<form id="chat-form" hx-post="/htmx/chat/message" hx-target="#chat-messages" hx-swap="beforeend" hx-trigger="submit">
+					<input type="hidden" name="session_id" value={ props.SessionID } />
+					<div class="flex items-end gap-2">
+						<textarea
+							id="chat-message"
+							name="message"
+							placeholder={ getChatPlaceholder(props.Placeholder) }
+							class={ "flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent", getFocusRingClass(props.FocusRingColor) }
+							rows="2"
+							disabled?={ props.IsLoading }
+							onkeydown="handleChatKeyPress(event)"
+						></textarea>
+						<button
+							type="submit"
+							disabled?={ props.IsLoading }
+							class={ "p-2 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed", getUserMessageColorClass(props.UserMessageColor) }
+						>
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+							</svg>
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+
+	<!-- Floating Chat Button -->
+	<button
+		id="chat-button"
+		onclick="toggleChat(true)"
+		class={ "fixed bottom-4 right-4 w-12 h-12 text-white rounded-full shadow-lg transition-all hover:scale-105 flex items-center justify-center z-40 sm:bottom-6 sm:right-6 sm:w-14 sm:h-14", getFloatingButtonClass(props.FloatingButtonColor), templ.KV("hidden", props.ShowChat) }
+	>
+		<svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+		</svg>
+	</button>
+
+	<!-- Chat JavaScript -->
+	<script>
+		let chatVisible = false;
+		let isLoading = false;
+		let eventSource = null;
+
+		function toggleChat(show) {
+			chatVisible = show;
+			const chatInterface = document.getElementById('chat-interface');
+			const chatButton = document.getElementById('chat-button');
+			
+			if (show) {
+				chatInterface.classList.remove('hidden');
+				chatButton.classList.add('hidden');
+				document.getElementById('chat-message').focus();
+			} else {
+				chatInterface.classList.add('hidden');
+				chatButton.classList.remove('hidden');
+				
+				// Close any active SSE connection
+				if (eventSource) {
+					eventSource.close();
+					eventSource = null;
+				}
+			}
+		}
+
+		function handleChatKeyPress(event) {
+			if (event.key === 'Enter' && !event.shiftKey) {
+				event.preventDefault();
+				if (!isLoading) {
+					document.getElementById('chat-form').dispatchEvent(new Event('submit'));
+				}
+			}
+		}
+
+		// Handle form submission
+		document.getElementById('chat-form').addEventListener('submit', function(e) {
+			const messageInput = document.getElementById('chat-message');
+			const message = messageInput.value.trim();
+			
+			if (!message || isLoading) {
+				e.preventDefault();
+				return;
+			}
+
+			// Add user message immediately
+			const messagesContainer = document.getElementById('chat-messages');
+			const userMessage = document.createElement('div');
+			userMessage.className = 'flex justify-end mb-4';
+			userMessage.innerHTML = `
+				<div class="max-w-[80%] p-3 rounded-lg text-sm bg-blue-600 text-white">
+					<p class="whitespace-pre-wrap">${message}</p>
+					<p class="text-xs mt-1 opacity-70 text-white text-opacity-70">
+						${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+					</p>
+				</div>
+			`;
+			messagesContainer.appendChild(userMessage);
+			
+			// Clear input and show loading
+			messageInput.value = '';
+			isLoading = true;
+			messageInput.disabled = true;
+			
+			// Scroll to bottom
+			messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+			// Start SSE connection for real-time updates
+			startChatSSE(message);
+		});
+
+		function startChatSSE(message) {
+			// Close existing connection if any
+			if (eventSource) {
+				eventSource.close();
+			}
+
+			const sessionId = document.querySelector('input[name="session_id"]').value;
+			const sseUrl = `/chat/stream?message=${encodeURIComponent(message)}&session_id=${encodeURIComponent(sessionId)}`;
+			
+			eventSource = new EventSource(sseUrl);
+			
+			eventSource.onmessage = function(event) {
+				try {
+					const eventData = JSON.parse(event.data);
+					console.log('Chat SSE Event:', eventData);
+					
+					handleChatSSEEvent(eventData);
+					
+				} catch (error) {
+					console.error('Error parsing chat SSE event:', error);
+				}
+			};
+
+			eventSource.onerror = function(error) {
+				console.error('Chat SSE error:', error);
+				isLoading = false;
+				document.getElementById('chat-message').disabled = false;
+				
+				// Add error message
+				addAIMessage('Sorry, there was an error processing your request. Please try again.');
+				
+				if (eventSource) {
+					eventSource.close();
+					eventSource = null;
+				}
+			};
+
+			eventSource.onopen = function(event) {
+				console.log('Chat SSE connection opened');
+			};
+		}
+
+		function handleChatSSEEvent(eventData) {
+			const messagesContainer = document.getElementById('chat-messages');
+
+			switch (eventData.type) {
+				case 'poi_detail_chunk':
+				case 'chunk':
+					// Handle streaming chunks for POI details
+					updateStreamingMessage(eventData.message || eventData.data?.chunk || '');
+					break;
+					
+				case 'itinerary':
+					// Itinerary update complete
+					addAIMessage('I\'ve updated your itinerary based on your request!');
+					
+					// Update the main itinerary display
+					if (eventData.data && eventData.data.itinerary_response) {
+						updateItineraryDisplay(eventData.data.itinerary_response);
+					}
+					
+					isLoading = false;
+					document.getElementById('chat-message').disabled = false;
+					break;
+					
+				case 'complete':
+					// Processing complete
+					if (!eventData.message || eventData.message === '') {
+						addAIMessage('Done! Your itinerary has been updated.');
+					} else {
+						addAIMessage(eventData.message);
+					}
+					
+					isLoading = false;
+					document.getElementById('chat-message').disabled = false;
+					
+					// Close the connection
+					if (eventSource) {
+						eventSource.close();
+						eventSource = null;
+					}
+					break;
+					
+				case 'error':
+					addAIMessage('Sorry, I encountered an error: ' + (eventData.message || 'Unknown error'));
+					isLoading = false;
+					document.getElementById('chat-message').disabled = false;
+					break;
+					
+				case 'sse-close':
+					if (eventSource) {
+						eventSource.close();
+						eventSource = null;
+					}
+					break;
+			}
+			
+			// Scroll to bottom after each update
+			messagesContainer.scrollTop = messagesContainer.scrollHeight;
+		}
+
+		let streamingMessageElement = null;
+
+		function updateStreamingMessage(chunk) {
+			const messagesContainer = document.getElementById('chat-messages');
+			
+			if (!streamingMessageElement) {
+				// Create new streaming message bubble
+				streamingMessageElement = document.createElement('div');
+				streamingMessageElement.className = 'flex justify-start mb-4';
+				streamingMessageElement.innerHTML = `
+					<div class="max-w-[80%] p-3 rounded-lg text-sm bg-gray-100 text-gray-800">
+						<p class="whitespace-pre-wrap streaming-content"></p>
+						<p class="text-xs mt-1 opacity-70 text-gray-500">
+							Loci AI • ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+						</p>
+					</div>
+				`;
+				messagesContainer.appendChild(streamingMessageElement);
+			}
+			
+			// Update the content
+			const contentElement = streamingMessageElement.querySelector('.streaming-content');
+			contentElement.textContent += chunk;
+			
+			// Scroll to bottom
+			messagesContainer.scrollTop = messagesContainer.scrollHeight;
+		}
+
+		function addAIMessage(message) {
+			const messagesContainer = document.getElementById('chat-messages');
+			
+			// Clear any streaming message
+			streamingMessageElement = null;
+			
+			const aiMessage = document.createElement('div');
+			aiMessage.className = 'flex justify-start mb-4';
+			aiMessage.innerHTML = `
+				<div class="max-w-[80%] p-3 rounded-lg text-sm bg-gray-100 text-gray-800">
+					<p class="whitespace-pre-wrap">${message}</p>
+					<p class="text-xs mt-1 opacity-70 text-gray-500">
+						Loci AI • ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+					</p>
+				</div>
+			`;
+			messagesContainer.appendChild(aiMessage);
+			messagesContainer.scrollTop = messagesContainer.scrollHeight;
+		}
+
+		function updateItineraryDisplay(itineraryData) {
+			// Find the main itinerary container and update it
+			const itineraryContainer = document.getElementById('itinerary-container');
+			if (itineraryContainer && itineraryData) {
+				// This would trigger a page refresh or HTMX update to show the new itinerary
+				// For now, we'll just reload the page to show updates
+				setTimeout(() => {
+					window.location.reload();
+				}, 2000);
+			}
+		}
+
+		// Handle HTMX response (fallback for non-SSE)
+		document.body.addEventListener('htmx:afterRequest', function(event) {
+			if (event.detail.elt.id === 'chat-form') {
+				isLoading = false;
+				document.getElementById('chat-message').disabled = false;
+			}
+		});
+
+		// Clean up on page unload
+		window.addEventListener('beforeunload', function() {
+			if (eventSource) {
+				eventSource.close();
+			}
+		});
+	</script>
+}
+
+templ ChatMessageBubble(message models.ChatMessage, userMessageColor string) {
+	<div class={ "flex", templ.KV("justify-end", message.Role == "user"), templ.KV("justify-start", message.Role != "user") }>
+		<div class={ "max-w-[80%] p-3 rounded-lg text-sm",
+			templ.KV("bg-blue-600 text-white", message.Role == "user"),
+			templ.KV("bg-gray-100 text-gray-800", message.Role == "assistant"),
+			templ.KV("bg-red-100 text-red-800 border border-red-200", message.Role == "error") }>
+			<p class="whitespace-pre-wrap">{ message.Content }</p>
+			<p class={ "text-xs mt-1 opacity-70",
+				templ.KV("text-white text-opacity-70", message.Role == "user"),
+				templ.KV("text-gray-500", message.Role != "user") }>
+				{ message.Timestamp }
+			</p>
+		</div>
+	</div>
+}
+
+// Utility functions for chat interface
+func getChatTitle(title string) string {
+	if title == "" {
+		return "Continue Planning"
+	}
+	return title
+}
+
+func getChatPlaceholder(placeholder string) string {
+	if placeholder == "" {
+		return "Ask me to modify your itinerary..."
+	}
+	return placeholder
+}
+
+func getChatEmptyTitle(title string) string {
+	if title == "" {
+		return "Ask me to modify your itinerary!"
+	}
+	return title
+}
+
+func getChatEmptySubtitle(subtitle string) string {
+	if subtitle == "" {
+		return `Try: "Add the Eiffel Tower" or "Remove expensive activities"`
+	}
+	return subtitle
+}
+
+func getChatLoadingMessage(message string) string {
+	if message == "" {
+		return "Updating your itinerary..."
+	}
+	return message
+}
+
+func getHeaderColorClass(color string) string {
+	if color == "" {
+		return "bg-blue-600"
+	}
+	return color
+}
+
+func getUserMessageColorClass(color string) string {
+	if color == "" {
+		return "bg-blue-600 hover:bg-blue-700"
+	}
+	return color
+}
+
+func getFloatingButtonClass(color string) string {
+	if color == "" {
+		return "bg-blue-600 hover:bg-blue-700"
+	}
+	return color
+}
+
+func getFocusRingClass(color string) string {
+	if color == "" {
+		return "focus:ring-blue-500"
+	}
+	return color
+}

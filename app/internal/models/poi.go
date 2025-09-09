@@ -95,6 +95,8 @@ type POIDetailedInfo struct {
 	CuisineType      string            `json:"cuisine_type,omitempty"` // For restaurants
 	StarRating       string            `json:"star_rating,omitempty"`  // For hotels
 	Amenities        string            `json:"amenities"`
+	TimeToSpend      string            `json:"time_to_spend"`
+	Budget           string            `json:"budget"`
 	Err              error             `json:"-"`
 	Source           string            `json:"source,omitempty"` // Source of the POI data (e.g., "google", "yelp", etc.)
 }

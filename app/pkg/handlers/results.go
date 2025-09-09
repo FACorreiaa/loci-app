@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/FACorreiaa/go-templui/app/internal/features/results"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"github.com/FACorreiaa/go-templui/app/pkg/config"
 	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
@@ -48,7 +49,7 @@ func (h *ResultsHandlers) HandleRestaurantSearch(c *gin.Context) {
 	restaurants, err := h.fetchRestaurantResults(query, city, intent)
 	if err != nil {
 		logger.Log.Error("Failed to fetch restaurant results", zap.Error(err))
-		c.String(http.StatusInternalServerError, `<div class="text-red-500">Failed to load restaurant results.</div>`)
+		c.String(http.StatusInternalServerError, `<div class="text-red-500">Failed to load restaurant models.</div>`)
 		return
 	}
 
@@ -91,7 +92,7 @@ func (h *ResultsHandlers) HandleActivitySearch(c *gin.Context) {
 	activities, err := h.fetchActivityResults(query, city, intent)
 	if err != nil {
 		logger.Log.Error("Failed to fetch activity results", zap.Error(err))
-		c.String(http.StatusInternalServerError, `<div class="text-red-500">Failed to load activity results.</div>`)
+		c.String(http.StatusInternalServerError, `<div class="text-red-500">Failed to load activity models.</div>`)
 		return
 	}
 
@@ -129,7 +130,7 @@ func (h *ResultsHandlers) HandleHotelSearch(c *gin.Context) {
 	hotels, err := h.fetchHotelResults(query, city, intent)
 	if err != nil {
 		logger.Log.Error("Failed to fetch hotel results", zap.Error(err))
-		c.String(http.StatusInternalServerError, `<div class="text-red-500">Failed to load hotel results.</div>`)
+		c.String(http.StatusInternalServerError, `<div class="text-red-500">Failed to load hotel models.</div>`)
 		return
 	}
 
@@ -167,7 +168,7 @@ func (h *ResultsHandlers) HandleItinerarySearch(c *gin.Context) {
 	itinerary, err := h.fetchItineraryResults(query, city, intent)
 	if err != nil {
 		logger.Log.Error("Failed to fetch itinerary results", zap.Error(err))
-		c.String(http.StatusInternalServerError, `<div class="text-red-500">Failed to load itinerary results.</div>`)
+		c.String(http.StatusInternalServerError, `<div class="text-red-500">Failed to load itinerary models.</div>`)
 		return
 	}
 
@@ -186,7 +187,7 @@ func (h *ResultsHandlers) HandleItinerarySearch(c *gin.Context) {
 
 // Backend service calls - these would call your actual LLM service
 
-func (h *ResultsHandlers) fetchRestaurantResults(query, city, intent string) ([]results.RestaurantDetailedInfo, error) {
+func (h *ResultsHandlers) fetchRestaurantResults(query, city, intent string) ([]models.RestaurantDetailedInfo, error) {
 	// Build request payload
 	requestPayload := map[string]interface{}{
 		"message": query,
@@ -211,7 +212,7 @@ func (h *ResultsHandlers) fetchRestaurantResults(query, city, intent string) ([]
 	return restaurants, nil
 }
 
-func (h *ResultsHandlers) fetchActivityResults(query, city, intent string) ([]results.POIDetailedInfo, error) {
+func (h *ResultsHandlers) fetchActivityResults(query, city, intent string) ([]models.POIDetailedInfo, error) {
 	// Similar implementation for activities
 	requestPayload := map[string]interface{}{
 		"message": query,
@@ -233,7 +234,7 @@ func (h *ResultsHandlers) fetchActivityResults(query, city, intent string) ([]re
 	return activities, nil
 }
 
-func (h *ResultsHandlers) fetchHotelResults(query, city, intent string) ([]results.HotelDetailedInfo, error) {
+func (h *ResultsHandlers) fetchHotelResults(query, city, intent string) ([]models.HotelDetailedInfo, error) {
 	// Similar implementation for hotels
 	requestPayload := map[string]interface{}{
 		"message": query,
@@ -255,7 +256,7 @@ func (h *ResultsHandlers) fetchHotelResults(query, city, intent string) ([]resul
 	return hotels, nil
 }
 
-func (h *ResultsHandlers) fetchItineraryResults(query, city, intent string) (results.AIItineraryResponse, error) {
+func (h *ResultsHandlers) fetchItineraryResults(query, city, intent string) (models.AIItineraryResponse, error) {
 	// Similar implementation for itinerary
 	requestPayload := map[string]interface{}{
 		"message": query,
@@ -271,7 +272,7 @@ func (h *ResultsHandlers) fetchItineraryResults(query, city, intent string) (res
 
 	itinerary, err := h.callLLMForItinerary(llmEndpoint, requestPayload)
 	if err != nil {
-		return results.AIItineraryResponse{}, err
+		return models.AIItineraryResponse{}, err
 	}
 
 	return itinerary, nil
@@ -313,22 +314,22 @@ type SSEEvent struct {
 }
 
 type LLMStreamResponse struct {
-	Content     string                           `json:"content"`
-	Type        string                           `json:"type"`
-	IsComplete  bool                             `json:"is_complete"`
-	Restaurants []results.RestaurantDetailedInfo `json:"restaurants"`
-	Activities  []results.POIDetailedInfo        `json:"activities"`
-	Hotels      []results.HotelDetailedInfo      `json:"hotels"`
-	Itinerary   *results.AIItineraryResponse     `json:"itinerary"`
+	Content     string                          `json:"content"`
+	Type        string                          `json:"type"`
+	IsComplete  bool                            `json:"is_complete"`
+	Restaurants []models.RestaurantDetailedInfo `json:"restaurants"`
+	Activities  []models.POIDetailedInfo        `json:"activities"`
+	Hotels      []models.HotelDetailedInfo      `json:"hotels"`
+	Itinerary   *models.AIItineraryResponse     `json:"itinerary"`
 }
 
-func (h *ResultsHandlers) callLLMForRestaurants(endpoint string, payload map[string]interface{}) ([]results.RestaurantDetailedInfo, error) {
+func (h *ResultsHandlers) callLLMForRestaurants(endpoint string, payload map[string]interface{}) ([]models.RestaurantDetailedInfo, error) {
 	// Use mock data directly - no external calls
 	logger.Log.Info("Using mock restaurant data (no external LLM calls)")
 	return h.getMockRestaurants(), nil
 }
 
-func (h *ResultsHandlers) getMockRestaurants() []results.RestaurantDetailedInfo {
+func (h *ResultsHandlers) getMockRestaurants() []models.RestaurantDetailedInfo {
 	cuisineType := "Portuguese"
 	address := "Rua Augusta, Lisbon"
 	phone := "+351 21 123 4567"
@@ -336,7 +337,7 @@ func (h *ResultsHandlers) getMockRestaurants() []results.RestaurantDetailedInfo 
 	hours := "12:00 - 24:00"
 	website := "https://sample-restaurant.pt"
 
-	return []results.RestaurantDetailedInfo{
+	return []models.RestaurantDetailedInfo{
 		{
 			Name:         "Taberna do Bacalhau",
 			Description:  "Traditional Portuguese cuisine with the finest codfish dishes in a cozy historic setting",
@@ -361,14 +362,14 @@ func (h *ResultsHandlers) getMockRestaurants() []results.RestaurantDetailedInfo 
 	}
 }
 
-func (h *ResultsHandlers) callLLMForActivities(endpoint string, payload map[string]interface{}) ([]results.POIDetailedInfo, error) {
+func (h *ResultsHandlers) callLLMForActivities(endpoint string, payload map[string]interface{}) ([]models.POIDetailedInfo, error) {
 	// Use mock data directly - no external calls
 	logger.Log.Info("Using mock activities data (no external LLM calls)")
 	return h.getMockActivities(), nil
 }
 
-func (h *ResultsHandlers) getMockActivities() []results.POIDetailedInfo {
-	return []results.POIDetailedInfo{
+func (h *ResultsHandlers) getMockActivities() []models.POIDetailedInfo {
+	return []models.POIDetailedInfo{
 		{
 			Name:        "Belém Tower",
 			Description: "A 16th-century fortified tower serving as both a fortress and ceremonial gateway to Lisbon",
@@ -393,17 +394,17 @@ func (h *ResultsHandlers) getMockActivities() []results.POIDetailedInfo {
 	}
 }
 
-func (h *ResultsHandlers) callLLMForHotels(endpoint string, payload map[string]interface{}) ([]results.HotelDetailedInfo, error) {
+func (h *ResultsHandlers) callLLMForHotels(endpoint string, payload map[string]interface{}) ([]models.HotelDetailedInfo, error) {
 	// Use mock data directly - no external calls
 	logger.Log.Info("Using mock hotels data (no external LLM calls)")
 	return h.getMockHotels(), nil
 }
 
-func (h *ResultsHandlers) getMockHotels() []results.HotelDetailedInfo {
+func (h *ResultsHandlers) getMockHotels() []models.HotelDetailedInfo {
 	priceRange1 := "€€€"
 	priceRange2 := "€€€€"
-	
-	return []results.HotelDetailedInfo{
+
+	return []models.HotelDetailedInfo{
 		{
 			Name:        "Pousada de Lisboa",
 			Description: "Elegant boutique hotel in a restored 18th-century building in the heart of Lisbon's historic center",
@@ -425,17 +426,17 @@ func (h *ResultsHandlers) getMockHotels() []results.HotelDetailedInfo {
 	}
 }
 
-func (h *ResultsHandlers) callLLMForItinerary(endpoint string, payload map[string]interface{}) (results.AIItineraryResponse, error) {
+func (h *ResultsHandlers) callLLMForItinerary(endpoint string, payload map[string]interface{}) (models.AIItineraryResponse, error) {
 	// Use mock data directly - no external calls
 	logger.Log.Info("Using mock itinerary data (no external LLM calls)")
 	return h.getMockItinerary(), nil
 }
 
-func (h *ResultsHandlers) getMockItinerary() results.AIItineraryResponse {
-	return results.AIItineraryResponse{
+func (h *ResultsHandlers) getMockItinerary() models.AIItineraryResponse {
+	return models.AIItineraryResponse{
 		ItineraryName:      "Lisbon Discovery: 3-Day Cultural Journey",
 		OverallDescription: "Experience Lisbon's rich maritime history, stunning architecture, and vibrant culture in this carefully crafted 3-day itinerary",
-		PointsOfInterest: []results.POIDetailedInfo{
+		PointsOfInterest: []models.POIDetailedInfo{
 			{
 				Name:        "Belém Tower",
 				Description: "16th-century fortified tower and UNESCO World Heritage site",
@@ -457,7 +458,7 @@ func (h *ResultsHandlers) getMockItinerary() results.AIItineraryResponse {
 				Tags:        []string{"UNESCO", "Architecture", "Religious"},
 			},
 		},
-		Restaurants: []results.POIDetailedInfo{
+		Restaurants: []models.POIDetailedInfo{
 			{
 				Name:        "Pastéis de Belém",
 				Description: "Home of the original pastéis de nata since 1837",
@@ -468,7 +469,7 @@ func (h *ResultsHandlers) getMockItinerary() results.AIItineraryResponse {
 				Tags:        []string{"Traditional", "Dessert", "Historic"},
 			},
 		},
-		Bars: []results.POIDetailedInfo{
+		Bars: []models.POIDetailedInfo{
 			{
 				Name:        "Pensão Amor",
 				Description: "Quirky bar in a former brothel with vintage decor",
@@ -481,5 +482,3 @@ func (h *ResultsHandlers) getMockItinerary() results.AIItineraryResponse {
 		},
 	}
 }
-
-
