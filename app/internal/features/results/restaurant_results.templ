@@ -2,8 +2,8 @@ package results
 
 import (
 	"fmt"
-	"strings"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
+	"strings"
 )
 
 templ RestaurantResults(restaurants []models.RestaurantDetailedInfo, compact bool, showToggle bool, initialLimit int, favorites []string, isLoadingFavorites bool) {
@@ -271,11 +271,3 @@ func getCuisineEmoji(cuisineType *string) string {
 	return "🍽️"
 }
 
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
-}

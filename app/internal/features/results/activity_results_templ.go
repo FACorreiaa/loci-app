@@ -408,7 +408,7 @@ func ActivityCard(activity models.POIDetailedInfo, compact bool, isFavorite bool
 				var templ_7745c5c3_Var21 string
 				templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(day)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 174, Col: 85}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 174, Col: 43}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 				if templ_7745c5c3_Err != nil {
@@ -421,7 +421,7 @@ func ActivityCard(activity models.POIDetailedInfo, compact bool, isFavorite bool
 				var templ_7745c5c3_Var22 string
 				templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(hours)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 175, Col: 65}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activity_results.templ`, Line: 175, Col: 23}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 				if templ_7745c5c3_Err != nil {

@@ -3,6 +3,7 @@ package routes
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"regexp"
@@ -66,7 +67,93 @@ func getUserFromContext(c *gin.Context) *models.User {
 	}
 }
 
-// parseItineraryFromResponse parses an AIItineraryResponse from a stored LLM response
+// parseCompleteItineraryResponse parses a complete AiCityResponse with all three parts from stored LLM response
+func parseCompleteItineraryResponse(responseText string, logger *slog.Logger) (*models.AiCityResponse, error) {
+	if responseText == "" {
+		return nil, nil
+	}
+
+	// Clean the JSON response
+	cleanedResponse := cleanJSONResponse(responseText)
+
+	// Try to parse as complete AiCityResponse first
+	var completeResponse models.AiCityResponse
+	err := json.Unmarshal([]byte(cleanedResponse), &completeResponse)
+	if err == nil && (completeResponse.AIItineraryResponse.ItineraryName != "" || len(completeResponse.AIItineraryResponse.PointsOfInterest) > 0) {
+		logger.Debug("parseCompleteItineraryResponse: Parsed as complete AiCityResponse")
+		return &completeResponse, nil
+	}
+
+	// Try to parse as unified chat response format with "data" wrapper
+	var unifiedResponse struct {
+		Data models.AiCityResponse `json:"data"`
+	}
+	err = json.Unmarshal([]byte(cleanedResponse), &unifiedResponse)
+	if err == nil && (unifiedResponse.Data.AIItineraryResponse.ItineraryName != "" || len(unifiedResponse.Data.AIItineraryResponse.PointsOfInterest) > 0) {
+		logger.Debug("parseCompleteItineraryResponse: Parsed as unified chat response")
+		return &unifiedResponse.Data, nil
+	}
+
+	// If we can't parse as complete response, try parsing individual parts from SSE format
+	return parseSSEFormatResponse(cleanedResponse, logger)
+}
+
+// parseSSEFormatResponse parses multi-part SSE response format like [city_data]...[general_pois]...[itinerary]...
+func parseSSEFormatResponse(responseText string, logger *slog.Logger) (*models.AiCityResponse, error) {
+	result := &models.AiCityResponse{}
+	
+	// Parse city_data section
+	if cityMatch := regexp.MustCompile(`\[city_data\]\s*(.*?)(?:\n\n|\[|$)`).FindStringSubmatch(responseText); len(cityMatch) > 1 {
+		var cityData models.GeneralCityData
+		if err := json.Unmarshal([]byte(strings.TrimSpace(cityMatch[1])), &cityData); err == nil {
+			result.GeneralCityData = cityData
+			logger.Debug("parseSSEFormatResponse: Parsed city_data section")
+		}
+	}
+	
+	// Parse general_pois section
+	if poisMatch := regexp.MustCompile(`\[general_pois\]\s*(.*?)(?:\n\n|\[|$)`).FindStringSubmatch(responseText); len(poisMatch) > 1 {
+		var generalPOIs []models.POIDetailedInfo
+		if err := json.Unmarshal([]byte(strings.TrimSpace(poisMatch[1])), &generalPOIs); err == nil {
+			result.PointsOfInterest = generalPOIs
+			logger.Debug("parseSSEFormatResponse: Parsed general_pois section", "count", len(generalPOIs))
+		}
+	}
+	
+	// Parse itinerary section
+	if itineraryMatch := regexp.MustCompile(`\[itinerary\]\s*(.*?)(?:\n\n|\[|$)`).FindStringSubmatch(responseText); len(itineraryMatch) > 1 {
+		var itineraryData models.AIItineraryResponse
+		if err := json.Unmarshal([]byte(strings.TrimSpace(itineraryMatch[1])), &itineraryData); err == nil {
+			result.AIItineraryResponse = itineraryData
+			logger.Debug("parseSSEFormatResponse: Parsed itinerary section", "poisCount", len(itineraryData.PointsOfInterest))
+		}
+	}
+	
+	// Return result if we have at least some data
+	if result.GeneralCityData.City != "" || len(result.PointsOfInterest) > 0 || result.AIItineraryResponse.ItineraryName != "" {
+		return result, nil
+	}
+	
+	// Fallback: try to parse as legacy format for backwards compatibility
+	return parseCompleteItineraryResponseLegacy(responseText, logger)
+}
+
+// parseCompleteItineraryResponseLegacy handles legacy format (backwards compatibility)
+func parseCompleteItineraryResponseLegacy(responseText string, logger *slog.Logger) (*models.AiCityResponse, error) {
+	// Try legacy parsing methods
+	if legacyItinerary, err := parseItineraryFromResponse(responseText, logger); err == nil && legacyItinerary != nil {
+		result := &models.AiCityResponse{
+			AIItineraryResponse: *legacyItinerary,
+		}
+		logger.Debug("parseCompleteItineraryResponseLegacy: Parsed as legacy format")
+		return result, nil
+	}
+	
+	logger.Debug("parseCompleteItineraryResponse: Could not parse response in any format")
+	return nil, fmt.Errorf("failed to parse complete itinerary response")
+}
+
+// parseItineraryFromResponse parses an AIItineraryResponse from a stored LLM response (legacy function for backwards compatibility)
 func parseItineraryFromResponse(responseText string, logger *slog.Logger) (*models.AIItineraryResponse, error) {
 	if responseText == "" {
 		return nil, nil
@@ -538,13 +625,33 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 					zap.String("user", userID),
 					zap.String("sessionID", sessionIdParam))
 
-				// Try to get the data from the cache
-				if itineraryData, found := middleware.ItineraryCache.Get(sessionIdParam); found {
-					// DATA FOUND! Render the static results page with the data.
-					logger.Log.Info("Itinerary found in cache. Rendering results.")
+				// Try to get the complete data from the new cache first
+				if completeData, found := middleware.CompleteItineraryCache.Get(sessionIdParam); found {
+					// DATA FOUND! Render the static results page with the complete data.
+					logger.Log.Info("Complete itinerary found in cache. Rendering results.")
 
-					// NOTE: Using ItineraryResults, NOT ItineraryResultsStream
-					content = results.ItineraryResults(itineraryData, true, true, 5, []string{}) // Adjust params as needed
+					content = results.ItineraryResults(
+						completeData.GeneralCityData,
+						completeData.PointsOfInterest,
+						completeData.AIItineraryResponse,
+						true, true, 5, []string{})
+					
+					logger.Log.Info("Rendered complete cached itinerary",
+						zap.String("city", completeData.GeneralCityData.City),
+						zap.Int("generalPOIs", len(completeData.PointsOfInterest)),
+						zap.Int("personalizedPOIs", len(completeData.AIItineraryResponse.PointsOfInterest)))
+				} else if itineraryData, found := middleware.ItineraryCache.Get(sessionIdParam); found {
+					// Fallback to legacy cache
+					logger.Log.Info("Legacy itinerary found in cache. Rendering results.")
+
+					// Create empty city data and general POIs for legacy cached data
+					emptyCityData := models.GeneralCityData{}
+					emptyGeneralPOIs := []models.POIDetailedInfo{}
+					
+					content = results.ItineraryResults(emptyCityData, emptyGeneralPOIs, itineraryData, true, true, 5, []string{})
+					
+					logger.Log.Info("Rendered legacy cached itinerary",
+						zap.Int("personalizedPOIs", len(itineraryData.PointsOfInterest)))
 				} else {
 					// Data not found in cache - try to retrieve from database
 					logger.Log.Info("Itinerary not found in cache, attempting to load from database", zap.String("sessionID", sessionIdParam))
@@ -564,20 +671,26 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 								zap.Error(err))
 							content = results.PageNotFound("Itinerary session expired. Please create a new itinerary.")
 						} else {
-							// Try to parse the stored response as itinerary data
-							itineraryData, err := parseItineraryFromResponse(interaction.ResponseText, slog.Default())
-							if err != nil || itineraryData == nil {
-								logger.Log.Warn("Could not parse itinerary from stored response",
+							// Try to parse the stored response as complete itinerary data (all three parts)
+							completeData, err := parseCompleteItineraryResponse(interaction.ResponseText, slog.Default())
+							if err != nil || completeData == nil {
+								logger.Log.Warn("Could not parse complete itinerary from stored response",
 									zap.String("sessionID", sessionIdParam),
 									zap.Error(err))
 								content = results.PageNotFound("Could not load itinerary data. Please create a new itinerary.")
 							} else {
-								logger.Log.Info("Successfully loaded itinerary from database",
+								logger.Log.Info("Successfully loaded complete itinerary from database",
 									zap.String("sessionID", sessionIdParam),
-									zap.Int("poisCount", len(itineraryData.PointsOfInterest)))
+									zap.String("city", completeData.GeneralCityData.City),
+									zap.Int("generalPOIs", len(completeData.PointsOfInterest)),
+									zap.Int("personalizedPOIs", len(completeData.AIItineraryResponse.PointsOfInterest)))
 
-								// Render the results page with the database data
-								content = results.ItineraryResults(*itineraryData, true, true, 5, []string{})
+								// Render the results page with the complete database data (all three parts)
+								content = results.ItineraryResults(
+									completeData.GeneralCityData,
+									completeData.PointsOfInterest,
+									completeData.AIItineraryResponse,
+									true, true, 5, []string{})
 							}
 						}
 					}

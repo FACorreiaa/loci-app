@@ -101,16 +101,16 @@ templ ChatPage() {
 					>
 						<div class="flex-1">
 							@textarea.Textarea(textarea.Props{
-								ID: "chat-input",
-								Name: "message",
+								ID:          "chat-input",
+								Name:        "message",
 								Placeholder: "Ask me about travel destinations, restaurants, activities...",
-								Class: "w-full resize-none border rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background placeholder-muted-foreground max-h-32",
-								Rows: 1,
-								Attributes: templ.Attributes{"onkeydown": "handleEnterKey(event)"},
+								Class:       "w-full resize-none border rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background placeholder-muted-foreground max-h-32",
+								Rows:        1,
+								Attributes:  templ.Attributes{"onkeydown": "handleEnterKey(event)"},
 							})
 						</div>
 						@button.Button(button.Props{
-							Type: button.TypeSubmit,
+							Type:  button.TypeSubmit,
 							Class: "px-4 py-3 flex items-center gap-2",
 						}) {
 							<span id="chat-loading" class="htmx-indicator">

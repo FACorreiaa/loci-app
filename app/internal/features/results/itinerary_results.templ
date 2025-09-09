@@ -2,79 +2,364 @@ package results
 
 import (
 	"fmt"
-	"strings"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
+	"strings"
 )
 
-templ ItineraryResults(itinerary models.AIItineraryResponse, compact bool, showToggle bool, initialLimit int, favorites []string) {
+templ ItineraryResults(cityData models.GeneralCityData, generalPOIs []models.POIDetailedInfo, itinerary models.AIItineraryResponse, compact bool, showToggle bool, initialLimit int, favorites []string) {
 	<div class="min-h-screen bg-gray-50 dark:bg-gray-900 itinerary-results" id="itinerary-container" x-data="itineraryPage()">
-		<!-- Itinerary Header -->
-		<div class="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 mb-6 border">
-			<div class="flex items-center gap-4">
-				<div class="text-4xl">🗺️</div>
-				<div class="flex-1">
-					<h2 class="text-2xl font-bold text-card-foreground mb-2">{ getItineraryName(itinerary.ItineraryName) }</h2>
-					if itinerary.OverallDescription != "" {
-						<p class="text-muted-foreground mb-4">{ itinerary.OverallDescription }</p>
-					}
-					<div class="flex items-center gap-4 text-sm text-muted-foreground">
-						<div class="flex items-center gap-1">
-							<i class="fas fa-map-marker-alt"></i>
-							<span>{ fmt.Sprintf("%d", len(itinerary.PointsOfInterest)) } Points of Interest</span>
+		<!-- Mobile-First Enhanced Header -->
+		<div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
+			<div class="px-4 py-3 sm:px-6">
+				<!-- Main Header Content -->
+				<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+					<div class="flex-1 min-w-0">
+						<div class="flex items-center gap-3">
+							<div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-xl flex-shrink-0">
+								🗺️
+							</div>
+							<div class="flex-1 min-w-0">
+								<h1 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl truncate">
+									{ getItineraryName(itinerary.ItineraryName) }
+								</h1>
+								<!-- Enhanced City Information -->
+								if cityData.City != "" {
+									<div class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 mt-1 mb-2">
+										<svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+										</svg>
+										<span class="font-medium">{ cityData.City }{ getCityProvince(cityData.StateProvince) }, { cityData.Country }</span>
+										if cityData.Population != "" {
+											<span class="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
+												Pop: { cityData.Population }
+											</span>
+										}
+									</div>
+								}
+								<div class="flex flex-wrap items-center gap-2 text-xs text-gray-600 dark:text-gray-300 mt-1">
+									<div class="flex items-center gap-1">
+										<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+										</svg>
+										<span>{ fmt.Sprintf("%d", len(itinerary.PointsOfInterest)) } personalized places</span>
+									</div>
+									if len(generalPOIs) > 0 {
+										<div class="flex items-center gap-1">
+											<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+											</svg>
+											<span>{ fmt.Sprintf("%d", len(generalPOIs)) } city highlights</span>
+										</div>
+									}
+									if len(itinerary.Restaurants) > 0 {
+										<div class="flex items-center gap-1">
+											<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
+											</svg>
+											<span>{ fmt.Sprintf("%d", len(itinerary.Restaurants)) } restaurants</span>
+										</div>
+									}
+									if len(itinerary.Bars) > 0 {
+										<div class="flex items-center gap-1">
+											<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+											</svg>
+											<span>{ fmt.Sprintf("%d", len(itinerary.Bars)) } bars</span>
+										</div>
+									}
+								</div>
+							</div>
 						</div>
-						if len(itinerary.Restaurants) > 0 {
-							<div class="flex items-center gap-1">
-								<i class="fas fa-utensils"></i>
-								<span>{ fmt.Sprintf("%d", len(itinerary.Restaurants)) } Restaurants</span>
-							</div>
-						}
-						if len(itinerary.Bars) > 0 {
-							<div class="flex items-center gap-1">
-								<i class="fas fa-glass-cheers"></i>
-								<span>{ fmt.Sprintf("%d", len(itinerary.Bars)) } Bars</span>
-							</div>
-						}
+					</div>
+
+					<!-- Mobile Action Button -->
+					<div class="flex sm:hidden">
+						<button @click="showMobileMenu = !showMobileMenu" 
+								class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+							</svg>
+						</button>
+					</div>
+
+					<!-- Desktop Actions -->
+					<div class="hidden sm:flex items-center gap-2">
+						<button @click="showChat = true" 
+								class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.013 8.013 0 01-7.93-6.94c-.42-.51-.92-.92-1.43-1.25-.63-.41-.63-1.33 0-1.74.51-.33 1.01-.74 1.43-1.25A8.013 8.013 0 0113 4c4.418 0 8 3.582 8 8z"></path>
+							</svg>
+							Continue Planning
+						</button>
+						<!-- Debug Status (Remove after testing) -->
+						<div class="text-xs text-gray-600 dark:text-gray-400" x-text="'Chat: ' + (showChat ? 'Open' : 'Closed')"></div>
+						<button @click="alert('Alpine.js is working! showChat=' + showChat)" class="text-xs px-2 py-1 bg-gray-200 rounded">Debug</button>
+						<button @click="toggleBookmark()"
+								:class="isBookmarked ? 'text-red-600 bg-red-50 hover:bg-red-100' : 'text-gray-700 hover:bg-gray-100'"
+								class="p-2 rounded-lg transition-colors">
+							<svg class="w-4 h-4" :class="isBookmarked ? 'fill-current' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+							</svg>
+						</button>
+						<button @click="shareItinerary()" 
+								class="p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
+							</svg>
+						</button>
 					</div>
 				</div>
-				<div class="flex gap-2">
-					<button 
-						onclick="toggleChat(true)" 
-						class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-					>
-						<i class="fas fa-comments mr-2"></i>
-						Continue Planning
+
+				<!-- View Mode Toggle (Mobile-First) -->
+				<div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+					<div class="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+						<button @click="viewMode = 'list'" 
+								:class="viewMode === 'list' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-300'"
+								class="flex-1 px-3 py-2 rounded text-sm font-medium transition-colors">
+							<div class="flex items-center justify-center gap-1">
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+								</svg>
+								<span class="hidden sm:inline">List</span>
+							</div>
+						</button>
+						<button @click="viewMode = 'map'" 
+								:class="viewMode === 'map' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-300'"
+								class="flex-1 px-3 py-2 rounded text-sm font-medium transition-colors">
+							<div class="flex items-center justify-center gap-1">
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+								</svg>
+								<span class="hidden sm:inline">Map</span>
+							</div>
+						</button>
+						<button @click="viewMode = 'split'" 
+								:class="viewMode === 'split' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-300'"
+								class="flex-1 px-3 py-2 rounded text-sm font-medium transition-colors">
+							<div class="flex items-center justify-center gap-1">
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+								</svg>
+								<span class="hidden sm:inline">Split</span>
+							</div>
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- Mobile Menu -->
+			<div x-show="showMobileMenu" 
+				 x-transition:enter="transition ease-out duration-200" 
+				 x-transition:enter-start="opacity-0 transform -translate-y-2" 
+				 x-transition:enter-end="opacity-100 transform translate-y-0"
+				 x-transition:leave="transition ease-in duration-150" 
+				 x-transition:leave-start="opacity-100 transform translate-y-0" 
+				 x-transition:leave-end="opacity-0 transform -translate-y-2"
+				 class="sm:hidden border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+				<div class="px-4 py-3 space-y-2">
+					<button @click="showChat = true; showMobileMenu = false" 
+							class="w-full flex items-center gap-3 px-3 py-2 text-left text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+						<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.013 8.013 0 01-7.93-6.94c-.42-.51-.92-.92-1.43-1.25-.63-.41-.63-1.33 0-1.74.51-.33 1.01-.74 1.43-1.25A8.013 8.013 0 0113 4c4.418 0 8 3.582 8 8z"></path>
+						</svg>
+						<span class="font-medium">Continue Planning</span>
 					</button>
-					<button class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
-						<i class="fas fa-heart mr-2"></i>
-						Save Itinerary
+					<button @click="toggleBookmark(); showMobileMenu = false" 
+							class="w-full flex items-center gap-3 px-3 py-2 text-left text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+						<svg class="w-5 h-5" :class="isBookmarked ? 'text-red-600 fill-current' : 'text-gray-600'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+						</svg>
+						<span x-text="isBookmarked ? 'Remove from Saved' : 'Save Itinerary'"></span>
 					</button>
-					<button class="px-4 py-2 border border-input rounded-lg hover:bg-accent transition-colors">
-						<i class="fas fa-share-alt mr-2"></i>
-						Share
+					<button @click="shareItinerary(); showMobileMenu = false" 
+							class="w-full flex items-center gap-3 px-3 py-2 text-left text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+						<svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
+						</svg>
+						<span>Share Itinerary</span>
+					</button>
+					<button @click="exportItinerary(); showMobileMenu = false" 
+							class="w-full flex items-center gap-3 px-3 py-2 text-left text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+						<svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+						</svg>
+						<span>Export</span>
 					</button>
 				</div>
 			</div>
 		</div>
-		<!-- Points of Interest -->
-		if len(itinerary.PointsOfInterest) > 0 {
-			<div class="mb-8">
-				<h3 class="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-					<i class="fas fa-map-marker-alt text-blue-600"></i>
-					Points of Interest
-				</h3>
-				<div class="space-y-4" id="poi-list">
-					for i, poi := range itinerary.PointsOfInterest {
-						if !showToggle || i < initialLimit {
-							@ItineraryPOICard(poi, i+1, contains(favorites, poi.ID.String()))
-						} else {
-							<div class="poi-card hidden">
-								@ItineraryPOICard(poi, i+1, contains(favorites, poi.ID.String()))
-							</div>
-						}
-					}
+		<!-- Main Content Area with Enhanced Mobile Layout -->
+		<div class="flex-1">
+			<!-- Map Container (Mobile-First) -->
+			<div x-show="viewMode === 'map' || viewMode === 'split'" 
+				 x-transition:enter="transition ease-out duration-300" 
+				 x-transition:enter-start="opacity-0" 
+				 x-transition:enter-end="opacity-100"
+				 class="relative">
+				<div :class="viewMode === 'map' ? 'h-[calc(100vh-200px)] md:h-[600px]' : viewMode === 'split' ? 'h-[300px] md:h-[400px] lg:h-[500px]' : 'h-[400px]'"
+					 class="w-full">
+					@MapContainer(itinerary.PointsOfInterest, nil, "session-placeholder")
 				</div>
 			</div>
-		}
+
+			<!-- Content Layout for List/Split View -->
+			<div class="px-4 py-4 sm:px-6">
+				<div :class="viewMode === 'split' ? 'lg:flex lg:gap-6' : ''" class="w-full">
+					<!-- Search and Filter Bar (Mobile-Optimized) -->
+					<div x-show="viewMode === 'list' || viewMode === 'split'" 
+						 class="w-full" 
+						 :class="viewMode === 'split' ? 'lg:w-1/2' : ''">
+						
+						<!-- Enhanced Filter Controls -->
+						<div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-4">
+							<!-- Search Bar -->
+							<div class="relative mb-4">
+								<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+									<svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+									</svg>
+								</div>
+								<input x-model="searchQuery" 
+									   type="text" 
+									   placeholder="Search places..." 
+									   class="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg text-sm placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"/>
+							</div>
+
+							<!-- Filter Pills (Mobile-Responsive) -->
+							<div class="flex flex-wrap gap-2">
+								<select x-model="selectedCategory" 
+										class="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+									<option value="">All Categories</option>
+									for _, poi := range itinerary.PointsOfInterest {
+										if poi.Category != "" {
+											<option value={ poi.Category }>{ poi.Category }</option>
+										}
+									}
+								</select>
+								
+								<select x-model="sortBy" 
+										class="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+									<option value="name">Sort by Name</option>
+									<option value="category">Sort by Category</option>
+									<option value="rating">Sort by Rating</option>
+								</select>
+								
+								<!-- Results Count -->
+								<div class="flex items-center px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-300">
+									<span>{ fmt.Sprintf("%d", len(itinerary.PointsOfInterest)) } places</span>
+								</div>
+							</div>
+						</div>
+
+						<!-- City Information Section -->
+						if cityData.City != "" && cityData.Description != "" {
+							<div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 mb-6 border border-blue-100 dark:border-gray-600">
+								<div class="flex items-start gap-4">
+									<div class="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
+										<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+										</svg>
+									</div>
+									<div class="flex-1">
+										<h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">About { cityData.City }</h3>
+										<p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">{ cityData.Description }</p>
+										<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+											if cityData.Area != "" {
+												<div class="flex items-center gap-2">
+													<svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+													</svg>
+													<span class="text-gray-600 dark:text-gray-400">{ cityData.Area }</span>
+												</div>
+											}
+											if cityData.Timezone != "" {
+												<div class="flex items-center gap-2">
+													<svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+													</svg>
+													<span class="text-gray-600 dark:text-gray-400">{ cityData.Timezone }</span>
+												</div>
+											}
+											if cityData.Language != "" {
+												<div class="flex items-center gap-2">
+													<svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path>
+													</svg>
+													<span class="text-gray-600 dark:text-gray-400">{ cityData.Language }</span>
+												</div>
+											}
+											if cityData.Population != "" {
+												<div class="flex items-center gap-2">
+													<svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+													</svg>
+													<span class="text-gray-600 dark:text-gray-400">{ cityData.Population }</span>
+												</div>
+											}
+										</div>
+									</div>
+								</div>
+							</div>
+						}
+
+						<!-- City Highlights Section -->
+						if len(generalPOIs) > 0 {
+							<div class="mb-8">
+								<div class="flex items-center justify-between mb-6">
+									<h3 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+										<div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+											<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+											</svg>
+										</div>
+										City Highlights
+										<span class="text-sm font-normal text-gray-500 dark:text-gray-400">({ len(generalPOIs) } places)</span>
+									</h3>
+								</div>
+								<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+									for _, poi := range generalPOIs {
+										@GeneralPOICard(poi)
+									}
+								</div>
+							</div>
+						}
+
+						<!-- Personalized Itinerary Section -->
+						if len(itinerary.PointsOfInterest) > 0 {
+							<div class="mb-8">
+								<div class="flex items-center justify-between mb-6">
+									<h3 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+										<div class="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+											<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+											</svg>
+										</div>
+										Your Personalized Itinerary
+										<span class="text-sm font-normal text-gray-500 dark:text-gray-400">({ len(itinerary.PointsOfInterest) } places)</span>
+									</h3>
+								</div>
+							</div>
+						}
+
+						<!-- Enhanced POI Cards -->
+						if len(itinerary.PointsOfInterest) > 0 {
+							<div class="space-y-4" id="enhanced-poi-list">
+								for i, poi := range itinerary.PointsOfInterest {
+									if !showToggle || i < initialLimit {
+										@EnhancedPOICard(poi, i+1, contains(favorites, poi.ID.String()), false)
+									} else {
+										<div class="poi-card hidden">
+											@EnhancedPOICard(poi, i+1, contains(favorites, poi.ID.String()), true)
+										</div>
+									}
+								}
+							</div>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
 		<!-- Restaurants -->
 		if len(itinerary.Restaurants) > 0 {
 			<div class="mb-8">
@@ -155,9 +440,198 @@ templ ItineraryResults(itinerary models.AIItineraryResponse, compact bool, showT
 			});
 		}
 	</script>
-	
-	<!-- Chat Interface for Itinerary Planning -->
+	<!-- Enhanced Mobile-First Chat Interface -->
 	@ChatInterface("itinerary-chat-session")
+
+	<!-- POI Details Modal -->
+	<div x-show="selectedPOI" 
+		 x-transition:enter="transition ease-out duration-300" 
+		 x-transition:enter-start="opacity-0" 
+		 x-transition:enter-end="opacity-100"
+		 x-transition:leave="transition ease-in duration-200" 
+		 x-transition:leave-start="opacity-100" 
+		 x-transition:leave-end="opacity-0"
+		 class="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50"
+		 @click="selectedPOI = null">
+		@POIDetailsModal()
+	</div>
+
+	<!-- Mobile Chat FAB (Floating Action Button) -->
+	<button x-show="!showChat && viewMode !== 'map'" 
+			@click="showChat = true"
+			class="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center z-40 sm:hidden">
+		<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.013 8.013 0 01-7.93-6.94c-.42-.51-.92-.92-1.43-1.25-.63-.41-.63-1.33 0-1.74.51-.33 1.01-.74 1.43-1.25A8.013 8.013 0 0113 4c4.418 0 8 3.582 8 8z"></path>
+		</svg>
+	</button>
+
+	<!-- Alpine.js State Management -->
+	@ItineraryStateScript()
+	@POIModalScript()
+}
+
+// Enhanced POI Card with Mobile-First Design
+templ EnhancedPOICard(poi models.POIDetailedInfo, priority int, isFavorite bool, isHidden bool) {
+	<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-300"
+		 x-show="shouldShowPOI({name: '{ poi.Name }', category: '{ poi.Category }', description: '{ poi.Description }'})">
+		
+		<div class="flex flex-col sm:flex-row">
+			<!-- POI Image (Mobile-First) -->
+			<div class="relative flex-shrink-0">
+				if len(poi.Images) > 0 && poi.Images[0] != "" {
+					<img class="h-48 w-full sm:h-32 sm:w-48 object-cover" 
+						 src={ poi.Images[0] } 
+						 alt={ poi.Name }
+						 loading="lazy"/>
+				} else {
+					<div class="h-48 w-full sm:h-32 sm:w-48 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+						<div class="text-center text-white">
+							<svg class="w-12 h-12 mx-auto mb-2 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+							</svg>
+							<span class="text-xs opacity-80">{ getCategoryEmoji(poi.Category) }</span>
+						</div>
+					</div>
+				}
+				
+				<!-- Priority Badge -->
+				<div class="absolute top-3 left-3 w-8 h-8 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-lg">
+					<span class="text-sm font-bold text-gray-900 dark:text-white">{ fmt.Sprintf("%d", priority) }</span>
+				</div>
+				
+				<!-- Favorite Button -->
+				<button @click.stop="togglePOIFavorite('{ poi.ID.String() }')"
+						class="absolute top-3 right-3 w-8 h-8 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+					<svg class="w-4 h-4" :class="{ fmt.Sprintf(`'text-red-500 fill-current': %t`, isFavorite) }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+					</svg>
+				</button>
+			</div>
+
+			<!-- POI Content -->
+			<div class="flex-1 p-4">
+				<div class="flex flex-col h-full">
+					<!-- Header -->
+					<div class="flex items-start justify-between mb-3">
+						<div class="flex-1 min-w-0">
+							<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2 cursor-pointer hover:text-blue-600 transition-colors"
+								@click={ fmt.Sprintf("selectPOI({name: '%s', description: '%s', category: '%s', address: '%s', rating: %.1f})", 
+									strings.ReplaceAll(poi.Name, "'", "\\'"), 
+									strings.ReplaceAll(poi.Description, "'", "\\'"), 
+									poi.Category, 
+									strings.ReplaceAll(poi.Address, "'", "\\'"), 
+									poi.Rating) }>
+								{ poi.Name }
+							</h3>
+							
+							<div class="flex items-center gap-2 mb-2">
+								if poi.Category != "" {
+									<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+										<span class="mr-1">{ getCategoryEmoji(poi.Category) }</span>
+										{ poi.Category }
+									</span>
+								}
+								
+								if poi.Rating > 0 {
+									<div class="flex items-center gap-1">
+										<svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+											<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+										</svg>
+										<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+											{ fmt.Sprintf("%.1f", poi.Rating) }
+										</span>
+									</div>
+								}
+							</div>
+						</div>
+					</div>
+
+					<!-- Description -->
+					if poi.Description != "" {
+						<p class="text-sm text-gray-600 dark:text-gray-300 mb-4 line-clamp-3">
+							{ poi.Description }
+						</p>
+					}
+
+					<!-- Tags/Features (Mobile-Optimized) -->
+					if len(poi.Tags) > 0 {
+						<div class="flex flex-wrap gap-2 mb-4">
+							for _, tag := range poi.Tags[:min(4, len(poi.Tags))] {
+								<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+									{ tag }
+								</span>
+							}
+							if len(poi.Tags) > 4 {
+								<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+									+{ fmt.Sprintf("%d", len(poi.Tags)-4) } more
+								</span>
+							}
+						</div>
+					}
+
+					<!-- Footer Information -->
+					<div class="mt-auto">
+						<div class="flex items-center justify-between">
+							<div class="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
+								if poi.Address != "" {
+									<div class="flex items-center gap-1">
+										<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+										</svg>
+										<span class="line-clamp-1">{ poi.Address }</span>
+									</div>
+								}
+								
+								<div class="flex items-center gap-3">
+									if poi.TimeToSpend != "" {
+										<div class="flex items-center gap-1">
+											<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+											</svg>
+											<span>{ poi.TimeToSpend }</span>
+										</div>
+									}
+									
+									if poi.Budget != "" {
+										<div class="flex items-center gap-1">
+											<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+											</svg>
+											<span class={ getBudgetColor(poi.Budget) }>{ poi.Budget }</span>
+										</div>
+									}
+								</div>
+							</div>
+
+							<!-- Action Buttons (Mobile-First) -->
+							<div class="flex flex-col sm:flex-row gap-2">
+								<button @click.stop={ fmt.Sprintf("selectPOI({name: '%s', description: '%s', category: '%s', address: '%s', rating: %.1f})", 
+									strings.ReplaceAll(poi.Name, "'", "\\'"), 
+									strings.ReplaceAll(poi.Description, "'", "\\'"), 
+									poi.Category, 
+									strings.ReplaceAll(poi.Address, "'", "\\'"), 
+									poi.Rating) }
+										class="px-3 py-2 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 rounded-lg transition-colors">
+									View Details
+								</button>
+								
+								if poi.Website != "" {
+									<a href={ poi.Website }
+									   target="_blank"
+									   rel="noopener noreferrer"
+									   class="px-3 py-2 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 rounded-lg transition-colors text-center">
+										Website
+									</a>
+								}
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 }
 
 templ ItineraryPOICard(poi models.POIDetailedInfo, priority int, isFavorite bool) {
@@ -413,4 +887,145 @@ func getBudgetColor(budget string) string {
 	default:
 		return "text-gray-600"
 	}
+}
+
+// Helper function for min
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// Helper function to check if item exists in slice
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
+
+func getCityProvince(province string) string {
+	if province != "" {
+		return ", " + province
+	}
+	return ""
+}
+
+// GeneralPOICard component for displaying city highlights
+templ GeneralPOICard(poi models.POIDetailedInfo) {
+	<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-300 group">
+		<div class="relative">
+			<!-- POI Image -->
+			if len(poi.Images) > 0 && poi.Images[0] != "" {
+				<img class="h-48 w-full object-cover group-hover:scale-105 transition-transform duration-300" 
+					 src={ poi.Images[0] } 
+					 alt={ poi.Name }
+					 loading="lazy"/>
+			} else {
+				<div class="h-48 w-full bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center">
+					<svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+					</svg>
+				</div>
+			}
+			
+			<!-- Category Badge -->
+			if poi.Category != "" {
+				<div class="absolute top-3 left-3">
+					<span class="bg-white/90 backdrop-blur-sm text-gray-800 px-3 py-1 rounded-full text-sm font-medium shadow-sm">
+						{ poi.Category }
+					</span>
+				</div>
+			}
+		</div>
+		
+		<div class="p-4">
+			<div class="flex items-start justify-between mb-3">
+				<h4 class="font-semibold text-gray-900 dark:text-white text-lg group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
+					{ poi.Name }
+				</h4>
+				if poi.Rating > 0 {
+					<div class="flex items-center gap-1 flex-shrink-0">
+						<svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+							<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+						</svg>
+						<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+							{ formatRating(poi.Rating) }
+						</span>
+					</div>
+				}
+			</div>
+			
+			<!-- Description -->
+			if poi.Description != "" {
+				<p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-4 line-clamp-2">
+					{ poi.Description }
+				</p>
+			}
+			
+			<!-- Address -->
+			if poi.Address != "" {
+				<div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-3">
+					<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+					</svg>
+					<span class="truncate">{ poi.Address }</span>
+				</div>
+			}
+			
+			<!-- Tags -->
+			if len(poi.Tags) > 0 {
+				<div class="flex flex-wrap gap-1 mb-4">
+					for _, tag := range poi.Tags[:minInt(3, len(poi.Tags))] {
+						<span class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs">
+							{ tag }
+						</span>
+					}
+					if len(poi.Tags) > 3 {
+						<span class="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-2 py-1 rounded-full text-xs">
+							+{ fmt.Sprintf("%d", len(poi.Tags)-3) }
+						</span>
+					}
+				</div>
+			}
+			
+			<!-- Action Buttons -->
+			<div class="flex items-center justify-between">
+				<button class="text-green-600 hover:text-green-700 text-sm font-medium hover:bg-green-50 dark:hover:bg-green-900/20 px-3 py-2 rounded-lg transition-colors">
+					View Details
+				</button>
+				<div class="flex gap-2">
+					<button class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors" title="Add to favorites">
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+						</svg>
+					</button>
+					<button class="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-colors" title="Share">
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
+						</svg>
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+func formatRating(rating float64) string {
+	if rating == float64(int(rating)) {
+		return fmt.Sprintf("%.0f", rating)
+	}
+	return fmt.Sprintf("%.1f", rating)
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

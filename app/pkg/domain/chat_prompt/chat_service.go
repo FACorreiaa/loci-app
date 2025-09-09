@@ -1622,16 +1622,16 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 		Message:   finalResponseMessage,
 		Timestamp: time.Now(),
 	}, 3)
-	
+
 	// Cache the itinerary data for immediate access
 	if session.CurrentItinerary != nil && session.CurrentItinerary.AIItineraryResponse.ItineraryName != "" {
-		l.logger.InfoContext(ctx, "Caching itinerary data", 
+		l.logger.InfoContext(ctx, "Caching itinerary data",
 			slog.String("sessionID", sessionID.String()),
 			slog.String("itineraryName", session.CurrentItinerary.AIItineraryResponse.ItineraryName),
 			slog.Int("poisCount", len(session.CurrentItinerary.AIItineraryResponse.PointsOfInterest)))
 		middleware.ItineraryCache.Set(sessionID.String(), session.CurrentItinerary.AIItineraryResponse)
 	}
-	
+
 	l.sendEvent(ctx, eventCh, models.StreamEvent{
 		Type:    models.EventTypeComplete,
 		Data:    "Turn completed.",
@@ -2687,17 +2687,17 @@ func (l *ServiceImpl) streamWorkerWithResponseAndCache(ctx context.Context, prom
 func (l *ServiceImpl) cacheItineraryIfAvailable(ctx context.Context, sessionID uuid.UUID, responses map[string]*strings.Builder, responsesMutex *sync.Mutex) {
 	responsesMutex.Lock()
 	defer responsesMutex.Unlock()
-	
+
 	if itineraryBuilder, exists := responses["itinerary"]; exists && itineraryBuilder != nil {
 		itineraryResponse := itineraryBuilder.String()
 		if parsedItinerary, err := parseItineraryFromResponse(itineraryResponse, l.logger); err == nil && parsedItinerary != nil {
-			l.logger.InfoContext(ctx, "Caching unified chat itinerary data", 
+			l.logger.InfoContext(ctx, "Caching unified chat itinerary data",
 				slog.String("sessionID", sessionID.String()),
 				slog.String("itineraryName", parsedItinerary.ItineraryName),
 				slog.Int("poisCount", len(parsedItinerary.PointsOfInterest)))
 			middleware.ItineraryCache.Set(sessionID.String(), *parsedItinerary)
 		} else {
-			l.logger.WarnContext(ctx, "Failed to parse unified chat itinerary for caching", 
+			l.logger.WarnContext(ctx, "Failed to parse unified chat itinerary for caching",
 				slog.String("sessionID", sessionID.String()),
 				slog.Any("error", err))
 		}
@@ -2742,4 +2742,3 @@ func parseItineraryFromResponse(responseText string, logger *slog.Logger) (*mode
 	logger.Debug("parseItineraryFromResponse: Could not parse response as itinerary", "error", err)
 	return nil, fmt.Errorf("failed to parse itinerary: %w", err)
 }
-

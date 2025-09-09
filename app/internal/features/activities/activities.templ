@@ -260,7 +260,6 @@ templ ActivitiesPageWithQuery(query string) {
 					AI-powered activity suggestions for: <span class="font-semibold">{ query }</span>
 				</p>
 			</div>
-			
 			<!-- Loading/Streaming Banner -->
 			<div class="mb-6">
 				<div class="bg-gradient-to-r from-green-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 border">
@@ -279,13 +278,15 @@ templ ActivitiesPageWithQuery(query string) {
 					</div>
 				</div>
 			</div>
-			
 			<!-- Results Container - This will be populated by HTMX -->
-			<div id="activity-results" class="space-y-6"
-				hx-post="/activities/search" 
+			<div
+				id="activity-results"
+				class="space-y-6"
+				hx-post="/activities/search"
 				hx-trigger="load"
 				hx-vals={ "{\"query\":\"" + query + "\", \"city\":\"\"}" }
-				hx-swap="innerHTML">
+				hx-swap="innerHTML"
+			>
 				<!-- Results will be loaded here -->
 				<div class="text-center py-8">
 					<div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>

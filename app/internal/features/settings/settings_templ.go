@@ -261,7 +261,7 @@ func InterestToggle(name string, emoji string, active bool) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/settings/settings.templ`, Line: 740, Col: 15}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/settings/settings.templ`, Line: 732, Col: 15}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -284,7 +284,7 @@ func InterestToggle(name string, emoji string, active bool) templ.Component {
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(emoji)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/settings/settings.templ`, Line: 746, Col: 31}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/settings/settings.templ`, Line: 738, Col: 31}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -297,7 +297,7 @@ func InterestToggle(name string, emoji string, active bool) templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/settings/settings.templ`, Line: 747, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/settings/settings.templ`, Line: 739, Col: 50}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -339,7 +339,7 @@ func NotificationToggle(title string, description string, active bool) templ.Com
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/settings/settings.templ`, Line: 754, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/settings/settings.templ`, Line: 746, Col: 50}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -352,7 +352,7 @@ func NotificationToggle(title string, description string, active bool) templ.Com
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/settings/settings.templ`, Line: 755, Col: 57}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/settings/settings.templ`, Line: 747, Col: 57}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {

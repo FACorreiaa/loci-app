@@ -2,10 +2,10 @@ package results
 
 // StreamingData represents the parsed streaming data from SSE
 type StreamingData struct {
-	CityData         *CityData          `json:"general_city_data,omitempty"`
-	PointsOfInterest []POIStreamData    `json:"points_of_interest,omitempty"`
-	ItineraryResponse *ItineraryStream  `json:"itinerary_response,omitempty"`
-	SessionID        string            `json:"session_id,omitempty"`
+	CityData          *CityData        `json:"general_city_data,omitempty"`
+	PointsOfInterest  []POIStreamData  `json:"points_of_interest,omitempty"`
+	ItineraryResponse *ItineraryStream `json:"itinerary_response,omitempty"`
+	SessionID         string           `json:"session_id,omitempty"`
 }
 
 // CityData represents city information from streaming data
@@ -73,7 +73,6 @@ templ ItineraryResultsStream(sessionID, cityName, originalQuery string) {
 								List
 							</button>
 						</div>
-						
 						<!-- Action Buttons - Initially Hidden -->
 						<div id="action-buttons" class="hidden flex flex-col gap-2 sm:flex-row sm:gap-3">
 							<button id="continue-planning-btn" class="hidden flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-sm text-sm font-medium">
@@ -87,7 +86,6 @@ templ ItineraryResultsStream(sessionID, cityName, originalQuery string) {
 				</div>
 			</div>
 		</div>
-
 		<!-- Streaming Status -->
 		<div id="streaming-status" class="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 border-b border-blue-200 dark:border-gray-600">
 			<div class="max-w-7xl mx-auto px-4 py-6 sm:px-6">
@@ -112,7 +110,6 @@ templ ItineraryResultsStream(sessionID, cityName, originalQuery string) {
 				</div>
 			</div>
 		</div>
-
 		<!-- City Information - Initially Hidden -->
 		<div id="city-info-section" class="hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
 			<div class="max-w-7xl mx-auto px-4 py-6 sm:px-6">
@@ -135,7 +132,6 @@ templ ItineraryResultsStream(sessionID, cityName, originalQuery string) {
 							</div>
 						</div>
 					</div>
-
 					<!-- Quick Stats -->
 					<div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 						<h3 class="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -158,7 +154,6 @@ templ ItineraryResultsStream(sessionID, cityName, originalQuery string) {
 				</div>
 			</div>
 		</div>
-
 		<!-- Main Content -->
 		<div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 sm:py-6">
 			<!-- Map Container - Initially Hidden -->
@@ -172,7 +167,6 @@ templ ItineraryResultsStream(sessionID, cityName, originalQuery string) {
 					</div>
 				</div>
 			</div>
-
 			<!-- Results Container -->
 			<div id="results-container" class="space-y-6">
 				<!-- Loading State -->
@@ -190,7 +184,6 @@ templ ItineraryResultsStream(sessionID, cityName, originalQuery string) {
 						</div>
 					}
 				</div>
-
 				<!-- Actual Results - Initially Hidden -->
 				<div id="itinerary-results" class="hidden">
 					<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
@@ -214,7 +207,6 @@ templ ItineraryResultsStream(sessionID, cityName, originalQuery string) {
 			</div>
 		</div>
 	</div>
-	
 	<script type="text/javascript">
 	document.addEventListener('DOMContentLoaded', function() {
 		// Initialize streaming data

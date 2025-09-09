@@ -1,8 +1,8 @@
 package home
 
 import (
-    b "github.com/FACorreiaa/go-templui/app/internal/components/button"
-    t "github.com/FACorreiaa/go-templui/app/internal/components/textarea"
+	b "github.com/FACorreiaa/go-templui/app/internal/components/button"
+	t "github.com/FACorreiaa/go-templui/app/internal/components/textarea"
 )
 
 templ LoggedInDashboard() {
@@ -92,7 +92,7 @@ templ LoggedInDashboard() {
 						<!-- Profile Selection -->
 						<div>
 							<label for="profile-select" class="block text-sm font-medium text-card-foreground mb-2">Search Profile</label>
-							<select 
+							<select
 								id="profile-select"
 								name="profile-id"
 								class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background text-card-foreground"
@@ -112,7 +112,7 @@ templ LoggedInDashboard() {
 							</div>
 						</div>
 					</div>
-					<form 
+					<form
 						id="dashboard-search-form"
 						hx-post="/chat/stream/connect"
 						hx-target="#dashboard-results"
@@ -123,16 +123,16 @@ templ LoggedInDashboard() {
 						<div class="flex items-end gap-3">
 							<div class="flex-1">
 								@t.Textarea(t.Props{
-								    ID: "dashboard-search",
-								    Name: "dashboard-search",
-								    Placeholder: "Describe your perfect day, meal, or adventure...",
-								    Class: "w-full h-12 px-4 py-3 border rounded-xl resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background placeholder-muted-foreground",
-								    Rows: 1,
+									ID:          "dashboard-search",
+									Name:        "dashboard-search",
+									Placeholder: "Describe your perfect day, meal, or adventure...",
+									Class:       "w-full h-12 px-4 py-3 border rounded-xl resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background placeholder-muted-foreground",
+									Rows:        1,
 								})
 							</div>
 							@b.Button(b.Props{
-								Type: b.TypeSubmit,
-								ID: "search-btn",
+								Type:  b.TypeSubmit,
+								ID:    "search-btn",
 								Class: "px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-xl font-medium transition-colors flex items-center gap-2",
 							}) {
 								<svg id="search-icon" class="w-4 h-4 htmx-request:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -144,7 +144,6 @@ templ LoggedInDashboard() {
 						</div>
 					</form>
 					<div id="dashboard-results" class="mt-4"></div>
-					
 					<script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/sse.js"></script>
 					<script>
 						// Simple HTMX event handlers - no complex JS needed!

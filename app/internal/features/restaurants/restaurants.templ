@@ -298,7 +298,6 @@ templ RestaurantsPageWithQuery(query string) {
 					AI-powered restaurant suggestions for: <span class="font-semibold">{ query }</span>
 				</p>
 			</div>
-			
 			<!-- Loading/Streaming Banner -->
 			<div class="mb-6">
 				<div class="bg-gradient-to-r from-orange-50 to-red-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 border">
@@ -317,13 +316,15 @@ templ RestaurantsPageWithQuery(query string) {
 					</div>
 				</div>
 			</div>
-			
 			<!-- Results Container - This will be populated by HTMX -->
-			<div id="restaurant-results" class="space-y-6"
-				hx-post="/restaurants/search" 
+			<div
+				id="restaurant-results"
+				class="space-y-6"
+				hx-post="/restaurants/search"
 				hx-trigger="load"
 				hx-vals={ "{\"query\":\"" + query + "\", \"city\":\"\"}" }
-				hx-swap="innerHTML">
+				hx-swap="innerHTML"
+			>
 				<!-- Results will be loaded here -->
 				<div class="text-center py-8">
 					<div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>

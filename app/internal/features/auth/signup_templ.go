@@ -8,9 +8,7 @@ package auth
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-import (
-	card "github.com/FACorreiaa/go-templui/app/internal/components/card"
-)
+import card "github.com/FACorreiaa/go-templui/app/internal/components/card"
 
 func SignUp() templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {

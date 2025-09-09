@@ -243,7 +243,7 @@ func HotelsPageWithQuery(query string) templ.Component {
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(query)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/hotels/hotels.templ`, Line: 305, Col: 79}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/hotels/hotels.templ`, Line: 304, Col: 79}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {

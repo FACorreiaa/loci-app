@@ -95,7 +95,7 @@ func ItineraryResultsStream(sessionID, cityName, originalQuery string) templ.Com
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(cityName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results_stream.templ`, Line: 128, Col: 24}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/itinerary_results_stream.templ`, Line: 125, Col: 24}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {

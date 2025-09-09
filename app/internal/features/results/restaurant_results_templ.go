@@ -509,13 +509,4 @@ func getCuisineEmoji(cuisineType *string) string {
 	return "🍽️"
 }
 
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
-}
-
 var _ = templruntime.GeneratedTemplate

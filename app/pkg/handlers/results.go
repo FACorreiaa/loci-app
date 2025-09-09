@@ -176,12 +176,18 @@ func (h *ResultsHandlers) HandleItinerarySearch(c *gin.Context) {
 	favorites := []string{}
 
 	// Render results using the new itinerary results component
+	// For legacy handlers, create empty city data and general POIs
+	emptyCityData := models.GeneralCityData{}
+	emptyGeneralPOIs := []models.POIDetailedInfo{}
+	
 	c.HTML(http.StatusOK, "", results.ItineraryResults(
-		itinerary,
-		false, // compact
-		true,  // showToggle
-		5,     // initialLimit
-		favorites,
+		emptyCityData,   // cityData
+		emptyGeneralPOIs, // generalPOIs
+		itinerary,       // itinerary
+		false,          // compact
+		true,           // showToggle
+		5,              // initialLimit
+		favorites,      // favorites
 	))
 }
 

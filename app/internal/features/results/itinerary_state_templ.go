@@ -11,13 +11,14 @@ import templruntime "github.com/a-h/templ/runtime"
 // ItineraryStateScript provides Alpine.js state management for the itinerary page
 func ItineraryStateScript() templ.ComponentScript {
 	return templ.ComponentScript{
-		Name: `__templ_ItineraryStateScript_0745`,
-		Function: `function __templ_ItineraryStateScript_0745(){// Initialize Alpine.js data and state
+		Name: `__templ_ItineraryStateScript_8ca2`,
+		Function: `function __templ_ItineraryStateScript_8ca2(){// Initialize Alpine.js data and state
     function itineraryPage() {
         return {
-            // View state
-            viewMode: 'split', // 'map', 'list', 'split'
+            // View state (Mobile-First)
+            viewMode: window.innerWidth < 768 ? 'list' : 'split', // Start with list on mobile
             showChat: false,
+            showMobileMenu: false,
             mapLoaded: false,
             selectedPOI: null,
             isBookmarked: false,
@@ -36,6 +37,8 @@ func ItineraryStateScript() templ.ComponentScript {
                 // Initialize the component
                 this.loadBookmarkStatus();
                 this.setupKeyboardShortcuts();
+                this.setupMobileOptimizations();
+                this.handleViewportChanges();
             },
 
             // View mode methods
@@ -288,6 +291,172 @@ func ItineraryStateScript() templ.ComponentScript {
                     document.body.removeChild(textarea);
                     this.showNotification('Link copied to clipboard!', 'success');
                 }
+            },
+
+            // Mobile-specific optimizations
+            setupMobileOptimizations() {
+                // Close mobile menu when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('[x-data]')) {
+                        this.showMobileMenu = false;
+                    }
+                });
+
+                // Optimize touch interactions
+                document.addEventListener('touchstart', () => {}, { passive: true });
+
+                // Handle iOS viewport issues
+                if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                    const viewport = document.querySelector('meta[name=viewport]');
+                    if (viewport) {
+                        viewport.setAttribute('content', 
+                            'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
+                    }
+                }
+            },
+
+            handleViewportChanges() {
+                // Responsive view mode adjustments
+                window.addEventListener('resize', () => {
+                    const isMobile = window.innerWidth < 768;
+                    
+                    // Auto-adjust view mode based on screen size
+                    if (isMobile && this.viewMode === 'split') {
+                        this.viewMode = 'list';
+                    }
+                    
+                    // Close mobile menu on resize to larger screen
+                    if (!isMobile) {
+                        this.showMobileMenu = false;
+                    }
+
+                    // Adjust chat interface for mobile
+                    if (isMobile && this.showChat) {
+                        document.body.style.overflow = 'hidden';
+                    } else {
+                        document.body.style.overflow = '';
+                    }
+                });
+
+                // Handle orientation change
+                window.addEventListener('orientationchange', () => {
+                    setTimeout(() => {
+                        if (window.map && window.map.resize) {
+                            window.map.resize();
+                        }
+                    }, 100);
+                });
+            },
+
+            // Enhanced filtering for mobile
+            shouldShowPOI(poi) {
+                // Category filter
+                if (this.selectedCategory && poi.category !== this.selectedCategory) {
+                    return false;
+                }
+
+                // Search filter - more comprehensive for mobile
+                if (this.searchQuery) {
+                    const query = this.searchQuery.toLowerCase();
+                    const searchableText = [
+                        poi.name || '',
+                        poi.description || '',
+                        poi.category || '',
+                        poi.address || ''
+                    ].join(' ').toLowerCase();
+                    
+                    if (!searchableText.includes(query)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            },
+
+            // Mobile-optimized chat methods
+            openMobileChat() {
+                this.showChat = true;
+                this.showMobileMenu = false;
+                document.body.style.overflow = 'hidden'; // Prevent background scroll
+            },
+
+            closeMobileChat() {
+                this.showChat = false;
+                document.body.style.overflow = ''; // Restore scroll
+            },
+
+            // Touch-friendly POI selection
+            selectPOIWithTouch(poiData) {
+                // Add haptic feedback if available
+                if (navigator.vibrate) {
+                    navigator.vibrate(10);
+                }
+                
+                this.selectedPOI = poiData;
+                
+                // Close mobile menu if open
+                this.showMobileMenu = false;
+            },
+
+            // Mobile-optimized notifications
+            showMobileNotification(message, type = 'info') {
+                // Create mobile-optimized notification
+                const notification = document.createElement('div');
+                notification.className = ` + "`" + `fixed top-16 left-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 transform -translate-y-16 ${
+                    type === 'success' ? 'bg-green-500' : 
+                    type === 'error' ? 'bg-red-500' : 
+                    'bg-blue-500'
+                }` + "`" + `;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                // Slide in
+                setTimeout(() => {
+                    notification.classList.remove('-translate-y-16');
+                    notification.classList.add('translate-y-0');
+                }, 100);
+                
+                // Auto remove
+                setTimeout(() => {
+                    notification.classList.add('-translate-y-16');
+                    setTimeout(() => {
+                        if (document.body.contains(notification)) {
+                            document.body.removeChild(notification);
+                        }
+                    }, 300);
+                }, 3000);
+            },
+
+            // Enhanced keyboard shortcuts for mobile
+            setupKeyboardShortcuts() {
+                document.addEventListener('keydown', (e) => {
+                    // ESC to close modals and menus
+                    if (e.key === 'Escape') {
+                        if (this.selectedPOI) {
+                            this.closePOIModal();
+                        } else if (this.showChat) {
+                            this.closeMobileChat();
+                        } else if (this.showMobileMenu) {
+                            this.showMobileMenu = false;
+                        }
+                    }
+                    
+                    // Cmd/Ctrl + K to open search (if not mobile)
+                    if ((e.metaKey || e.ctrlKey) && e.key === 'k' && window.innerWidth >= 768) {
+                        e.preventDefault();
+                        const searchInput = document.querySelector('input[type="text"][placeholder*="Search"]');
+                        if (searchInput) {
+                            searchInput.focus();
+                        }
+                    }
+                    
+                    // View mode shortcuts (1, 2, 3) for desktop only
+                    if (e.key >= '1' && e.key <= '3' && !e.target.matches('input, textarea') && window.innerWidth >= 768) {
+                        const modes = ['list', 'map', 'split'];
+                        this.setViewMode(modes[parseInt(e.key) - 1]);
+                    }
+                });
             }
         }
     }
@@ -295,8 +464,8 @@ func ItineraryStateScript() templ.ComponentScript {
     // Make function available globally
     window.itineraryPage = itineraryPage;
 }`,
-		Call:       templ.SafeScript(`__templ_ItineraryStateScript_0745`),
-		CallInline: templ.SafeScriptInline(`__templ_ItineraryStateScript_0745`),
+		Call:       templ.SafeScript(`__templ_ItineraryStateScript_8ca2`),
+		CallInline: templ.SafeScriptInline(`__templ_ItineraryStateScript_8ca2`),
 	}
 }
 

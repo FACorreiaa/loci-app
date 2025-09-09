@@ -349,7 +349,7 @@ func RestaurantsPageWithQuery(query string) templ.Component {
 		var templ_7745c5c3_Var18 string
 		templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(query)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/restaurants/restaurants.templ`, Line: 309, Col: 79}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/restaurants/restaurants.templ`, Line: 308, Col: 79}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 		if templ_7745c5c3_Err != nil {

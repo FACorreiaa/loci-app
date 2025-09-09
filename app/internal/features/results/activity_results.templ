@@ -2,8 +2,8 @@ package results
 
 import (
 	"fmt"
-	"strings"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
+	"strings"
 )
 
 templ ActivityResults(activities []models.POIDetailedInfo, compact bool, showToggle bool, initialLimit int, favorites []string) {
@@ -170,11 +170,11 @@ templ ActivityCard(activity models.POIDetailedInfo, compact bool, isFavorite boo
 							<div class="flex items-center gap-1">
 								<i class="fas fa-clock"></i>
 								for day, hours := range activity.OpeningHours {
-                                                <div>
-                                                    <span class="font-semibold">{ day }:</span>
-                                                    <span>{ hours }</span>
-                                                </div>
-                                            }
+									<div>
+										<span class="font-semibold">{ day }:</span>
+										<span>{ hours }</span>
+									</div>
+								}
 							</div>
 						}
 					</div>
