@@ -92,6 +92,14 @@ func (h *ProfilesHandler) GetProfiles(c *gin.Context) {
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		
+		// Check if this is an HTMX request (for select dropdown)
+		if c.GetHeader("HX-Request") == "true" {
+			c.Header("Content-Type", "text/html")
+			c.String(http.StatusBadRequest, `<option value="">Error: Invalid user session</option>`)
+			return
+		}
+		
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
@@ -99,7 +107,43 @@ func (h *ProfilesHandler) GetProfiles(c *gin.Context) {
 	profiles, err := h.profileService.GetSearchProfiles(c.Request.Context(), userID)
 	if err != nil {
 		logger.Log.Error("Failed to get profiles", zap.String("userID", userIDStr), zap.Error(err))
+		
+		// Check if this is an HTMX request (for select dropdown)
+		if c.GetHeader("HX-Request") == "true" {
+			c.Header("Content-Type", "text/html")
+			c.String(http.StatusInternalServerError, `<option value="">Error loading profiles</option>`)
+			return
+		}
+		
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve profiles"})
+		return
+	}
+
+	// Check if this is an HTMX request (for select dropdown)
+	if c.GetHeader("HX-Request") == "true" {
+		c.Header("Content-Type", "text/html")
+		
+		if len(profiles) == 0 {
+			c.String(http.StatusOK, `<option value="">No profiles found - create one in Settings</option>`)
+			return
+		}
+		
+		// Build HTML options
+		html := `<option value="">Auto-select profile</option>`
+		for _, profile := range profiles {
+			selected := ""
+			if profile.IsDefault {
+				selected = ` selected`
+			}
+			suffix := ""
+			if profile.IsDefault {
+				suffix = " (Default)"
+			}
+			html += fmt.Sprintf(`<option value="%s"%s>%s%s</option>`, 
+				profile.ID, selected, profile.ProfileName, suffix)
+		}
+		
+		c.String(http.StatusOK, html)
 		return
 	}
 

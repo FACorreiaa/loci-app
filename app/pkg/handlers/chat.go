@@ -41,6 +41,95 @@ func NewChatHandlers(llmService llmchat.LlmInteractiontService, profileService p
 	}
 }
 
+// HandleChatStreamConnect creates an SSE connection setup for HTMX
+func (h *ChatHandlers) HandleChatStreamConnect(c *gin.Context) {
+	logger.Log.Info("Chat stream connect request received",
+		zap.String("ip", c.ClientIP()),
+		zap.String("user", middleware.GetUserIDFromContext(c)),
+	)
+
+	// Get form parameters
+	query := c.PostForm("dashboard-search")
+	profileID := c.PostForm("profile-id")
+	
+	if query == "" {
+		c.Header("Content-Type", "text/html")
+		c.String(http.StatusBadRequest, `
+			<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl p-6 mt-4">
+				<div class="flex items-center gap-3">
+					<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+					</svg>
+					<span class="text-red-700 dark:text-red-300 text-sm">
+						Please provide a search query.
+					</span>
+				</div>
+			</div>
+		`)
+		return
+	}
+
+	// Generate a unique session ID for this search
+	sessionID := uuid.New().String()
+	
+	// Create the SSE connection URL with parameters
+	sseURL := fmt.Sprintf("/chat/stream?session_id=%s&dashboard-search=%s", 
+		sessionID, 
+		url.QueryEscape(query))
+	
+	if profileID != "" {
+		sseURL += "&profile-id=" + url.QueryEscape(profileID)
+	}
+
+	// Return HTML that sets up the SSE connection
+	c.Header("Content-Type", "text/html")
+	c.String(http.StatusOK, fmt.Sprintf(`
+		<div 
+			hx-ext="sse" 
+			sse-connect="%s"
+		>
+			<div id="initial-loading" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-6">
+				<div class="flex items-start gap-4">
+					<div class="flex-shrink-0">
+						<div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+							<svg class="w-5 h-5 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+							</svg>
+						</div>
+					</div>
+					<div class="flex-1">
+						<h3 class="font-semibold text-blue-800 dark:text-blue-200 mb-2">AI is analyzing your request...</h3>
+						<div class="space-y-2">
+							<div class="flex items-center gap-3 text-blue-700 dark:text-blue-300">
+								<div class="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+								<span id="status-text" class="text-sm">Processing with Gemini AI (this may take 5-6 seconds)...</span>
+							</div>
+							<div id="streaming-content" 
+								class="text-sm text-blue-600 dark:text-blue-400 space-y-1"
+								sse-swap="chunk"
+								hx-swap="beforeend"
+							>
+								<div class="text-xs opacity-75">Starting AI analysis...</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<!-- Navigation/completion target -->
+			<div id="navigation-target" 
+				sse-swap="navigation" 
+				hx-swap="outerHTML"
+			></div>
+			<!-- Status updates target -->
+			<div id="status-target" 
+				sse-swap="status" 
+				hx-swap="innerHTML"
+				hx-target="#status-text"
+			></div>
+		</div>
+	`, sseURL))
+}
+
 // getDefaultProfileID gets the user's default profile ID
 func (h *ChatHandlers) getDefaultProfileID(ctx context.Context, userID uuid.UUID) (uuid.UUID, error) {
 	// Get user's profiles
@@ -562,10 +651,20 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 		zap.String("user", middleware.GetUserIDFromContext(c)),
 	)
 
-	// Get message from form data (HTMX post)
-	message := c.PostForm("message")
-	if message == "" {
-		message = c.PostForm("dashboard-search") // For dashboard searches
+	// Get message from form data (POST) or query parameters (GET for SSE)
+	var message string
+	if c.Request.Method == "GET" {
+		// For SSE connections, get from query params
+		message = c.Query("dashboard-search")
+		if message == "" {
+			message = c.Query("message")
+		}
+	} else {
+		// For POST requests, get from form data
+		message = c.PostForm("message")
+		if message == "" {
+			message = c.PostForm("dashboard-search")
+		}
 	}
 
 	if message == "" {
@@ -583,9 +682,14 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 		c.String(http.StatusBadRequest, "Invalid user ID")
 		return
 	}
-	// Check if a specific profile ID was provided in the form
+	// Check if a specific profile ID was provided in form or query params
 	var profileID uuid.UUID
-	profileIDStr := c.PostForm("profile-id")
+	var profileIDStr string
+	if c.Request.Method == "GET" {
+		profileIDStr = c.Query("profile-id")
+	} else {
+		profileIDStr = c.PostForm("profile-id")
+	}
 	if profileIDStr != "" {
 		// Use the provided profile ID
 		parsedProfileID, err := uuid.Parse(profileIDStr)

@@ -642,6 +642,8 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 
 		// Chat endpoints
 		htmxGroup.POST("/chat/message", chatHandlers.SendMessage)
+		htmxGroup.POST("/chat/stream/connect", middleware.OptionalAuthMiddleware(), chatHandlers.HandleChatStreamConnect)
+		htmxGroup.GET("/chat/stream", middleware.OptionalAuthMiddleware(), chatHandlers.ProcessUnifiedChatMessageStream)
 		htmxGroup.POST("/chat/stream", middleware.OptionalAuthMiddleware(), chatHandlers.ProcessUnifiedChatMessageStream)
 
 		// Favorites endpoints
