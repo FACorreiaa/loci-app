@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	"github.com/FACorreiaa/go-templui/app/internal/features/results"
@@ -53,12 +54,25 @@ func (h *ResultsHandlers) HandleRestaurantSearch(c *gin.Context) {
 		return
 	}
 
+	// Generate session ID for caching results
+	sessionID := uuid.New().String()
+
+	// Cache the results for later access via direct route
+	middleware.RestaurantsCache.Set(sessionID, restaurants)
+
+	logger.Log.Info("Cached restaurant results",
+		zap.String("sessionID", sessionID),
+		zap.Int("count", len(restaurants)))
+
 	// Get user favorites (if authenticated)
 	userID := middleware.GetUserIDFromContext(c)
 
 	fmt.Printf("User ID: %s\n", userID)
 	favorites := []string{}
 	isLoadingFavorites := false
+
+	// Set the sessionID in response header so frontend can use it for direct links
+	c.Header("X-Session-ID", sessionID)
 
 	// Render results using the new restaurant results component
 	c.HTML(http.StatusOK, "", results.RestaurantResults(
@@ -96,8 +110,21 @@ func (h *ResultsHandlers) HandleActivitySearch(c *gin.Context) {
 		return
 	}
 
+	// Generate session ID for caching results
+	sessionID := uuid.New().String()
+
+	// Cache the results for later access via direct route
+	middleware.ActivitiesCache.Set(sessionID, activities)
+
+	logger.Log.Info("Cached activity results",
+		zap.String("sessionID", sessionID),
+		zap.Int("count", len(activities)))
+
 	// Get user favorites (if authenticated)
 	favorites := []string{}
+
+	// Set the sessionID in response header so frontend can use it for direct links
+	c.Header("X-Session-ID", sessionID)
 
 	// Render results using the new activity results component
 	c.HTML(http.StatusOK, "", results.ActivityResults(
@@ -134,8 +161,21 @@ func (h *ResultsHandlers) HandleHotelSearch(c *gin.Context) {
 		return
 	}
 
+	// Generate session ID for caching results
+	sessionID := uuid.New().String()
+
+	// Cache the results for later access via direct route
+	middleware.HotelsCache.Set(sessionID, hotels)
+
+	logger.Log.Info("Cached hotel results",
+		zap.String("sessionID", sessionID),
+		zap.Int("count", len(hotels)))
+
 	// Get user favorites (if authenticated)
 	favorites := []string{}
+
+	// Set the sessionID in response header so frontend can use it for direct links
+	c.Header("X-Session-ID", sessionID)
 
 	// Render results using the new hotel results component
 	c.HTML(http.StatusOK, "", results.HotelResults(

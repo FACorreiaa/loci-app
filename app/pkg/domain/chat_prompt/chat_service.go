@@ -2179,6 +2179,8 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 			if routeType == "itinerary" {
 				l.cacheItineraryIfAvailable(ctx, sessionID, responses, &responsesMutex)
 			}
+			// Cache result-specific data for restaurants, activities, and hotels
+			l.cacheResultsIfAvailable(ctx, sessionID, routeType, responses, &responsesMutex)
 
 			l.sendEvent(ctx, eventCh, models.StreamEvent{
 				Type: models.EventTypeComplete,
@@ -2473,6 +2475,8 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStreamFree(ctx context.Context, c
 			if routeType == "itinerary" {
 				l.cacheItineraryIfAvailable(ctx, sessionID, responses, &responsesMutex)
 			}
+			// Cache result-specific data for restaurants, activities, and hotels
+			l.cacheResultsIfAvailable(ctx, sessionID, routeType, responses, &responsesMutex)
 
 			l.sendEvent(ctx, eventCh, models.StreamEvent{
 				Type: models.EventTypeComplete,
@@ -2721,6 +2725,45 @@ func (l *ServiceImpl) cacheItineraryIfAvailable(ctx context.Context, sessionID u
 	}
 }
 
+// cacheResultsIfAvailable caches result-specific data for restaurants, activities, and hotels
+func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uuid.UUID, routeType string, responses map[string]*strings.Builder, responsesMutex *sync.Mutex) {
+	responsesMutex.Lock()
+	defer responsesMutex.Unlock()
+
+	switch routeType {
+	case "restaurants":
+		if restaurantBuilder, exists := responses["restaurants"]; exists && restaurantBuilder != nil {
+			restaurantResponse := restaurantBuilder.String()
+			if restaurants, err := parseRestaurantsFromResponse(restaurantResponse, l.logger); err == nil && len(restaurants) > 0 {
+				l.logger.InfoContext(ctx, "Caching restaurant data",
+					slog.String("sessionID", sessionID.String()),
+					slog.Int("restaurantsCount", len(restaurants)))
+				middleware.RestaurantsCache.Set(sessionID.String(), restaurants)
+			}
+		}
+	case "activities":
+		if activityBuilder, exists := responses["activities"]; exists && activityBuilder != nil {
+			activityResponse := activityBuilder.String()
+			if activities, err := parseActivitiesFromResponse(activityResponse, l.logger); err == nil && len(activities) > 0 {
+				l.logger.InfoContext(ctx, "Caching activity data",
+					slog.String("sessionID", sessionID.String()),
+					slog.Int("activitiesCount", len(activities)))
+				middleware.ActivitiesCache.Set(sessionID.String(), activities)
+			}
+		}
+	case "hotels":
+		if hotelBuilder, exists := responses["hotels"]; exists && hotelBuilder != nil {
+			hotelResponse := hotelBuilder.String()
+			if hotels, err := parseHotelsFromResponse(hotelResponse, l.logger); err == nil && len(hotels) > 0 {
+				l.logger.InfoContext(ctx, "Caching hotel data",
+					slog.String("sessionID", sessionID.String()),
+					slog.Int("hotelsCount", len(hotels)))
+				middleware.HotelsCache.Set(sessionID.String(), hotels)
+			}
+		}
+	}
+}
+
 // parseItineraryFromResponse parses an AIItineraryResponse from a stored LLM response
 func parseItineraryFromResponse(responseText string, logger *slog.Logger) (*models.AIItineraryResponse, error) {
 	if responseText == "" {
@@ -2812,4 +2855,79 @@ func (l *ServiceImpl) parseCompleteResponseFromParts(responses map[string]*strin
 	}
 	
 	return completeResponse, nil
+}
+
+// parseRestaurantsFromResponse parses restaurant data from SSE response
+func parseRestaurantsFromResponse(responseText string, logger *slog.Logger) ([]models.RestaurantDetailedInfo, error) {
+	if responseText == "" {
+		return nil, fmt.Errorf("empty restaurant response text")
+	}
+
+	cleanedResponse := cleanJSONResponse(responseText)
+	
+	// Try to parse as array of restaurants
+	var restaurants []models.RestaurantDetailedInfo
+	if err := json.Unmarshal([]byte(cleanedResponse), &restaurants); err == nil {
+		return restaurants, nil
+	}
+	
+	// Try to parse as wrapper with data field
+	var wrapper struct {
+		Data []models.RestaurantDetailedInfo `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(cleanedResponse), &wrapper); err == nil && len(wrapper.Data) > 0 {
+		return wrapper.Data, nil
+	}
+	
+	return nil, fmt.Errorf("failed to parse restaurant response")
+}
+
+// parseActivitiesFromResponse parses activity data from SSE response
+func parseActivitiesFromResponse(responseText string, logger *slog.Logger) ([]models.POIDetailedInfo, error) {
+	if responseText == "" {
+		return nil, fmt.Errorf("empty activities response text")
+	}
+
+	cleanedResponse := cleanJSONResponse(responseText)
+	
+	// Try to parse as array of activities
+	var activities []models.POIDetailedInfo
+	if err := json.Unmarshal([]byte(cleanedResponse), &activities); err == nil {
+		return activities, nil
+	}
+	
+	// Try to parse as wrapper with data field
+	var wrapper struct {
+		Data []models.POIDetailedInfo `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(cleanedResponse), &wrapper); err == nil && len(wrapper.Data) > 0 {
+		return wrapper.Data, nil
+	}
+	
+	return nil, fmt.Errorf("failed to parse activities response")
+}
+
+// parseHotelsFromResponse parses hotel data from SSE response
+func parseHotelsFromResponse(responseText string, logger *slog.Logger) ([]models.HotelDetailedInfo, error) {
+	if responseText == "" {
+		return nil, fmt.Errorf("empty hotels response text")
+	}
+
+	cleanedResponse := cleanJSONResponse(responseText)
+	
+	// Try to parse as array of hotels
+	var hotels []models.HotelDetailedInfo
+	if err := json.Unmarshal([]byte(cleanedResponse), &hotels); err == nil {
+		return hotels, nil
+	}
+	
+	// Try to parse as wrapper with data field
+	var wrapper struct {
+		Data []models.HotelDetailedInfo `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(cleanedResponse), &wrapper); err == nil && len(wrapper.Data) > 0 {
+		return wrapper.Data, nil
+	}
+	
+	return nil, fmt.Errorf("failed to parse hotels response")
 }

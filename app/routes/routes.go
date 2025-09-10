@@ -13,7 +13,10 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/FACorreiaa/go-templui/app/internal/features"
+	"github.com/FACorreiaa/go-templui/app/internal/features/activities"
+	"github.com/FACorreiaa/go-templui/app/internal/features/hotels"
 	"github.com/FACorreiaa/go-templui/app/internal/features/itinerary"
+	"github.com/FACorreiaa/go-templui/app/internal/features/restaurants"
 	"github.com/FACorreiaa/go-templui/app/internal/features/results"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"github.com/FACorreiaa/go-templui/app/internal/renderer"
@@ -30,7 +33,6 @@ import (
 	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
 
 	"github.com/FACorreiaa/go-templui/app/internal/features/about"
-	"github.com/FACorreiaa/go-templui/app/internal/features/activities"
 	"github.com/FACorreiaa/go-templui/app/internal/features/auth"
 	"github.com/FACorreiaa/go-templui/app/internal/features/billing"
 	"github.com/FACorreiaa/go-templui/app/internal/features/bookmarks"
@@ -38,13 +40,11 @@ import (
 	"github.com/FACorreiaa/go-templui/app/internal/features/discover"
 	"github.com/FACorreiaa/go-templui/app/internal/features/favorites"
 	"github.com/FACorreiaa/go-templui/app/internal/features/home"
-	"github.com/FACorreiaa/go-templui/app/internal/features/hotels"
 	"github.com/FACorreiaa/go-templui/app/internal/features/lists"
 	"github.com/FACorreiaa/go-templui/app/internal/features/nearby"
 	"github.com/FACorreiaa/go-templui/app/internal/features/pricing"
 	"github.com/FACorreiaa/go-templui/app/internal/features/profile"
 	"github.com/FACorreiaa/go-templui/app/internal/features/recents"
-	"github.com/FACorreiaa/go-templui/app/internal/features/restaurants"
 	"github.com/FACorreiaa/go-templui/app/internal/features/reviews"
 	"github.com/FACorreiaa/go-templui/app/internal/features/settings"
 	"github.com/FACorreiaa/go-templui/app/internal/pages"
@@ -101,7 +101,7 @@ func parseCompleteItineraryResponse(responseText string, logger *slog.Logger) (*
 // parseSSEFormatResponse parses multi-part SSE response format like [city_data]...[general_pois]...[itinerary]...
 func parseSSEFormatResponse(responseText string, logger *slog.Logger) (*models.AiCityResponse, error) {
 	result := &models.AiCityResponse{}
-	
+
 	// Parse city_data section
 	if cityMatch := regexp.MustCompile(`\[city_data\]\s*(.*?)(?:\n\n|\[|$)`).FindStringSubmatch(responseText); len(cityMatch) > 1 {
 		var cityData models.GeneralCityData
@@ -110,7 +110,7 @@ func parseSSEFormatResponse(responseText string, logger *slog.Logger) (*models.A
 			logger.Debug("parseSSEFormatResponse: Parsed city_data section")
 		}
 	}
-	
+
 	// Parse general_pois section
 	if poisMatch := regexp.MustCompile(`\[general_pois\]\s*(.*?)(?:\n\n|\[|$)`).FindStringSubmatch(responseText); len(poisMatch) > 1 {
 		var generalPOIs []models.POIDetailedInfo
@@ -119,7 +119,7 @@ func parseSSEFormatResponse(responseText string, logger *slog.Logger) (*models.A
 			logger.Debug("parseSSEFormatResponse: Parsed general_pois section", "count", len(generalPOIs))
 		}
 	}
-	
+
 	// Parse itinerary section
 	if itineraryMatch := regexp.MustCompile(`\[itinerary\]\s*(.*?)(?:\n\n|\[|$)`).FindStringSubmatch(responseText); len(itineraryMatch) > 1 {
 		var itineraryData models.AIItineraryResponse
@@ -128,12 +128,12 @@ func parseSSEFormatResponse(responseText string, logger *slog.Logger) (*models.A
 			logger.Debug("parseSSEFormatResponse: Parsed itinerary section", "poisCount", len(itineraryData.PointsOfInterest))
 		}
 	}
-	
+
 	// Return result if we have at least some data
 	if result.GeneralCityData.City != "" || len(result.PointsOfInterest) > 0 || result.AIItineraryResponse.ItineraryName != "" {
 		return result, nil
 	}
-	
+
 	// Fallback: try to parse as legacy format for backwards compatibility
 	return parseCompleteItineraryResponseLegacy(responseText, logger)
 }
@@ -148,7 +148,7 @@ func parseCompleteItineraryResponseLegacy(responseText string, logger *slog.Logg
 		logger.Debug("parseCompleteItineraryResponseLegacy: Parsed as legacy format")
 		return result, nil
 	}
-	
+
 	logger.Debug("parseCompleteItineraryResponse: Could not parse response in any format")
 	return nil, fmt.Errorf("failed to parse complete itinerary response")
 }
@@ -362,111 +362,6 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		}))
 	})
 
-	// Activities (public but enhanced when authenticated)
-	r.GET("/activities", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
-		query := c.Query("q")
-
-		logger.Log.Info("Activities page accessed",
-			zap.String("ip", c.ClientIP()),
-			zap.String("query", query))
-
-		// Create activities page with query context
-		var content templ.Component
-		if query != "" {
-			// Page accessed with a query - this should trigger LLM streaming for activities
-			content = activities.ActivitiesPageWithQuery(query)
-		} else {
-			// Regular activities page
-			content = activities.ActivitiesPage()
-		}
-
-		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
-			Title:   "Activities - Loci",
-			Content: content,
-			Nav: models.Navigation{
-				Items: []models.NavItem{
-					{Name: "Home", URL: "/"},
-					{Name: "Discover", URL: "/discover"},
-					{Name: "Activities", URL: "/activities"},
-					{Name: "Hotels", URL: "/hotels"},
-					{Name: "Restaurants", URL: "/restaurants"},
-				},
-			},
-			ActiveNav: "Activities",
-			User:      getUserFromContext(c),
-		}))
-	})
-
-	// Hotels (public but enhanced when authenticated)
-	r.GET("/hotels", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
-		query := c.Query("q")
-
-		logger.Log.Info("Hotels page accessed",
-			zap.String("ip", c.ClientIP()),
-			zap.String("query", query))
-
-		// Create hotel page with query context
-		var content templ.Component
-		if query != "" {
-			// Page accessed with a query - this should trigger LLM streaming for hotels
-			content = hotels.HotelsPageWithQuery(query)
-		} else {
-			// Regular hotel page
-			content = hotels.HotelsPage()
-		}
-
-		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
-			Title:   "Hotels - Loci",
-			Content: content,
-			Nav: models.Navigation{
-				Items: []models.NavItem{
-					{Name: "Home", URL: "/"},
-					{Name: "Discover", URL: "/discover"},
-					{Name: "Activities", URL: "/activities"},
-					{Name: "Hotels", URL: "/hotels"},
-					{Name: "Restaurants", URL: "/restaurants"},
-				},
-			},
-			ActiveNav: "Hotels",
-			User:      getUserFromContext(c),
-		}))
-	})
-
-	// Restaurants (public but enhanced when authenticated)
-	r.GET("/restaurants", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
-		query := c.Query("q")
-
-		logger.Log.Info("Restaurants page accessed",
-			zap.String("ip", c.ClientIP()),
-			zap.String("query", query))
-
-		// Create restaurant page with query context
-		var content templ.Component
-		if query != "" {
-			// Page accessed with a query - this should trigger LLM streaming for restaurants
-			content = restaurants.RestaurantsPageWithQuery(query)
-		} else {
-			// Regular restaurant page
-			content = restaurants.RestaurantsPage()
-		}
-
-		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
-			Title:   "Restaurants - Loci",
-			Content: content,
-			Nav: models.Navigation{
-				Items: []models.NavItem{
-					{Name: "Home", URL: "/"},
-					{Name: "Discover", URL: "/discover"},
-					{Name: "Activities", URL: "/activities"},
-					{Name: "Hotels", URL: "/hotels"},
-					{Name: "Restaurants", URL: "/restaurants"},
-				},
-			},
-			ActiveNav: "Restaurants",
-			User:      getUserFromContext(c),
-		}))
-	})
-
 	// Discover (public but enhanced when authenticated)
 	r.GET("/discover", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
 		logger.Log.Info("Discover page accessed", zap.String("ip", c.ClientIP()))
@@ -548,67 +443,6 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 	protected := r.Group("/")
 	protected.Use(middleware.AuthMiddleware())
 	{
-		// Dashboard (authenticated landing)
-		protected.GET("/dashboard", func(c *gin.Context) {
-			logger.Log.Info("Dashboard accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
-				Title:   "Dashboard - Loci",
-				Content: home.LoggedInDashboard(),
-				Nav: models.Navigation{
-					Items: []models.NavItem{
-						{Name: "Dashboard", URL: "/dashboard"},
-						{Name: "Discover", URL: "/discover"},
-						{Name: "Nearby", URL: "/nearby"},
-						{Name: "Chat", URL: "/chat"},
-						{Name: "Favorites", URL: "/favorites"},
-					},
-				},
-				ActiveNav: "Dashboard",
-				User:      getUserFromContext(c),
-			}))
-		})
-
-		// Chat
-		protected.GET("/chat", func(c *gin.Context) {
-			logger.Log.Info("Chat page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
-				Title:   "AI Chat - Loci",
-				Content: chat.ChatPage(),
-				Nav: models.Navigation{
-					Items: []models.NavItem{
-						{Name: "Dashboard", URL: "/dashboard"},
-						{Name: "Discover", URL: "/discover"},
-						{Name: "Nearby", URL: "/nearby"},
-						{Name: "Chat", URL: "/chat"},
-						{Name: "Favorites", URL: "/favorites"},
-					},
-				},
-				ActiveNav: "Chat",
-				User:      getUserFromContext(c),
-			}))
-		})
-
-		// Nearby
-		protected.GET("/nearby", func(c *gin.Context) {
-			logger.Log.Info("Nearby page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
-				Title:   "Nearby Places - Loci",
-				Content: nearby.NearbyPage(),
-				Nav: models.Navigation{
-					Items: []models.NavItem{
-						{Name: "Dashboard", URL: "/dashboard"},
-						{Name: "Discover", URL: "/discover"},
-						{Name: "Nearby", URL: "/nearby"},
-						{Name: "Itinerary", URL: "/itinerary"},
-						{Name: "Chat", URL: "/chat"},
-						{Name: "Favorites", URL: "/favorites"},
-					},
-				},
-				ActiveNav: "Nearby",
-				User:      getUserFromContext(c),
-			}))
-		})
-
 		// Itinerary
 		protected.GET("/itinerary", func(c *gin.Context) {
 			userID := middleware.GetUserIDFromContext(c)
@@ -635,7 +469,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 						completeData.PointsOfInterest,
 						completeData.AIItineraryResponse,
 						true, true, 5, []string{})
-					
+
 					logger.Log.Info("Rendered complete cached itinerary",
 						zap.String("city", completeData.GeneralCityData.City),
 						zap.Int("generalPOIs", len(completeData.PointsOfInterest)),
@@ -647,9 +481,9 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 					// Create empty city data and general POIs for legacy cached data
 					emptyCityData := models.GeneralCityData{}
 					emptyGeneralPOIs := []models.POIDetailedInfo{}
-					
+
 					content = results.ItineraryResults(emptyCityData, emptyGeneralPOIs, itineraryData, true, true, 5, []string{})
-					
+
 					logger.Log.Info("Rendered legacy cached itinerary",
 						zap.Int("personalizedPOIs", len(itineraryData.PointsOfInterest)))
 				} else {
@@ -716,6 +550,211 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 					},
 				},
 				ActiveNav: "Itinerary",
+				User:      getUserFromContext(c),
+			}))
+		})
+		
+		// Activities (public but enhanced when authenticated)
+		protected.GET("/activities", func(c *gin.Context) {
+			query := c.Query("q")
+			sessionIdParam := c.Query("sessionId")
+
+			logger.Log.Info("Activities page accessed",
+				zap.String("ip", c.ClientIP()),
+				zap.String("query", query))
+
+			// Create activities page with query context
+			var content templ.Component
+			if sessionIdParam != "" {
+				logger.Log.Info("Attempting to load activities from cache",
+					zap.String("sessionID", sessionIdParam))
+
+				// Try to get cached activities data
+				if cachedData, found := middleware.ActivitiesCache.Get(sessionIdParam); found {
+					logger.Log.Info("Activities found in cache. Rendering results.")
+					content = results.ActivityResults(cachedData, false, true, 5, []string{})
+				} else {
+					logger.Log.Info("Activities not found in cache")
+					content = results.PageNotFound("Activities session expired. Please search again.")
+				}
+			} else if query != "" {
+				// Page accessed with a query - this should trigger LLM streaming for activities
+				content = activities.ActivitiesPageWithQuery(query)
+			} else {
+				// Regular activities page
+				content = activities.ActivitiesPage()
+			}
+
+			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+				Title:   "Activities - Loci",
+				Content: content,
+				Nav: models.Navigation{
+					Items: []models.NavItem{
+						{Name: "Home", URL: "/"},
+						{Name: "Discover", URL: "/discover"},
+						{Name: "Activities", URL: "/activities"},
+						{Name: "Hotels", URL: "/hotels"},
+						{Name: "Restaurants", URL: "/restaurants"},
+					},
+				},
+				ActiveNav: "Activities",
+				User:      getUserFromContext(c),
+			}))
+		})
+
+		// Hotels (public but enhanced when authenticated)
+		protected.GET("/hotels", func(c *gin.Context) {
+			query := c.Query("q")
+			sessionIdParam := c.Query("sessionId")
+
+			logger.Log.Info("Hotels page accessed",
+				zap.String("ip", c.ClientIP()),
+				zap.String("query", query))
+
+			// Create hotel page with query context
+			var content templ.Component
+			if sessionIdParam != "" {
+				logger.Log.Info("Attempting to load hotels from cache",
+					zap.String("sessionID", sessionIdParam))
+
+				// Try to get cached hotels data
+				if cachedData, found := middleware.HotelsCache.Get(sessionIdParam); found {
+					logger.Log.Info("Hotels found in cache. Rendering results.")
+					content = results.HotelResults(cachedData, false, true, 5, []string{})
+				} else {
+					logger.Log.Info("Hotels not found in cache")
+					content = results.PageNotFound("Hotels session expired. Please search again.")
+				}
+			} else if query != "" {
+				// Page accessed with a query - this should trigger LLM streaming for hotels
+				content = hotels.HotelsPageWithQuery(query)
+			} else {
+				// Regular hotel page
+				content = hotels.HotelsPage()
+			}
+
+			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+				Title:   "Hotels - Loci",
+				Content: content,
+				Nav: models.Navigation{
+					Items: []models.NavItem{
+						{Name: "Home", URL: "/"},
+						{Name: "Discover", URL: "/discover"},
+						{Name: "Activities", URL: "/activities"},
+						{Name: "Hotels", URL: "/hotels"},
+						{Name: "Restaurants", URL: "/restaurants"},
+					},
+				},
+				ActiveNav: "Hotels",
+				User:      getUserFromContext(c),
+			}))
+		})
+
+		// Restaurants (public but enhanced when authenticated)
+		protected.GET("/restaurants", func(c *gin.Context) {
+			query := c.Query("q")
+			sessionIdParam := c.Query("sessionId")
+
+			logger.Log.Info("Restaurants page accessed",
+				zap.String("ip", c.ClientIP()),
+				zap.String("query", query))
+
+			// Create restaurant page with query context
+			var content templ.Component
+			if sessionIdParam != "" {
+				logger.Log.Info("Attempting to load restaurants from cache",
+					zap.String("sessionID", sessionIdParam))
+
+				// Try to get cached restaurants data
+				if cachedData, found := middleware.RestaurantsCache.Get(sessionIdParam); found {
+					logger.Log.Info("Restaurants found in cache. Rendering results.")
+					content = results.RestaurantResults(cachedData, false, true, 5, []string{}, false)
+				} else {
+					logger.Log.Info("Restaurants not found in cache")
+					content = results.PageNotFound("Restaurants session expired. Please search again.")
+				}
+			} else if query != "" {
+				// Page accessed with a query - this should trigger LLM streaming for restaurants
+				content = restaurants.RestaurantsPageWithQuery(query)
+			} else {
+				// Regular restaurant page
+				content = restaurants.RestaurantsPage()
+			}
+
+			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+				Title:   "Restaurants - Loci",
+				Content: content,
+				Nav: models.Navigation{
+					Items: []models.NavItem{
+						{Name: "Home", URL: "/"},
+						{Name: "Discover", URL: "/discover"},
+						{Name: "Activities", URL: "/activities"},
+						{Name: "Hotels", URL: "/hotels"},
+						{Name: "Restaurants", URL: "/restaurants"},
+					},
+				},
+				ActiveNav: "Restaurants",
+				User:      getUserFromContext(c),
+			}))
+		})
+
+		// Dashboard (authenticated landing)
+		protected.GET("/dashboard", func(c *gin.Context) {
+			logger.Log.Info("Dashboard accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
+			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+				Title:   "Dashboard - Loci",
+				Content: home.LoggedInDashboard(),
+				Nav: models.Navigation{
+					Items: []models.NavItem{
+						{Name: "Dashboard", URL: "/dashboard"},
+						{Name: "Discover", URL: "/discover"},
+						{Name: "Nearby", URL: "/nearby"},
+						{Name: "Chat", URL: "/chat"},
+						{Name: "Favorites", URL: "/favorites"},
+					},
+				},
+				ActiveNav: "Dashboard",
+				User:      getUserFromContext(c),
+			}))
+		})
+
+		// Chat
+		protected.GET("/chat", func(c *gin.Context) {
+			logger.Log.Info("Chat page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
+			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+				Title:   "AI Chat - Loci",
+				Content: chat.ChatPage(),
+				Nav: models.Navigation{
+					Items: []models.NavItem{
+						{Name: "Dashboard", URL: "/dashboard"},
+						{Name: "Discover", URL: "/discover"},
+						{Name: "Nearby", URL: "/nearby"},
+						{Name: "Chat", URL: "/chat"},
+						{Name: "Favorites", URL: "/favorites"},
+					},
+				},
+				ActiveNav: "Chat",
+				User:      getUserFromContext(c),
+			}))
+		})
+
+		// Nearby
+		protected.GET("/nearby", func(c *gin.Context) {
+			logger.Log.Info("Nearby page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
+			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+				Title:   "Nearby Places - Loci",
+				Content: nearby.NearbyPage(),
+				Nav: models.Navigation{
+					Items: []models.NavItem{
+						{Name: "Dashboard", URL: "/dashboard"},
+						{Name: "Discover", URL: "/discover"},
+						{Name: "Nearby", URL: "/nearby"},
+						{Name: "Itinerary", URL: "/itinerary"},
+						{Name: "Chat", URL: "/chat"},
+						{Name: "Favorites", URL: "/favorites"},
+					},
+				},
+				ActiveNav: "Nearby",
 				User:      getUserFromContext(c),
 			}))
 		})
