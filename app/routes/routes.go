@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -10,12 +9,10 @@ import (
 	"strings"
 
 	"github.com/a-h/templ"
-	"github.com/google/uuid"
 
 	"github.com/FACorreiaa/go-templui/app/internal/features"
 	"github.com/FACorreiaa/go-templui/app/internal/features/activities"
 	"github.com/FACorreiaa/go-templui/app/internal/features/hotels"
-	"github.com/FACorreiaa/go-templui/app/internal/features/itinerary"
 	"github.com/FACorreiaa/go-templui/app/internal/features/restaurants"
 	"github.com/FACorreiaa/go-templui/app/internal/features/results"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
@@ -113,10 +110,23 @@ func parseSSEFormatResponse(responseText string, logger *slog.Logger) (*models.A
 
 	// Parse general_pois section
 	if poisMatch := regexp.MustCompile(`\[general_pois\]\s*(.*?)(?:\n\n|\[|$)`).FindStringSubmatch(responseText); len(poisMatch) > 1 {
-		var generalPOIs []models.POIDetailedInfo
-		if err := json.Unmarshal([]byte(strings.TrimSpace(poisMatch[1])), &generalPOIs); err == nil {
-			result.PointsOfInterest = generalPOIs
-			logger.Debug("parseSSEFormatResponse: Parsed general_pois section", "count", len(generalPOIs))
+		// Try parsing as wrapper with points_of_interest field first
+		var poisWrapper struct {
+			PointsOfInterest []models.POIDetailedInfo `json:"points_of_interest"`
+		}
+		cleanedPOIsJSON := strings.TrimSpace(poisMatch[1])
+		if err := json.Unmarshal([]byte(cleanedPOIsJSON), &poisWrapper); err == nil && len(poisWrapper.PointsOfInterest) > 0 {
+			result.PointsOfInterest = poisWrapper.PointsOfInterest
+			logger.Debug("parseSSEFormatResponse: Parsed general_pois section with wrapper", "count", len(poisWrapper.PointsOfInterest))
+		} else {
+			// Fallback: try parsing as direct array
+			var generalPOIs []models.POIDetailedInfo
+			if err := json.Unmarshal([]byte(cleanedPOIsJSON), &generalPOIs); err == nil {
+				result.PointsOfInterest = generalPOIs
+				logger.Debug("parseSSEFormatResponse: Parsed general_pois section as direct array", "count", len(generalPOIs))
+			} else {
+				logger.Warn("parseSSEFormatResponse: Failed to parse general_pois section", "error", err)
+			}
 		}
 	}
 
@@ -290,7 +300,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 	bookmarksHandlers := handlers2.NewBookmarksHandlers()
 	discoverHandlers := handlers2.NewDiscoverHandlers()
 	nearbyHandlers := handlers2.NewNearbyHandlers()
-	itineraryHandlers := handlers2.NewItineraryHandlers()
+	itineraryHandlers := handlers2.NewItineraryHandlers(chatRepo)
 	settingsHandlers := handlers2.NewSettingsHandlers()
 	resultsHandlers := handlers2.NewResultsHandlers()
 
@@ -445,97 +455,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 	{
 		// Itinerary
 		protected.GET("/itinerary", func(c *gin.Context) {
-			userID := middleware.GetUserIDFromContext(c)
-			query := c.Query("q")
-			sessionIdParam := c.Query("sessionId")
-
-			logger.Log.Info("Itinerary page accessed",
-				zap.String("user", userID),
-				zap.String("query", query))
-			var content templ.Component
-
-			if sessionIdParam != "" {
-				logger.Log.Info("Attempting to load itinerary from cache",
-					zap.String("user", userID),
-					zap.String("sessionID", sessionIdParam))
-
-				// Try to get the complete data from the new cache first
-				if completeData, found := middleware.CompleteItineraryCache.Get(sessionIdParam); found {
-					// DATA FOUND! Render the static results page with the complete data.
-					logger.Log.Info("Complete itinerary found in cache. Rendering results.")
-
-					content = results.ItineraryResults(
-						completeData.GeneralCityData,
-						completeData.PointsOfInterest,
-						completeData.AIItineraryResponse,
-						true, true, 5, []string{})
-
-					logger.Log.Info("Rendered complete cached itinerary",
-						zap.String("city", completeData.GeneralCityData.City),
-						zap.Int("generalPOIs", len(completeData.PointsOfInterest)),
-						zap.Int("personalizedPOIs", len(completeData.AIItineraryResponse.PointsOfInterest)))
-				} else if itineraryData, found := middleware.ItineraryCache.Get(sessionIdParam); found {
-					// Fallback to legacy cache
-					logger.Log.Info("Legacy itinerary found in cache. Rendering results.")
-
-					// Create empty city data and general POIs for legacy cached data
-					emptyCityData := models.GeneralCityData{}
-					emptyGeneralPOIs := []models.POIDetailedInfo{}
-
-					content = results.ItineraryResults(emptyCityData, emptyGeneralPOIs, itineraryData, true, true, 5, []string{})
-
-					logger.Log.Info("Rendered legacy cached itinerary",
-						zap.Int("personalizedPOIs", len(itineraryData.PointsOfInterest)))
-				} else {
-					// Data not found in cache - try to retrieve from database
-					logger.Log.Info("Itinerary not found in cache, attempting to load from database", zap.String("sessionID", sessionIdParam))
-
-					// Parse sessionID as UUID
-					sessionID, err := uuid.Parse(sessionIdParam)
-					if err != nil {
-						logger.Log.Warn("Invalid session ID format", zap.String("sessionID", sessionIdParam), zap.Error(err))
-						content = results.PageNotFound("Invalid session ID")
-					} else {
-						// Try to get the latest interaction for this session from database
-						ctx := context.Background()
-						interaction, err := chatRepo.GetLatestInteractionBySessionID(ctx, sessionID)
-						if err != nil || interaction == nil {
-							logger.Log.Warn("No interaction found in database for session",
-								zap.String("sessionID", sessionIdParam),
-								zap.Error(err))
-							content = results.PageNotFound("Itinerary session expired. Please create a new itinerary.")
-						} else {
-							// Try to parse the stored response as complete itinerary data (all three parts)
-							completeData, err := parseCompleteItineraryResponse(interaction.ResponseText, slog.Default())
-							if err != nil || completeData == nil {
-								logger.Log.Warn("Could not parse complete itinerary from stored response",
-									zap.String("sessionID", sessionIdParam),
-									zap.Error(err))
-								content = results.PageNotFound("Could not load itinerary data. Please create a new itinerary.")
-							} else {
-								logger.Log.Info("Successfully loaded complete itinerary from database",
-									zap.String("sessionID", sessionIdParam),
-									zap.String("city", completeData.GeneralCityData.City),
-									zap.Int("generalPOIs", len(completeData.PointsOfInterest)),
-									zap.Int("personalizedPOIs", len(completeData.AIItineraryResponse.PointsOfInterest)))
-
-								// Render the results page with the complete database data (all three parts)
-								content = results.ItineraryResults(
-									completeData.GeneralCityData,
-									completeData.PointsOfInterest,
-									completeData.AIItineraryResponse,
-									true, true, 5, []string{})
-							}
-						}
-					}
-				}
-			} else {
-				// No session ID in the URL. This means the user navigated here directly.
-				// Show the default page where they can start creating a new itinerary.
-				logger.Log.Info("Direct navigation to /itinerary. Showing default page.")
-				content = itinerary.ItineraryPage() // Your original default page
-			}
-
+			content := itineraryHandlers.HandleItineraryPage(c)
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Travel Planner - Loci",
 				Content: content,

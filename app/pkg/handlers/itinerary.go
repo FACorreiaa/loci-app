@@ -1,23 +1,37 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/FACorreiaa/go-templui/app/internal/features/itinerary"
-	"github.com/FACorreiaa/go-templui/app/internal/models"
-	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 	"github.com/a-h/templ"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
+
+	"github.com/FACorreiaa/go-templui/app/internal/features/itinerary"
+	"github.com/FACorreiaa/go-templui/app/internal/features/results"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
+	llmchat "github.com/FACorreiaa/go-templui/app/pkg/domain/chat_prompt"
+	"github.com/FACorreiaa/go-templui/app/pkg/logger"
+	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
+	"github.com/FACorreiaa/go-templui/app/pkg/services"
 )
 
-type ItineraryHandlers struct{}
+type ItineraryHandlers struct {
+	chatRepo         llmchat.Repository
+	itineraryService *services.ItineraryService
+}
 
-func NewItineraryHandlers() *ItineraryHandlers {
-	return &ItineraryHandlers{}
+func NewItineraryHandlers(chatRepo llmchat.Repository) *ItineraryHandlers {
+	return &ItineraryHandlers{
+		chatRepo:         chatRepo,
+		itineraryService: services.NewItineraryService(),
+	}
 }
 
 func (h *ItineraryHandlers) HandleDestination(c *gin.Context) {
@@ -272,4 +286,101 @@ func renderChatMessage(message models.ChatMessage, isUser bool) string {
 			</div>
 		</div>
 	`, userClass, iconBg, iconClass, bgClass, textClass, message.Content, timestamp)
+}
+
+// HandleItineraryPage handles the main itinerary page logic
+func (h *ItineraryHandlers) HandleItineraryPage(c *gin.Context) templ.Component {
+	userID := middleware.GetUserIDFromContext(c)
+	query := c.Query("q")
+	sessionIdParam := c.Query("sessionId")
+
+	logger.Log.Info("Itinerary page accessed",
+		zap.String("user", userID),
+		zap.String("query", query),
+		zap.String("sessionId", sessionIdParam))
+
+	if sessionIdParam == "" {
+		logger.Log.Info("Direct navigation to /itinerary. Showing default page.")
+		return itinerary.ItineraryPage()
+	}
+
+	// Load itinerary data for session
+	return h.loadItineraryBySession(sessionIdParam)
+}
+
+func (h *ItineraryHandlers) loadItineraryBySession(sessionIdParam string) templ.Component {
+	logger.Log.Info("Attempting to load itinerary from cache", zap.String("sessionID", sessionIdParam))
+
+	// Try complete cache first
+	if completeData, found := middleware.CompleteItineraryCache.Get(sessionIdParam); found {
+		logger.Log.Info("Complete itinerary found in cache. Rendering results.",
+			zap.String("city", completeData.GeneralCityData.City),
+			zap.Int("generalPOIs", len(completeData.PointsOfInterest)),
+			zap.Int("personalizedPOIs", len(completeData.AIItineraryResponse.PointsOfInterest)))
+
+		return results.ItineraryResults(
+			completeData.GeneralCityData,
+			completeData.PointsOfInterest,
+			completeData.AIItineraryResponse,
+			true, true, 5, []string{})
+	}
+
+	// Try legacy cache
+	if itineraryData, found := middleware.ItineraryCache.Get(sessionIdParam); found {
+		logger.Log.Info("Legacy itinerary found in cache. Rendering results.",
+			zap.Int("personalizedPOIs", len(itineraryData.PointsOfInterest)))
+
+		// Create empty city data and general POIs for legacy cached data
+		emptyCityData := models.GeneralCityData{}
+		emptyGeneralPOIs := []models.POIDetailedInfo{}
+
+		return results.ItineraryResults(emptyCityData, emptyGeneralPOIs, itineraryData, true, true, 5, []string{})
+	}
+
+	// Load from database
+	return h.loadItineraryFromDatabase(sessionIdParam)
+}
+
+// loadItineraryFromDatabase loads itinerary from database when not found in cache
+func (h *ItineraryHandlers) loadItineraryFromDatabase(sessionIdParam string) templ.Component {
+	logger.Log.Info("Itinerary not found in cache, attempting to load from database", zap.String("sessionID", sessionIdParam))
+
+	// Parse sessionID as UUID
+	sessionID, err := uuid.Parse(sessionIdParam)
+	if err != nil {
+		logger.Log.Warn("Invalid session ID format", zap.String("sessionID", sessionIdParam), zap.Error(err))
+		return results.PageNotFound("Invalid session ID")
+	}
+
+	// Get the latest interaction for this session from database
+	ctx := context.Background()
+	interaction, err := h.chatRepo.GetLatestInteractionBySessionID(ctx, sessionID)
+	if err != nil || interaction == nil {
+		logger.Log.Warn("No interaction found in database for session",
+			zap.String("sessionID", sessionIdParam),
+			zap.Error(err))
+		return results.PageNotFound("Itinerary session expired. Please create a new itinerary.")
+	}
+
+	// Parse the stored response as complete itinerary data
+	completeData, err := h.itineraryService.ParseCompleteItineraryResponse(interaction.ResponseText, slog.Default())
+	if err != nil || completeData == nil {
+		logger.Log.Warn("Could not parse complete itinerary from stored response",
+			zap.String("sessionID", sessionIdParam),
+			zap.Error(err))
+		return results.PageNotFound("Could not load itinerary data. Please create a new itinerary.")
+	}
+
+	logger.Log.Info("Successfully loaded complete itinerary from database",
+		zap.String("sessionID", sessionIdParam),
+		zap.String("city", completeData.GeneralCityData.City),
+		zap.Int("generalPOIs", len(completeData.PointsOfInterest)),
+		zap.Int("personalizedPOIs", len(completeData.AIItineraryResponse.PointsOfInterest)))
+
+	// Render the results page with the complete database data
+	return results.ItineraryResults(
+		completeData.GeneralCityData,
+		completeData.PointsOfInterest,
+		completeData.AIItineraryResponse,
+		true, true, 5, []string{})
 }
