@@ -11,10 +11,6 @@ import (
 	"github.com/a-h/templ"
 
 	"github.com/FACorreiaa/go-templui/app/internal/features"
-	"github.com/FACorreiaa/go-templui/app/internal/features/activities"
-	"github.com/FACorreiaa/go-templui/app/internal/features/hotels"
-	"github.com/FACorreiaa/go-templui/app/internal/features/restaurants"
-	"github.com/FACorreiaa/go-templui/app/internal/features/results"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"github.com/FACorreiaa/go-templui/app/internal/renderer"
 	"github.com/FACorreiaa/go-templui/app/pkg/config"
@@ -301,6 +297,9 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 	discoverHandlers := handlers2.NewDiscoverHandlers()
 	nearbyHandlers := handlers2.NewNearbyHandlers()
 	itineraryHandlers := handlers2.NewItineraryHandlers(chatRepo)
+	activitiesHandlers := handlers2.NewActivitiesHandlers(chatRepo)
+	hotelsHandlers := handlers2.NewHotelsHandlers(chatRepo)
+	restaurantsHandlers := handlers2.NewRestaurantsHandlers(chatRepo)
 	settingsHandlers := handlers2.NewSettingsHandlers()
 	resultsHandlers := handlers2.NewResultsHandlers()
 
@@ -476,35 +475,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		
 		// Activities (public but enhanced when authenticated)
 		protected.GET("/activities", func(c *gin.Context) {
-			query := c.Query("q")
-			sessionIdParam := c.Query("sessionId")
-
-			logger.Log.Info("Activities page accessed",
-				zap.String("ip", c.ClientIP()),
-				zap.String("query", query))
-
-			// Create activities page with query context
-			var content templ.Component
-			if sessionIdParam != "" {
-				logger.Log.Info("Attempting to load activities from cache",
-					zap.String("sessionID", sessionIdParam))
-
-				// Try to get cached activities data
-				if cachedData, found := middleware.ActivitiesCache.Get(sessionIdParam); found {
-					logger.Log.Info("Activities found in cache. Rendering results.")
-					content = results.ActivityResults(cachedData, false, true, 5, []string{})
-				} else {
-					logger.Log.Info("Activities not found in cache")
-					content = results.PageNotFound("Activities session expired. Please search again.")
-				}
-			} else if query != "" {
-				// Page accessed with a query - this should trigger LLM streaming for activities
-				content = activities.ActivitiesPageWithQuery(query)
-			} else {
-				// Regular activities page
-				content = activities.ActivitiesPage()
-			}
-
+			content := activitiesHandlers.HandleActivitiesPage(c)
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Activities - Loci",
 				Content: content,
@@ -524,35 +495,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 
 		// Hotels (public but enhanced when authenticated)
 		protected.GET("/hotels", func(c *gin.Context) {
-			query := c.Query("q")
-			sessionIdParam := c.Query("sessionId")
-
-			logger.Log.Info("Hotels page accessed",
-				zap.String("ip", c.ClientIP()),
-				zap.String("query", query))
-
-			// Create hotel page with query context
-			var content templ.Component
-			if sessionIdParam != "" {
-				logger.Log.Info("Attempting to load hotels from cache",
-					zap.String("sessionID", sessionIdParam))
-
-				// Try to get cached hotels data
-				if cachedData, found := middleware.HotelsCache.Get(sessionIdParam); found {
-					logger.Log.Info("Hotels found in cache. Rendering results.")
-					content = results.HotelResults(cachedData, false, true, 5, []string{})
-				} else {
-					logger.Log.Info("Hotels not found in cache")
-					content = results.PageNotFound("Hotels session expired. Please search again.")
-				}
-			} else if query != "" {
-				// Page accessed with a query - this should trigger LLM streaming for hotels
-				content = hotels.HotelsPageWithQuery(query)
-			} else {
-				// Regular hotel page
-				content = hotels.HotelsPage()
-			}
-
+			content := hotelsHandlers.HandleHotelsPage(c)
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Hotels - Loci",
 				Content: content,
@@ -572,35 +515,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 
 		// Restaurants (public but enhanced when authenticated)
 		protected.GET("/restaurants", func(c *gin.Context) {
-			query := c.Query("q")
-			sessionIdParam := c.Query("sessionId")
-
-			logger.Log.Info("Restaurants page accessed",
-				zap.String("ip", c.ClientIP()),
-				zap.String("query", query))
-
-			// Create restaurant page with query context
-			var content templ.Component
-			if sessionIdParam != "" {
-				logger.Log.Info("Attempting to load restaurants from cache",
-					zap.String("sessionID", sessionIdParam))
-
-				// Try to get cached restaurants data
-				if cachedData, found := middleware.RestaurantsCache.Get(sessionIdParam); found {
-					logger.Log.Info("Restaurants found in cache. Rendering results.")
-					content = results.RestaurantResults(cachedData, false, true, 5, []string{}, false)
-				} else {
-					logger.Log.Info("Restaurants not found in cache")
-					content = results.PageNotFound("Restaurants session expired. Please search again.")
-				}
-			} else if query != "" {
-				// Page accessed with a query - this should trigger LLM streaming for restaurants
-				content = restaurants.RestaurantsPageWithQuery(query)
-			} else {
-				// Regular restaurant page
-				content = restaurants.RestaurantsPage()
-			}
-
+			content := restaurantsHandlers.HandleRestaurantsPage(c)
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Restaurants - Loci",
 				Content: content,

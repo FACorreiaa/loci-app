@@ -2038,22 +2038,29 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 	}
 
 	// Generate cache key based on session parameters
-	cacheKeyData := map[string]interface{}{
-		"user_id":     userID.String(),
-		"profile_id":  profileID.String(),
-		"city":        cityName,
-		"message":     cleanedMessage,
-		"domain":      string(domain),
-		"preferences": basePreferences,
+	var cacheKey string
+	if domain == models.DomainItinerary {
+		// Use simpler cache key for itinerary requests (24h cache)
+		cacheKey = generateItineraryCacheKey(cityName, string(domain), userID)
+	} else {
+		// Use complex cache key for other domains
+		cacheKeyData := map[string]interface{}{
+			"user_id":     userID.String(),
+			"profile_id":  profileID.String(),
+			"city":        cityName,
+			"message":     cleanedMessage,
+			"domain":      string(domain),
+			"preferences": basePreferences,
+		}
+		cacheKeyBytes, err := json.Marshal(cacheKeyData)
+		if err != nil {
+			l.logger.ErrorContext(ctx, "Failed to marshal cache key data", slog.Any("error", err))
+			// Use a fallback cache key
+			cacheKeyBytes = []byte(fmt.Sprintf("fallback_%s_%s", cleanedMessage, cityName))
+		}
+		hash := md5.Sum(cacheKeyBytes)
+		cacheKey = hex.EncodeToString(hash[:])
 	}
-	cacheKeyBytes, err := json.Marshal(cacheKeyData)
-	if err != nil {
-		l.logger.ErrorContext(ctx, "Failed to marshal cache key data", slog.Any("error", err))
-		// Use a fallback cache key
-		cacheKeyBytes = []byte(fmt.Sprintf("fallback_%s_%s", cleanedMessage, cityName))
-	}
-	hash := md5.Sum(cacheKeyBytes)
-	cacheKey := hex.EncodeToString(hash[:])
 
 	// Step 5: Fan-in Fan-out Setup
 	var wg sync.WaitGroup
@@ -2337,19 +2344,27 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStreamFree(ctx context.Context, c
 	}
 
 	// Generate cache key based on session parameters
-	cacheKeyData := map[string]interface{}{
-		"city":    cityName,
-		"message": cleanedMessage,
-		"domain":  string(domain),
+	var cacheKey string
+	if domain == models.DomainItinerary {
+		// Use simpler cache key for itinerary requests (24h cache)
+		// For free users, use "free" as userID placeholder
+		cacheKey = generateItineraryCacheKey(cityName, string(domain), uuid.Nil)
+	} else {
+		// Use complex cache key for other domains
+		cacheKeyData := map[string]interface{}{
+			"city":    cityName,
+			"message": cleanedMessage,
+			"domain":  string(domain),
+		}
+		cacheKeyBytes, err := json.Marshal(cacheKeyData)
+		if err != nil {
+			l.logger.ErrorContext(ctx, "Failed to marshal cache key data", slog.Any("error", err))
+			// Use a fallback cache key
+			cacheKeyBytes = []byte(fmt.Sprintf("fallback_%s_%s", cleanedMessage, cityName))
+		}
+		hash := md5.Sum(cacheKeyBytes)
+		cacheKey = hex.EncodeToString(hash[:])
 	}
-	cacheKeyBytes, err := json.Marshal(cacheKeyData)
-	if err != nil {
-		l.logger.ErrorContext(ctx, "Failed to marshal cache key data", slog.Any("error", err))
-		// Use a fallback cache key
-		cacheKeyBytes = []byte(fmt.Sprintf("fallback_%s_%s", cleanedMessage, cityName))
-	}
-	hash := md5.Sum(cacheKeyBytes)
-	cacheKey := hex.EncodeToString(hash[:])
 
 	// Step 5: Fan-in Fan-out Setup
 	var wg sync.WaitGroup

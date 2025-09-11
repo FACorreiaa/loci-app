@@ -16,6 +16,18 @@ func generatePOICacheKey(city string, lat, lon, distance float64, userID uuid.UU
 	return fmt.Sprintf("poi:%s:%f:%f:%f:%s", city, lat, lon, distance, userID.String())
 }
 
+func GenerateItineraryCacheKey(cityName, intent string, userID uuid.UUID) string {
+	userIDStr := userID.String()
+	if userID == uuid.Nil {
+		userIDStr = "free-user"
+	}
+	return fmt.Sprintf("itinerary:%s:%s:%s", cityName, intent, userIDStr)
+}
+
+func generateItineraryCacheKey(cityName, intent string, userID uuid.UUID) string {
+	return GenerateItineraryCacheKey(cityName, intent, userID)
+}
+
 func cleanJSONResponse(response string) string {
 	response = strings.TrimSpace(response)
 

@@ -609,8 +609,8 @@ func (h *ChatHandlers) mapDomainToURL(domain models.DomainType, query string) st
 	case models.DomainItinerary:
 		return fmt.Sprintf("/itinerary?q=%s", encodedQuery)
 	case models.DomainGeneral:
-		// For general queries, default to itinerary planning
-		return fmt.Sprintf("/itinerary?q=%s", encodedQuery)
+		// For general queries, default to activities page
+		return fmt.Sprintf("/activities?q=%s", encodedQuery)
 	default:
 		// Default fallback to activities
 		return fmt.Sprintf("/activities?q=%s", encodedQuery)

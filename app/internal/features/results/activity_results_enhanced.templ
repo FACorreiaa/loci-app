@@ -214,6 +214,38 @@ templ ActivitiesResults(cityData models.GeneralCityData, activities []models.POI
 			</div>
 		</div>
 	</div>
+	
+	<script>
+		function activitiesPage() {
+			return {
+				viewMode: 'list',
+				showChat: false,
+				selectedActivity: null,
+				searchQuery: '',
+				selectedCategory: '',
+				sortBy: 'name',
+				
+				init() {
+					// Initialize the component
+				},
+				
+				setViewMode(mode) {
+					this.viewMode = mode;
+				},
+				
+				selectActivity(activity) {
+					this.selectedActivity = activity;
+				},
+				
+				closeModal() {
+					this.selectedActivity = null;
+				}
+			}
+		}
+		
+		// Make function available globally
+		window.activitiesPage = activitiesPage;
+	</script>
 }
 
 // ActivityListCard for the list view section

@@ -214,6 +214,38 @@ templ RestaurantsResults(cityData models.GeneralCityData, restaurants []models.R
 			</div>
 		</div>
 	</div>
+	
+	<script>
+		function restaurantsPage() {
+			return {
+				viewMode: 'list',
+				showChat: false,
+				selectedRestaurant: null,
+				searchQuery: '',
+				selectedCategory: '',
+				sortBy: 'name',
+				
+				init() {
+					// Initialize the component
+				},
+				
+				setViewMode(mode) {
+					this.viewMode = mode;
+				},
+				
+				selectRestaurant(restaurant) {
+					this.selectedRestaurant = restaurant;
+				},
+				
+				closeModal() {
+					this.selectedRestaurant = null;
+				}
+			}
+		}
+		
+		// Make function available globally
+		window.restaurantsPage = restaurantsPage;
+	</script>
 }
 
 // RestaurantListCard for the list view section

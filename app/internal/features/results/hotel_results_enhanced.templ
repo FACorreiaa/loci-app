@@ -214,6 +214,38 @@ templ HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetail
 			</div>
 		</div>
 	</div>
+	
+	<script>
+		function hotelsPage() {
+			return {
+				viewMode: 'list',
+				showChat: false,
+				selectedHotel: null,
+				searchQuery: '',
+				selectedCategory: '',
+				sortBy: 'name',
+				
+				init() {
+					// Initialize the component
+				},
+				
+				setViewMode(mode) {
+					this.viewMode = mode;
+				},
+				
+				selectHotel(hotel) {
+					this.selectedHotel = hotel;
+				},
+				
+				closeModal() {
+					this.selectedHotel = null;
+				}
+			}
+		}
+		
+		// Make function available globally
+		window.hotelsPage = hotelsPage;
+	</script>
 }
 
 // HotelListCard for the list view section

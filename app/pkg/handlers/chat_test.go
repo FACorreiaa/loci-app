@@ -3,44 +3,33 @@ package handlers
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-
-	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 )
 
-func TestMain(m *testing.M) {
-	// Initialize logger
-	err := logger.Init(zapcore.InfoLevel, zap.String("service", "loci-templui-test"))
-	if err != nil {
-		panic("Failed to initialize logger")
-	}
-	// Run tests
-	exitCode := m.Run()
-	// Exit
-	os.Exit(exitCode)
-}
 
 func TestChatHandlers_SendMessage(t *testing.T) {
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
+
+	// Create mock dependencies
+	mockLlmService := &MockLlmService{}
+	mockProfileService := &MockProfileService{}
+	mockChatRepo := &MockRepository{}
 
 	// Setup the router
 	r := gin.Default()
 	r.Static("/static", "./assets/static")
 	r.StaticFile("/sw.js", "./static/sw.js")
 	r.Use(func(c *gin.Context) {
-		// Mock the user ID in the context
-		c.Set("user_id", "test-user-id")
+		// Mock the user ID in the context with a valid UUID
+		c.Set("user_id", "550e8400-e29b-41d4-a716-446655440000")
 		c.Next()
 	})
-	chatHandlers := NewChatHandlers()
+	chatHandlers := NewChatHandlers(mockLlmService, mockProfileService, mockChatRepo)
 	r.POST("/chat/message", chatHandlers.SendMessage)
 
 	t.Run("it returns a successful response with a valid message", func(t *testing.T) {
@@ -61,10 +50,10 @@ func TestChatHandlers_SendMessage(t *testing.T) {
 		// Assert the status code
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		// Assert the response body
+		// Assert the response body contains SSE components and processing message
 		responseBody := w.Body.String()
-		assert.Contains(t, responseBody, "Hello", "Response should contain the user message")
-		assert.Contains(t, responseBody, "Thanks for your message!", "Response should contain the AI message")
+		assert.Contains(t, responseBody, "I'm analyzing your request and updating your itinerary", "Response should contain the AI processing message")
+		assert.Contains(t, responseBody, "sse-connect=\"/chat/stream?message=Hello", "Response should contain SSE connection for the message")
 	})
 
 	t.Run("it returns a bad request with an empty message", func(t *testing.T) {
