@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -313,6 +315,16 @@ func (h *ItineraryHandlers) loadItineraryBySession(sessionIdParam string) templ.
 
 	// Try complete cache first
 	if completeData, found := middleware.CompleteItineraryCache.Get(sessionIdParam); found {
+		jsonData, err := json.MarshalIndent(completeData, "", "  ")
+		if err != nil {
+			logger.Log.Error("Failed to marshal completeData to JSON", zap.Error(err))
+		} else {
+			logger.Log.Info("Complete itinerary JSON structure", zap.String("json", string(jsonData)))
+		}
+
+		if err := os.WriteFile("completeData.json", jsonData, 0644); err != nil {
+			logger.Log.Error("Failed to write JSON to file", zap.Error(err))
+		}
 		logger.Log.Info("Complete itinerary found in cache. Rendering results.",
 			zap.String("city", completeData.GeneralCityData.City),
 			zap.Int("generalPOIs", len(completeData.PointsOfInterest)),

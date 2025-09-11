@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -74,7 +75,7 @@ func (h *ChatHandlers) HandleChatStreamConnect(c *gin.Context) {
 	// Get user ID for session management
 	userIDStr := middleware.GetUserIDFromContext(c)
 	var sessionID string
-	
+
 	if userIDStr != "" && userIDStr != "anonymous" {
 		userID, err := uuid.Parse(userIDStr)
 		if err == nil {
@@ -104,7 +105,7 @@ func (h *ChatHandlers) HandleChatStreamConnect(c *gin.Context) {
 			}
 		}
 	}
-	
+
 	// If no existing session found, create a new one
 	if sessionID == "" {
 		sessionID = uuid.New().String()
@@ -354,7 +355,7 @@ func (h *ChatHandlers) SendMessage(c *gin.Context) {
 
 	message := c.PostForm("message")
 	sessionID := c.PostForm("session_id")
-	
+
 	if message == "" {
 		logger.Log.Warn("Empty chat message received")
 		c.String(http.StatusBadRequest, `<div class="text-red-500">Message cannot be empty</div>`)
@@ -397,7 +398,7 @@ func (h *ChatHandlers) SendMessage(c *gin.Context) {
 	// Process the message through AI service for itinerary modification
 	// Create event channel for potential streaming response
 	eventCh := make(chan models.StreamEvent, 100)
-	
+
 	// Process in goroutine
 	go func() {
 		err := h.llmService.ProcessUnifiedChatMessageStream(
@@ -424,7 +425,7 @@ func (h *ChatHandlers) SendMessage(c *gin.Context) {
 	// For chat interface, we want to return quick response and then handle streaming updates
 	// First return the AI response bubble
 	response := "I'm analyzing your request and updating your itinerary. Please wait a moment..."
-	
+
 	c.String(http.StatusOK, fmt.Sprintf(`
 		<!-- AI Response -->
 		<div class="flex justify-start mb-4">
@@ -1045,17 +1046,31 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 			// Print streamed response to terminal
 			fmt.Printf("SSE >> %s\n", eventData)
 
+			filePath := "events.json" // Change to "events.txt" for text format
+			f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				logger.Log.Error("Failed to open file", zap.Error(err), zap.String("file", filePath))
+				continue
+			}
+			defer f.Close()
+
+			// For JSON: Write eventData with a newline for separation
+			if _, err := f.Write(append(eventData, '\n')); err != nil {
+				logger.Log.Error("Failed to write to file", zap.Error(err), zap.String("file", filePath))
+				continue
+			}
+			
 			fmt.Fprintf(c.Writer, "data: %s\n\n", eventData)
 			flusher.Flush()
 
 			// End stream on complete or error
 			if event.Type == models.EventTypeComplete || event.Type == models.EventTypeError {
 				logger.Log.Info("Stream completed", zap.String("eventType", event.Type))
-				
+
 				// Send a final SSE close message to help HTMX understand the connection is intentionally closed
 				fmt.Fprintf(c.Writer, "data: {\"type\":\"sse-close\"}\n\n")
 				flusher.Flush()
-				
+
 				return
 			}
 
@@ -1216,9 +1231,9 @@ func (h *ChatHandlers) HandleChatStream(c *gin.Context) {
 	if message == "" {
 		message = c.Query("dashboard-search")
 	}
-	
+
 	sessionID := c.Query("session_id")
-	
+
 	if message == "" {
 		logger.Log.Warn("Empty message for chat stream")
 		c.String(http.StatusBadRequest, "Message parameter is required (use 'message' or 'dashboard-search')")
@@ -1321,11 +1336,11 @@ func (h *ChatHandlers) HandleChatStream(c *gin.Context) {
 			// End stream on complete or error
 			if event.Type == models.EventTypeComplete || event.Type == models.EventTypeError {
 				logger.Log.Info("Chat stream completed", zap.String("eventType", event.Type))
-				
+
 				// Send a final SSE close message
 				fmt.Fprintf(c.Writer, "data: {\"type\":\"sse-close\"}\n\n")
 				flusher.Flush()
-				
+
 				return
 			}
 

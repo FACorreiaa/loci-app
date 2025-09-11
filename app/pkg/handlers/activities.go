@@ -61,6 +61,7 @@ func (h *ActivitiesHandlers) loadActivitiesBySession(sessionIdParam string) temp
 
 	// Try complete cache first (IDENTICAL to itinerary logic)
 	if completeData, found := middleware.CompleteItineraryCache.Get(sessionIdParam); found {
+
 		logger.Log.Info("Complete activities found in cache. Rendering results.",
 			zap.String("city", completeData.GeneralCityData.City),
 			zap.Int("generalPOIs", len(completeData.PointsOfInterest)),
@@ -74,18 +75,18 @@ func (h *ActivitiesHandlers) loadActivitiesBySession(sessionIdParam string) temp
 			true, true, 5, []string{})
 	}
 
-	// Try legacy cache (IDENTICAL to itinerary logic)
-	if itineraryData, found := middleware.ItineraryCache.Get(sessionIdParam); found {
-		logger.Log.Info("Legacy activities found in cache. Rendering results.",
-			zap.Int("personalizedPOIs", len(itineraryData.PointsOfInterest)))
-
-		// Create empty city data for legacy cached data (IDENTICAL to itinerary)
-		emptyCityData := models.GeneralCityData{}
-
-		// Filter activities from legacy data
-		activityPOIs := filterPOIsForActivities(itineraryData.PointsOfInterest)
-		return results.ActivitiesResults(emptyCityData, activityPOIs, true, true, 5, []string{})
-	}
+	//// Try legacy cache (IDENTICAL to itinerary logic)
+	//if itineraryData, found := middleware.ItineraryCache.Get(sessionIdParam); found {
+	//	logger.Log.Info("Legacy activities found in cache. Rendering results.",
+	//		zap.Int("personalizedPOIs", len(itineraryData.PointsOfInterest)))
+	//
+	//	// Create empty city data for legacy cached data (IDENTICAL to itinerary)
+	//	emptyCityData := models.GeneralCityData{}
+	//
+	//	// Filter activities from legacy data
+	//	activityPOIs := filterPOIsForActivities(itineraryData.PointsOfInterest)
+	//	return results.ActivitiesResults(emptyCityData, activityPOIs, true, true, 5, []string{})
+	//}
 
 	// Load from database (IDENTICAL to itinerary logic)
 	return h.loadActivitiesFromDatabase(sessionIdParam)

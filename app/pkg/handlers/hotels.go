@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
+	"os"
 	"strings"
 
 	"github.com/a-h/templ"
@@ -61,6 +63,16 @@ func (h *HotelsHandlers) loadHotelsBySession(sessionIdParam string) templ.Compon
 
 	// Try complete cache first (IDENTICAL to itinerary logic)
 	if completeData, found := middleware.CompleteItineraryCache.Get(sessionIdParam); found {
+		jsonData, err := json.MarshalIndent(completeData, "", "  ")
+		if err != nil {
+			logger.Log.Error("Failed to marshal completeData to JSON", zap.Error(err))
+		} else {
+			logger.Log.Info("Complete itinerary JSON structure", zap.String("json", string(jsonData)))
+		}
+
+		if err := os.WriteFile("completeData.json", jsonData, 0644); err != nil {
+			logger.Log.Error("Failed to write JSON to file", zap.Error(err))
+		}
 		logger.Log.Info("Complete hotels found in cache. Rendering results.",
 			zap.String("city", completeData.GeneralCityData.City),
 			zap.Int("generalPOIs", len(completeData.PointsOfInterest)),
@@ -81,7 +93,7 @@ func (h *HotelsHandlers) loadHotelsBySession(sessionIdParam string) templ.Compon
 
 		// Create empty city data for legacy cached data (IDENTICAL to itinerary)
 		emptyCityData := models.GeneralCityData{}
-		
+
 		// Filter hotels from legacy data
 		hotelPOIs := filterPOIsForHotels(itineraryData.PointsOfInterest)
 		return results.HotelsResults(emptyCityData, hotelPOIs, true, true, 5, []string{})
@@ -173,17 +185,17 @@ func convertPOIToHotel(poi models.POIDetailedInfo) models.HotelDetailedInfo {
 	if poi.PhoneNumber != "" {
 		phoneNumber = &poi.PhoneNumber
 	}
-	
+
 	var website *string
 	if poi.Website != "" {
 		website = &poi.Website
 	}
-	
+
 	var priceRange *string
 	if poi.PriceRange != "" {
 		priceRange = &poi.PriceRange
 	}
-	
+
 	var openingHours *string
 	if len(poi.OpeningHours) > 0 {
 		// Convert map to string representation

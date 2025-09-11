@@ -2183,9 +2183,9 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 			}
 
 			// Cache itinerary data if this was an itinerary request
-			if routeType == "itinerary" {
-				l.cacheItineraryIfAvailable(ctx, sessionID, responses, &responsesMutex)
-			}
+			//if routeType == "itinerary" {
+			//	l.cacheItineraryIfAvailable(ctx, sessionID, responses, &responsesMutex)
+			//}
 			// Cache result-specific data for restaurants, activities, and hotels
 			l.cacheResultsIfAvailable(ctx, sessionID, routeType, responses, &responsesMutex)
 
@@ -2486,12 +2486,13 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStreamFree(ctx context.Context, c
 				baseURL = "/itinerary"
 			}
 
-			// Cache itinerary data if this was an itinerary request
-			if routeType == "itinerary" {
-				l.cacheItineraryIfAvailable(ctx, sessionID, responses, &responsesMutex)
-			}
-			// Cache result-specific data for restaurants, activities, and hotels
 			l.cacheResultsIfAvailable(ctx, sessionID, routeType, responses, &responsesMutex)
+			// Cache itinerary data if this was an itinerary request
+			//if routeType == "itinerary" {
+			//	l.cacheItineraryIfAvailable(ctx, sessionID, responses, &responsesMutex)
+			//}
+			// Cache result-specific data for restaurants, activities, and hotels
+			//l.cacheResultsIfAvailable(ctx, sessionID, routeType, responses, &responsesMutex)
 
 			l.sendEvent(ctx, eventCh, models.StreamEvent{
 				Type: models.EventTypeComplete,
@@ -2715,7 +2716,7 @@ func (l *ServiceImpl) cacheItineraryIfAvailable(ctx context.Context, sessionID u
 			slog.Int("generalPOIsCount", len(completeResponse.PointsOfInterest)),
 			slog.String("itineraryName", completeResponse.AIItineraryResponse.ItineraryName),
 			slog.Int("itineraryPOIsCount", len(completeResponse.AIItineraryResponse.PointsOfInterest)))
-		
+
 		// Cache in both systems for backwards compatibility
 		middleware.CompleteItineraryCache.Set(sessionID.String(), *completeResponse)
 		if completeResponse.AIItineraryResponse.ItineraryName != "" || len(completeResponse.AIItineraryResponse.PointsOfInterest) > 0 {
@@ -2725,7 +2726,7 @@ func (l *ServiceImpl) cacheItineraryIfAvailable(ctx context.Context, sessionID u
 		l.logger.WarnContext(ctx, "Failed to parse complete unified chat response for caching",
 			slog.String("sessionID", sessionID.String()),
 			slog.Any("error", err))
-		
+
 		// Fallback: try to cache just the itinerary part
 		if itineraryBuilder, exists := responses["itinerary"]; exists && itineraryBuilder != nil {
 			itineraryResponse := itineraryBuilder.String()
@@ -2746,6 +2747,15 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 	defer responsesMutex.Unlock()
 
 	switch routeType {
+	case "itinerary":
+		if itineraryBuilder, exists := responses["itinerary"]; exists && itineraryBuilder != nil {
+			itineraryResponse := itineraryBuilder.String()
+			if itinerary, err := parseItineraryFromResponse(itineraryResponse, l.logger); err == nil {
+				l.logger.InfoContext(ctx, "Caching restaurant data",
+					slog.String("sessionID", sessionID.String()))
+				middleware.ItineraryCache.Set(sessionID.String(), *itinerary)
+			}
+		}
 	case "restaurants":
 		if restaurantBuilder, exists := responses["restaurants"]; exists && restaurantBuilder != nil {
 			restaurantResponse := restaurantBuilder.String()
@@ -2823,7 +2833,7 @@ func (l *ServiceImpl) parseCompleteResponseFromParts(responses map[string]*strin
 	completeResponse := &models.AiCityResponse{
 		SessionID: sessionID,
 	}
-	
+
 	// Parse city_data part
 	if cityDataBuilder, exists := responses["city_data"]; exists && cityDataBuilder != nil {
 		cityDataStr := cityDataBuilder.String()
@@ -2837,7 +2847,7 @@ func (l *ServiceImpl) parseCompleteResponseFromParts(responses map[string]*strin
 			}
 		}
 	}
-	
+
 	// Parse general_pois part
 	if poisBuilder, exists := responses["general_pois"]; exists && poisBuilder != nil {
 		poisStr := poisBuilder.String()
@@ -2851,7 +2861,7 @@ func (l *ServiceImpl) parseCompleteResponseFromParts(responses map[string]*strin
 			}
 		}
 	}
-	
+
 	// Parse itinerary part
 	if itineraryBuilder, exists := responses["itinerary"]; exists && itineraryBuilder != nil {
 		itineraryStr := itineraryBuilder.String()
@@ -2861,14 +2871,14 @@ func (l *ServiceImpl) parseCompleteResponseFromParts(responses map[string]*strin
 			l.logger.Warn("Failed to parse itinerary part", slog.Any("error", err))
 		}
 	}
-	
+
 	// Validate that we have at least some data
-	if completeResponse.GeneralCityData.City == "" && 
-	   len(completeResponse.PointsOfInterest) == 0 && 
-	   completeResponse.AIItineraryResponse.ItineraryName == "" {
+	if completeResponse.GeneralCityData.City == "" &&
+		len(completeResponse.PointsOfInterest) == 0 &&
+		completeResponse.AIItineraryResponse.ItineraryName == "" {
 		return nil, fmt.Errorf("no valid data found in any response parts")
 	}
-	
+
 	return completeResponse, nil
 }
 
@@ -2879,13 +2889,13 @@ func parseRestaurantsFromResponse(responseText string, logger *slog.Logger) ([]m
 	}
 
 	cleanedResponse := cleanJSONResponse(responseText)
-	
+
 	// Try to parse as array of restaurants
 	var restaurants []models.RestaurantDetailedInfo
 	if err := json.Unmarshal([]byte(cleanedResponse), &restaurants); err == nil {
 		return restaurants, nil
 	}
-	
+
 	// Try to parse as wrapper with data field
 	var wrapper struct {
 		Data []models.RestaurantDetailedInfo `json:"data"`
@@ -2893,7 +2903,7 @@ func parseRestaurantsFromResponse(responseText string, logger *slog.Logger) ([]m
 	if err := json.Unmarshal([]byte(cleanedResponse), &wrapper); err == nil && len(wrapper.Data) > 0 {
 		return wrapper.Data, nil
 	}
-	
+
 	return nil, fmt.Errorf("failed to parse restaurant response")
 }
 
@@ -2904,13 +2914,13 @@ func parseActivitiesFromResponse(responseText string, logger *slog.Logger) ([]mo
 	}
 
 	cleanedResponse := cleanJSONResponse(responseText)
-	
+
 	// Try to parse as array of activities
 	var activities []models.POIDetailedInfo
 	if err := json.Unmarshal([]byte(cleanedResponse), &activities); err == nil {
 		return activities, nil
 	}
-	
+
 	// Try to parse as wrapper with data field
 	var wrapper struct {
 		Data []models.POIDetailedInfo `json:"data"`
@@ -2918,7 +2928,7 @@ func parseActivitiesFromResponse(responseText string, logger *slog.Logger) ([]mo
 	if err := json.Unmarshal([]byte(cleanedResponse), &wrapper); err == nil && len(wrapper.Data) > 0 {
 		return wrapper.Data, nil
 	}
-	
+
 	return nil, fmt.Errorf("failed to parse activities response")
 }
 
@@ -2929,13 +2939,13 @@ func parseHotelsFromResponse(responseText string, logger *slog.Logger) ([]models
 	}
 
 	cleanedResponse := cleanJSONResponse(responseText)
-	
+
 	// Try to parse as array of hotels
 	var hotels []models.HotelDetailedInfo
 	if err := json.Unmarshal([]byte(cleanedResponse), &hotels); err == nil {
 		return hotels, nil
 	}
-	
+
 	// Try to parse as wrapper with data field
 	var wrapper struct {
 		Data []models.HotelDetailedInfo `json:"data"`
@@ -2943,6 +2953,6 @@ func parseHotelsFromResponse(responseText string, logger *slog.Logger) ([]models
 	if err := json.Unmarshal([]byte(cleanedResponse), &wrapper); err == nil && len(wrapper.Data) > 0 {
 		return wrapper.Data, nil
 	}
-	
+
 	return nil, fmt.Errorf("failed to parse hotels response")
 }
