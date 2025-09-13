@@ -310,6 +310,26 @@ func (h *ItineraryHandlers) HandleItineraryPage(c *gin.Context) templ.Component 
 	return h.loadItineraryBySession(sessionIdParam)
 }
 
+// HandleItineraryPageSSE handles the itinerary page with SSE support
+func (h *ItineraryHandlers) HandleItineraryPageSSE(c *gin.Context) templ.Component {
+	userID := middleware.GetUserIDFromContext(c)
+	query := c.Query("q")
+	sessionIdParam := c.Query("sessionId")
+
+	logger.Log.Info("Itinerary SSE page accessed",
+		zap.String("user", userID),
+		zap.String("query", query),
+		zap.String("sessionId", sessionIdParam))
+
+	if sessionIdParam == "" {
+		logger.Log.Info("Direct navigation to /itinerary SSE. Showing default page.")
+		return itinerary.ItineraryPage()
+	}
+
+	// Load itinerary data for session with SSE support
+	return h.loadItineraryBySessionSSE(sessionIdParam)
+}
+
 func (h *ItineraryHandlers) loadItineraryBySession(sessionIdParam string) templ.Component {
 	logger.Log.Info("Attempting to load itinerary from cache", zap.String("sessionID", sessionIdParam))
 
@@ -334,7 +354,7 @@ func (h *ItineraryHandlers) loadItineraryBySession(sessionIdParam string) templ.
 			completeData.GeneralCityData,
 			completeData.PointsOfInterest,
 			completeData.AIItineraryResponse,
-			true, true, 5, []string{})
+			true, true, 15, []string{})
 	}
 
 	// Try legacy cache
@@ -351,6 +371,254 @@ func (h *ItineraryHandlers) loadItineraryBySession(sessionIdParam string) templ.
 
 	// Load from database
 	return h.loadItineraryFromDatabase(sessionIdParam)
+}
+
+// loadItineraryBySessionSSE loads itinerary with SSE support
+func (h *ItineraryHandlers) loadItineraryBySessionSSE(sessionIdParam string) templ.Component {
+	logger.Log.Info("Attempting to load itinerary from cache with SSE", zap.String("sessionID", sessionIdParam))
+
+	// Try complete cache first
+	if completeData, found := middleware.CompleteItineraryCache.Get(sessionIdParam); found {
+		logger.Log.Info("Complete itinerary found in cache. Rendering SSE results with data.",
+			zap.String("city", completeData.GeneralCityData.City),
+			zap.Int("generalPOIs", len(completeData.PointsOfInterest)),
+			zap.Int("personalizedPOIs", len(completeData.AIItineraryResponse.PointsOfInterest)))
+
+		return results.ItineraryResultsSSE(
+			sessionIdParam,
+			completeData.GeneralCityData,
+			completeData.PointsOfInterest,
+			completeData.AIItineraryResponse,
+			true) // hasData = true
+	}
+
+	// Try legacy cache
+	if itineraryData, found := middleware.ItineraryCache.Get(sessionIdParam); found {
+		logger.Log.Info("Legacy itinerary found in cache. Rendering SSE results with data.",
+			zap.Int("personalizedPOIs", len(itineraryData.PointsOfInterest)))
+
+		// Create empty city data and general POIs for legacy cached data
+		emptyCityData := models.GeneralCityData{}
+		emptyGeneralPOIs := []models.POIDetailedInfo{}
+
+		return results.ItineraryResultsSSE(
+			sessionIdParam,
+			emptyCityData,
+			emptyGeneralPOIs,
+			itineraryData,
+			true) // hasData = true
+	}
+
+	// if it doesnt find cached data, the data should be the llm response itself that comes from ProcessUnifiedChatMessageStream
+	// implement this https://github.com/a-h/templ/blob/main/examples/streaming/main.templ
+	// this is how the data should be fetched instead of having an empty page
+
+	// No cached data found - show loading interface with SSE
+	logger.Log.Info("No itinerary found in cache. Rendering SSE loading interface.",
+		zap.String("sessionID", sessionIdParam))
+
+	emptyCityData := models.GeneralCityData{}
+	emptyGeneralPOIs := []models.POIDetailedInfo{}
+	emptyItinerary := models.AIItineraryResponse{}
+
+	return results.ItineraryResultsSSE(
+		sessionIdParam,
+		emptyCityData,
+		emptyGeneralPOIs,
+		emptyItinerary,
+		false) // hasData = false, will show loading and connect to SSE
+}
+
+// HandleItinerarySSE handles Server-Sent Events for itinerary updates
+func (h *ItineraryHandlers) HandleItinerarySSE(c *gin.Context) {
+	sessionID := c.Query("sessionId")
+	if sessionID == "" {
+		c.Status(http.StatusBadRequest)
+		return
+	}
+
+	logger.Log.Info("SSE connection established for itinerary",
+		zap.String("sessionId", sessionID))
+
+	// Set SSE headers
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("Access-Control-Allow-Origin", "*")
+
+	// Create a channel for updates
+	updateChan := make(chan models.ItinerarySSEEvent)
+	defer close(updateChan)
+
+	// Start monitoring for updates in a separate goroutine
+	go h.monitorItineraryUpdates(sessionID, updateChan)
+
+	// Stream updates to client
+	flusher := c.Writer.(http.Flusher)
+	for {
+		select {
+		case event := <-updateChan:
+			if event.Type == "complete" {
+				logger.Log.Info("Sending completion event",
+					zap.String("sessionId", sessionID))
+
+				// Send final completion event
+				c.SSEvent("itinerary-complete", map[string]interface{}{
+					"sessionId": sessionID,
+					"message":   "Itinerary generation complete",
+				})
+				flusher.Flush()
+				return
+			}
+
+			// Send HTML fragment updates based on event type
+			if event.Type == "header-update" {
+				if data, ok := event.Data.(map[string]interface{}); ok {
+					if completeData, exists := data["completeData"]; exists {
+						if complete, valid := completeData.(models.AiCityResponse); valid {
+							headerHTML := h.renderHeaderHTML(complete.GeneralCityData, complete.PointsOfInterest, complete.AIItineraryResponse)
+							c.SSEvent("itinerary-header", headerHTML)
+						}
+					}
+				}
+			} else if event.Type == "content-update" {
+				if data, ok := event.Data.(map[string]interface{}); ok {
+					if completeData, exists := data["completeData"]; exists {
+						if complete, valid := completeData.(models.AiCityResponse); valid {
+							contentHTML := h.renderContentHTML(complete.GeneralCityData, complete.PointsOfInterest, complete.AIItineraryResponse)
+							c.SSEvent("itinerary-content", contentHTML)
+						}
+					}
+				}
+			} else {
+				// Send progress update
+				c.SSEvent(event.Type, event.Data)
+			}
+			flusher.Flush()
+
+		case <-c.Request.Context().Done():
+			logger.Log.Info("SSE connection closed",
+				zap.String("sessionId", sessionID))
+			return
+		}
+	}
+}
+
+// monitorItineraryUpdates monitors for itinerary updates and sends SSE events
+func (h *ItineraryHandlers) monitorItineraryUpdates(sessionID string, updateChan chan<- models.ItinerarySSEEvent) {
+	// Check for cached data first
+	if completeData, found := middleware.CompleteItineraryCache.Get(sessionID); found {
+		logger.Log.Info("Complete data found in cache, sending completion immediately",
+			zap.String("sessionId", sessionID))
+
+		// Send header update
+		updateChan <- models.ItinerarySSEEvent{
+			Type: "header-update",
+			Data: map[string]interface{}{
+				"sessionId":    sessionID,
+				"completeData": completeData,
+			},
+		}
+
+		// Send content update
+		updateChan <- models.ItinerarySSEEvent{
+			Type: "content-update",
+			Data: map[string]interface{}{
+				"sessionId":    sessionID,
+				"completeData": completeData,
+			},
+		}
+
+		// Send completion
+		updateChan <- models.ItinerarySSEEvent{
+			Type: "complete",
+			Data: map[string]interface{}{
+				"sessionId":        sessionID,
+				"city":             completeData.GeneralCityData.City,
+				"totalPOIs":        len(completeData.PointsOfInterest),
+				"personalizedPOIs": len(completeData.AIItineraryResponse.PointsOfInterest),
+			},
+		}
+		return
+	}
+
+	// Legacy cache check
+	if itineraryData, found := middleware.ItineraryCache.Get(sessionID); found {
+		logger.Log.Info("Legacy data found in cache, sending completion immediately",
+			zap.String("sessionId", sessionID))
+
+		updateChan <- models.ItinerarySSEEvent{
+			Type: "complete",
+			Data: map[string]interface{}{
+				"sessionId":        sessionID,
+				"personalizedPOIs": len(itineraryData.PointsOfInterest),
+			},
+		}
+		return
+	}
+
+	// If no cached data, poll for updates
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	timeout := time.After(5 * time.Minute) // 5 minute timeout
+
+	for {
+		select {
+		case <-ticker.C:
+			// Check cache again
+			if completeData, found := middleware.CompleteItineraryCache.Get(sessionID); found {
+				logger.Log.Info("Complete data appeared in cache",
+					zap.String("sessionId", sessionID))
+
+				updateChan <- models.ItinerarySSEEvent{
+					Type: "complete",
+					Data: map[string]interface{}{
+						"sessionId":        sessionID,
+						"city":             completeData.GeneralCityData.City,
+						"totalPOIs":        len(completeData.PointsOfInterest),
+						"personalizedPOIs": len(completeData.AIItineraryResponse.PointsOfInterest),
+					},
+				}
+				return
+			}
+
+			if itineraryData, found := middleware.ItineraryCache.Get(sessionID); found {
+				logger.Log.Info("Legacy data appeared in cache",
+					zap.String("sessionId", sessionID))
+
+				updateChan <- models.ItinerarySSEEvent{
+					Type: "complete",
+					Data: map[string]interface{}{
+						"sessionId":        sessionID,
+						"personalizedPOIs": len(itineraryData.PointsOfInterest),
+					},
+				}
+				return
+			}
+
+			// Send progress update
+			updateChan <- models.ItinerarySSEEvent{
+				Type: "progress",
+				Data: map[string]interface{}{
+					"sessionId": sessionID,
+					"message":   "Processing your itinerary...",
+					"timestamp": time.Now().Unix(),
+				},
+			}
+
+		case <-timeout:
+			logger.Log.Warn("SSE monitoring timed out", zap.String("sessionId", sessionID))
+			updateChan <- models.ItinerarySSEEvent{
+				Type: "error",
+				Data: map[string]interface{}{
+					"sessionId": sessionID,
+					"message":   "Request timed out. Please try again.",
+				},
+			}
+			return
+		}
+	}
 }
 
 // loadItineraryFromDatabase loads itinerary from database when not found in cache
@@ -395,4 +663,20 @@ func (h *ItineraryHandlers) loadItineraryFromDatabase(sessionIdParam string) tem
 		completeData.PointsOfInterest,
 		completeData.AIItineraryResponse,
 		true, true, 5, []string{})
+}
+
+// renderHeaderHTML renders header HTML fragment for SSE
+func (h *ItineraryHandlers) renderHeaderHTML(cityData models.GeneralCityData, generalPOIs []models.POIDetailedInfo, itinerary models.AIItineraryResponse) string {
+	buf := &strings.Builder{}
+	component := results.ItineraryHeaderComplete(cityData, generalPOIs, itinerary)
+	component.Render(context.Background(), buf)
+	return buf.String()
+}
+
+// renderContentHTML renders content HTML fragment for SSE
+func (h *ItineraryHandlers) renderContentHTML(cityData models.GeneralCityData, generalPOIs []models.POIDetailedInfo, itinerary models.AIItineraryResponse) string {
+	buf := &strings.Builder{}
+	component := results.ItineraryContentComplete(cityData, generalPOIs, itinerary)
+	component.Render(context.Background(), buf)
+	return buf.String()
 }

@@ -348,8 +348,12 @@ func (h *ResultsHandlers) HandleItineraryStreamSearch(c *gin.Context) {
 		originalQuery = "Itinerary planning"
 	}
 
-	// Render the streaming itinerary results page
-	c.HTML(http.StatusOK, "", results.ItineraryResultsStream(sessionID, cityName, originalQuery))
+	// Render the SSE itinerary results page with empty data initially
+	emptyCityData := models.GeneralCityData{}
+	emptyGeneralPOIs := []models.POIDetailedInfo{}
+	emptyItinerary := models.AIItineraryResponse{}
+	
+	c.HTML(http.StatusOK, "", results.ItineraryResultsSSE(sessionID, emptyCityData, emptyGeneralPOIs, emptyItinerary, false))
 }
 
 // SSE Response structures to match your backend

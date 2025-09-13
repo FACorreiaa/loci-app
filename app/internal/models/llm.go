@@ -35,3 +35,9 @@ func NewLLMInteraction(userID *uuid.UUID, prompt, responseText, modelUsed string
 		CreatedAt:    time.Now(),
 	}
 }
+
+// ItinerarySSEEvent represents an SSE event for itinerary updates
+type ItinerarySSEEvent struct {
+	Type string      `json:"type"`
+	Data interface{} `json:"data"`
+}

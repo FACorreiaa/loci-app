@@ -1,12 +1,8 @@
 package routes
 
 import (
-	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
-	"regexp"
-	"strings"
 
 	"github.com/a-h/templ"
 
@@ -59,188 +55,6 @@ func getUserFromContext(c *gin.Context) *models.User {
 		IsActive: true,
 	}
 }
-
-// parseCompleteItineraryResponse parses a complete AiCityResponse with all three parts from stored LLM response
-func parseCompleteItineraryResponse(responseText string, logger *slog.Logger) (*models.AiCityResponse, error) {
-	if responseText == "" {
-		return nil, nil
-	}
-
-	// Clean the JSON response
-	cleanedResponse := cleanJSONResponse(responseText)
-
-	// Try to parse as complete AiCityResponse first
-	var completeResponse models.AiCityResponse
-	err := json.Unmarshal([]byte(cleanedResponse), &completeResponse)
-	if err == nil && (completeResponse.AIItineraryResponse.ItineraryName != "" || len(completeResponse.AIItineraryResponse.PointsOfInterest) > 0) {
-		logger.Debug("parseCompleteItineraryResponse: Parsed as complete AiCityResponse")
-		return &completeResponse, nil
-	}
-
-	// Try to parse as unified chat response format with "data" wrapper
-	var unifiedResponse struct {
-		Data models.AiCityResponse `json:"data"`
-	}
-	err = json.Unmarshal([]byte(cleanedResponse), &unifiedResponse)
-	if err == nil && (unifiedResponse.Data.AIItineraryResponse.ItineraryName != "" || len(unifiedResponse.Data.AIItineraryResponse.PointsOfInterest) > 0) {
-		logger.Debug("parseCompleteItineraryResponse: Parsed as unified chat response")
-		return &unifiedResponse.Data, nil
-	}
-
-	// If we can't parse as complete response, try parsing individual parts from SSE format
-	return parseSSEFormatResponse(cleanedResponse, logger)
-}
-
-// parseSSEFormatResponse parses multi-part SSE response format like [city_data]...[general_pois]...[itinerary]...
-func parseSSEFormatResponse(responseText string, logger *slog.Logger) (*models.AiCityResponse, error) {
-	result := &models.AiCityResponse{}
-
-	// Parse city_data section
-	if cityMatch := regexp.MustCompile(`\[city_data\]\s*(.*?)(?:\n\n|\[|$)`).FindStringSubmatch(responseText); len(cityMatch) > 1 {
-		var cityData models.GeneralCityData
-		if err := json.Unmarshal([]byte(strings.TrimSpace(cityMatch[1])), &cityData); err == nil {
-			result.GeneralCityData = cityData
-			logger.Debug("parseSSEFormatResponse: Parsed city_data section")
-		}
-	}
-
-	// Parse general_pois section
-	if poisMatch := regexp.MustCompile(`\[general_pois\]\s*(.*?)(?:\n\n|\[|$)`).FindStringSubmatch(responseText); len(poisMatch) > 1 {
-		// Try parsing as wrapper with points_of_interest field first
-		var poisWrapper struct {
-			PointsOfInterest []models.POIDetailedInfo `json:"points_of_interest"`
-		}
-		cleanedPOIsJSON := strings.TrimSpace(poisMatch[1])
-		if err := json.Unmarshal([]byte(cleanedPOIsJSON), &poisWrapper); err == nil && len(poisWrapper.PointsOfInterest) > 0 {
-			result.PointsOfInterest = poisWrapper.PointsOfInterest
-			logger.Debug("parseSSEFormatResponse: Parsed general_pois section with wrapper", "count", len(poisWrapper.PointsOfInterest))
-		} else {
-			// Fallback: try parsing as direct array
-			var generalPOIs []models.POIDetailedInfo
-			if err := json.Unmarshal([]byte(cleanedPOIsJSON), &generalPOIs); err == nil {
-				result.PointsOfInterest = generalPOIs
-				logger.Debug("parseSSEFormatResponse: Parsed general_pois section as direct array", "count", len(generalPOIs))
-			} else {
-				logger.Warn("parseSSEFormatResponse: Failed to parse general_pois section", "error", err)
-			}
-		}
-	}
-
-	// Parse itinerary section
-	if itineraryMatch := regexp.MustCompile(`\[itinerary\]\s*(.*?)(?:\n\n|\[|$)`).FindStringSubmatch(responseText); len(itineraryMatch) > 1 {
-		var itineraryData models.AIItineraryResponse
-		if err := json.Unmarshal([]byte(strings.TrimSpace(itineraryMatch[1])), &itineraryData); err == nil {
-			result.AIItineraryResponse = itineraryData
-			logger.Debug("parseSSEFormatResponse: Parsed itinerary section", "poisCount", len(itineraryData.PointsOfInterest))
-		}
-	}
-
-	// Return result if we have at least some data
-	if result.GeneralCityData.City != "" || len(result.PointsOfInterest) > 0 || result.AIItineraryResponse.ItineraryName != "" {
-		return result, nil
-	}
-
-	// Fallback: try to parse as legacy format for backwards compatibility
-	return parseCompleteItineraryResponseLegacy(responseText, logger)
-}
-
-// parseCompleteItineraryResponseLegacy handles legacy format (backwards compatibility)
-func parseCompleteItineraryResponseLegacy(responseText string, logger *slog.Logger) (*models.AiCityResponse, error) {
-	// Try legacy parsing methods
-	if legacyItinerary, err := parseItineraryFromResponse(responseText, logger); err == nil && legacyItinerary != nil {
-		result := &models.AiCityResponse{
-			AIItineraryResponse: *legacyItinerary,
-		}
-		logger.Debug("parseCompleteItineraryResponseLegacy: Parsed as legacy format")
-		return result, nil
-	}
-
-	logger.Debug("parseCompleteItineraryResponse: Could not parse response in any format")
-	return nil, fmt.Errorf("failed to parse complete itinerary response")
-}
-
-// parseItineraryFromResponse parses an AIItineraryResponse from a stored LLM response (legacy function for backwards compatibility)
-func parseItineraryFromResponse(responseText string, logger *slog.Logger) (*models.AIItineraryResponse, error) {
-	if responseText == "" {
-		return nil, nil
-	}
-
-	// Clean the JSON response (similar to existing parsePOIsFromResponse)
-	cleanedResponse := cleanJSONResponse(responseText)
-
-	// Try to parse as unified chat response format with "data" wrapper first
-	var unifiedResponse struct {
-		Data models.AiCityResponse `json:"data"`
-	}
-	err := json.Unmarshal([]byte(cleanedResponse), &unifiedResponse)
-	if err == nil && (unifiedResponse.Data.AIItineraryResponse.ItineraryName != "" || len(unifiedResponse.Data.AIItineraryResponse.PointsOfInterest) > 0) {
-		logger.Debug("parseItineraryFromResponse: Parsed as unified chat response")
-		return &unifiedResponse.Data.AIItineraryResponse, nil
-	}
-
-	// Try to parse as direct AiCityResponse
-	var cityResponse models.AiCityResponse
-	err = json.Unmarshal([]byte(cleanedResponse), &cityResponse)
-	if err == nil && (cityResponse.AIItineraryResponse.ItineraryName != "" || len(cityResponse.AIItineraryResponse.PointsOfInterest) > 0) {
-		logger.Debug("parseItineraryFromResponse: Parsed as AiCityResponse")
-		return &cityResponse.AIItineraryResponse, nil
-	}
-
-	// Try to parse directly as AIItineraryResponse
-	var itineraryResponse models.AIItineraryResponse
-	err = json.Unmarshal([]byte(cleanedResponse), &itineraryResponse)
-	if err == nil && (itineraryResponse.ItineraryName != "" || len(itineraryResponse.PointsOfInterest) > 0) {
-		logger.Debug("parseItineraryFromResponse: Parsed as direct AIItineraryResponse")
-		return &itineraryResponse, nil
-	}
-
-	logger.Debug("parseItineraryFromResponse: Could not parse response as itinerary", "error", err)
-	return nil, err
-}
-
-// cleanJSONResponse cleans the response text for JSON parsing (reused from existing code)
-func cleanJSONResponse(response string) string {
-	// Remove any leading/trailing whitespace
-	cleaned := strings.TrimSpace(response)
-
-	// Remove code block markers if present
-	if strings.HasPrefix(cleaned, "```json") {
-		cleaned = strings.TrimPrefix(cleaned, "```json")
-	}
-	if strings.HasPrefix(cleaned, "```") {
-		cleaned = strings.TrimPrefix(cleaned, "```")
-	}
-	if strings.HasSuffix(cleaned, "```") {
-		cleaned = strings.TrimSuffix(cleaned, "```")
-	}
-
-	// Remove any non-JSON text before the first {
-	startIndex := strings.Index(cleaned, "{")
-	if startIndex != -1 {
-		cleaned = cleaned[startIndex:]
-	}
-
-	// Remove any non-JSON text after the last }
-	endIndex := strings.LastIndex(cleaned, "}")
-	if endIndex != -1 {
-		cleaned = cleaned[:endIndex+1]
-	}
-
-	// Clean up any remaining non-JSON prefixes/suffixes
-	re := regexp.MustCompile(`^[^{]*({.*})[^}]*$`)
-	if matches := re.FindStringSubmatch(cleaned); len(matches) > 1 {
-		cleaned = matches[1]
-	}
-
-	return strings.TrimSpace(cleaned)
-}
-
-//func getDBFromContext(c *gin.Context) *pgxpool.Pool {
-//	if db, exists := c.Get("db"); exists {
-//		return db.(*pgxpool.Pool)
-//	}
-//	return nil
-//}
 
 func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 	//r.Use(middleware.AuthMiddleware())
@@ -453,8 +267,29 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 	protected.Use(middleware.AuthMiddleware())
 	{
 		// Itinerary
+		// protected.GET("/itinerary", func(c *gin.Context) {
+		// 	content := itineraryHandlers.HandleItineraryPage(c)
+		// 	c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+		// 		Title:   "Travel Planner - Loci",
+		// 		Content: content,
+		// 		Nav: models.Navigation{
+		// 			Items: []models.NavItem{
+		// 				{Name: "Dashboard", URL: "/dashboard"},
+		// 				{Name: "Discover", URL: "/discover"},
+		// 				{Name: "Nearby", URL: "/nearby"},
+		// 				{Name: "Itinerary", URL: "/itinerary"},
+		// 				{Name: "Chat", URL: "/chat"},
+		// 				{Name: "Favorites", URL: "/favorites"},
+		// 			},
+		// 		},
+		// 		ActiveNav: "Itinerary",
+		// 		User:      getUserFromContext(c),
+		// 	}))
+		// })
+
+		// Itinerary SSE
 		protected.GET("/itinerary", func(c *gin.Context) {
-			content := itineraryHandlers.HandleItineraryPage(c)
+			content := itineraryHandlers.HandleItineraryPageSSE(c)
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Travel Planner - Loci",
 				Content: content,
@@ -472,10 +307,10 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 				User:      getUserFromContext(c),
 			}))
 		})
-		
-		// Activities (public but enhanced when authenticated)
+
+		//Activities (public but enhanced when authenticated)
 		protected.GET("/activities", func(c *gin.Context) {
-			content := activitiesHandlers.HandleActivitiesPage(c)
+			content := activitiesHandlers.HandleActivitiesPageSSE(c)
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Activities - Loci",
 				Content: content,
@@ -493,9 +328,9 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 			}))
 		})
 
-		// Hotels (public but enhanced when authenticated)
+		//Hotels (public but enhanced when authenticated)
 		protected.GET("/hotels", func(c *gin.Context) {
-			content := hotelsHandlers.HandleHotelsPage(c)
+			content := hotelsHandlers.HandleHotelsPageSSE(c)
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Hotels - Loci",
 				Content: content,
@@ -514,8 +349,28 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		})
 
 		// Restaurants (public but enhanced when authenticated)
+		// protected.GET("/restaurants", func(c *gin.Context) {
+		// 	content := restaurantsHandlers.HandleRestaurantsPage(c)
+		// 	c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+		// 		Title:   "Restaurants - Loci",
+		// 		Content: content,
+		// 		Nav: models.Navigation{
+		// 			Items: []models.NavItem{
+		// 				{Name: "Home", URL: "/"},
+		// 				{Name: "Discover", URL: "/discover"},
+		// 				{Name: "Activities", URL: "/activities"},
+		// 				{Name: "Hotels", URL: "/hotels"},
+		// 				{Name: "Restaurants", URL: "/restaurants"},
+		// 			},
+		// 		},
+		// 		ActiveNav: "Restaurants",
+		// 		User:      getUserFromContext(c),
+		// 	}))
+		// })
+
+		// Restaurants SSE
 		protected.GET("/restaurants", func(c *gin.Context) {
-			content := restaurantsHandlers.HandleRestaurantsPage(c)
+			content := restaurantsHandlers.HandleRestaurantsPageSSE(c)
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Restaurants - Loci",
 				Content: content,
@@ -799,6 +654,16 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		htmxGroup.DELETE("/itinerary/remove/:id", itineraryHandlers.RemovePOI)
 		htmxGroup.GET("/itinerary/summary", itineraryHandlers.GetItinerarySummary)
 		htmxGroup.GET("/itinerary/stream", chatHandlers.HandleItineraryStream)
+		htmxGroup.GET("/itinerary/sse", itineraryHandlers.HandleItinerarySSE)
+
+		// Restaurants SSE endpoints
+		htmxGroup.GET("/restaurants/sse", restaurantsHandlers.HandleRestaurantsSSE)
+
+		// Activities SSE endpoints
+		htmxGroup.GET("/activities/sse", activitiesHandlers.HandleActivitiesSSE)
+
+		// Hotels SSE endpoints
+		htmxGroup.GET("/hotels/sse", hotelsHandlers.HandleHotelsSSE)
 
 		// Settings endpoints (protected)
 		settingsGroup := htmxGroup.Group("/settings")

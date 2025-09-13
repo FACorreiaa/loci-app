@@ -121,10 +121,3 @@ func setupDatabase(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, erro
 	logger.Log.Info("Database setup completed successfully")
 	return pool, nil
 }
-
-//func getDBFromContext(c *gin.Context) *pgxpool.Pool {
-//	if db, exists := c.Get("db"); exists {
-//		return db.(*pgxpool.Pool)
-//	}
-//	return nil
-//}

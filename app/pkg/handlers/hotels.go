@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/a-h/templ"
 	"github.com/gin-gonic/gin"
@@ -229,4 +231,300 @@ func convertPOIToHotel(poi models.POIDetailedInfo) models.HotelDetailedInfo {
 		Images:           poi.Images,
 		LlmInteractionID: poi.LlmInteractionID,
 	}
+}
+
+// HandleHotelsPageSSE handles the hotels page with SSE support
+func (h *HotelsHandlers) HandleHotelsPageSSE(c *gin.Context) templ.Component {
+	query := c.Query("q")
+	sessionIdParam := c.Query("sessionId")
+
+	logger.Log.Info("Hotels SSE page accessed",
+		zap.String("ip", c.ClientIP()),
+		zap.String("query", query),
+		zap.String("sessionId", sessionIdParam))
+
+	if sessionIdParam == "" {
+		logger.Log.Info("Direct navigation to /hotels SSE. Showing default page.")
+		return hotels.HotelsPage()
+	}
+
+	// Load hotels data for session with SSE support
+	return h.loadHotelsBySessionSSE(sessionIdParam)
+}
+
+// loadHotelsBySessionSSE loads hotels with SSE support
+func (h *HotelsHandlers) loadHotelsBySessionSSE(sessionIdParam string) templ.Component {
+	logger.Log.Info("Attempting to load hotels from cache with SSE", zap.String("sessionID", sessionIdParam))
+
+	// Try complete cache first
+	if completeData, found := middleware.CompleteItineraryCache.Get(sessionIdParam); found {
+		logger.Log.Info("Complete hotels found in cache. Rendering SSE results with data.",
+			zap.String("city", completeData.GeneralCityData.City),
+			zap.Int("totalPOIs", len(completeData.PointsOfInterest)))
+
+		// Filter POIs for hotels
+		hotelPOIs := filterPOIsForHotels(completeData.PointsOfInterest)
+		
+		return results.HotelsResultsSSE(
+			sessionIdParam,
+			completeData.GeneralCityData,
+			hotelPOIs,
+			true) // hasData = true
+	}
+
+	// Try legacy cache
+	if itineraryData, found := middleware.ItineraryCache.Get(sessionIdParam); found {
+		logger.Log.Info("Legacy hotels found in cache. Rendering SSE results with data.",
+			zap.Int("personalizedPOIs", len(itineraryData.PointsOfInterest)))
+
+		// Create empty city data for legacy cached data
+		emptyCityData := models.GeneralCityData{}
+		
+		// Filter hotels from legacy data
+		hotelPOIs := filterPOIsForHotels(itineraryData.PointsOfInterest)
+		
+		return results.HotelsResultsSSE(
+			sessionIdParam,
+			emptyCityData,
+			hotelPOIs,
+			true) // hasData = true
+	}
+
+	// No cached data found - show loading interface with SSE
+	logger.Log.Info("No hotels found in cache. Rendering SSE loading interface.",
+		zap.String("sessionID", sessionIdParam))
+
+	emptyCityData := models.GeneralCityData{}
+	emptyHotels := []models.HotelDetailedInfo{}
+
+	return results.HotelsResultsSSE(
+		sessionIdParam,
+		emptyCityData,
+		emptyHotels,
+		false) // hasData = false, will show loading and connect to SSE
+}
+
+// HandleHotelsSSE handles Server-Sent Events for hotel updates
+func (h *HotelsHandlers) HandleHotelsSSE(c *gin.Context) {
+	sessionID := c.Query("sessionId")
+	if sessionID == "" {
+		c.Status(http.StatusBadRequest)
+		return
+	}
+
+	logger.Log.Info("SSE connection established for hotels", 
+		zap.String("sessionId", sessionID))
+
+	// Set SSE headers
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("Access-Control-Allow-Origin", "*")
+
+	// Create a channel for updates
+	updateChan := make(chan models.ItinerarySSEEvent)
+	defer close(updateChan)
+
+	// Start monitoring for updates in a separate goroutine
+	go h.monitorHotelUpdates(sessionID, updateChan)
+
+	// Stream updates to client
+	flusher := c.Writer.(http.Flusher)
+	for {
+		select {
+		case event := <-updateChan:
+			if event.Type == "complete" {
+				logger.Log.Info("Sending hotels completion event", 
+					zap.String("sessionId", sessionID))
+				
+				// Send final completion event
+				c.SSEvent("hotels-complete", map[string]interface{}{
+					"sessionId": sessionID,
+					"message": "Hotel search complete",
+				})
+				flusher.Flush()
+				return
+			}
+
+			// Send HTML fragment updates based on event type
+			if event.Type == "header-update" {
+				if data, ok := event.Data.(map[string]interface{}); ok {
+					if completeData, exists := data["completeData"]; exists {
+						if complete, valid := completeData.(models.AiCityResponse); valid {
+							hotelPOIs := filterPOIsForHotels(complete.PointsOfInterest)
+							headerHTML := h.renderHotelsHeaderHTML(complete.GeneralCityData, hotelPOIs)
+							c.SSEvent("hotels-header", headerHTML)
+						}
+					}
+				}
+			} else if event.Type == "content-update" {
+				if data, ok := event.Data.(map[string]interface{}); ok {
+					if completeData, exists := data["completeData"]; exists {
+						if complete, valid := completeData.(models.AiCityResponse); valid {
+							hotelPOIs := filterPOIsForHotels(complete.PointsOfInterest)
+							contentHTML := h.renderHotelsContentHTML(complete.GeneralCityData, hotelPOIs)
+							c.SSEvent("hotels-content", contentHTML)
+						}
+					}
+				}
+			} else {
+				// Send progress update
+				c.SSEvent(event.Type, event.Data)
+			}
+			flusher.Flush()
+
+		case <-c.Request.Context().Done():
+			logger.Log.Info("SSE connection closed", 
+				zap.String("sessionId", sessionID))
+			return
+		}
+	}
+}
+
+// monitorHotelUpdates monitors for hotel updates and sends SSE events
+func (h *HotelsHandlers) monitorHotelUpdates(sessionID string, updateChan chan<- models.ItinerarySSEEvent) {
+	// Check for cached data first
+	if completeData, found := middleware.CompleteItineraryCache.Get(sessionID); found {
+		logger.Log.Info("Complete data found in cache, sending hotels completion immediately",
+			zap.String("sessionId", sessionID))
+		
+		// Send header update
+		updateChan <- models.ItinerarySSEEvent{
+			Type: "header-update",
+			Data: map[string]interface{}{
+				"sessionId": sessionID,
+				"completeData": completeData,
+			},
+		}
+		
+		// Send content update
+		updateChan <- models.ItinerarySSEEvent{
+			Type: "content-update",
+			Data: map[string]interface{}{
+				"sessionId": sessionID,
+				"completeData": completeData,
+			},
+		}
+		
+		// Send completion
+		updateChan <- models.ItinerarySSEEvent{
+			Type: "complete",
+			Data: map[string]interface{}{
+				"sessionId": sessionID,
+				"totalPOIs": len(completeData.PointsOfInterest),
+			},
+		}
+		return
+	}
+
+	// Legacy cache check
+	if itineraryData, found := middleware.ItineraryCache.Get(sessionID); found {
+		logger.Log.Info("Legacy data found in cache, sending hotels completion immediately",
+			zap.String("sessionId", sessionID))
+		
+		updateChan <- models.ItinerarySSEEvent{
+			Type: "complete", 
+			Data: map[string]interface{}{
+				"sessionId": sessionID,
+				"personalizedPOIs": len(itineraryData.PointsOfInterest),
+			},
+		}
+		return
+	}
+
+	// If no cached data, poll for updates
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	timeout := time.After(5 * time.Minute) // 5 minute timeout
+	
+	for {
+		select {
+		case <-ticker.C:
+			// Check cache again
+			if completeData, found := middleware.CompleteItineraryCache.Get(sessionID); found {
+				logger.Log.Info("Complete data appeared in cache for hotels",
+					zap.String("sessionId", sessionID))
+				
+				// Send header update
+				updateChan <- models.ItinerarySSEEvent{
+					Type: "header-update",
+					Data: map[string]interface{}{
+						"sessionId": sessionID,
+						"completeData": completeData,
+					},
+				}
+				
+				// Send content update
+				updateChan <- models.ItinerarySSEEvent{
+					Type: "content-update",
+					Data: map[string]interface{}{
+						"sessionId": sessionID,
+						"completeData": completeData,
+					},
+				}
+				
+				// Send completion
+				updateChan <- models.ItinerarySSEEvent{
+					Type: "complete",
+					Data: map[string]interface{}{
+						"sessionId": sessionID,
+						"totalPOIs": len(completeData.PointsOfInterest),
+					},
+				}
+				return
+			}
+
+			if itineraryData, found := middleware.ItineraryCache.Get(sessionID); found {
+				logger.Log.Info("Legacy data appeared in cache for hotels",
+					zap.String("sessionId", sessionID))
+				
+				updateChan <- models.ItinerarySSEEvent{
+					Type: "complete",
+					Data: map[string]interface{}{
+						"sessionId": sessionID,
+						"personalizedPOIs": len(itineraryData.PointsOfInterest),
+					},
+				}
+				return
+			}
+
+			// Send progress update
+			updateChan <- models.ItinerarySSEEvent{
+				Type: "progress",
+				Data: map[string]interface{}{
+					"sessionId": sessionID,
+					"message": "Finding hotels...",
+					"timestamp": time.Now().Unix(),
+				},
+			}
+
+		case <-timeout:
+			logger.Log.Warn("SSE monitoring timed out for hotels", zap.String("sessionId", sessionID))
+			updateChan <- models.ItinerarySSEEvent{
+				Type: "error",
+				Data: map[string]interface{}{
+					"sessionId": sessionID,
+					"message": "Request timed out. Please try again.",
+				},
+			}
+			return
+		}
+	}
+}
+
+// renderHotelsHeaderHTML renders header HTML fragment for SSE
+func (h *HotelsHandlers) renderHotelsHeaderHTML(cityData models.GeneralCityData, hotels []models.HotelDetailedInfo) string {
+	buf := &strings.Builder{}
+	component := results.HotelsHeaderComplete(cityData, hotels)
+	component.Render(context.Background(), buf)
+	return buf.String()
+}
+
+// renderHotelsContentHTML renders content HTML fragment for SSE  
+func (h *HotelsHandlers) renderHotelsContentHTML(cityData models.GeneralCityData, hotels []models.HotelDetailedInfo) string {
+	buf := &strings.Builder{}
+	component := results.HotelsContentComplete(cityData, hotels)
+	component.Render(context.Background(), buf)
+	return buf.String()
 }

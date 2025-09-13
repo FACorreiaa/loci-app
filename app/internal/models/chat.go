@@ -43,6 +43,7 @@ type LlmInteraction struct {
 type AIItineraryResponse struct {
 	ItineraryName      string            `json:"itinerary_name"`
 	OverallDescription string            `json:"overall_description"`
+	GeneralCityData    GeneralCityData   `json:"general_pois"`
 	PointsOfInterest   []POIDetailedInfo `json:"points_of_interest"`
 	Restaurants        []POIDetailedInfo `json:"restaurants,omitempty"`
 	Bars               []POIDetailedInfo `json:"bars,omitempty"`
