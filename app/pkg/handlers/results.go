@@ -353,7 +353,7 @@ func (h *ResultsHandlers) HandleItineraryStreamSearch(c *gin.Context) {
 	emptyGeneralPOIs := []models.POIDetailedInfo{}
 	emptyItinerary := models.AIItineraryResponse{}
 	
-	c.HTML(http.StatusOK, "", results.ItineraryResultsSSE(sessionID, emptyCityData, emptyGeneralPOIs, emptyItinerary, false))
+	c.HTML(http.StatusOK, "", results.ItineraryResults(emptyCityData, emptyGeneralPOIs, emptyItinerary, true, false, 5, []string{}))
 }
 
 // SSE Response structures to match your backend

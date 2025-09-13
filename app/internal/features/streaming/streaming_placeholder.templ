@@ -1,0 +1,255 @@
+package streaming
+
+import (
+    "fmt"
+)
+
+// StreamingPlaceholder is the initial UI shown while content is being generated.
+// It connects to the SSE stream to receive live updates based on request type.
+templ StreamingPlaceholder(sessionID string, requestType string, query string) {
+    <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <!-- Main Streaming Container -->
+        <div
+            id="streaming-container"
+            hx-ext="sse"
+            sse-connect={ fmt.Sprintf("/api/stream/%s", sessionID) }
+            sse-swap="message"
+            hx-swap="beforeend"
+            class="max-w-7xl mx-auto px-4 py-6"
+        >
+            <!-- Initial Loading State -->
+            <div id="loading-indicator" class="text-center py-12">
+                @LoadingState(requestType, query)
+            </div>
+            
+            <!-- Content Area - Will be populated by streaming events -->
+            <div id="content-area" class="space-y-6">
+                <!-- Dynamic content will be inserted here -->
+            </div>
+        </div>
+        
+        <!-- Actions Container - Listens for completion events -->
+        <div
+            id="actions-container"
+            hx-ext="sse"
+            sse-connect={ fmt.Sprintf("/api/stream/%s", sessionID) }
+            sse-swap="complete"
+            class="fixed bottom-6 right-6 z-50"
+        >
+            <!-- Completion actions will appear here -->
+        </div>
+        
+        <!-- Progress Container - Listens for progress events -->
+        <div
+            id="progress-container"
+            hx-ext="sse"
+            sse-connect={ fmt.Sprintf("/api/stream/%s", sessionID) }
+            sse-swap="progress"
+            class="fixed top-20 left-1/2 transform -translate-x-1/2 z-40"
+        >
+            <!-- Progress messages will appear here -->
+        </div>
+        
+        <!-- Error Container - Listens for error events -->
+        <div
+            id="error-container"
+            hx-ext="sse"
+            sse-connect={ fmt.Sprintf("/api/stream/%s", sessionID) }
+            sse-swap="error"
+            class="fixed top-4 right-4 z-50"
+        >
+            <!-- Error messages will appear here -->
+        </div>
+    </div>
+}
+
+// LoadingState shows the appropriate loading message based on request type
+templ LoadingState(requestType string, query string) {
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
+        <div class="flex flex-col items-center">
+            <!-- Loading Spinner -->
+            <div class="relative mb-6">
+                <div class="w-16 h-16 border-4 border-blue-200 rounded-full animate-spin border-t-blue-600"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    { getLoadingEmoji(requestType) }
+                </div>
+            </div>
+            
+            <!-- Title and Description -->
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-4 text-center">
+                { getLoadingTitle(requestType) }
+            </h1>
+            
+            if query != "" {
+                <p class="text-gray-600 dark:text-gray-300 text-center mb-4 max-w-2xl">
+                    Searching for: <span class="font-semibold text-blue-600 dark:text-blue-400">{ query }</span>
+                </p>
+            }
+            
+            <p class="text-gray-500 dark:text-gray-400 text-center max-w-md">
+                { getLoadingDescription(requestType) }
+            </p>
+            
+            <!-- Progress Steps -->
+            <div class="mt-8 w-full max-w-md">
+                <div class="flex justify-between text-xs text-gray-400 mb-2">
+                    <span>Starting</span>
+                    <span>Processing</span>
+                    <span>Complete</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="bg-blue-600 h-2 rounded-full animate-pulse" style="width: 33%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+// ProgressMessage shows streaming progress updates
+templ ProgressMessage(message string, timestamp string) {
+    <div 
+        class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-2 shadow-sm animate-slide-down"
+        hx-swap-oob="afterbegin:#progress-container"
+    >
+        <div class="flex items-center gap-2">
+            <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+            <p class="text-sm text-blue-800 dark:text-blue-200">{ message }</p>
+            <span class="text-xs text-blue-600 dark:text-blue-400 ml-auto">{ timestamp }</span>
+        </div>
+    </div>
+}
+
+// ErrorMessage shows error notifications
+templ ErrorMessage(errorMsg string, sessionID string) {
+    <div 
+        class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 shadow-lg max-w-md animate-slide-down"
+        hx-swap-oob="afterbegin:#error-container"
+    >
+        <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+            </svg>
+            <div class="flex-1">
+                <p class="text-sm font-medium text-red-800 dark:text-red-200 mb-1">
+                    Something went wrong
+                </p>
+                <p class="text-xs text-red-600 dark:text-red-300">
+                    { errorMsg }
+                </p>
+                <button 
+                    hx-post={ fmt.Sprintf("/api/retry/%s", sessionID) }
+                    hx-target="#streaming-container"
+                    hx-swap="outerHTML"
+                    class="mt-2 text-xs text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100 font-medium underline"
+                >
+                    Try Again
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+// CompletionActions shows actions available when streaming is complete
+templ CompletionActions(requestType string, sessionID string, navigationURL string) {
+    <div 
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 animate-slide-up"
+        hx-swap-oob="innerHTML:#actions-container"
+    >
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
+                <svg class="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <div class="flex-1">
+                <p class="text-sm font-medium text-gray-900 dark:text-white">
+                    { getCompletionMessage(requestType) }
+                </p>
+                <div class="flex gap-2 mt-2">
+                    if navigationURL != "" {
+                        <a 
+                            href={ navigationURL }
+                            class="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors"
+                        >
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                            View Results
+                        </a>
+                    }
+                    <button 
+                        hx-post={ fmt.Sprintf("/api/continue-chat/%s", sessionID) }
+                        hx-target="body"
+                        class="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    >
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.013 8.013 0 01-7.93-6.94c-.42-.51-.92-.92-1.43-1.25-.63-.41-.63-1.33 0-1.74.51-.33 1.01-.74 1.43-1.25A8.013 8.013 0 0113 4c4.418 0 8 3.582 8 8z"></path>
+                        </svg>
+                        Continue Planning
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+// Utility functions
+func getLoadingEmoji(requestType string) string {
+    switch requestType {
+    case "itinerary":
+        return "🗺️"
+    case "hotels":
+        return "🏨"
+    case "restaurants":
+        return "🍽️"
+    case "activities":
+        return "🎯"
+    default:
+        return "🔍"
+    }
+}
+
+func getLoadingTitle(requestType string) string {
+    switch requestType {
+    case "itinerary":
+        return "Creating Your Personalized Itinerary"
+    case "hotels":
+        return "Finding Perfect Accommodations"
+    case "restaurants":
+        return "Discovering Great Restaurants"
+    case "activities":
+        return "Finding Exciting Activities"
+    default:
+        return "Processing Your Request"
+    }
+}
+
+func getLoadingDescription(requestType string) string {
+    switch requestType {
+    case "itinerary":
+        return "We're analyzing your preferences and creating a customized travel plan just for you. This may take a moment."
+    case "hotels":
+        return "Searching through thousands of hotels to find the perfect match for your needs and budget."
+    case "restaurants":
+        return "Exploring the local dining scene to recommend restaurants that match your taste and preferences."
+    case "activities":
+        return "Discovering unique activities and attractions that align with your interests and travel style."
+    default:
+        return "Processing your request. Please wait while we gather the information you need."
+    }
+}
+
+func getCompletionMessage(requestType string) string {
+    switch requestType {
+    case "itinerary":
+        return "Your personalized itinerary is ready!"
+    case "hotels":
+        return "Found great hotel options for you!"
+    case "restaurants":
+        return "Discovered amazing restaurants!"
+    case "activities":
+        return "Found exciting activities to explore!"
+    default:
+        return "Request completed successfully!"
+    }
+}

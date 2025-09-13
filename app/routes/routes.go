@@ -32,6 +32,7 @@ import (
 	"github.com/FACorreiaa/go-templui/app/internal/features/lists"
 	"github.com/FACorreiaa/go-templui/app/internal/features/nearby"
 	"github.com/FACorreiaa/go-templui/app/internal/features/pricing"
+	streamingfeatures "github.com/FACorreiaa/go-templui/app/internal/features/streaming"
 	"github.com/FACorreiaa/go-templui/app/internal/features/profile"
 	"github.com/FACorreiaa/go-templui/app/internal/features/recents"
 	"github.com/FACorreiaa/go-templui/app/internal/features/reviews"
@@ -289,23 +290,57 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 
 		// Itinerary SSE
 		protected.GET("/itinerary", func(c *gin.Context) {
-			content := itineraryHandlers.HandleItineraryPageSSE(c)
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
-				Title:   "Travel Planner - Loci",
-				Content: content,
-				Nav: models.Navigation{
-					Items: []models.NavItem{
-						{Name: "Dashboard", URL: "/dashboard"},
-						{Name: "Discover", URL: "/discover"},
-						{Name: "Nearby", URL: "/nearby"},
-						{Name: "Itinerary", URL: "/itinerary"},
-						{Name: "Chat", URL: "/chat"},
-						{Name: "Favorites", URL: "/favorites"},
+			query := c.Query("q")
+			sessionIdParam := c.Query("sessionId")
+			
+			// If there's a query but no sessionId, start new streaming
+			if query != "" && sessionIdParam == "" {
+				// Return the streaming trigger page wrapped in layout
+				content := streamingfeatures.StreamingTriggerPage(query, "itinerary")
+				c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+					Title:   "Travel Planner - Loci",
+					Content: content,
+					Nav: models.Navigation{
+						Items: []models.NavItem{
+							{Name: "Dashboard", URL: "/dashboard"},
+							{Name: "Discover", URL: "/discover"},
+							{Name: "Nearby", URL: "/nearby"},
+							{Name: "Itinerary", URL: "/itinerary"},
+							{Name: "Chat", URL: "/chat"},
+							{Name: "Favorites", URL: "/favorites"},
+						},
 					},
-				},
-				ActiveNav: "Itinerary",
-				User:      getUserFromContext(c),
-			}))
+					ActiveNav: "Itinerary",
+					User:      getUserFromContext(c),
+				}))
+				return
+			}
+			
+			// For sessionId cases or default page, call the SSE handler directly
+			// This returns complete HTML pages, not components for layout
+			content := itineraryHandlers.HandleItineraryPageSSE(c)
+			if sessionIdParam == "" {
+				// Default empty page - wrap in layout
+				c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+					Title:   "Travel Planner - Loci",
+					Content: content,
+					Nav: models.Navigation{
+						Items: []models.NavItem{
+							{Name: "Dashboard", URL: "/dashboard"},
+							{Name: "Discover", URL: "/discover"},
+							{Name: "Nearby", URL: "/nearby"},
+							{Name: "Itinerary", URL: "/itinerary"},
+							{Name: "Chat", URL: "/chat"},
+							{Name: "Favorites", URL: "/favorites"},
+						},
+					},
+					ActiveNav: "Itinerary",
+					User:      getUserFromContext(c),
+				}))
+			} else {
+				// Cached results - render directly without layout wrapper
+				c.HTML(http.StatusOK, "", content)
+			}
 		})
 
 		//Activities (public but enhanced when authenticated)
