@@ -76,53 +76,11 @@ templ ItineraryResultsSSE(sessionID string, cityData models.GeneralCityData, gen
 			</div>
 		</div>
 		<!-- Main Content Area -->
-		<div class="flex flex-1 overflow-hidden">
-			<!-- Content Area with SSE Zone -->
-			<div
-				id="itinerary-content"
-				x-show="viewMode !== 'map'"
-				class="flex-1 overflow-auto"
-				if !hasData {
-					sse-swap="itinerary-content"
-				}
-			>
-				if hasData {
-					@ItineraryContentComplete(cityData, generalPOIs, itinerary)
-				} else {
-					@ItineraryContentLoading()
-				}
-			</div>
-			<!-- Map View (always available) -->
-			<div
-				x-show="viewMode === 'map' || viewMode === 'split'"
-				:class="viewMode === 'split' ? 'w-1/2' : 'w-full'"
-				class="bg-gray-200 relative"
-			>
-				<div class="absolute inset-0 flex items-center justify-center">
-					<div class="text-center">
-						<div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-							<svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-							</svg>
-						</div>
-						<p class="text-gray-600 font-medium">Interactive Map</p>
-						<p class="text-gray-500 text-sm">Coming soon</p>
-					</div>
-				</div>
-			</div>
-		</div>
-		<!-- Loading Progress Indicator (SSE driven) -->
-		<div
-			id="loading-progress"
-			if !hasData {
-				sse-swap="loading-progress"
-				class="fixed bottom-4 right-4 z-50"
+		<div id="itinerary-content" sse-swap="innerHTML">
+			if hasData {
+				@ItineraryResults(cityData, generalPOIs, itinerary, true, true, 5, []string{})
 			} else {
-				class="fixed bottom-4 right-4 z-50 hidden"
-			}
-		>
-			if !hasData {
-				@LoadingProgress()
+				@ItineraryContentLoading()
 			}
 		</div>
 	</div>
@@ -252,34 +210,7 @@ templ ItineraryHeaderLoading() {
 	</div>
 }
 
-// ItineraryContentComplete renders the complete content area
-templ ItineraryContentComplete(cityData models.GeneralCityData, generalPOIs []models.POIDetailedInfo, itinerary models.AIItineraryResponse) {
-	<div class="p-4">
-		<!-- Use existing ItineraryResults content components -->
-		@ItineraryResults(cityData, generalPOIs, itinerary, false, false, 15, []string{})
-	</div>
-}
 
-// ItineraryContentLoading renders the loading state for content
-templ ItineraryContentLoading() {
-	<div class="p-4 space-y-4">
-		<div class="animate-pulse">
-			<div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-			<div class="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-			<div class="space-y-3">
-				for i := 0; i < 5; i++ {
-					<div class="flex space-x-4">
-						<div class="w-16 h-16 bg-gray-200 rounded"></div>
-						<div class="flex-1 space-y-2">
-							<div class="h-4 bg-gray-200 rounded w-2/3"></div>
-							<div class="h-3 bg-gray-200 rounded w-1/2"></div>
-						</div>
-					</div>
-				}
-			</div>
-		</div>
-	</div>
-}
 
 // LoadingProgress renders the loading progress indicator
 templ LoadingProgress() {

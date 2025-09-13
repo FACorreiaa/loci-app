@@ -384,49 +384,18 @@ func (h *ItineraryHandlers) loadItineraryBySessionSSE(sessionIdParam string) tem
 			zap.Int("generalPOIs", len(completeData.PointsOfInterest)),
 			zap.Int("personalizedPOIs", len(completeData.AIItineraryResponse.PointsOfInterest)))
 
-		return results.ItineraryResultsSSE(
-			sessionIdParam,
+		return results.ItineraryResults(
+
 			completeData.GeneralCityData,
 			completeData.PointsOfInterest,
 			completeData.AIItineraryResponse,
-			true) // hasData = true
+			true,
+			true,
+			15,
+			[]string{})
 	}
 
-	// Try legacy cache
-	if itineraryData, found := middleware.ItineraryCache.Get(sessionIdParam); found {
-		logger.Log.Info("Legacy itinerary found in cache. Rendering SSE results with data.",
-			zap.Int("personalizedPOIs", len(itineraryData.PointsOfInterest)))
-
-		// Create empty city data and general POIs for legacy cached data
-		emptyCityData := models.GeneralCityData{}
-		emptyGeneralPOIs := []models.POIDetailedInfo{}
-
-		return results.ItineraryResultsSSE(
-			sessionIdParam,
-			emptyCityData,
-			emptyGeneralPOIs,
-			itineraryData,
-			true) // hasData = true
-	}
-
-	// if it doesnt find cached data, the data should be the llm response itself that comes from ProcessUnifiedChatMessageStream
-	// implement this https://github.com/a-h/templ/blob/main/examples/streaming/main.templ
-	// this is how the data should be fetched instead of having an empty page
-
-	// No cached data found - show loading interface with SSE
-	logger.Log.Info("No itinerary found in cache. Rendering SSE loading interface.",
-		zap.String("sessionID", sessionIdParam))
-
-	emptyCityData := models.GeneralCityData{}
-	emptyGeneralPOIs := []models.POIDetailedInfo{}
-	emptyItinerary := models.AIItineraryResponse{}
-
-	return results.ItineraryResultsSSE(
-		sessionIdParam,
-		emptyCityData,
-		emptyGeneralPOIs,
-		emptyItinerary,
-		false) // hasData = false, will show loading and connect to SSE
+	return h.loadItineraryFromDatabase(sessionIdParam)
 }
 
 // HandleItinerarySSE handles Server-Sent Events for itinerary updates
@@ -471,29 +440,6 @@ func (h *ItineraryHandlers) HandleItinerarySSE(c *gin.Context) {
 				return
 			}
 
-			// Send HTML fragment updates based on event type
-			if event.Type == "header-update" {
-				if data, ok := event.Data.(map[string]interface{}); ok {
-					if completeData, exists := data["completeData"]; exists {
-						if complete, valid := completeData.(models.AiCityResponse); valid {
-							headerHTML := h.renderHeaderHTML(complete.GeneralCityData, complete.PointsOfInterest, complete.AIItineraryResponse)
-							c.SSEvent("itinerary-header", headerHTML)
-						}
-					}
-				}
-			} else if event.Type == "content-update" {
-				if data, ok := event.Data.(map[string]interface{}); ok {
-					if completeData, exists := data["completeData"]; exists {
-						if complete, valid := completeData.(models.AiCityResponse); valid {
-							contentHTML := h.renderContentHTML(complete.GeneralCityData, complete.PointsOfInterest, complete.AIItineraryResponse)
-							c.SSEvent("itinerary-content", contentHTML)
-						}
-					}
-				}
-			} else {
-				// Send progress update
-				c.SSEvent(event.Type, event.Data)
-			}
 			flusher.Flush()
 
 		case <-c.Request.Context().Done():
@@ -663,20 +609,4 @@ func (h *ItineraryHandlers) loadItineraryFromDatabase(sessionIdParam string) tem
 		completeData.PointsOfInterest,
 		completeData.AIItineraryResponse,
 		true, true, 5, []string{})
-}
-
-// renderHeaderHTML renders header HTML fragment for SSE
-func (h *ItineraryHandlers) renderHeaderHTML(cityData models.GeneralCityData, generalPOIs []models.POIDetailedInfo, itinerary models.AIItineraryResponse) string {
-	buf := &strings.Builder{}
-	component := results.ItineraryHeaderComplete(cityData, generalPOIs, itinerary)
-	component.Render(context.Background(), buf)
-	return buf.String()
-}
-
-// renderContentHTML renders content HTML fragment for SSE
-func (h *ItineraryHandlers) renderContentHTML(cityData models.GeneralCityData, generalPOIs []models.POIDetailedInfo, itinerary models.AIItineraryResponse) string {
-	buf := &strings.Builder{}
-	component := results.ItineraryContentComplete(cityData, generalPOIs, itinerary)
-	component.Render(context.Background(), buf)
-	return buf.String()
 }
