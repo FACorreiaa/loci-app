@@ -32,11 +32,11 @@ import (
 	"github.com/FACorreiaa/go-templui/app/internal/features/lists"
 	"github.com/FACorreiaa/go-templui/app/internal/features/nearby"
 	"github.com/FACorreiaa/go-templui/app/internal/features/pricing"
-	streamingfeatures "github.com/FACorreiaa/go-templui/app/internal/features/streaming"
 	"github.com/FACorreiaa/go-templui/app/internal/features/profile"
 	"github.com/FACorreiaa/go-templui/app/internal/features/recents"
 	"github.com/FACorreiaa/go-templui/app/internal/features/reviews"
 	"github.com/FACorreiaa/go-templui/app/internal/features/settings"
+	streamingfeatures "github.com/FACorreiaa/go-templui/app/internal/features/streaming"
 	"github.com/FACorreiaa/go-templui/app/internal/pages"
 
 	"github.com/gin-gonic/gin"
@@ -292,7 +292,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		protected.GET("/itinerary", func(c *gin.Context) {
 			query := c.Query("q")
 			sessionIdParam := c.Query("sessionId")
-			
+
 			// If there's a query but no sessionId, start new streaming
 			if query != "" && sessionIdParam == "" {
 				// Return the streaming trigger page wrapped in layout
@@ -315,32 +315,26 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 				}))
 				return
 			}
-			
-			// For sessionId cases or default page, call the SSE handler directly
-			// This returns complete HTML pages, not components for layout
+
+			// For sessionId cases or default page, call the SSE handler
+			// This returns templ.Component that should be wrapped in layout
 			content := itineraryHandlers.HandleItineraryPageSSE(c)
-			if sessionIdParam == "" {
-				// Default empty page - wrap in layout
-				c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
-					Title:   "Travel Planner - Loci",
-					Content: content,
-					Nav: models.Navigation{
-						Items: []models.NavItem{
-							{Name: "Dashboard", URL: "/dashboard"},
-							{Name: "Discover", URL: "/discover"},
-							{Name: "Nearby", URL: "/nearby"},
-							{Name: "Itinerary", URL: "/itinerary"},
-							{Name: "Chat", URL: "/chat"},
-							{Name: "Favorites", URL: "/favorites"},
-						},
+			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+				Title:   "Travel Planner - Loci",
+				Content: content,
+				Nav: models.Navigation{
+					Items: []models.NavItem{
+						{Name: "Dashboard", URL: "/dashboard"},
+						{Name: "Discover", URL: "/discover"},
+						{Name: "Nearby", URL: "/nearby"},
+						{Name: "Itinerary", URL: "/itinerary"},
+						{Name: "Chat", URL: "/chat"},
+						{Name: "Favorites", URL: "/favorites"},
 					},
-					ActiveNav: "Itinerary",
-					User:      getUserFromContext(c),
-				}))
-			} else {
-				// Cached results - render directly without layout wrapper
-				c.HTML(http.StatusOK, "", content)
-			}
+				},
+				ActiveNav: "Itinerary",
+				User:      getUserFromContext(c),
+			}))
 		})
 
 		//Activities (public but enhanced when authenticated)

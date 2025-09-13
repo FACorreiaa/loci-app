@@ -2704,13 +2704,28 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 
 	switch routeType {
 	case "itinerary":
+		// Cache both individual itinerary part and complete response
 		if itineraryBuilder, exists := responses["itinerary"]; exists && itineraryBuilder != nil {
 			itineraryResponse := itineraryBuilder.String()
 			if itinerary, err := parseItineraryFromResponse(itineraryResponse, l.logger); err == nil {
-				l.logger.InfoContext(ctx, "Caching restaurant data",
+				l.logger.InfoContext(ctx, "Caching itinerary data",
 					slog.String("sessionID", sessionID.String()))
 				middleware.ItineraryCache.Set(sessionID.String(), *itinerary)
 			}
+		}
+		
+		// Cache complete response with all parts (city_data + general_pois + itinerary)
+		if completeResponse, err := l.parseCompleteResponseFromParts(responses, sessionID); err == nil {
+			l.logger.InfoContext(ctx, "Caching complete itinerary response",
+				slog.String("sessionID", sessionID.String()),
+				slog.String("city", completeResponse.GeneralCityData.City),
+				slog.Int("generalPOIs", len(completeResponse.PointsOfInterest)),
+				slog.Int("itineraryPOIs", len(completeResponse.AIItineraryResponse.PointsOfInterest)))
+			middleware.CompleteItineraryCache.Set(sessionID.String(), *completeResponse)
+		} else {
+			l.logger.WarnContext(ctx, "Failed to cache complete itinerary response", 
+				slog.String("sessionID", sessionID.String()), 
+				slog.Any("error", err))
 		}
 	case "restaurants":
 		if restaurantBuilder, exists := responses["restaurants"]; exists && restaurantBuilder != nil {
