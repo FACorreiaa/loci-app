@@ -1,4 +1,5 @@
 # Debug and Fix Checklist
+## Always use TemplUI components 
 
 ## UI Issues
 - [x] **0. Login/Signup Button Alignment** ✓ FIXED
@@ -27,10 +28,20 @@
     - `app/routes/routes.go`
 
 ## Backend/Data Issues
-- [ ] **1. Empty Points of Interest**
-  - Debug why `complete_itinerary.json` returns empty "points_of_interest"
-  - Verify data pipeline from request to response
-  - Check if POI service is being called correctly
+- [x] **1. Empty Points of Interest** ✓ FIXED
+  - Issue: `complete_itinerary.json` had `"points_of_interest": null` at top level
+  - Root cause: Parser expected direct array `[]POIDetailedInfo` but LLM returns wrapped object `{"points_of_interest": [...]}`
+  - Analysis:
+    - LLM prompt (`getGeneralPOIPrompt`) correctly asks for `{"points_of_interest": [...]}`
+    - Parser in `chat_parser.go:78` was trying to unmarshal directly into array
+    - This caused parsing to fail silently, leaving top-level POIs as null
+    - POI data WAS present in `itinerary_response.points_of_interest` but not at top level
+  - Solution:
+    - Updated `parseCompleteResponseFromParts` to first try parsing as wrapped object
+    - Falls back to direct array parsing for backwards compatibility
+    - Added debug logging to track which format was used
+  - Files modified:
+    - `app/pkg/domain/chat_prompt/chat_parser.go:72-96`
 
 - [ ] **2. Cache System Verification**
   - Verify cache implementation for endpoints
@@ -49,6 +60,7 @@
     - Hotels: stuck on loading state
   - This used to work - regression investigation needed
 
+- 3.1 Optimise the services that are using 
 ## Feature Parity with SolidJS Project
 - [ ] **4. Compare with go-ai-poi-client**
   - Navigate to `../go-ai-poi-client`

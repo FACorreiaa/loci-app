@@ -74,11 +74,23 @@ func (l *ServiceImpl) parseCompleteResponseFromParts(responses map[string]*strin
 		poisStr := poisBuilder.String()
 		if poisStr != "" {
 			cleanedPOIs := cleanJSONResponse(poisStr)
-			var pois []models.POIDetailedInfo
-			if err := json.Unmarshal([]byte(cleanedPOIs), &pois); err != nil {
-				l.logger.Warn("Failed to parse general_pois part", slog.Any("error", err))
+
+			// Try parsing as wrapper with points_of_interest field first (this is what the LLM returns)
+			var poisWrapper struct {
+				PointsOfInterest []models.POIDetailedInfo `json:"points_of_interest"`
+			}
+			if err := json.Unmarshal([]byte(cleanedPOIs), &poisWrapper); err == nil && len(poisWrapper.PointsOfInterest) > 0 {
+				completeResponse.PointsOfInterest = poisWrapper.PointsOfInterest
+				l.logger.Debug("Parsed general_pois as wrapped object", slog.Int("count", len(poisWrapper.PointsOfInterest)))
 			} else {
-				completeResponse.PointsOfInterest = pois
+				// Fallback: try parsing as direct array
+				var pois []models.POIDetailedInfo
+				if err := json.Unmarshal([]byte(cleanedPOIs), &pois); err != nil {
+					l.logger.Warn("Failed to parse general_pois part", slog.Any("error", err))
+				} else {
+					completeResponse.PointsOfInterest = pois
+					l.logger.Debug("Parsed general_pois as direct array", slog.Int("count", len(pois)))
+				}
 			}
 		}
 	}
