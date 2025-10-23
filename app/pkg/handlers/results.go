@@ -177,8 +177,12 @@ func (h *ResultsHandlers) HandleHotelSearch(c *gin.Context) {
 	// Set the sessionID in response header so frontend can use it for direct links
 	c.Header("X-Session-ID", sessionID)
 
+	// Create empty city data for now
+	emptyCityData := models.GeneralCityData{}
+
 	// Render results using the new hotel results component
-	c.HTML(http.StatusOK, "", results.HotelResults(
+	c.HTML(http.StatusOK, "", results.HotelsResults(
+		emptyCityData,
 		hotels,
 		false, // compact
 		true,  // showToggle

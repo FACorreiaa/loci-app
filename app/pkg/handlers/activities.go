@@ -37,15 +37,17 @@ func NewActivitiesHandlers(chatRepo llmchat.Repository, logger *slog.Logger) *Ac
 func (h *ActivitiesHandlers) HandleActivitiesPage(c *gin.Context) templ.Component {
 	query := c.Query("q")
 	sessionIDParam := c.Query("sessionId")
+	cacheKey := c.Query("cacheKey")
 
 	logger.Log.Info("Activities page accessed",
 		zap.String("ip", c.ClientIP()),
 		zap.String("query", query),
-		zap.String("sessionId", sessionIDParam))
+		zap.String("sessionId", sessionIDParam),
+		zap.String("cacheKey", cacheKey))
 
 	// Handle session-based loading
 	if sessionIDParam != "" {
-		return h.loadActivitiesBySession(sessionIDParam)
+		return h.loadActivitiesBySession(sessionIDParam, cacheKey)
 	}
 
 	// Handle query-based loading
@@ -58,37 +60,27 @@ func (h *ActivitiesHandlers) HandleActivitiesPage(c *gin.Context) templ.Componen
 }
 
 // loadActivitiesBySession loads activities using IDENTICAL logic as itinerary
-func (h *ActivitiesHandlers) loadActivitiesBySession(sessionIDParam string) templ.Component {
-	logger.Log.Info("Attempting to load activities from cache", zap.String("sessionID", sessionIDParam))
+func (h *ActivitiesHandlers) loadActivitiesBySession(sessionIDParam string, cacheKey string) templ.Component {
+	logger.Log.Info("Attempting to load activities from cache",
+		zap.String("sessionID", sessionIDParam),
+		zap.String("cacheKey", cacheKey))
 
-	// Try complete cache first (IDENTICAL to itinerary logic)
-	if completeData, found := middleware.CompleteItineraryCache.Get(sessionIDParam); found {
+	// Try activities cache first with cacheKey (for reusable cache hits)
+	if cacheKey != "" {
+		if activitiesData, found := middleware.ActivitiesCache.Get(cacheKey); found {
+			logger.Log.Info("Activities found in cache. Rendering results with data.",
+				zap.Int("activities", len(activitiesData)))
 
-		logger.Log.Info("Complete activities found in cache. Rendering results.",
-			zap.String("city", completeData.GeneralCityData.City),
-			zap.Int("generalPOIs", len(completeData.PointsOfInterest)),
-			zap.Int("personalizedPOIs", len(completeData.AIItineraryResponse.PointsOfInterest)))
+			// Create empty city data for now
+			emptyCityData := models.GeneralCityData{}
 
-		// Filter POIs for activities and render (IDENTICAL to itinerary results pattern)
-		activityPOIs := filterPOIsForActivities(completeData.PointsOfInterest)
-		return results.ActivitiesResults(
-			completeData.GeneralCityData,
-			activityPOIs,
-			true, true, 5, []string{})
+			// Return static template when data is available
+			return results.ActivitiesResults(
+				emptyCityData,
+				activitiesData,
+				true, true, 15, []string{})
+		}
 	}
-
-	//// Try legacy cache (IDENTICAL to itinerary logic)
-	//if itineraryData, found := middleware.ItineraryCache.Get(sessionIDParam); found {
-	//	logger.Log.Info("Legacy activities found in cache. Rendering results.",
-	//		zap.Int("personalizedPOIs", len(itineraryData.PointsOfInterest)))
-	//
-	//	// Create empty city data for legacy cached data (IDENTICAL to itinerary)
-	//	emptyCityData := models.GeneralCityData{}
-	//
-	//	// Filter activities from legacy data
-	//	activityPOIs := filterPOIsForActivities(itineraryData.PointsOfInterest)
-	//	return results.ActivitiesResults(emptyCityData, activityPOIs, true, true, 5, []string{})
-	//}
 
 	// Load from database (IDENTICAL to itinerary logic)
 	return h.loadActivitiesFromDatabase(sessionIDParam)
@@ -174,11 +166,13 @@ func filterPOIsForActivities(allPOIs []models.POIDetailedInfo) []models.POIDetai
 func (h *ActivitiesHandlers) HandleActivitiesPageSSE(c *gin.Context) templ.Component {
 	query := c.Query("q")
 	sessionIDParam := c.Query("sessionId")
+	cacheKey := c.Query("cacheKey")
 
 	logger.Log.Info("Activities SSE page accessed",
 		zap.String("ip", c.ClientIP()),
 		zap.String("query", query),
-		zap.String("sessionId", sessionIDParam))
+		zap.String("sessionId", sessionIDParam),
+		zap.String("cacheKey", cacheKey))
 
 	if sessionIDParam == "" {
 		logger.Log.Info("Direct navigation to /activities SSE. Showing default page.")
@@ -186,5 +180,5 @@ func (h *ActivitiesHandlers) HandleActivitiesPageSSE(c *gin.Context) templ.Compo
 	}
 
 	// Load activities data for session with SSE support
-	return h.loadActivitiesBySession(sessionIDParam)
+	return h.loadActivitiesBySession(sessionIDParam, cacheKey)
 }

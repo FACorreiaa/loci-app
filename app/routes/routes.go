@@ -340,7 +340,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 
 		//Activities (public but enhanced when authenticated)
 		protected.GET("/activities", func(c *gin.Context) {
-			content := activitiesHandlers.HandleActivitiesPageSSE(c)
+			content := activitiesHandlers.HandleActivitiesPage(c)
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Activities - Loci",
 				Content: content,
@@ -360,7 +360,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 
 		//Hotels (public but enhanced when authenticated)
 		protected.GET("/hotels", func(c *gin.Context) {
-			content := hotelsHandlers.HandleHotelsPageSSE(c)
+			content := hotelsHandlers.HandleHotelsPage(c)
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Hotels - Loci",
 				Content: content,
@@ -755,15 +755,6 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		htmxGroup.GET("/itinerary/summary", itineraryHandlers.GetItinerarySummary)
 		htmxGroup.GET("/itinerary/stream", chatHandlers.HandleItineraryStream)
 		htmxGroup.GET("/itinerary/sse", itineraryHandlers.HandleItinerarySSE)
-
-		// Restaurants SSE endpoints
-		htmxGroup.GET("/restaurants/sse", restaurantsHandlers.HandleRestaurantsPageSSE)
-
-		// Activities SSE endpoints
-		htmxGroup.GET("/activities/sse", activitiesHandlers.HandleActivitiesSSE)
-
-		// Hotels SSE endpoints
-		htmxGroup.GET("/hotels/sse", hotelsHandlers.HandleHotelsSSE)
 
 		// Settings endpoints (protected)
 		settingsGroup := htmxGroup.Group("/settings")

@@ -89,6 +89,16 @@ templ ActivitiesResults(cityData models.GeneralCityData, activities []models.POI
 								<span class="hidden sm:inline">Map</span>
 							</div>
 						</button>
+						<button @click="viewMode = 'split'"
+								:class="viewMode === 'split' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-300'"
+								class="flex-1 px-3 py-2 rounded text-sm font-medium transition-colors">
+							<div class="flex items-center justify-center gap-1">
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+								</svg>
+								<span class="hidden sm:inline">Split</span>
+							</div>
+						</button>
 						<button @click="viewMode = 'grid'"
 								:class="viewMode === 'grid' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-300'"
 								class="flex-1 px-3 py-2 rounded text-sm font-medium transition-colors">
@@ -105,110 +115,94 @@ templ ActivitiesResults(cityData models.GeneralCityData, activities []models.POI
 		</div>
 
 		<!-- Main Content Area -->
-		<div class="px-4 py-4 sm:px-6">
-			<!-- List View Layout -->
-			<div x-show="viewMode === 'list'" class="flex gap-6">
-				<!-- Main Content (Left) -->
-				<div class="flex-1">
-					<!-- About Section -->
+		<div class="flex-1 min-h-0">
+			<!-- Map Container (shown in map and split views) -->
+			<div
+				x-show="viewMode === 'map' || viewMode === 'split'"
+				x-transition:enter="transition ease-out duration-300"
+				x-transition:enter-start="opacity-0"
+				x-transition:enter-end="opacity-100"
+				class="relative"
+			>
+				<div
+					:class="viewMode === 'map' ? 'h-[calc(100vh-200px)] md:h-[600px]' : viewMode === 'split' ? 'h-[300px] md:h-[400px] lg:h-[500px]' : 'h-[400px]'"
+					class="w-full"
+				>
+					@ActivitiesMapContainer(activities, &cityData, "session-placeholder")
+				</div>
+			</div>
+
+			<!-- Content Layout for List/Split/Grid View -->
+			<div class="px-4 py-4 sm:px-6">
+				<!-- List View -->
+				<div
+					x-show="viewMode === 'list' || viewMode === 'split'"
+					class="w-full"
+				>
+					<!-- City Information Section -->
 					if cityData.City != "" && cityData.Description != "" {
-						<section class="mb-8">
-							<h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">About { cityData.City }</h2>
-							<div class="bg-white dark:bg-gray-800 rounded-lg p-6">
-								<p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-6">{ cityData.Description }</p>
-								<div class="grid grid-cols-2 gap-6 text-sm">
-									<div>
-										if cityData.Population != "" {
-											<div class="mb-3">
-												<span class="font-medium text-gray-900 dark:text-white">Population:</span>
-												<br/>
-												<span class="text-gray-600 dark:text-gray-300">{ cityData.Population }</span>
+						<div class="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 mb-6 border border-purple-100 dark:border-gray-600">
+							<div class="flex items-start gap-4">
+								<div class="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center flex-shrink-0">
+									<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path>
+									</svg>
+								</div>
+								<div class="flex-1">
+									<h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">About { cityData.City }</h3>
+									<p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">{ cityData.Description }</p>
+									<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+										if cityData.Area != "" {
+											<div class="flex items-center gap-2">
+												<svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+												</svg>
+												<span class="text-gray-600 dark:text-gray-400">Area: { cityData.Area }</span>
+											</div>
+										}
+										if cityData.Timezone != "" {
+											<div class="flex items-center gap-2">
+												<svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+												</svg>
+												<span class="text-gray-600 dark:text-gray-400">{ cityData.Timezone }</span>
 											</div>
 										}
 										if cityData.Language != "" {
-											<div class="mb-3">
-												<span class="font-medium text-gray-900 dark:text-white">Language:</span>
-												<br/>
-												<span class="text-gray-600 dark:text-gray-300">{ cityData.Language }</span>
+											<div class="flex items-center gap-2">
+												<svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" d="m10.5 21 5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 0 1 6-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 0 1-3.827-5.802" />
+												</svg>
+												<span class="text-gray-600 dark:text-gray-400">Language: { cityData.Language }</span>
 											</div>
 										}
-									</div>
-									<div>
-										if cityData.Timezone != "" {
-											<div class="mb-3">
-												<span class="font-medium text-gray-900 dark:text-white">Timezone:</span>
-												<br/>
-												<span class="text-gray-600 dark:text-gray-300">{ cityData.Timezone }</span>
-											</div>
-										}
-										if cityData.Area != "" {
-											<div class="mb-3">
-												<span class="font-medium text-gray-900 dark:text-white">Climate:</span>
-												<br/>
-												<span class="text-gray-600 dark:text-gray-300">{ cityData.Area }</span>
+										if cityData.Population != "" {
+											<div class="flex items-center gap-2">
+												<svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+												</svg>
+												<span class="text-gray-600 dark:text-gray-400">Population: { cityData.Population }</span>
 											</div>
 										}
 									</div>
 								</div>
 							</div>
-						</section>
-					}
-
-					<!-- All Activities Section -->
-					if len(activities) > 0 {
-						<section class="mb-8">
-							<h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">All Activities in { cityData.City }</h2>
-							<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-								for _, activity := range activities {
-									@ActivityListCard(activity)
-								}
-							</div>
-							if len(activities) > 6 {
-								<div class="text-center mt-4">
-									<button class="text-gray-600 hover:text-gray-800 text-sm">
-										And { fmt.Sprintf("%d", len(activities) - 6) } more activities to discover...
-									</button>
-								</div>
-							}
-						</section>
-					}
-				</div>
-
-				<!-- Quick Info Sidebar (Right) -->
-				<div class="w-64 flex-shrink-0">
-					<div class="bg-white dark:bg-gray-800 rounded-lg p-4 sticky top-4">
-						<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Info</h3>
-						<div class="space-y-3 text-sm">
-							<div class="flex justify-between">
-								<span class="text-gray-600 dark:text-gray-300">Total Activities:</span>
-								<span class="font-medium text-gray-900 dark:text-white">{ len(activities) }</span>
-							</div>
-							<div class="flex justify-between">
-								<span class="text-gray-600 dark:text-gray-300">Categories:</span>
-								<span class="font-medium text-gray-900 dark:text-white">{ getUniqueActivityCategories(activities) }</span>
-							</div>
-							if cityData.Area != "" {
-								<div class="flex justify-between">
-									<span class="text-gray-600 dark:text-gray-300">Climate:</span>
-									<span class="font-medium text-gray-900 dark:text-white text-right text-xs">{ cityData.Area }</span>
-								</div>
-							}
 						</div>
+					}
+
+					<!-- Activity List -->
+					<div class="space-y-4">
+						for i, activity := range activities {
+							@ActivityListCard(activity, i+1)
+						}
 					</div>
 				</div>
-			</div>
 
-			<!-- Grid View Layout -->
-			<div x-show="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-				for _, activity := range activities {
-					@ActivityGridCard(activity)
-				}
-			</div>
-
-			<!-- Map View (Full screen map) -->
-			<div x-show="viewMode === 'map'">
-				<div class="h-[calc(100vh-200px)]">
-					@ActivitiesMapContainer(activities, &cityData, "session-placeholder")
+				<!-- Grid View -->
+				<div x-show="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+					for i, activity := range activities {
+						@ActivityGridCard(activity, i+1)
+					}
 				</div>
 			</div>
 		</div>
@@ -248,9 +242,13 @@ templ ActivitiesResults(cityData models.GeneralCityData, activities []models.POI
 }
 
 // ActivityListCard for the list view section
-templ ActivityListCard(activity models.POIDetailedInfo) {
-	<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
-		<div class="flex items-start justify-between mb-3">
+templ ActivityListCard(activity models.POIDetailedInfo, index int) {
+	<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow relative">
+		<!-- Index Badge -->
+		<div class="absolute top-2 right-2 w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg z-10">
+			{ fmt.Sprintf("%d", index) }
+		</div>
+		<div class="flex items-start justify-between mb-3 pr-10">
 			<h4 class="font-semibold text-gray-900 dark:text-white line-clamp-1">{ activity.Name }</h4>
 			if activity.Rating > 0 {
 				<div class="flex items-center gap-1 flex-shrink-0">
@@ -284,10 +282,14 @@ templ ActivityListCard(activity models.POIDetailedInfo) {
 }
 
 // ActivityGridCard for the grid view
-templ ActivityGridCard(activity models.POIDetailedInfo) {
-	<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+templ ActivityGridCard(activity models.POIDetailedInfo, index int) {
+	<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition-shadow relative">
+		<!-- Index Badge -->
+		<div class="absolute top-2 right-2 w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg z-10">
+			{ fmt.Sprintf("%d", index) }
+		</div>
 		<div class="p-4">
-			<div class="flex items-start justify-between mb-3">
+			<div class="flex items-start justify-between mb-3 pr-10">
 				<h4 class="font-semibold text-gray-900 dark:text-white line-clamp-1">{ activity.Name }</h4>
 				if activity.Rating > 0 {
 					<div class="flex items-center gap-1 flex-shrink-0">
@@ -320,18 +322,8 @@ templ ActivityGridCard(activity models.POIDetailedInfo) {
 
 // ActivitiesMapContainer for map view
 templ ActivitiesMapContainer(activities []models.POIDetailedInfo, cityData *models.GeneralCityData, sessionId string) {
-	<div class="w-full h-full bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
-		<div class="text-center">
-			<svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-			</svg>
-			<p class="text-gray-500 dark:text-gray-400">Activity map view coming soon</p>
-			if cityData != nil {
-				<p class="text-sm text-gray-400 dark:text-gray-500 mt-2">Showing { fmt.Sprintf("%d", len(activities)) } activities in { cityData.City }</p>
-			} else {
-				<p class="text-sm text-gray-400 dark:text-gray-500 mt-2">Showing { fmt.Sprintf("%d", len(activities)) } activities in this area</p>
-			}
-		</div>
+	<div class="relative w-full h-full min-h-[500px]">
+		@MapContainer(activities, cityData, sessionId, true, true, "purple")
 	</div>
 }
 

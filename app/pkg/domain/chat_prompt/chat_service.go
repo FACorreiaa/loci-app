@@ -2180,18 +2180,19 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 			//	l.cacheItineraryIfAvailable(ctx, sessionID, responses, &responsesMutex)
 			//}
 			// Cache result-specific data for restaurants, activities, and hotels
-			l.cacheResultsIfAvailable(ctx, sessionID, routeType, responses, &responsesMutex)
+			l.cacheResultsIfAvailable(ctx, sessionID, cacheKey, routeType, responses, &responsesMutex)
 
 			l.sendEvent(ctx, eventCh, models.StreamEvent{
 				Type: models.EventTypeComplete,
 				Data: map[string]interface{}{"session_id": sessionID.String()},
 				Navigation: &models.NavigationData{
-					URL:       fmt.Sprintf("%s?sessionId=%s&cityName=%s&domain=%s", baseURL, sessionID.String(), url.QueryEscape(cityName), routeType),
+					URL:       fmt.Sprintf("%s?sessionId=%s&cityName=%s&domain=%s&cacheKey=%s", baseURL, sessionID.String(), url.QueryEscape(cityName), routeType, cacheKey),
 					RouteType: routeType,
 					QueryParams: map[string]string{
 						"sessionId": sessionID.String(),
 						"cityName":  cityName,
 						"domain":    routeType,
+						"cacheKey":  cacheKey,
 					},
 				},
 			}, 3)
@@ -2479,7 +2480,7 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStreamFree(ctx context.Context, c
 				baseURL = "/itinerary"
 			}
 
-			l.cacheResultsIfAvailable(ctx, sessionID, routeType, responses, &responsesMutex)
+			l.cacheResultsIfAvailable(ctx, sessionID, cacheKey, routeType, responses, &responsesMutex)
 			// Cache itinerary data if this was an itinerary request
 			//if routeType == "itinerary" {
 			//	l.cacheItineraryIfAvailable(ctx, sessionID, responses, &responsesMutex)
@@ -2491,12 +2492,13 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStreamFree(ctx context.Context, c
 				Type: models.EventTypeComplete,
 				Data: map[string]interface{}{"session_id": sessionID.String()},
 				Navigation: &models.NavigationData{
-					URL:       fmt.Sprintf("%s?sessionId=%s&cityName=%s&domain=%s", baseURL, sessionID.String(), url.QueryEscape(cityName), routeType),
+					URL:       fmt.Sprintf("%s?sessionId=%s&cityName=%s&domain=%s&cacheKey=%s", baseURL, sessionID.String(), url.QueryEscape(cityName), routeType, cacheKey),
 					RouteType: routeType,
 					QueryParams: map[string]string{
 						"sessionId": sessionID.String(),
 						"cityName":  cityName,
 						"domain":    routeType,
+						"cacheKey":  cacheKey,
 					},
 				},
 			}, 3)
@@ -2697,7 +2699,7 @@ func (l *ServiceImpl) streamWorkerWithResponseAndCache(ctx context.Context, prom
 }
 
 // cacheResultsIfAvailable caches result-specific data for restaurants, activities, and hotels
-func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uuid.UUID, routeType string, responses map[string]*strings.Builder, responsesMutex *sync.Mutex) {
+func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uuid.UUID, cacheKey string, routeType string, responses map[string]*strings.Builder, responsesMutex *sync.Mutex) {
 	responsesMutex.Lock()
 	defer responsesMutex.Unlock()
 
@@ -2716,8 +2718,9 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 				}
 
 				l.logger.InfoContext(ctx, "Caching itinerary data",
-					slog.String("sessionID", sessionID.String()))
-				middleware.ItineraryCache.Set(sessionID.String(), *itinerary)
+					slog.String("sessionID", sessionID.String()),
+					slog.String("cacheKey", cacheKey))
+				middleware.ItineraryCache.Set(cacheKey, *itinerary)
 			}
 		}
 
@@ -2733,10 +2736,11 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 
 			l.logger.InfoContext(ctx, "Caching complete itinerary response",
 				slog.String("sessionID", sessionID.String()),
+				slog.String("cacheKey", cacheKey),
 				slog.String("city", completeResponse.GeneralCityData.City),
 				slog.Int("generalPOIs", len(completeResponse.PointsOfInterest)),
 				slog.Int("itineraryPOIs", len(completeResponse.AIItineraryResponse.PointsOfInterest)))
-			middleware.CompleteItineraryCache.Set(sessionID.String(), *completeResponse)
+			middleware.CompleteItineraryCache.Set(cacheKey, *completeResponse)
 		} else {
 			l.logger.WarnContext(ctx, "Failed to cache complete itinerary response",
 				slog.String("sessionID", sessionID.String()),
@@ -2756,8 +2760,21 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 
 				l.logger.InfoContext(ctx, "Caching restaurant data",
 					slog.String("sessionID", sessionID.String()),
+					slog.String("cacheKey", cacheKey),
 					slog.Int("restaurantsCount", len(restaurants)))
-				middleware.RestaurantsCache.Set(sessionID.String(), restaurants)
+				middleware.RestaurantsCache.Set(cacheKey, restaurants)
+
+				// Also cache to CompleteItineraryCache using cacheKey for reusability
+				if completeResponse, err := l.parseCompleteResponseFromParts(responses, sessionID); err == nil {
+					middleware.CompleteItineraryCache.Set(cacheKey, *completeResponse)
+					l.logger.InfoContext(ctx, "Caching complete response for restaurants",
+						slog.String("sessionID", sessionID.String()),
+						slog.String("cacheKey", cacheKey))
+				} else {
+					l.logger.WarnContext(ctx, "Failed to parse or cache complete response for restaurants",
+						slog.String("sessionID", sessionID.String()),
+						slog.Any("error", err))
+				}
 			}
 		}
 	case "activities":
@@ -2774,8 +2791,21 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 
 				l.logger.InfoContext(ctx, "Caching activity data",
 					slog.String("sessionID", sessionID.String()),
+					slog.String("cacheKey", cacheKey),
 					slog.Int("activitiesCount", len(activities)))
-				middleware.ActivitiesCache.Set(sessionID.String(), activities)
+				middleware.ActivitiesCache.Set(cacheKey, activities)
+
+				// Also cache to CompleteItineraryCache using cacheKey for reusability
+				if completeResponse, err := l.parseCompleteResponseFromParts(responses, sessionID); err == nil {
+					middleware.CompleteItineraryCache.Set(cacheKey, *completeResponse)
+					l.logger.InfoContext(ctx, "Caching complete response for activities",
+						slog.String("sessionID", sessionID.String()),
+						slog.String("cacheKey", cacheKey))
+				} else {
+					l.logger.WarnContext(ctx, "Failed to parse or cache complete response for activities",
+						slog.String("sessionID", sessionID.String()),
+						slog.Any("error", err))
+				}
 			}
 		}
 	case "hotels":
@@ -2792,8 +2822,21 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 
 				l.logger.InfoContext(ctx, "Caching hotel data",
 					slog.String("sessionID", sessionID.String()),
+					slog.String("cacheKey", cacheKey),
 					slog.Int("hotelsCount", len(hotels)))
-				middleware.HotelsCache.Set(sessionID.String(), hotels)
+				middleware.HotelsCache.Set(cacheKey, hotels)
+
+				// Also cache to CompleteItineraryCache using cacheKey for reusability
+				if completeResponse, err := l.parseCompleteResponseFromParts(responses, sessionID); err == nil {
+					middleware.CompleteItineraryCache.Set(cacheKey, *completeResponse)
+					l.logger.InfoContext(ctx, "Caching complete response for hotels",
+						slog.String("sessionID", sessionID.String()),
+						slog.String("cacheKey", cacheKey))
+				} else {
+					l.logger.WarnContext(ctx, "Failed to parse or cache complete response for hotels",
+						slog.String("sessionID", sessionID.String()),
+						slog.Any("error", err))
+				}
 			}
 		}
 	}

@@ -315,11 +315,13 @@ func (h *ItineraryHandlers) HandleItineraryPageSSE(c *gin.Context) templ.Compone
 	userID := middleware.GetUserIDFromContext(c)
 	query := c.Query("q")
 	sessionIDParam := c.Query("sessionId")
+	cacheKey := c.Query("cacheKey")
 
 	logger.Log.Info("Itinerary SSE page accessed",
 		zap.String("user", userID),
 		zap.String("query", query),
-		zap.String("sessionId", sessionIDParam))
+		zap.String("sessionId", sessionIDParam),
+		zap.String("cacheKey", cacheKey))
 
 	if sessionIDParam == "" {
 		logger.Log.Info("Direct navigation to /itinerary SSE. Showing default page.")
@@ -327,7 +329,7 @@ func (h *ItineraryHandlers) HandleItineraryPageSSE(c *gin.Context) templ.Compone
 	}
 
 	// Load itinerary data for session with SSE support
-	return h.loadItineraryBySessionSSE(sessionIDParam)
+	return h.loadItineraryBySessionSSE(sessionIDParam, cacheKey)
 }
 
 func (h *ItineraryHandlers) loadItineraryBySession(sessionIDParam string) templ.Component {
@@ -374,39 +376,42 @@ func (h *ItineraryHandlers) loadItineraryBySession(sessionIDParam string) templ.
 }
 
 // loadItineraryBySessionSSE loads itinerary with SSE support
-func (h *ItineraryHandlers) loadItineraryBySessionSSE(sessionIDParam string) templ.Component {
-	logger.Log.Info("Attempting to load itinerary from cache with SSE", zap.String("sessionID", sessionIDParam))
+func (h *ItineraryHandlers) loadItineraryBySessionSSE(sessionIDParam string, cacheKey string) templ.Component {
+	logger.Log.Info("Attempting to load itinerary from cache with SSE",
+		zap.String("sessionID", sessionIDParam),
+		zap.String("cacheKey", cacheKey))
 
-	// Try complete cache first
-	if completeData, found := middleware.CompleteItineraryCache.Get(sessionIDParam); found {
-		// Print JSON data for debugging what will be displayed
-		jsonData, err := json.MarshalIndent(completeData, "", "  ")
-		if err != nil {
-			logger.Log.Error("Failed to marshal completeData to JSON", zap.Error(err))
-		} else {
-			filename := "complete_itinerary.json" // Or fmt.Sprintf("complete_itinerary_%s.json", sessionID)
-			if writeErr := os.WriteFile(filename, jsonData, 0644); writeErr != nil {
-				logger.Log.Error("Failed to write completeData to file", zap.String("file", filename), zap.Error(writeErr))
+	// Try complete cache first with cacheKey (for reusable cache hits)
+	if cacheKey != "" {
+		if completeData, found := middleware.CompleteItineraryCache.Get(cacheKey); found {
+			// Print JSON data for debugging what will be displayed
+			jsonData, err := json.MarshalIndent(completeData, "", "  ")
+			if err != nil {
+				logger.Log.Error("Failed to marshal completeData to JSON", zap.Error(err))
 			} else {
-				logger.Log.Info("Complete itinerary data written to file", zap.String("file", filename))
+				filename := "complete_itinerary.json" // Or fmt.Sprintf("complete_itinerary_%s.json", sessionID)
+				if writeErr := os.WriteFile(filename, jsonData, 0644); writeErr != nil {
+					logger.Log.Error("Failed to write completeData to file", zap.String("file", filename), zap.Error(writeErr))
+				} else {
+					logger.Log.Info("Complete itinerary data written to file", zap.String("file", filename))
+				}
+				logger.Log.Info("Complete itinerary data being displayed in view", zap.String("json", string(jsonData)))
 			}
-			logger.Log.Info("Complete itinerary data being displayed in view", zap.String("json", string(jsonData)))
+
+			logger.Log.Info("Complete itinerary found in cache. Rendering SSE results with data.",
+				zap.String("city", completeData.GeneralCityData.City),
+				zap.Int("generalPOIs", len(completeData.PointsOfInterest)),
+				zap.Int("personalizedPOIs", len(completeData.AIItineraryResponse.PointsOfInterest)))
+
+			return results.ItineraryResults(
+				completeData.GeneralCityData,
+				completeData.PointsOfInterest,
+				completeData.AIItineraryResponse,
+				true,
+				true,
+				15,
+				[]string{})
 		}
-
-		logger.Log.Info("Complete itinerary found in cache. Rendering SSE results with data.",
-			zap.String("city", completeData.GeneralCityData.City),
-			zap.Int("generalPOIs", len(completeData.PointsOfInterest)),
-			zap.Int("personalizedPOIs", len(completeData.AIItineraryResponse.PointsOfInterest)))
-
-		return results.ItineraryResults(
-
-			completeData.GeneralCityData,
-			completeData.PointsOfInterest,
-			completeData.AIItineraryResponse,
-			true,
-			true,
-			15,
-			[]string{})
 	}
 
 	return h.loadItineraryFromDatabase(sessionIDParam)

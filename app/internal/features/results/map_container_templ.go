@@ -16,7 +16,7 @@ import (
 // package results (no changes to imports or helpers like poisToJSON, cityDataToJSON)
 
 // MapContainer displays the interactive Mapbox map with POI markers
-func MapContainer(pois []models.POIDetailedInfo, cityData *models.GeneralCityData, sessionId string, showLegend bool) templ.Component {
+func MapContainer(pois []models.POIDetailedInfo, cityData *models.GeneralCityData, sessionId string, showLegend bool, useNumberedMarkers bool, markerColor string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -51,7 +51,7 @@ func MapContainer(pois []models.POIDetailedInfo, cityData *models.GeneralCityDat
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = MapInitScript(poisToJSON(pois), cityDataToJSON(cityData)).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = MapInitScript(poisToJSON(pois), cityDataToJSON(cityData), useNumberedMarkers, markerColor).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -59,10 +59,10 @@ func MapContainer(pois []models.POIDetailedInfo, cityData *models.GeneralCityDat
 	})
 }
 
-func MapInitScript(poisJSON, cityJSON string) templ.ComponentScript {
+func MapInitScript(poisJSON, cityJSON string, useNumberedMarkers bool, markerColor string) templ.ComponentScript {
 	return templ.ComponentScript{
-		Name: `__templ_MapInitScript_2458`,
-		Function: `function __templ_MapInitScript_2458(poisJSON, cityJSON){document.addEventListener('DOMContentLoaded', function() {
+		Name: `__templ_MapInitScript_16b1`,
+		Function: `function __templ_MapInitScript_16b1(poisJSON, cityJSON, useNumberedMarkers, markerColor){document.addEventListener('DOMContentLoaded', function() {
         if (!window.mapboxgl) {
             console.error('Mapbox GL JS not loaded');
             return;
@@ -127,24 +127,59 @@ func MapInitScript(poisJSON, cityJSON string) templ.ComponentScript {
             const bounds = new mapboxgl.LngLatBounds();
             let hasValidCoordinates = false;
 
+            // Get marker color based on parameter
+            const getMarkerColor = function(color) {
+                const colors = {
+                    'blue': '#2563eb',
+                    'orange': '#f97316',
+                    'green': '#10b981',
+                    'purple': '#9333ea'
+                };
+                return colors[color] || '#2563eb';
+            };
+
+            const markerBgColor = getMarkerColor(markerColor);
+
             // Add POI markers and extend bounds
             poisData.forEach(function(poi, index) {
                 if (poi.latitude && poi.longitude) {
                     hasValidCoordinates = true;
                     bounds.extend([poi.longitude, poi.latitude]);
 
-                    // Create marker element (unchanged)
+                    // Create marker element with conditional numbered styling
                     const markerEl = document.createElement('div');
                     markerEl.className = 'poi-marker';
-                    markerEl.style.cssText = ` + "`" + `
-                        width: 24px;
-                        height: 24px;
-                        background-color: #2563eb;
-                        border: 2px solid white;
-                        border-radius: 50%;
-                        cursor: pointer;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-                    ` + "`" + `;
+
+                    if (useNumberedMarkers) {
+                        // Numbered marker with centered number
+                        markerEl.style.cssText = ` + "`" + `
+                            width: 32px;
+                            height: 32px;
+                            background-color: white;
+                            border: 3px solid ${markerBgColor};
+                            border-radius: 50%;
+                            cursor: pointer;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-weight: bold;
+                            font-size: 14px;
+                            color: ${markerBgColor};
+                        ` + "`" + `;
+                        markerEl.textContent = (index + 1).toString();
+                    } else {
+                        // Plain colored dot marker
+                        markerEl.style.cssText = ` + "`" + `
+                            width: 24px;
+                            height: 24px;
+                            background-color: ${markerBgColor};
+                            border: 2px solid white;
+                            border-radius: 50%;
+                            cursor: pointer;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                        ` + "`" + `;
+                    }
 
                     // Create popup (unchanged)
                     const popup = new mapboxgl.Popup({
@@ -258,8 +293,8 @@ func MapInitScript(poisJSON, cityJSON string) templ.ComponentScript {
         return [0, 0];  // Default fallback
     }
 }`,
-		Call:       templ.SafeScript(`__templ_MapInitScript_2458`, poisJSON, cityJSON),
-		CallInline: templ.SafeScriptInline(`__templ_MapInitScript_2458`, poisJSON, cityJSON),
+		Call:       templ.SafeScript(`__templ_MapInitScript_16b1`, poisJSON, cityJSON, useNumberedMarkers, markerColor),
+		CallInline: templ.SafeScriptInline(`__templ_MapInitScript_16b1`, poisJSON, cityJSON, useNumberedMarkers, markerColor),
 	}
 }
 

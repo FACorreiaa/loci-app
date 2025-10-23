@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
+	"os"
 	"strings"
 
 	"github.com/a-h/templ"
@@ -37,15 +39,17 @@ func NewRestaurantsHandlers(chatRepo llmchat.Repository, logger *slog.Logger) *R
 func (h *RestaurantsHandlers) HandleRestaurantsPage(c *gin.Context) templ.Component {
 	query := c.Query("q")
 	sessionIDParam := c.Query("sessionId")
+	cacheKey := c.Query("cacheKey")
 
 	logger.Log.Info("Restaurants page accessed",
 		zap.String("ip", c.ClientIP()),
 		zap.String("query", query),
-		zap.String("sessionId", sessionIDParam))
+		zap.String("sessionId", sessionIDParam),
+		zap.String("cacheKey", cacheKey))
 
 	// Handle session-based loading
 	if sessionIDParam != "" {
-		return h.loadRestaurantsBySession(sessionIDParam)
+		return h.loadRestaurantsBySession(sessionIDParam, cacheKey)
 	}
 
 	// Handle query-based loading
@@ -58,41 +62,43 @@ func (h *RestaurantsHandlers) HandleRestaurantsPage(c *gin.Context) templ.Compon
 }
 
 // loadRestaurantsBySession loads restaurants using IDENTICAL logic as itinerary
-func (h *RestaurantsHandlers) loadRestaurantsBySession(sessionIDParam string) templ.Component {
+
+func (h *RestaurantsHandlers) loadRestaurantsBySession(sessionIDParam string, cacheKey string) templ.Component {
+
 	logger.Log.Info("Attempting to load restaurants from cache",
+
 		zap.String("sessionID", sessionIDParam),
-		zap.String("cacheKey", sessionIDParam))
 
-	// Try complete cache first (IDENTICAL to itinerary logic)
-	if completeData, found := middleware.CompleteItineraryCache.Get(sessionIDParam); found {
-		logger.Log.Info("Complete restaurants found in cache. Rendering results.",
-			zap.String("city", completeData.GeneralCityData.City),
-			zap.Int("generalPOIs", len(completeData.PointsOfInterest)),
-			zap.Int("personalizedPOIs", len(completeData.AIItineraryResponse.PointsOfInterest)))
+		zap.String("cacheKey", cacheKey))
 
-		// Filter POIs for restaurants and render (IDENTICAL to itinerary results pattern)
-		restaurantPOIs := filterPOIsForRestaurants(completeData.PointsOfInterest)
-		return results.RestaurantsResults(
-			completeData.GeneralCityData,
-			restaurantPOIs,
-			true, true, 5, []string{})
-	}
+	// Try restaurants cache first with cacheKey (for reusable cache hits)
+	if cacheKey != "" {
+		if restaurantsData, found := middleware.RestaurantsCache.Get(cacheKey); found {
 
-	// Try legacy cache (IDENTICAL to itinerary logic)
-	if itineraryData, found := middleware.ItineraryCache.Get(sessionIDParam); found {
-		logger.Log.Info("Legacy restaurants found in cache. Rendering results.",
-			zap.Int("personalizedPOIs", len(itineraryData.PointsOfInterest)))
+			logger.Log.Info("Restaurants found in cache. Rendering results.",
 
-		// Create empty city data for legacy cached data (IDENTICAL to itinerary)
-		emptyCityData := models.GeneralCityData{}
+				zap.Int("restaurants", len(restaurantsData)))
 
-		// Filter restaurants from legacy data and convert to restaurant results
-		restaurantPOIs := filterPOIsForRestaurants(itineraryData.PointsOfInterest)
-		return results.RestaurantsResults(emptyCityData, restaurantPOIs, true, true, 5, []string{})
+			// Create empty city data for now
+
+			emptyCityData := models.GeneralCityData{}
+
+			// Return static template when data is available
+
+			return results.RestaurantsResults(
+
+				emptyCityData,
+
+				restaurantsData,
+
+				true, true, 15, []string{})
+		}
 	}
 
 	// Load from database (IDENTICAL to itinerary logic)
+
 	return h.loadRestaurantsFromDatabase(sessionIDParam)
+
 }
 
 // loadRestaurantsFromDatabase loads restaurants from database when not found in cache
@@ -131,13 +137,23 @@ func (h *RestaurantsHandlers) loadRestaurantsFromDatabase(sessionIDParam string)
 		return results.RestaurantsResults(emptyCityData, emptyRestaurants, true, true, 5, []string{})
 	}
 
+	// Print JSON data for debugging
+	jsonData, err := json.MarshalIndent(completeData, "", "  ")
+	if err != nil {
+		logger.Log.Error("Failed to marshal completeData to JSON", zap.Error(err))
+	} else {
+		if err := os.WriteFile("complete_restaurant.json", jsonData, 0644); err != nil {
+			logger.Log.Error("Failed to write JSON to file", zap.Error(err))
+		}
+	}
+
 	logger.Log.Info("Successfully loaded complete data from database for restaurants",
 		zap.String("sessionID", sessionIDParam),
 		zap.String("city", completeData.GeneralCityData.City),
 		zap.Int("totalPOIs", len(completeData.PointsOfInterest)))
 
 	// Filter POIs for restaurants and render (IDENTICAL to itinerary results pattern)
-	restaurantPOIs := filterPOIsForRestaurants(completeData.PointsOfInterest)
+	restaurantPOIs := filterRestaurants(completeData.PointsOfInterest)
 	return results.RestaurantsResults(
 		completeData.GeneralCityData,
 		restaurantPOIs,
@@ -148,11 +164,13 @@ func (h *RestaurantsHandlers) loadRestaurantsFromDatabase(sessionIDParam string)
 func (h *RestaurantsHandlers) HandleRestaurantsPageSSE(c *gin.Context) templ.Component {
 	query := c.Query("q")
 	sessionIDParam := c.Query("sessionId")
+	cacheKey := c.Query("cacheKey")
 
 	logger.Log.Info("Restaurants SSE page accessed",
 		zap.String("ip", c.ClientIP()),
 		zap.String("query", query),
-		zap.String("sessionId", sessionIDParam))
+		zap.String("sessionId", sessionIDParam),
+		zap.String("cacheKey", cacheKey))
 
 	if sessionIDParam == "" {
 		logger.Log.Info("Direct navigation to /restaurants SSE. Showing default page.")
@@ -160,11 +178,11 @@ func (h *RestaurantsHandlers) HandleRestaurantsPageSSE(c *gin.Context) templ.Com
 	}
 
 	// Load restaurants data for session with SSE support
-	return h.loadRestaurantsBySession(sessionIDParam)
+	return h.loadRestaurantsBySession(sessionIDParam, cacheKey)
 }
 
-// filterPOIsForRestaurants filters POIs to show only dining-related categories
-func filterPOIsForRestaurants(allPOIs []models.POIDetailedInfo) []models.RestaurantDetailedInfo {
+// filterRestaurants filters POIs to show only dining-related categories
+func filterRestaurants(allPOIs []models.POIDetailedInfo) []models.RestaurantDetailedInfo {
 	var restaurantPOIs []models.RestaurantDetailedInfo
 	restaurantCategories := map[string]bool{
 		"restaurant": true,
@@ -223,14 +241,17 @@ func convertPOIToRestaurant(poi models.POIDetailedInfo) models.RestaurantDetaile
 	var openingHours *string
 	if len(poi.OpeningHours) > 0 {
 		// Convert map to string representation
-		hoursStr := ""
+		var hoursBuilder strings.Builder
 		for day, hours := range poi.OpeningHours {
-			if hoursStr != "" {
-				hoursStr += ", "
+			if hoursBuilder.Len() > 0 {
+				hoursBuilder.WriteString(", ")
 			}
-			hoursStr += day + ": " + hours
+			hoursBuilder.WriteString(day)
+			hoursBuilder.WriteString(": ")
+			hoursBuilder.WriteString(hours)
 		}
-		if hoursStr != "" {
+		if hoursBuilder.Len() > 0 {
+			hoursStr := hoursBuilder.String()
 			openingHours = &hoursStr
 		}
 	}

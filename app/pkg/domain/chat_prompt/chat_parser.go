@@ -105,6 +105,33 @@ func (l *ServiceImpl) parseCompleteResponseFromParts(responses map[string]*strin
 		}
 	}
 
+	// Parse restaurants part
+	if restaurantBuilder, exists := responses["restaurants"]; exists && restaurantBuilder != nil {
+		restaurantStr := restaurantBuilder.String()
+		if restaurants, err := parseRestaurantsFromResponse(restaurantStr, l.logger); err == nil && len(restaurants) > 0 {
+			var pois []models.POIDetailedInfo
+			for _, r := range restaurants {
+				pois = append(pois, models.POIDetailedInfo{
+					Name:        r.Name,
+					Category:    "Restaurant",
+					Description: r.Description,
+					Latitude:    r.Latitude,
+					Longitude:   r.Longitude,
+					Address:     *r.Address,
+					Website:     *r.Website,
+					PhoneNumber: *r.PhoneNumber,
+					PriceLevel:  *r.PriceLevel,
+					Rating:      r.Rating,
+					Tags:        r.Tags,
+					Images:      r.Images,
+				})
+			}
+			completeResponse.PointsOfInterest = pois
+		} else {
+			l.logger.Warn("Failed to parse restaurants part", slog.Any("error", err))
+		}
+	}
+
 	// Populate city name on all POIs from parsed city data
 	cityName := completeResponse.GeneralCityData.City
 	if cityName != "" {
@@ -154,6 +181,14 @@ func parseRestaurantsFromResponse(responseText string, _ *slog.Logger) ([]models
 		return wrapper.Data, nil
 	}
 
+	// Try to parse as wrapper with restaurants field
+	var restaurantsWrapper struct {
+		Restaurants []models.RestaurantDetailedInfo `json:"restaurants"`
+	}
+	if err := json.Unmarshal([]byte(cleanedResponse), &restaurantsWrapper); err == nil && len(restaurantsWrapper.Restaurants) > 0 {
+		return restaurantsWrapper.Restaurants, nil
+	}
+
 	return nil, fmt.Errorf("failed to parse restaurant response")
 }
 
@@ -179,6 +214,14 @@ func parseActivitiesFromResponse(responseText string, _ *slog.Logger) ([]models.
 		return wrapper.Data, nil
 	}
 
+	// Try to parse as wrapper with activities field
+	var activitiesWrapper struct {
+		Activities []models.POIDetailedInfo `json:"activities"`
+	}
+	if err := json.Unmarshal([]byte(cleanedResponse), &activitiesWrapper); err == nil && len(activitiesWrapper.Activities) > 0 {
+		return activitiesWrapper.Activities, nil
+	}
+
 	return nil, fmt.Errorf("failed to parse activities response")
 }
 
@@ -202,6 +245,14 @@ func parseHotelsFromResponse(responseText string, _ *slog.Logger) ([]models.Hote
 	}
 	if err := json.Unmarshal([]byte(cleanedResponse), &wrapper); err == nil && len(wrapper.Data) > 0 {
 		return wrapper.Data, nil
+	}
+
+	// Try to parse as wrapper with hotels field
+	var hotelsWrapper struct {
+		Hotels []models.HotelDetailedInfo `json:"hotels"`
+	}
+	if err := json.Unmarshal([]byte(cleanedResponse), &hotelsWrapper); err == nil && len(hotelsWrapper.Hotels) > 0 {
+		return hotelsWrapper.Hotels, nil
 	}
 
 	return nil, fmt.Errorf("failed to parse hotels response")
