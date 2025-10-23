@@ -757,7 +757,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		htmxGroup.GET("/itinerary/sse", itineraryHandlers.HandleItinerarySSE)
 
 		// Restaurants SSE endpoints
-		htmxGroup.GET("/restaurants/sse", restaurantsHandlers.HandleRestaurantsSSE)
+		htmxGroup.GET("/restaurants/sse", restaurantsHandlers.HandleRestaurantsPageSSE)
 
 		// Activities SSE endpoints
 		htmxGroup.GET("/activities/sse", activitiesHandlers.HandleActivitiesSSE)

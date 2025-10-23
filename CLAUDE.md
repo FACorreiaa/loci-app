@@ -142,12 +142,13 @@
 ### Missing Features from SolidJS Implementation
 
 #### High Priority (Core Functionality)
-1. **Map Integration** - CRITICAL
+1. **Map Integration** - CRITICAL (some already implemented)
    - Full Mapbox GL integration with route visualization
    - Marker clustering and styling
    - Route optimization algorithm connecting POIs
    - Dynamic marker updates based on filters
    - View modes: Map/List/Split view
+   - Markers with same number as the numbers on the list
 
 2. **City Information Panel**
    - General city data display (population, language, weather, timezone, area)
@@ -222,7 +223,7 @@
 ### Implementation Recommendations
 
 **Phase 1: Core Functionality** (Do First)
-- Map integration with Mapbox GL (issue #5)
+- Map integration with Mapbox GL (issue #5) (done)
 - City information panel
 - View mode toggles (Map/List/Split)
 - Basic filtering system
@@ -230,8 +231,13 @@
 **Phase 2: Enhanced UX**
 - Advanced filtering with all categories
 - Enhanced card design with badges
-- General POIs section
+- Enhanced metadata for Itineraries (add distance to user calculated through PostGis, etc)
+- Enhanced metadata for Restaurants (number of starts, opening times, type of food, etc)
+- Enhanced metadata for Hotels (number of stars)
+- Activities ((add distance to user calculated through PostGis, etc), opening times)
+- General POIs section (done, improve layout and metadata)
 - Favorites API integration
+- Bookmark API integration
 
 **Phase 3: Polish**
 - Session management improvements
