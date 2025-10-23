@@ -33,11 +33,16 @@ type LLMConfig struct {
 	StreamEndpoint string
 }
 
+type MapConfig struct {
+	MapboxAPIKey string
+}
+
 type Config struct {
 	Repositories RepositoriesConfig
 	ServerPort   string
 	JWT          JWTConfig
 	LLM          LLMConfig
+	Map          MapConfig
 }
 
 func Load() (*Config, error) {
@@ -82,6 +87,10 @@ func Load() (*Config, error) {
 
 	cfg.LLM = LLMConfig{
 		StreamEndpoint: getEnvOrDefault("LLM_STREAM_ENDPOINT", "http://localhost:8000/api/v1/llm"),
+	}
+
+	cfg.Map = MapConfig{
+		MapboxAPIKey: getEnvOrDefault("MAPBOX_API_KEY", ""),
 	}
 
 	if cfg.JWT.SecretKey == "" {

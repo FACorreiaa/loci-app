@@ -105,6 +105,23 @@ func (l *ServiceImpl) parseCompleteResponseFromParts(responses map[string]*strin
 		}
 	}
 
+	// Populate city name on all POIs from parsed city data
+	cityName := completeResponse.GeneralCityData.City
+	if cityName != "" {
+		// Update general POIs with city name
+		for i := range completeResponse.PointsOfInterest {
+			if completeResponse.PointsOfInterest[i].City == "" {
+				completeResponse.PointsOfInterest[i].City = cityName
+			}
+		}
+		// Update itinerary POIs with city name
+		for i := range completeResponse.AIItineraryResponse.PointsOfInterest {
+			if completeResponse.AIItineraryResponse.PointsOfInterest[i].City == "" {
+				completeResponse.AIItineraryResponse.PointsOfInterest[i].City = cityName
+			}
+		}
+	}
+
 	// Validate that we have at least some data
 	if completeResponse.GeneralCityData.City == "" &&
 		len(completeResponse.PointsOfInterest) == 0 &&

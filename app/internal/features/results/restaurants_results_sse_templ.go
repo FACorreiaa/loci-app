@@ -380,12 +380,26 @@ func LoadingProgressRestaurants() templ.Component {
 
 func RestaurantsStateScript() templ.ComponentScript {
 	return templ.ComponentScript{
-		Name: `__templ_RestaurantsStateScript_1a74`,
-		Function: `function __templ_RestaurantsStateScript_1a74(){function restaurantsPage() {
+		Name: `__templ_RestaurantsStateScript_884f`,
+		Function: `function __templ_RestaurantsStateScript_884f(){function restaurantsPage() {
         return {
             viewMode: 'list',
             showMobileMenu: false,
-            
+
+            init() {
+                // Listen for SSE completion event to hide loading indicator
+                const container = this.$el;
+                container.addEventListener('htmx:sseMessage', (event) => {
+                    if (event.detail.type === 'restaurants-complete') {
+                        console.log('Restaurants loading complete');
+                        const loadingProgress = document.getElementById('loading-progress');
+                        if (loadingProgress) {
+                            loadingProgress.classList.add('hidden');
+                        }
+                    }
+                });
+            },
+
             shareRestaurants() {
                 if (navigator.share) {
                     navigator.share({
@@ -399,15 +413,15 @@ func RestaurantsStateScript() templ.ComponentScript {
                     });
                 }
             },
-            
+
             setViewMode(mode) {
                 this.viewMode = mode;
             }
         };
     }
 }`,
-		Call:       templ.SafeScript(`__templ_RestaurantsStateScript_1a74`),
-		CallInline: templ.SafeScriptInline(`__templ_RestaurantsStateScript_1a74`),
+		Call:       templ.SafeScript(`__templ_RestaurantsStateScript_884f`),
+		CallInline: templ.SafeScriptInline(`__templ_RestaurantsStateScript_884f`),
 	}
 }
 

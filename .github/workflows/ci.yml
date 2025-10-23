@@ -205,8 +205,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [docker]
     if: github.ref == 'refs/heads/develop'
-    environment: staging
-    
+    # environment: staging  # Uncomment after creating environment in GitHub Settings
+
     steps:
     - name: Deploy to staging
       run: |
@@ -218,8 +218,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [docker]
     if: github.ref == 'refs/heads/main'
-    environment: production
-    
+    # environment: production  # Uncomment after creating environment in GitHub Settings
+
     steps:
     - name: Deploy to production
       run: |

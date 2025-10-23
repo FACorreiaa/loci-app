@@ -11,8 +11,22 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-
+	a "github.com/petar-dambovaliev/aho-corasick"
 	"google.golang.org/genai"
+)
+
+var (
+	accommBuilder = a.NewAhoCorasickBuilder(a.Opts{})
+	accommMatcher = accommBuilder.Build([]string{"hotel", "hostel", "accommodation", "stay", "sleep", "room", "booking", "airbnb", "lodge", "resort", "guesthouse"})
+
+	diningBuilder = a.NewAhoCorasickBuilder(a.Opts{})
+	diningMatcher = diningBuilder.Build([]string{"restaurant", "food", "eat", "dine", "meal", "cuisine", "drink", "cafe", "bar", "lunch", "dinner", "breakfast", "brunch"})
+
+	activBuilder = a.NewAhoCorasickBuilder(a.Opts{})
+	activMatcher = activBuilder.Build([]string{"activity", "museum", "park", "attraction", "tour", "visit", "see", "do", "experience", "adventure", "shopping", "nightlife"})
+
+	itinBuilder = a.NewAhoCorasickBuilder(a.Opts{})
+	itinMatcher = itinBuilder.Build([]string{"itinerary", "plan", "schedule", "trip", "day", "week", "journey", "route", "organize", "arrange"})
 )
 
 type LlmInteraction struct {
@@ -317,38 +331,28 @@ func (c *SimpleIntentClassifier) Classify(_ context.Context, message string) (In
 	return IntentModifyItinerary, nil // Default intent
 }
 
-// DomainDetector detects the primary domain from user queries
 type DomainDetector struct{}
 
 func (d *DomainDetector) DetectDomain(_ context.Context, message string) DomainType {
 	message = strings.ToLower(message)
 
-	// Accommodation domain keywords
-	matched, err := regexp.MatchString(`hotel|hostel|accommodation|stay|sleep|room|booking|airbnb|lodge|resort|guesthouse`, message)
-	if err == nil && matched {
+	switch true {
+	case hasMatch(accommMatcher, message):
 		return DomainAccommodation
-	}
-
-	// Dining domain keywords
-	matched, err = regexp.MatchString(`restaurant|food|eat|dine|meal|cuisine|drink|cafe|bar|lunch|dinner|breakfast|brunch`, message)
-	if err == nil && matched {
+	case hasMatch(diningMatcher, message):
 		return DomainDining
-	}
-
-	// Activity domain keywords
-	matched, err = regexp.MatchString(`activity|museum|park|attraction|tour|visit|see|do|experience|adventure|shopping|nightlife`, message)
-	if err == nil && matched {
+	case hasMatch(activMatcher, message):
 		return DomainActivities
-	}
-
-	// Itinerary domain keywords
-	matched, err = regexp.MatchString(`itinerary|plan|schedule|trip|day|week|journey|route|organize|arrange`, message)
-	if err == nil && matched {
+	case hasMatch(itinMatcher, message):
 		return DomainItinerary
+	default:
+		return DomainGeneral
 	}
+}
 
-	// Default to general domain
-	return DomainGeneral
+func hasMatch(m a.AhoCorasick, s string) bool {
+	iter := m.Iter(s)
+	return iter.Next() != nil
 }
 
 // RecentInteraction represents a recent user interaction with cities and POIs

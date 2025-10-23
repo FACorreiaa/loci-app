@@ -186,34 +186,42 @@ func (h *RestaurantsHandlers) loadRestaurantsBySessionSSE(sessionIDParam string)
 			logger.Log.Info("Restaurants data being displayed in view", zap.String("json", string(jsonData)))
 		}
 
-		logger.Log.Info("Complete restaurants found in cache. Rendering SSE results with data.",
+		logger.Log.Info("Complete restaurants found in cache. Rendering static results with data.",
 			zap.String("city", completeData.GeneralCityData.City),
 			zap.Int("totalPOIs", len(completeData.PointsOfInterest)),
 			zap.Int("restaurantPOIs", len(restaurantPOIs)))
 
-		return results.RestaurantsResultsSSE(
-			sessionIDParam,
+		// Return static template when data is available (same as itinerary)
+		return results.RestaurantsResults(
 			completeData.GeneralCityData,
 			restaurantPOIs,
-			true) // hasData = true
+			true, true, 15, []string{})
 	}
 
-	// Try legacy cache
-	if itineraryData, found := middleware.ItineraryCache.Get(sessionIDParam); found {
-		logger.Log.Info("Legacy restaurants found in cache. Rendering SSE results with data.",
-			zap.Int("personalizedPOIs", len(itineraryData.PointsOfInterest)))
+	// Try restaurants cache
+	if restaurantsData, found := middleware.RestaurantsCache.Get(sessionIDParam); found {
+		logger.Log.Info("Restaurants found in cache. Rendering results with data.",
+			zap.Int("restaurants", len(restaurantsData)))
 
-		// Create empty city data for legacy cached data
+		// Create empty city data for now
 		emptyCityData := models.GeneralCityData{}
 
-		// Filter restaurants from legacy data
-		restaurantPOIs := filterPOIsForRestaurants(itineraryData.PointsOfInterest)
-
-		return results.RestaurantsResultsSSE(
-			sessionIDParam,
+		// Return static template when data is available
+		return results.RestaurantsResults(
 			emptyCityData,
-			restaurantPOIs,
-			true) // hasData = true
+			restaurantsData,
+			true, true, 15, []string{})
+	}
+
+	// Try complete itinerary cache as fallback
+	if completeData, found := middleware.CompleteItineraryCache.Get(sessionIDParam); found {
+		logger.Log.Info("Complete itinerary found in cache for restaurants view.",
+			zap.String("city", completeData.GeneralCityData.City))
+
+		return results.RestaurantsResults(
+			completeData.GeneralCityData,
+			[]models.RestaurantDetailedInfo{},
+			true, true, 15, []string{})
 	}
 
 	// No cached data found - show loading interface with SSE
@@ -249,10 +257,11 @@ func (h *RestaurantsHandlers) HandleRestaurantsSSE(c *gin.Context) {
 
 	// Create a channel for updates
 	updateChan := make(chan models.ItinerarySSEEvent)
-	defer close(updateChan)
+	done := make(chan struct{})
+	defer close(done)
 
 	// Start monitoring for updates in a separate goroutine
-	go h.monitorRestaurantUpdates(sessionID, updateChan)
+	go h.monitorRestaurantUpdates(sessionID, updateChan, done)
 
 	// Stream updates to client
 	flusher := c.Writer.(http.Flusher)
@@ -309,7 +318,8 @@ func (h *RestaurantsHandlers) HandleRestaurantsSSE(c *gin.Context) {
 }
 
 // monitorRestaurantUpdates monitors for restaurant updates and sends SSE events
-func (h *RestaurantsHandlers) monitorRestaurantUpdates(sessionID string, updateChan chan<- models.ItinerarySSEEvent) {
+func (h *RestaurantsHandlers) monitorRestaurantUpdates(sessionID string, updateChan chan<- models.ItinerarySSEEvent, done <-chan struct{}) {
+	defer close(updateChan)
 	// Check for cached data first
 	if completeData, found := middleware.CompleteItineraryCache.Get(sessionID); found {
 		logger.Log.Info("Complete data found in cache, sending restaurants completion immediately",
@@ -367,6 +377,9 @@ func (h *RestaurantsHandlers) monitorRestaurantUpdates(sessionID string, updateC
 
 	for {
 		select {
+		case <-done:
+			logger.Log.Info("Stopping restaurant monitoring - client disconnected", zap.String("sessionId", sessionID))
+			return
 		case <-ticker.C:
 			// Check cache again
 			if completeData, found := middleware.CompleteItineraryCache.Get(sessionID); found {

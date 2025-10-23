@@ -13,8 +13,10 @@ import (
 	"github.com/FACorreiaa/go-templui/app/internal/models"
 )
 
+// package results (no changes to imports or helpers like poisToJSON, cityDataToJSON)
+
 // MapContainer displays the interactive Mapbox map with POI markers
-func MapContainer(pois []models.POIDetailedInfo, cityData *models.GeneralCityData, sessionId string) templ.Component {
+func MapContainer(pois []models.POIDetailedInfo, cityData *models.GeneralCityData, sessionId string, showLegend bool) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -35,12 +37,230 @@ func MapContainer(pois []models.POIDetailedInfo, cityData *models.GeneralCityDat
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"relative w-full h-full bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden\"><!-- Map Element --><div id=\"map\" class=\"w-full h-full\"></div><!-- Map Controls --><div class=\"absolute top-4 right-4 z-10 flex flex-col gap-2\"><button @click=\"map.zoomIn()\" class=\"w-10 h-10 bg-white dark:bg-gray-800 rounded-lg shadow-md flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 6v6m0 0v6m0-6h6m-6 0H6\"></path></svg></button> <button @click=\"map.zoomOut()\" class=\"w-10 h-10 bg-white dark:bg-gray-800 rounded-lg shadow-md flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M20 12H4\"></path></svg></button> <button @click=\"resetMapView()\" class=\"w-10 h-10 bg-white dark:bg-gray-800 rounded-lg shadow-md flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15\"></path></svg></button></div><!-- Loading State --><div x-show=\"!mapLoaded\" class=\"absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800\"><div class=\"flex flex-col items-center gap-3\"><div class=\"w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin\"></div><p class=\"text-sm text-gray-600 dark:text-gray-300\">Loading map...</p></div></div><!-- Map Legend --><div class=\"absolute bottom-4 left-4 bg-white dark:bg-gray-800 rounded-lg shadow-md p-3 max-w-xs\"><h4 class=\"text-sm font-medium text-gray-900 dark:text-white mb-2\">Legend</h4><div class=\"space-y-1\"><div class=\"flex items-center gap-2\"><div class=\"w-3 h-3 bg-blue-600 rounded-full\"></div><span class=\"text-xs text-gray-600 dark:text-gray-300\">Points of Interest</span></div><div class=\"flex items-center gap-2\"><div class=\"w-3 h-3 bg-red-600 rounded-full\"></div><span class=\"text-xs text-gray-600 dark:text-gray-300\">Selected POI</span></div></div></div></div><!-- Map Initialization Script --><script>\n        document.addEventListener('DOMContentLoaded', function() {\n            if (!window.mapboxgl) {\n                console.error('Mapbox GL JS not loaded');\n                return;\n            }\n\n            // POI data from server\n            const poisData = { templ.Raw(poisToJSON(pois)) };\n            const cityCenter = getCityCenter({ templ.Raw(cityDataToJSON(cityData)) });\n            \n            // Initialize map\n            window.map = new mapboxgl.Map({\n                container: 'map',\n                style: 'mapbox://styles/mapbox/streets-v11',\n                center: cityCenter,\n                zoom: 12\n            });\n\n            // Map load event\n            window.map.on('load', function() {\n                // Set map loaded state\n                if (window.Alpine && Alpine.store('itinerary')) {\n                    Alpine.store('itinerary').mapLoaded = true;\n                }\n\n                // Add POI markers\n                poisData.forEach(function(poi, index) {\n                    if (poi.latitude && poi.longitude) {\n                        // Create marker element\n                        const markerEl = document.createElement('div');\n                        markerEl.className = 'poi-marker';\n                        markerEl.style.cssText = `\n                            width: 24px;\n                            height: 24px;\n                            background-color: #2563eb;\n                            border: 2px solid white;\n                            border-radius: 50%;\n                            cursor: pointer;\n                            box-shadow: 0 2px 4px rgba(0,0,0,0.2);\n                        `;\n\n                        // Create popup\n                        const popup = new mapboxgl.Popup({\n                            offset: 25,\n                            closeButton: true,\n                            closeOnClick: false\n                        }).setHTML(`\n                            <div class=\"p-2 max-w-xs\">\n                                <h3 class=\"font-medium text-gray-900 mb-1\">${poi.name}</h3>\n                                <p class=\"text-sm text-gray-600 mb-2\">${poi.description || ''}</p>\n                                <div class=\"flex items-center gap-1 text-xs text-gray-500\">\n                                    <svg class=\"w-3 h-3\" fill=\"currentColor\" viewBox=\"0 0 20 20\">\n                                        <path fill-rule=\"evenodd\" d=\"M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z\" clip-rule=\"evenodd\"></path>\n                                    </svg>\n                                    ${poi.category || 'Point of Interest'}\n                                </div>\n                                <button onclick=\"selectPOI(${index})\" class=\"mt-2 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors\">\n                                    View Details\n                                </button>\n                            </div>\n                        `);\n\n                        // Add marker to map\n                        const marker = new mapboxgl.Marker(markerEl)\n                            .setLngLat([poi.longitude, poi.latitude])\n                            .setPopup(popup)\n                            .addTo(window.map);\n\n                        // Click handler\n                        markerEl.addEventListener('click', function() {\n                            selectPOI(index);\n                        });\n                    }\n                });\n            });\n\n            // Reset map view function\n            window.resetMapView = function() {\n                if (window.map) {\n                    window.map.flyTo({\n                        center: cityCenter,\n                        zoom: 12,\n                        duration: 1000\n                    });\n                }\n            };\n\n            // Select POI function\n            window.selectPOI = function(index) {\n                if (window.Alpine && Alpine.store('itinerary')) {\n                    Alpine.store('itinerary').selectedPOI = poisData[index];\n                }\n            };\n        });\n\n        // Helper function to get city center\n        function getCityCenter(cityData) {\n            if (cityData && cityData.center_latitude && cityData.center_longitude) {\n                return [cityData.center_longitude, cityData.center_latitude];\n            }\n            // Default to a reasonable center if no city data\n            return [0, 0];\n        }\n    </script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"relative w-full h-full min-h-[500px] bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden\" x-data=\"{ mapLoaded: false }\" style=\"min-height: 500px;\"><!-- Map Element --><div id=\"map\" class=\"w-full h-full\" style=\"min-height: 500px;\"></div><!-- Map Controls (keep these for usability, but style smaller if needed) --><div class=\"absolute top-4 right-4 z-10 flex flex-col gap-2\"><button @click=\"window.map && window.map.zoomIn()\" class=\"w-8 h-8 bg-white dark:bg-gray-800 rounded-md shadow flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors text-sm\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 6v6m0 0v6m0-6h6m-6 0H6\"></path></svg></button> <button @click=\"window.map && window.map.zoomOut()\" class=\"w-8 h-8 bg-white dark:bg-gray-800 rounded-md shadow flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors text-sm\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M20 12H4\"></path></svg></button> <button @click=\"window.resetMapView && window.resetMapView()\" class=\"w-8 h-8 bg-white dark:bg-gray-800 rounded-md shadow flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors text-sm\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15\"></path></svg></button></div><!-- Loading State --><div x-show=\"!mapLoaded\" class=\"absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800\"><div class=\"flex flex-col items-center gap-3\"><div class=\"w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin\"></div><p class=\"text-sm text-gray-600 dark:text-gray-300\">Loading map...</p></div></div><!-- Map Legend (conditionally shown; pass showLegend=false to hide) -->")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if showLegend {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<div class=\"absolute bottom-4 left-4 bg-white dark:bg-gray-800 rounded-lg shadow-md p-3 max-w-xs\"><h4 class=\"text-sm font-medium text-gray-900 dark:text-white mb-2\">Legend</h4><div class=\"space-y-1\"><div class=\"flex items-center gap-2\"><div class=\"w-3 h-3 bg-blue-600 rounded-full\"></div><span class=\"text-xs text-gray-600 dark:text-gray-300\">Points of Interest</span></div><div class=\"flex items-center gap-2\"><div class=\"w-3 h-3 bg-red-600 rounded-full\"></div><span class=\"text-xs text-gray-600 dark:text-gray-300\">Selected POI</span></div></div></div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = MapInitScript(poisToJSON(pois), cityDataToJSON(cityData)).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		return nil
 	})
+}
+
+func MapInitScript(poisJSON, cityJSON string) templ.ComponentScript {
+	return templ.ComponentScript{
+		Name: `__templ_MapInitScript_2458`,
+		Function: `function __templ_MapInitScript_2458(poisJSON, cityJSON){document.addEventListener('DOMContentLoaded', function() {
+        if (!window.mapboxgl) {
+            console.error('Mapbox GL JS not loaded');
+            return;
+        }
+
+        // Check if Mapbox token is set
+        if (!mapboxgl.accessToken && !window.MAPBOX_ACCESS_TOKEN) {
+            console.error('Mapbox access token not set. Please configure MAPBOX_API_KEY.');
+            return;
+        }
+
+        // POI data from server
+        const poisData = JSON.parse(poisJSON);
+        const cityDataParsed = JSON.parse(cityJSON);
+        const cityCenter = getCityCenter(cityDataParsed);
+
+        // Initialize map with constraints for responsive behavior
+        window.map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v11',
+            center: cityCenter,
+            zoom: 12,
+            minZoom: 3,        // Prevent zooming out too far (world view minimum)
+            maxZoom: 18,       // Allow detailed street view
+            renderWorldCopies: false  // Prevent duplicate worlds on wide screens
+        });
+
+        // Map load event
+        window.map.on('load', function() {
+            // Set map loaded state using Alpine's data context
+            const mapContainer = document.getElementById('map').closest('[x-data]');
+            if (mapContainer && window.Alpine) {
+                Alpine.$data(mapContainer).mapLoaded = true;
+            }
+
+            // Ensure map fills its container properly after DOM updates
+            // Use multiple resize calls to handle Alpine.js dynamic class application
+            setTimeout(function() {
+                window.map.resize();
+            }, 100);
+            setTimeout(function() {
+                window.map.resize();
+            }, 300);
+            setTimeout(function() {
+                window.map.resize();
+            }, 500);
+
+            // Watch for container size changes (handles Alpine.js dynamic classes)
+            const mapElement = document.getElementById('map');
+            if (mapElement && window.ResizeObserver) {
+                const resizeObserver = new ResizeObserver(function(entries) {
+                    for (let entry of entries) {
+                        if (entry.target === mapElement.parentElement) {
+                            window.map.resize();
+                        }
+                    }
+                });
+                resizeObserver.observe(mapElement.parentElement);
+            }
+
+            // Create bounds object to fit all markers
+            const bounds = new mapboxgl.LngLatBounds();
+            let hasValidCoordinates = false;
+
+            // Add POI markers and extend bounds
+            poisData.forEach(function(poi, index) {
+                if (poi.latitude && poi.longitude) {
+                    hasValidCoordinates = true;
+                    bounds.extend([poi.longitude, poi.latitude]);
+
+                    // Create marker element (unchanged)
+                    const markerEl = document.createElement('div');
+                    markerEl.className = 'poi-marker';
+                    markerEl.style.cssText = ` + "`" + `
+                        width: 24px;
+                        height: 24px;
+                        background-color: #2563eb;
+                        border: 2px solid white;
+                        border-radius: 50%;
+                        cursor: pointer;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                    ` + "`" + `;
+
+                    // Create popup (unchanged)
+                    const popup = new mapboxgl.Popup({
+                        offset: 25,
+                        closeButton: true,
+                        closeOnClick: false
+                    }).setHTML(` + "`" + `
+                        <div class="p-2 max-w-xs">
+                            <h3 class="font-medium text-gray-900 mb-1">${poi.name}</h3>
+                            <p class="text-sm text-gray-600 mb-2">${poi.description || ''}</p>
+                            <div class="flex items-center gap-1 text-xs text-gray-500">
+                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                                </svg>
+                                ${poi.category || 'Point of Interest'}
+                            </div>
+                            <button onclick="selectPOI(${index})" class="mt-2 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors">
+                                View Details
+                            </button>
+                        </div>
+                    ` + "`" + `);
+
+                    // Add marker to map
+                    const marker = new mapboxgl.Marker(markerEl)
+                        .setLngLat([poi.longitude, poi.latitude])
+                        .setPopup(popup)
+                        .addTo(window.map);
+
+                    // Click handler
+                    markerEl.addEventListener('click', function() {
+                        selectPOI(index);
+                    });
+                }
+            });
+
+			// Fit to bounds if there are valid POIs
+			if (hasValidCoordinates && !bounds.isEmpty()) {
+				// Calculate responsive padding based on screen size
+				const padding = {
+					top: window.innerWidth < 640 ? 40 : 60,      // Mobile vs desktop
+					bottom: window.innerWidth < 640 ? 40 : 80,   // More space for legend on desktop
+					left: window.innerWidth < 640 ? 20 : 60,
+					right: window.innerWidth < 640 ? 20 : 60
+				};
+
+				window.map.fitBounds(bounds, {
+					padding: padding,
+					maxZoom: 15,      // Don't zoom in too close
+					duration: 1000
+				});
+			}
+        });
+
+		// Reset map view function with responsive padding
+		window.resetMapView = function() {
+			if (window.map) {
+				const bounds = new mapboxgl.LngLatBounds();
+				let hasValid = false;
+				poisData.forEach(poi => {
+					if (poi.latitude && poi.longitude) {
+						hasValid = true;
+						bounds.extend([poi.longitude, poi.latitude]);
+					}
+				});
+
+				if (hasValid && !bounds.isEmpty()) {
+					const padding = {
+						top: window.innerWidth < 640 ? 40 : 60,
+						bottom: window.innerWidth < 640 ? 40 : 80,
+						left: window.innerWidth < 640 ? 20 : 60,
+						right: window.innerWidth < 640 ? 20 : 60
+					};
+					window.map.fitBounds(bounds, {
+						padding: padding,
+						maxZoom: 15,
+						duration: 1000
+					});
+				} else {
+					window.map.flyTo({ center: cityCenter, zoom: 12, duration: 1000 });
+				}
+			}
+		};
+
+        // Select POI function (unchanged)
+        window.selectPOI = function(index) {
+            console.log('Selected POI:', poisData[index]);
+            const event = new CustomEvent('poi-selected', { detail: poisData[index] });
+            document.dispatchEvent(event);
+        };
+
+        // Handle window resize to maintain map bounds
+        let resizeTimeout;
+        window.addEventListener('resize', function() {
+            // Debounce resize events to avoid performance issues
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(function() {
+                if (window.map) {
+                    window.map.resize();
+                    // Optionally re-fit bounds on resize if needed
+                    // window.resetMapView();
+                }
+            }, 250);
+        });
+    });
+
+    // Helper function to get city center (unchanged)
+    function getCityCenter(cityData) {
+        if (cityData && cityData.center_latitude && cityData.center_longitude) {
+            return [cityData.center_longitude, cityData.center_latitude];
+        }
+        return [0, 0];  // Default fallback
+    }
+}`,
+		Call:       templ.SafeScript(`__templ_MapInitScript_2458`, poisJSON, cityJSON),
+		CallInline: templ.SafeScriptInline(`__templ_MapInitScript_2458`, poisJSON, cityJSON),
+	}
 }
 
 // Helper function to convert POIs to JSON

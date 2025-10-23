@@ -7,16 +7,16 @@ require (
 	github.com/Masterminds/squirrel v1.5.4
 	github.com/Oudwins/tailwind-merge-go v0.2.1
 	github.com/PuerkitoBio/goquery v1.10.3
-	github.com/a-h/templ v0.3.924
+	github.com/a-h/templ v0.3.960
 	github.com/gin-gonic/gin v1.10.1
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/golang-migrate/migrate/v4 v4.19.0
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.5
 	github.com/joho/godotenv v1.5.1
-	github.com/markbates/goth v1.82.0
 	github.com/pashagolub/pgxmock/v4 v4.8.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
+	github.com/petar-dambovaliev/aho-corasick v0.0.0-20250424160509-463d218d4745
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.1
 	github.com/stretchr/testify v1.11.1
@@ -32,6 +32,7 @@ require (
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.41.0
 	golang.org/x/sync v0.16.0
+	golang.org/x/text v0.28.0
 	google.golang.org/genai v1.23.0
 )
 
@@ -96,9 +97,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.20.0 // indirect
 	golang.org/x/net v0.43.0 // indirect
-	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
-	golang.org/x/text v0.28.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250825161204-c5933d9347a5 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250825161204-c5933d9347a5 // indirect
 	google.golang.org/grpc v1.75.0 // indirect

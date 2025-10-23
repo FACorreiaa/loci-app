@@ -34,7 +34,7 @@ github.com/Oudwins/tailwind-merge-go/pkg/twmerge
 # github.com/PuerkitoBio/goquery v1.10.3
 ## explicit; go 1.23.0
 github.com/PuerkitoBio/goquery
-# github.com/a-h/templ v0.3.924
+# github.com/a-h/templ v0.3.960
 ## explicit; go 1.23.0
 github.com/a-h/templ
 github.com/a-h/templ/runtime
@@ -273,9 +273,6 @@ github.com/leodido/go-urn/scim/schema
 github.com/lib/pq
 github.com/lib/pq/oid
 github.com/lib/pq/scram
-# github.com/markbates/goth v1.82.0
-## explicit; go 1.23.0
-github.com/markbates/goth
 # github.com/mattn/go-isatty v0.0.20
 ## explicit; go 1.15
 github.com/mattn/go-isatty
@@ -301,6 +298,9 @@ github.com/pelletier/go-toml/v2/internal/characters
 github.com/pelletier/go-toml/v2/internal/danger
 github.com/pelletier/go-toml/v2/internal/tracker
 github.com/pelletier/go-toml/v2/unstable
+# github.com/petar-dambovaliev/aho-corasick v0.0.0-20250424160509-463d218d4745
+## explicit; go 1.15
+github.com/petar-dambovaliev/aho-corasick
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
@@ -487,10 +487,6 @@ golang.org/x/net/idna
 golang.org/x/net/internal/httpcommon
 golang.org/x/net/internal/timeseries
 golang.org/x/net/trace
-# golang.org/x/oauth2 v0.30.0
-## explicit; go 1.23.0
-golang.org/x/oauth2
-golang.org/x/oauth2/internal
 # golang.org/x/sync v0.16.0
 ## explicit; go 1.23.0
 golang.org/x/sync/errgroup

@@ -212,34 +212,42 @@ func (h *ActivitiesHandlers) loadActivitiesBySessionSSE(sessionIDParam string) t
 			logger.Log.Info("Activities data being displayed in view", zap.String("json", string(jsonData)))
 		}
 
-		logger.Log.Info("Complete activities found in cache. Rendering SSE results with data.",
+		logger.Log.Info("Complete activities found in cache. Rendering static results with data.",
 			zap.String("city", completeData.GeneralCityData.City),
 			zap.Int("totalPOIs", len(completeData.PointsOfInterest)),
 			zap.Int("activityPOIs", len(activityPOIs)))
 
-		return results.ActivitiesResultsSSE(
-			sessionIDParam,
+		// Return static template when data is available (same as itinerary)
+		return results.ActivitiesResults(
 			completeData.GeneralCityData,
 			activityPOIs,
-			true) // hasData = true
+			true, true, 15, []string{})
 	}
 
-	// Try legacy cache
-	if itineraryData, found := middleware.ItineraryCache.Get(sessionIDParam); found {
-		logger.Log.Info("Legacy activities found in cache. Rendering SSE results with data.",
-			zap.Int("personalizedPOIs", len(itineraryData.PointsOfInterest)))
+	// Try activities cache
+	if activitiesData, found := middleware.ActivitiesCache.Get(sessionIDParam); found {
+		logger.Log.Info("Activities found in cache. Rendering results with data.",
+			zap.Int("activities", len(activitiesData)))
 
-		// Create empty city data for legacy cached data
+		// Create empty city data for now
 		emptyCityData := models.GeneralCityData{}
 
-		// Filter activities from legacy data
-		activityPOIs := filterPOIsForActivities(itineraryData.PointsOfInterest)
-
-		return results.ActivitiesResultsSSE(
-			sessionIDParam,
+		// Return static template when data is available
+		return results.ActivitiesResults(
 			emptyCityData,
-			activityPOIs,
-			true) // hasData = true
+			activitiesData,
+			true, true, 15, []string{})
+	}
+
+	// Try complete itinerary cache as fallback
+	if completeData, found := middleware.CompleteItineraryCache.Get(sessionIDParam); found {
+		logger.Log.Info("Complete itinerary found in cache for activities view.",
+			zap.String("city", completeData.GeneralCityData.City))
+
+		return results.ActivitiesResults(
+			completeData.GeneralCityData,
+			[]models.POIDetailedInfo{},
+			true, true, 15, []string{})
 	}
 
 	// No cached data found - show loading interface with SSE
@@ -249,11 +257,10 @@ func (h *ActivitiesHandlers) loadActivitiesBySessionSSE(sessionIDParam string) t
 	emptyCityData := models.GeneralCityData{}
 	emptyActivities := []models.POIDetailedInfo{}
 
-	return results.ActivitiesResultsSSE(
-		sessionIDParam,
+	return results.ActivitiesResults(
 		emptyCityData,
 		emptyActivities,
-		false) // hasData = false, will show loading and connect to SSE
+		true, true, 15, []string{}) // Return empty results, SSE will populate via cache
 }
 
 // HandleActivitiesSSE handles Server-Sent Events for activity updates
@@ -300,26 +307,27 @@ func (h *ActivitiesHandlers) HandleActivitiesSSE(c *gin.Context) {
 
 			// Send HTML fragment updates based on event type
 			switch event.Type {
-			case "header-update":
-				if data, ok := event.Data.(map[string]interface{}); ok {
-					if completeData, exists := data["completeData"]; exists {
-						if complete, valid := completeData.(models.AiCityResponse); valid {
-							activityPOIs := filterPOIsForActivities(complete.PointsOfInterest)
-							headerHTML := h.renderActivitiesHeaderHTML(complete.GeneralCityData, activityPOIs)
-							c.SSEvent("activities-header", headerHTML)
-						}
-					}
-				}
-			case "content-update":
-				if data, ok := event.Data.(map[string]interface{}); ok {
-					if completeData, exists := data["completeData"]; exists {
-						if complete, valid := completeData.(models.AiCityResponse); valid {
-							activityPOIs := filterPOIsForActivities(complete.PointsOfInterest)
-							contentHTML := h.renderActivitiesContentHTML(complete.GeneralCityData, activityPOIs)
-							c.SSEvent("activities-content", contentHTML)
-						}
-					}
-				}
+			// DEPRECATED: SSE header/content updates replaced with cache-based rendering
+			//case "header-update":
+			//	if data, ok := event.Data.(map[string]interface{}); ok {
+			//		if completeData, exists := data["completeData"]; exists {
+			//			if complete, valid := completeData.(models.AiCityResponse); valid {
+			//				activityPOIs := filterPOIsForActivities(complete.PointsOfInterest)
+			//				headerHTML := h.renderActivitiesHeaderHTML(complete.GeneralCityData, activityPOIs)
+			//				c.SSEvent("activities-header", headerHTML)
+			//			}
+			//		}
+			//	}
+			//case "content-update":
+			//	if data, ok := event.Data.(map[string]interface{}); ok {
+			//		if completeData, exists := data["completeData"]; exists {
+			//			if complete, valid := completeData.(models.AiCityResponse); valid {
+			//				activityPOIs := filterPOIsForActivities(complete.GeneralCityData, activityPOIs)
+			//				contentHTML := h.renderActivitiesContentHTML(complete.GeneralCityData, activityPOIs)
+			//				c.SSEvent("activities-content", contentHTML)
+			//			}
+			//		}
+			//	}
 			default:
 				// Send progress update
 				c.SSEvent(event.Type, event.Data)
@@ -467,23 +475,25 @@ func (h *ActivitiesHandlers) monitorActivityUpdates(sessionID string, updateChan
 }
 
 // renderActivitiesHeaderHTML renders header HTML fragment for SSE
-func (h *ActivitiesHandlers) renderActivitiesHeaderHTML(cityData models.GeneralCityData, activities []models.POIDetailedInfo) string {
-	buf := &strings.Builder{}
-	component := results.ActivitiesHeaderComplete(cityData, activities)
-	err := component.Render(context.Background(), buf)
-	if err != nil {
-		h.logger.Error("failed to render activities header", slog.Any("error", err))
-	}
-	return buf.String()
-}
-
-// renderActivitiesContentHTML renders content HTML fragment for SSE
-func (h *ActivitiesHandlers) renderActivitiesContentHTML(cityData models.GeneralCityData, activities []models.POIDetailedInfo) string {
-	buf := &strings.Builder{}
-	component := results.ActivitiesContentComplete(cityData, activities)
-	err := component.Render(context.Background(), buf)
-	if err != nil {
-		h.logger.Error("failed to render activities content", slog.Any("error", err))
-	}
-	return buf.String()
-}
+// DEPRECATED: SSE approach replaced with cache-based rendering
+//func (h *ActivitiesHandlers) renderActivitiesHeaderHTML(cityData models.GeneralCityData, activities []models.POIDetailedInfo) string {
+//	buf := &strings.Builder{}
+//	component := results.ActivitiesHeaderComplete(cityData, activities)
+//	err := component.Render(context.Background(), buf)
+//	if err != nil {
+//		h.logger.Error("failed to render activities header", slog.Any("error", err))
+//	}
+//	return buf.String()
+//}
+//
+//// renderActivitiesContentHTML renders content HTML fragment for SSE
+//// DEPRECATED: SSE approach replaced with cache-based rendering
+//func (h *ActivitiesHandlers) renderActivitiesContentHTML(cityData models.GeneralCityData, activities []models.POIDetailedInfo) string {
+//	buf := &strings.Builder{}
+//	component := results.ActivitiesContentComplete(cityData, activities)
+//	err := component.Render(context.Background(), buf)
+//	if err != nil {
+//		h.logger.Error("failed to render activities content", slog.Any("error", err))
+//	}
+//	return buf.String()
+//}

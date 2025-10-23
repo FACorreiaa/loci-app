@@ -15,6 +15,7 @@ import (
 	"github.com/FACorreiaa/go-templui/app/internal/components/pwa"
 	"github.com/FACorreiaa/go-templui/app/internal/features/results"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
+	"os"
 )
 
 func LayoutPage(l models.LayoutTempl) templ.Component {
@@ -45,7 +46,7 @@ func LayoutPage(l models.LayoutTempl) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(l.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/pages/layout.templ`, Line: 18, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/pages/layout.templ`, Line: 19, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -55,7 +56,7 @@ func LayoutPage(l models.LayoutTempl) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = mapcomponents.MapboxScripts().Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = mapcomponents.MapboxScripts(os.Getenv("MAPBOX_API_KEY")).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

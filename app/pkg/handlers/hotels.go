@@ -84,8 +84,7 @@ func (h *HotelsHandlers) loadHotelsBySession(sessionIDParam string) templ.Compon
 
 		// Filter POIs for hotels and render (IDENTICAL to itinerary results pattern)
 		hotelPOIs := filterPOIsForHotels(completeData.PointsOfInterest)
-		return results.HotelsResults(
-			completeData.GeneralCityData,
+		return results.HotelResults(
 			hotelPOIs,
 			true, true, 5, []string{})
 	}
@@ -95,12 +94,9 @@ func (h *HotelsHandlers) loadHotelsBySession(sessionIDParam string) templ.Compon
 		logger.Log.Info("Legacy hotels found in cache. Rendering results.",
 			zap.Int("personalizedPOIs", len(itineraryData.PointsOfInterest)))
 
-		// Create empty city data for legacy cached data (IDENTICAL to itinerary)
-		emptyCityData := models.GeneralCityData{}
-
 		// Filter hotels from legacy data
 		hotelPOIs := filterPOIsForHotels(itineraryData.PointsOfInterest)
-		return results.HotelsResults(emptyCityData, hotelPOIs, true, true, 5, []string{})
+		return results.HotelResults(hotelPOIs, true, true, 5, []string{})
 	}
 
 	// Load from database (IDENTICAL to itinerary logic)
@@ -126,9 +122,8 @@ func (h *HotelsHandlers) loadHotelsFromDatabase(sessionIDParam string) templ.Com
 			zap.String("sessionID", sessionIDParam),
 			zap.Error(err))
 		// Return empty results instead of PageNotFound - data might still be processing
-		emptyCityData := models.GeneralCityData{}
 		emptyHotels := []models.HotelDetailedInfo{}
-		return results.HotelsResults(emptyCityData, emptyHotels, true, true, 5, []string{})
+		return results.HotelResults(emptyHotels, true, true, 5, []string{})
 	}
 
 	// Parse the stored response as complete data
@@ -138,9 +133,8 @@ func (h *HotelsHandlers) loadHotelsFromDatabase(sessionIDParam string) templ.Com
 			zap.String("sessionID", sessionIDParam),
 			zap.Error(err))
 		// Return empty results instead of PageNotFound for parsing errors
-		emptyCityData := models.GeneralCityData{}
 		emptyHotels := []models.HotelDetailedInfo{}
-		return results.HotelsResults(emptyCityData, emptyHotels, true, true, 5, []string{})
+		return results.HotelResults(emptyHotels, true, true, 5, []string{})
 	}
 
 	logger.Log.Info("Successfully loaded complete data from database for hotels",
@@ -150,8 +144,7 @@ func (h *HotelsHandlers) loadHotelsFromDatabase(sessionIDParam string) templ.Com
 
 	// Filter POIs for hotels and render (IDENTICAL to itinerary results pattern)
 	hotelPOIs := filterPOIsForHotels(completeData.PointsOfInterest)
-	return results.HotelsResults(
-		completeData.GeneralCityData,
+	return results.HotelResults(
 		hotelPOIs,
 		true, true, 5, []string{})
 }
@@ -274,48 +267,47 @@ func (h *HotelsHandlers) loadHotelsBySessionSSE(sessionIDParam string) templ.Com
 			logger.Log.Info("Hotels data being displayed in view", zap.String("json", string(jsonData)))
 		}
 
-		logger.Log.Info("Complete hotels found in cache. Rendering SSE results with data.",
+		logger.Log.Info("Complete hotels found in cache. Rendering static results with data.",
 			zap.String("city", completeData.GeneralCityData.City),
 			zap.Int("totalPOIs", len(completeData.PointsOfInterest)),
 			zap.Int("hotelPOIs", len(hotelPOIs)))
 
-		return results.HotelsResultsSSE(
-			sessionIDParam,
-			completeData.GeneralCityData,
+		// Return static template when data is available (same as itinerary)
+		return results.HotelResults(
 			hotelPOIs,
-			true) // hasData = true
+			true, true, 15, []string{})
 	}
 
-	// Try legacy cache
-	if itineraryData, found := middleware.ItineraryCache.Get(sessionIDParam); found {
-		logger.Log.Info("Legacy hotels found in cache. Rendering SSE results with data.",
-			zap.Int("personalizedPOIs", len(itineraryData.PointsOfInterest)))
+	// Try hotels cache
+	if hotelsData, found := middleware.HotelsCache.Get(sessionIDParam); found {
+		logger.Log.Info("Hotels found in cache. Rendering results with data.",
+			zap.Int("hotels", len(hotelsData)))
 
-		// Create empty city data for legacy cached data
-		emptyCityData := models.GeneralCityData{}
+		// Return static template when data is available
+		return results.HotelResults(
+			hotelsData,
+			true, true, 15, []string{})
+	}
 
-		// Filter hotels from legacy data
-		hotelPOIs := filterPOIsForHotels(itineraryData.PointsOfInterest)
+	// Try complete itinerary cache as fallback
+	if completeData, found := middleware.CompleteItineraryCache.Get(sessionIDParam); found {
+		logger.Log.Info("Complete itinerary found in cache for hotels view.",
+			zap.String("city", completeData.GeneralCityData.City))
 
-		return results.HotelsResultsSSE(
-			sessionIDParam,
-			emptyCityData,
-			hotelPOIs,
-			true) // hasData = true
+		return results.HotelResults(
+			[]models.HotelDetailedInfo{},
+			true, true, 15, []string{})
 	}
 
 	// No cached data found - show loading interface with SSE
 	logger.Log.Info("No hotels found in cache. Rendering SSE loading interface.",
 		zap.String("sessionID", sessionIDParam))
 
-	emptyCityData := models.GeneralCityData{}
 	emptyHotels := []models.HotelDetailedInfo{}
 
-	return results.HotelsResultsSSE(
-		sessionIDParam,
-		emptyCityData,
+	return results.HotelResults(
 		emptyHotels,
-		false) // hasData = false, will show loading and connect to SSE
+		true, true, 15, []string{}) // Return empty results, SSE will populate via cache
 }
 
 // HandleHotelsSSE handles Server-Sent Events for hotel updates
@@ -337,10 +329,11 @@ func (h *HotelsHandlers) HandleHotelsSSE(c *gin.Context) {
 
 	// Create a channel for updates
 	updateChan := make(chan models.ItinerarySSEEvent)
-	defer close(updateChan)
+	done := make(chan struct{})
+	defer close(done)
 
 	// Start monitoring for updates in a separate goroutine
-	go h.monitorHotelUpdates(sessionID, updateChan)
+	go h.monitorHotelUpdates(sessionID, updateChan, done)
 
 	// Stream updates to client
 	flusher := c.Writer.(http.Flusher)
@@ -362,26 +355,27 @@ func (h *HotelsHandlers) HandleHotelsSSE(c *gin.Context) {
 
 			// Send HTML fragment updates based on event type
 			switch event.Type {
-			case "header-update":
-				if data, ok := event.Data.(map[string]interface{}); ok {
-					if completeData, exists := data["completeData"]; exists {
-						if complete, valid := completeData.(models.AiCityResponse); valid {
-							hotelPOIs := filterPOIsForHotels(complete.PointsOfInterest)
-							headerHTML := h.renderHotelsHeaderHTML(complete.GeneralCityData, hotelPOIs)
-							c.SSEvent("hotels-header", headerHTML)
-						}
-					}
-				}
-			case "content-update":
-				if data, ok := event.Data.(map[string]interface{}); ok {
-					if completeData, exists := data["completeData"]; exists {
-						if complete, valid := completeData.(models.AiCityResponse); valid {
-							hotelPOIs := filterPOIsForHotels(complete.PointsOfInterest)
-							contentHTML := h.renderHotelsContentHTML(complete.GeneralCityData, hotelPOIs)
-							c.SSEvent("hotels-content", contentHTML)
-						}
-					}
-				}
+			// DEPRECATED: SSE header/content updates replaced with cache-based rendering
+			//case "header-update":
+			//	if data, ok := event.Data.(map[string]interface{}); ok {
+			//		if completeData, exists := data["completeData"]; exists {
+			//			if complete, valid := completeData.(models.AiCityResponse); valid {
+			//				hotelPOIs := filterPOIsForHotels(complete.PointsOfInterest)
+			//				headerHTML := h.renderHotelsHeaderHTML(complete.GeneralCityData, hotelPOIs)
+			//				c.SSEvent("hotels-header", headerHTML)
+			//			}
+			//		}
+			//	}
+			//case "content-update":
+			//	if data, ok := event.Data.(map[string]interface{}); ok {
+			//		if completeData, exists := data["completeData"]; exists {
+			//			if complete, valid := completeData.(models.AiCityResponse); valid {
+			//				hotelPOIs := filterPOIsForHotels(complete.PointsOfInterest)
+			//				contentHTML := h.renderHotelsContentHTML(complete.GeneralCityData, hotelPOIs)
+			//				c.SSEvent("hotels-content", contentHTML)
+			//			}
+			//		}
+			//	}
 			default:
 				// Send progress update
 				c.SSEvent(event.Type, event.Data)
@@ -397,7 +391,8 @@ func (h *HotelsHandlers) HandleHotelsSSE(c *gin.Context) {
 }
 
 // monitorHotelUpdates monitors for hotel updates and sends SSE events
-func (h *HotelsHandlers) monitorHotelUpdates(sessionID string, updateChan chan<- models.ItinerarySSEEvent) {
+func (h *HotelsHandlers) monitorHotelUpdates(sessionID string, updateChan chan<- models.ItinerarySSEEvent, done <-chan struct{}) {
+	defer close(updateChan)
 	// Check for cached data first
 	if completeData, found := middleware.CompleteItineraryCache.Get(sessionID); found {
 		logger.Log.Info("Complete data found in cache, sending hotels completion immediately",
@@ -455,6 +450,9 @@ func (h *HotelsHandlers) monitorHotelUpdates(sessionID string, updateChan chan<-
 
 	for {
 		select {
+		case <-done:
+			logger.Log.Info("Stopping hotel monitoring - client disconnected", zap.String("sessionId", sessionID))
+			return
 		case <-ticker.C:
 			// Check cache again
 			if completeData, found := middleware.CompleteItineraryCache.Get(sessionID); found {
@@ -529,23 +527,25 @@ func (h *HotelsHandlers) monitorHotelUpdates(sessionID string, updateChan chan<-
 }
 
 // renderHotelsHeaderHTML renders header HTML fragment for SSE
-func (h *HotelsHandlers) renderHotelsHeaderHTML(cityData models.GeneralCityData, hotels []models.HotelDetailedInfo) string {
-	buf := &strings.Builder{}
-	component := results.HotelsHeaderComplete(cityData, hotels)
-	err := component.Render(context.Background(), buf)
-	if err != nil {
-		h.logger.Error("failed to render hotels header", slog.Any("error", err))
-	}
-	return buf.String()
-}
-
-// renderHotelsContentHTML renders content HTML fragment for SSE
-func (h *HotelsHandlers) renderHotelsContentHTML(cityData models.GeneralCityData, hotels []models.HotelDetailedInfo) string {
-	buf := &strings.Builder{}
-	component := results.HotelsContentComplete(cityData, hotels)
-	err := component.Render(context.Background(), buf)
-	if err != nil {
-		h.logger.Error("failed to render hotels content", slog.Any("error", err))
-	}
-	return buf.String()
-}
+// DEPRECATED: SSE approach replaced with cache-based rendering
+//func (h *HotelsHandlers) renderHotelsHeaderHTML(cityData models.GeneralCityData, hotels []models.HotelDetailedInfo) string {
+//	buf := &strings.Builder{}
+//	component := results.HotelsHeaderComplete(cityData, hotels)
+//	err := component.Render(context.Background(), buf)
+//	if err != nil {
+//		h.logger.Error("failed to render hotels header", slog.Any("error", err))
+//	}
+//	return buf.String()
+//}
+//
+//// renderHotelsContentHTML renders content HTML fragment for SSE
+//// DEPRECATED: SSE approach replaced with cache-based rendering
+//func (h *HotelsHandlers) renderHotelsContentHTML(cityData models.GeneralCityData, hotels []models.HotelDetailedInfo) string {
+//	buf := &strings.Builder{}
+//	component := results.HotelsContentComplete(cityData, hotels)
+//	err := component.Render(context.Background(), buf)
+//	if err != nil {
+//		h.logger.Error("failed to render hotels content", slog.Any("error", err))
+//	}
+//	return buf.String()
+//}

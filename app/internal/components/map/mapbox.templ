@@ -1,21 +1,21 @@
 package mapcomponents
 
-templ MapboxScripts() {
+templ MapboxScripts(apiKey string) {
 	<!-- Mapbox GL JS -->
 	<link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet"/>
 	<script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
-	@MapboxConfigScript()
+	@MapboxConfigScript(apiKey)
 	@getCategoryIconFunction()
 }
 
-templ MapboxConfigScript() {
-	<script>
-		// Set Mapbox access token globally
-		window.MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoieW91cm11c2VybmFtZSIsImEiOiJjbHl6eHl6eHl6eHl6In0.your_access_token_here';
-		
-		// You can set this via server-side rendering with the actual token from environment variables
-		// Example: window.MAPBOX_ACCESS_TOKEN = '{{ .MapboxToken }}';
-	</script>
+script MapboxConfigScript(apiKey string) {
+	if (apiKey !== "") {
+		// Set Mapbox access token globally from server config
+		mapboxgl.accessToken = apiKey;
+		window.MAPBOX_ACCESS_TOKEN = apiKey;
+	} else {
+		console.error('Mapbox API key not configured. Please set MAPBOX_API_KEY environment variable.');
+	}
 }
 
 templ MapboxContainer(mapId string, height string) {

@@ -7,6 +7,7 @@ import (
 	"github.com/FACorreiaa/go-templui/app/internal/components/pwa"
 	"github.com/FACorreiaa/go-templui/app/internal/features/results"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
+	"os"
 )
 
 templ LayoutPage(l models.LayoutTempl) {
@@ -42,7 +43,7 @@ templ LayoutPage(l models.LayoutTempl) {
 			<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js" integrity="sha384-ZBXiYtYQ6hJ2Y0ZNoYuI+Nq5MqWBr+chMrS/RkXpNzQCApHEhOt2aY8EJgqwHLkJ" crossorigin="anonymous"></script>
             <script src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.2" integrity="sha384-BkCCd4DbvhfvRLfThp+5RN2KiB1FBROoAtwZFfceJishUnpFW1eF/aqG14M5TwA2" crossorigin="anonymous"></script>
 			<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js" integrity="sha384-O8NPfezTLQ/sgLfQYBJEnezJLlum9L6KOqHsfIWauzaFfD1TQSuvA4iUpgWGHeuZ" crossorigin="anonymous"></script>
-			@mapcomponents.MapboxScripts()
+			@mapcomponents.MapboxScripts(os.Getenv("MAPBOX_API_KEY"))
 			<script>
 				// Initialize theme on page load
 				document.addEventListener('DOMContentLoaded', function() {
