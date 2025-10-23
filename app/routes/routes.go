@@ -399,21 +399,69 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		// })
 
 		// Restaurants SSE
+		//protected.GET("/restaurants", func(c *gin.Context) {
+		//	content := restaurantsHandlers.HandleRestaurantsPageSSE(c)
+		//	c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+		//		Title:   "Restaurants - Loci",
+		//		Content: content,
+		//		Nav: models.Navigation{
+		//			Items: []models.NavItem{
+		//				{Name: "Home", URL: "/"},
+		//				{Name: "Discover", URL: "/discover"},
+		//				{Name: "Activities", URL: "/activities"},
+		//				{Name: "Hotels", URL: "/hotels"},
+		//				{Name: "Restaurants", URL: "/restaurants"},
+		//			},
+		//		},
+		//		ActiveNav: "Restaurants",
+		//		User:      getUserFromContext(c),
+		//	}))
+		//})
+
 		protected.GET("/restaurants", func(c *gin.Context) {
+			query := c.Query("q")
+			sessionIDParam := c.Query("sessionId")
+
+			// If there's a query but no sessionID, start new streaming
+			if query != "" && sessionIDParam == "" {
+				// Return the streaming trigger page wrapped in layout
+				content := streamingfeatures.StreamingTriggerPage(query, "restaurants")
+				c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+					Title:   "Travel Planner - Loci",
+					Content: content,
+					Nav: models.Navigation{
+						Items: []models.NavItem{
+							{Name: "Dashboard", URL: "/dashboard"},
+							{Name: "Discover", URL: "/discover"},
+							{Name: "Nearby", URL: "/nearby"},
+							{Name: "Itinerary", URL: "/itinerary"},
+							{Name: "Chat", URL: "/chat"},
+							{Name: "Favorites", URL: "/favorites"},
+						},
+					},
+					ActiveNav: "Restaurants",
+					User:      getUserFromContext(c),
+				}))
+				return
+			}
+
+			// For sessionId cases or default page, call the SSE handler
+			// This returns templ.Component that should be wrapped in layout
 			content := restaurantsHandlers.HandleRestaurantsPageSSE(c)
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
-				Title:   "Restaurants - Loci",
+				Title:   "Travel Planner - Loci",
 				Content: content,
 				Nav: models.Navigation{
 					Items: []models.NavItem{
-						{Name: "Home", URL: "/"},
+						{Name: "Dashboard", URL: "/dashboard"},
 						{Name: "Discover", URL: "/discover"},
-						{Name: "Activities", URL: "/activities"},
-						{Name: "Hotels", URL: "/hotels"},
-						{Name: "Restaurants", URL: "/restaurants"},
+						{Name: "Nearby", URL: "/nearby"},
+						{Name: "Itinerary", URL: "/itinerary"},
+						{Name: "Chat", URL: "/chat"},
+						{Name: "Favorites", URL: "/favorites"},
 					},
 				},
-				ActiveNav: "Restaurants",
+				ActiveNav: "Itinerary",
 				User:      getUserFromContext(c),
 			}))
 		})
