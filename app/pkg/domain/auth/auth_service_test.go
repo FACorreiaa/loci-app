@@ -210,7 +210,7 @@ func TestRegister(t *testing.T) {
 		mockRepo.On("Register", mock.Anything, username, email, mock.AnythingOfType("string")).Return(userID, nil).Once()
 
 		// Call the service method
-		err := service.Register(ctx, username, email, password, "user")
+		_, err := service.Register(ctx, username, email, password, "user")
 
 		// Assert expectations
 		assert.NoError(t, err)
@@ -228,7 +228,7 @@ func TestRegister(t *testing.T) {
 		mockRepo.On("Register", mock.Anything, username, email, mock.AnythingOfType("string")).Return("", models.ErrConflict).Once()
 
 		// Call the service method
-		err := service.Register(ctx, username, email, password, "user")
+		_, err := service.Register(ctx, username, email, password, "user")
 
 		// Assert expectations
 		assert.Error(t, err)

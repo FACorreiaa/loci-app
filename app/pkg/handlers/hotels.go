@@ -26,28 +26,30 @@ import (
 type HotelsHandlers struct {
 	chatRepo         llmchat.Repository
 	itineraryService *services.ItineraryService
+	logger           *slog.Logger
 }
 
-func NewHotelsHandlers(chatRepo llmchat.Repository) *HotelsHandlers {
+func NewHotelsHandlers(chatRepo llmchat.Repository, logger *slog.Logger) *HotelsHandlers {
 	return &HotelsHandlers{
 		chatRepo:         chatRepo,
 		itineraryService: services.NewItineraryService(),
+		logger:           logger,
 	}
 }
 
 // HandleHotelsPage handles the main hotels page logic
 func (h *HotelsHandlers) HandleHotelsPage(c *gin.Context) templ.Component {
 	query := c.Query("q")
-	sessionIdParam := c.Query("sessionId")
+	sessionIDParam := c.Query("sessionId")
 
 	logger.Log.Info("Hotels page accessed",
 		zap.String("ip", c.ClientIP()),
 		zap.String("query", query),
-		zap.String("sessionId", sessionIdParam))
+		zap.String("sessionId", sessionIDParam))
 
 	// Handle session-based loading
-	if sessionIdParam != "" {
-		return h.loadHotelsBySession(sessionIdParam)
+	if sessionIDParam != "" {
+		return h.loadHotelsBySession(sessionIDParam)
 	}
 
 	// Handle query-based loading
@@ -60,11 +62,11 @@ func (h *HotelsHandlers) HandleHotelsPage(c *gin.Context) templ.Component {
 }
 
 // loadHotelsBySession loads hotels using IDENTICAL logic as itinerary
-func (h *HotelsHandlers) loadHotelsBySession(sessionIdParam string) templ.Component {
-	logger.Log.Info("Attempting to load hotels from cache", zap.String("sessionID", sessionIdParam))
+func (h *HotelsHandlers) loadHotelsBySession(sessionIDParam string) templ.Component {
+	logger.Log.Info("Attempting to load hotels from cache", zap.String("sessionID", sessionIDParam))
 
 	// Try complete cache first (IDENTICAL to itinerary logic)
-	if completeData, found := middleware.CompleteItineraryCache.Get(sessionIdParam); found {
+	if completeData, found := middleware.CompleteItineraryCache.Get(sessionIDParam); found {
 		jsonData, err := json.MarshalIndent(completeData, "", "  ")
 		if err != nil {
 			logger.Log.Error("Failed to marshal completeData to JSON", zap.Error(err))
@@ -89,7 +91,7 @@ func (h *HotelsHandlers) loadHotelsBySession(sessionIdParam string) templ.Compon
 	}
 
 	// Try legacy cache (IDENTICAL to itinerary logic)
-	if itineraryData, found := middleware.ItineraryCache.Get(sessionIdParam); found {
+	if itineraryData, found := middleware.ItineraryCache.Get(sessionIDParam); found {
 		logger.Log.Info("Legacy hotels found in cache. Rendering results.",
 			zap.Int("personalizedPOIs", len(itineraryData.PointsOfInterest)))
 
@@ -102,17 +104,17 @@ func (h *HotelsHandlers) loadHotelsBySession(sessionIdParam string) templ.Compon
 	}
 
 	// Load from database (IDENTICAL to itinerary logic)
-	return h.loadHotelsFromDatabase(sessionIdParam)
+	return h.loadHotelsFromDatabase(sessionIDParam)
 }
 
 // loadHotelsFromDatabase loads hotels from database when not found in cache
-func (h *HotelsHandlers) loadHotelsFromDatabase(sessionIdParam string) templ.Component {
-	logger.Log.Info("Hotels not found in cache, attempting to load from database", zap.String("sessionID", sessionIdParam))
+func (h *HotelsHandlers) loadHotelsFromDatabase(sessionIDParam string) templ.Component {
+	logger.Log.Info("Hotels not found in cache, attempting to load from database", zap.String("sessionID", sessionIDParam))
 
 	// Parse sessionID as UUID
-	sessionID, err := uuid.Parse(sessionIdParam)
+	sessionID, err := uuid.Parse(sessionIDParam)
 	if err != nil {
-		logger.Log.Warn("Invalid session ID format", zap.String("sessionID", sessionIdParam), zap.Error(err))
+		logger.Log.Warn("Invalid session ID format", zap.String("sessionID", sessionIDParam), zap.Error(err))
 		return results.PageNotFound("Invalid session ID")
 	}
 
@@ -121,7 +123,7 @@ func (h *HotelsHandlers) loadHotelsFromDatabase(sessionIdParam string) templ.Com
 	interaction, err := h.chatRepo.GetLatestInteractionBySessionID(ctx, sessionID)
 	if err != nil || interaction == nil {
 		logger.Log.Warn("No interaction found in database for session",
-			zap.String("sessionID", sessionIdParam),
+			zap.String("sessionID", sessionIDParam),
 			zap.Error(err))
 		// Return empty results instead of PageNotFound - data might still be processing
 		emptyCityData := models.GeneralCityData{}
@@ -133,7 +135,7 @@ func (h *HotelsHandlers) loadHotelsFromDatabase(sessionIdParam string) templ.Com
 	completeData, err := h.itineraryService.ParseCompleteItineraryResponse(interaction.ResponseText, slog.Default())
 	if err != nil || completeData == nil {
 		logger.Log.Warn("Could not parse complete data from stored response",
-			zap.String("sessionID", sessionIdParam),
+			zap.String("sessionID", sessionIDParam),
 			zap.Error(err))
 		// Return empty results instead of PageNotFound for parsing errors
 		emptyCityData := models.GeneralCityData{}
@@ -142,7 +144,7 @@ func (h *HotelsHandlers) loadHotelsFromDatabase(sessionIdParam string) templ.Com
 	}
 
 	logger.Log.Info("Successfully loaded complete data from database for hotels",
-		zap.String("sessionID", sessionIdParam),
+		zap.String("sessionID", sessionIDParam),
 		zap.String("city", completeData.GeneralCityData.City),
 		zap.Int("totalPOIs", len(completeData.PointsOfInterest)))
 
@@ -236,55 +238,67 @@ func convertPOIToHotel(poi models.POIDetailedInfo) models.HotelDetailedInfo {
 // HandleHotelsPageSSE handles the hotels page with SSE support
 func (h *HotelsHandlers) HandleHotelsPageSSE(c *gin.Context) templ.Component {
 	query := c.Query("q")
-	sessionIdParam := c.Query("sessionId")
+	sessionIDParam := c.Query("sessionId")
 
 	logger.Log.Info("Hotels SSE page accessed",
 		zap.String("ip", c.ClientIP()),
 		zap.String("query", query),
-		zap.String("sessionId", sessionIdParam))
+		zap.String("sessionId", sessionIDParam))
 
-	if sessionIdParam == "" {
+	if sessionIDParam == "" {
 		logger.Log.Info("Direct navigation to /hotels SSE. Showing default page.")
 		return hotels.HotelsPage()
 	}
 
 	// Load hotels data for session with SSE support
-	return h.loadHotelsBySessionSSE(sessionIdParam)
+	return h.loadHotelsBySessionSSE(sessionIDParam)
 }
 
 // loadHotelsBySessionSSE loads hotels with SSE support
-func (h *HotelsHandlers) loadHotelsBySessionSSE(sessionIdParam string) templ.Component {
-	logger.Log.Info("Attempting to load hotels from cache with SSE", zap.String("sessionID", sessionIdParam))
+func (h *HotelsHandlers) loadHotelsBySessionSSE(sessionIDParam string) templ.Component {
+	logger.Log.Info("Attempting to load hotels from cache with SSE", zap.String("sessionID", sessionIDParam))
 
 	// Try complete cache first
-	if completeData, found := middleware.CompleteItineraryCache.Get(sessionIdParam); found {
-		logger.Log.Info("Complete hotels found in cache. Rendering SSE results with data.",
-			zap.String("city", completeData.GeneralCityData.City),
-			zap.Int("totalPOIs", len(completeData.PointsOfInterest)))
-
+	if completeData, found := middleware.CompleteItineraryCache.Get(sessionIDParam); found {
 		// Filter POIs for hotels
 		hotelPOIs := filterPOIsForHotels(completeData.PointsOfInterest)
-		
+
+		// Print JSON data for debugging what hotels will be displayed
+		jsonData, err := json.MarshalIndent(map[string]interface{}{
+			"city_data":  completeData.GeneralCityData,
+			"hotel_pois": hotelPOIs,
+		}, "", "  ")
+		if err != nil {
+			logger.Log.Error("Failed to marshal hotels data to JSON", zap.Error(err))
+		} else {
+			logger.Log.Info("Hotels data being displayed in view", zap.String("json", string(jsonData)))
+		}
+
+		logger.Log.Info("Complete hotels found in cache. Rendering SSE results with data.",
+			zap.String("city", completeData.GeneralCityData.City),
+			zap.Int("totalPOIs", len(completeData.PointsOfInterest)),
+			zap.Int("hotelPOIs", len(hotelPOIs)))
+
 		return results.HotelsResultsSSE(
-			sessionIdParam,
+			sessionIDParam,
 			completeData.GeneralCityData,
 			hotelPOIs,
 			true) // hasData = true
 	}
 
 	// Try legacy cache
-	if itineraryData, found := middleware.ItineraryCache.Get(sessionIdParam); found {
+	if itineraryData, found := middleware.ItineraryCache.Get(sessionIDParam); found {
 		logger.Log.Info("Legacy hotels found in cache. Rendering SSE results with data.",
 			zap.Int("personalizedPOIs", len(itineraryData.PointsOfInterest)))
 
 		// Create empty city data for legacy cached data
 		emptyCityData := models.GeneralCityData{}
-		
+
 		// Filter hotels from legacy data
 		hotelPOIs := filterPOIsForHotels(itineraryData.PointsOfInterest)
-		
+
 		return results.HotelsResultsSSE(
-			sessionIdParam,
+			sessionIDParam,
 			emptyCityData,
 			hotelPOIs,
 			true) // hasData = true
@@ -292,13 +306,13 @@ func (h *HotelsHandlers) loadHotelsBySessionSSE(sessionIdParam string) templ.Com
 
 	// No cached data found - show loading interface with SSE
 	logger.Log.Info("No hotels found in cache. Rendering SSE loading interface.",
-		zap.String("sessionID", sessionIdParam))
+		zap.String("sessionID", sessionIDParam))
 
 	emptyCityData := models.GeneralCityData{}
 	emptyHotels := []models.HotelDetailedInfo{}
 
 	return results.HotelsResultsSSE(
-		sessionIdParam,
+		sessionIDParam,
 		emptyCityData,
 		emptyHotels,
 		false) // hasData = false, will show loading and connect to SSE
@@ -312,7 +326,7 @@ func (h *HotelsHandlers) HandleHotelsSSE(c *gin.Context) {
 		return
 	}
 
-	logger.Log.Info("SSE connection established for hotels", 
+	logger.Log.Info("SSE connection established for hotels",
 		zap.String("sessionId", sessionID))
 
 	// Set SSE headers
@@ -334,20 +348,21 @@ func (h *HotelsHandlers) HandleHotelsSSE(c *gin.Context) {
 		select {
 		case event := <-updateChan:
 			if event.Type == "complete" {
-				logger.Log.Info("Sending hotels completion event", 
+				logger.Log.Info("Sending hotels completion event",
 					zap.String("sessionId", sessionID))
-				
+
 				// Send final completion event
 				c.SSEvent("hotels-complete", map[string]interface{}{
 					"sessionId": sessionID,
-					"message": "Hotel search complete",
+					"message":   "Hotel search complete",
 				})
 				flusher.Flush()
 				return
 			}
 
 			// Send HTML fragment updates based on event type
-			if event.Type == "header-update" {
+			switch event.Type {
+			case "header-update":
 				if data, ok := event.Data.(map[string]interface{}); ok {
 					if completeData, exists := data["completeData"]; exists {
 						if complete, valid := completeData.(models.AiCityResponse); valid {
@@ -357,7 +372,7 @@ func (h *HotelsHandlers) HandleHotelsSSE(c *gin.Context) {
 						}
 					}
 				}
-			} else if event.Type == "content-update" {
+			case "content-update":
 				if data, ok := event.Data.(map[string]interface{}); ok {
 					if completeData, exists := data["completeData"]; exists {
 						if complete, valid := completeData.(models.AiCityResponse); valid {
@@ -367,14 +382,14 @@ func (h *HotelsHandlers) HandleHotelsSSE(c *gin.Context) {
 						}
 					}
 				}
-			} else {
+			default:
 				// Send progress update
 				c.SSEvent(event.Type, event.Data)
 			}
 			flusher.Flush()
 
 		case <-c.Request.Context().Done():
-			logger.Log.Info("SSE connection closed", 
+			logger.Log.Info("SSE connection closed",
 				zap.String("sessionId", sessionID))
 			return
 		}
@@ -387,25 +402,25 @@ func (h *HotelsHandlers) monitorHotelUpdates(sessionID string, updateChan chan<-
 	if completeData, found := middleware.CompleteItineraryCache.Get(sessionID); found {
 		logger.Log.Info("Complete data found in cache, sending hotels completion immediately",
 			zap.String("sessionId", sessionID))
-		
+
 		// Send header update
 		updateChan <- models.ItinerarySSEEvent{
 			Type: "header-update",
 			Data: map[string]interface{}{
-				"sessionId": sessionID,
+				"sessionId":    sessionID,
 				"completeData": completeData,
 			},
 		}
-		
+
 		// Send content update
 		updateChan <- models.ItinerarySSEEvent{
 			Type: "content-update",
 			Data: map[string]interface{}{
-				"sessionId": sessionID,
+				"sessionId":    sessionID,
 				"completeData": completeData,
 			},
 		}
-		
+
 		// Send completion
 		updateChan <- models.ItinerarySSEEvent{
 			Type: "complete",
@@ -421,11 +436,11 @@ func (h *HotelsHandlers) monitorHotelUpdates(sessionID string, updateChan chan<-
 	if itineraryData, found := middleware.ItineraryCache.Get(sessionID); found {
 		logger.Log.Info("Legacy data found in cache, sending hotels completion immediately",
 			zap.String("sessionId", sessionID))
-		
+
 		updateChan <- models.ItinerarySSEEvent{
-			Type: "complete", 
+			Type: "complete",
 			Data: map[string]interface{}{
-				"sessionId": sessionID,
+				"sessionId":        sessionID,
 				"personalizedPOIs": len(itineraryData.PointsOfInterest),
 			},
 		}
@@ -437,7 +452,7 @@ func (h *HotelsHandlers) monitorHotelUpdates(sessionID string, updateChan chan<-
 	defer ticker.Stop()
 
 	timeout := time.After(5 * time.Minute) // 5 minute timeout
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -445,25 +460,25 @@ func (h *HotelsHandlers) monitorHotelUpdates(sessionID string, updateChan chan<-
 			if completeData, found := middleware.CompleteItineraryCache.Get(sessionID); found {
 				logger.Log.Info("Complete data appeared in cache for hotels",
 					zap.String("sessionId", sessionID))
-				
+
 				// Send header update
 				updateChan <- models.ItinerarySSEEvent{
 					Type: "header-update",
 					Data: map[string]interface{}{
-						"sessionId": sessionID,
+						"sessionId":    sessionID,
 						"completeData": completeData,
 					},
 				}
-				
+
 				// Send content update
 				updateChan <- models.ItinerarySSEEvent{
 					Type: "content-update",
 					Data: map[string]interface{}{
-						"sessionId": sessionID,
+						"sessionId":    sessionID,
 						"completeData": completeData,
 					},
 				}
-				
+
 				// Send completion
 				updateChan <- models.ItinerarySSEEvent{
 					Type: "complete",
@@ -478,11 +493,11 @@ func (h *HotelsHandlers) monitorHotelUpdates(sessionID string, updateChan chan<-
 			if itineraryData, found := middleware.ItineraryCache.Get(sessionID); found {
 				logger.Log.Info("Legacy data appeared in cache for hotels",
 					zap.String("sessionId", sessionID))
-				
+
 				updateChan <- models.ItinerarySSEEvent{
 					Type: "complete",
 					Data: map[string]interface{}{
-						"sessionId": sessionID,
+						"sessionId":        sessionID,
 						"personalizedPOIs": len(itineraryData.PointsOfInterest),
 					},
 				}
@@ -494,7 +509,7 @@ func (h *HotelsHandlers) monitorHotelUpdates(sessionID string, updateChan chan<-
 				Type: "progress",
 				Data: map[string]interface{}{
 					"sessionId": sessionID,
-					"message": "Finding hotels...",
+					"message":   "Finding hotels...",
 					"timestamp": time.Now().Unix(),
 				},
 			}
@@ -505,7 +520,7 @@ func (h *HotelsHandlers) monitorHotelUpdates(sessionID string, updateChan chan<-
 				Type: "error",
 				Data: map[string]interface{}{
 					"sessionId": sessionID,
-					"message": "Request timed out. Please try again.",
+					"message":   "Request timed out. Please try again.",
 				},
 			}
 			return
@@ -517,14 +532,20 @@ func (h *HotelsHandlers) monitorHotelUpdates(sessionID string, updateChan chan<-
 func (h *HotelsHandlers) renderHotelsHeaderHTML(cityData models.GeneralCityData, hotels []models.HotelDetailedInfo) string {
 	buf := &strings.Builder{}
 	component := results.HotelsHeaderComplete(cityData, hotels)
-	component.Render(context.Background(), buf)
+	err := component.Render(context.Background(), buf)
+	if err != nil {
+		h.logger.Error("failed to render hotels header", slog.Any("error", err))
+	}
 	return buf.String()
 }
 
-// renderHotelsContentHTML renders content HTML fragment for SSE  
+// renderHotelsContentHTML renders content HTML fragment for SSE
 func (h *HotelsHandlers) renderHotelsContentHTML(cityData models.GeneralCityData, hotels []models.HotelDetailedInfo) string {
 	buf := &strings.Builder{}
 	component := results.HotelsContentComplete(cityData, hotels)
-	component.Render(context.Background(), buf)
+	err := component.Render(context.Background(), buf)
+	if err != nil {
+		h.logger.Error("failed to render hotels content", slog.Any("error", err))
+	}
 	return buf.String()
 }

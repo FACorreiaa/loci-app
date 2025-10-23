@@ -24,6 +24,8 @@ type contextKey string
 const UserIDKey contextKey = "userID"
 const UserRoleKey contextKey = "userRole"
 const UserPlanKey contextKey = "userPlan"
+const UserEmail contextKey = "userEmail"
+const userName contextKey = "userName"
 const UserSubStatusKey contextKey = "userSubStatus"
 
 // LoggerMiddleware logs all HTTP requests using zap
@@ -234,10 +236,10 @@ func CreateContextWithUser(c *gin.Context) context.Context {
 		ctx = context.WithValue(ctx, UserIDKey, userID.(string))
 	}
 	if userEmail, exists := c.Get("user_email"); exists {
-		ctx = context.WithValue(ctx, "userEmail", userEmail.(string))
+		ctx = context.WithValue(ctx, userEmail, userEmail.(string))
 	}
-	if userName, exists := c.Get("user_name"); exists {
-		ctx = context.WithValue(ctx, "userName", userName.(string))
+	if un, exists := c.Get("user_name"); exists {
+		ctx = context.WithValue(ctx, userName, un.(string))
 	}
 
 	return ctx

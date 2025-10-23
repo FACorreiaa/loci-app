@@ -81,7 +81,7 @@ func (h *UnifiedStreamingHandlers) HandleGenerateStream(c *gin.Context) {
 // HandleStreamEvents serves the SSE endpoint for streaming events
 func (h *UnifiedStreamingHandlers) HandleStreamEvents(c *gin.Context) {
 	sessionID := c.Param("sessionId")
-	
+
 	ctx, span := otel.Tracer("UnifiedStreamingHandlers").Start(
 		c.Request.Context(),
 		"HandleStreamEvents",
@@ -155,7 +155,7 @@ func (h *UnifiedStreamingHandlers) HandleStreamEvents(c *gin.Context) {
 // processStreamingRequest handles the actual streaming logic in background
 func (h *UnifiedStreamingHandlers) processStreamingRequest(ctx context.Context, req streamingpkg.StreamRequest) {
 	l := h.logger.With(slog.String("sessionId", req.SessionID))
-	
+
 	// Create the streaming channel
 	eventCh := h.streamManager.CreateStream(req.SessionID, req.RequestType)
 	defer h.streamManager.CloseStream(req.SessionID)
@@ -175,7 +175,7 @@ func (h *UnifiedStreamingHandlers) processStreamingRequest(ctx context.Context, 
 	case streamingpkg.RequestTypeActivities:
 		h.processActivitiesRequest(ctx, req, eventCh)
 	default:
-		errorEvent := streamingpkg.NewErrorEvent(req.SessionID, req.RequestType, 
+		errorEvent := streamingpkg.NewErrorEvent(req.SessionID, req.RequestType,
 			fmt.Errorf("unsupported request type: %s", req.RequestType))
 		streamingpkg.SendEventSafe(ctx, eventCh, errorEvent, time.Second*2)
 		return
@@ -188,7 +188,7 @@ func (h *UnifiedStreamingHandlers) processStreamingRequest(ctx context.Context, 
 func (h *UnifiedStreamingHandlers) processItineraryRequest(ctx context.Context, req streamingpkg.StreamRequest, eventCh chan streamingpkg.UnifiedStreamEvent) {
 	// Create a traditional StreamEvent channel to interface with existing service
 	legacyEventCh := make(chan models.StreamEvent, 100)
-	
+
 	// Start the LLM service in background
 	go func() {
 		defer close(legacyEventCh)
@@ -204,10 +204,10 @@ func (h *UnifiedStreamingHandlers) processItineraryRequest(ctx context.Context, 
 	for legacyEvent := range legacyEventCh {
 		unifiedEvent := h.convertLegacyEvent(legacyEvent, req)
 		streamingpkg.SendEventSafe(ctx, eventCh, unifiedEvent, time.Second*2)
-		
+
 		if legacyEvent.IsFinal {
 			// Send completion event with navigation
-			completeEvent := streamingpkg.NewCompleteEvent(req.SessionID, req.RequestType, 
+			completeEvent := streamingpkg.NewCompleteEvent(req.SessionID, req.RequestType,
 				fmt.Sprintf("/itinerary?sessionId=%s", req.SessionID))
 			streamingpkg.SendEventSafe(ctx, eventCh, completeEvent, time.Second*2)
 			break
@@ -224,7 +224,7 @@ func (h *UnifiedStreamingHandlers) processHotelsRequest(ctx context.Context, req
 	// Here you would call your hotel service
 	// For now, we'll use the LLM service with hotel domain
 	legacyEventCh := make(chan models.StreamEvent, 100)
-	
+
 	go func() {
 		defer close(legacyEventCh)
 		// Call with hotel domain
@@ -239,9 +239,9 @@ func (h *UnifiedStreamingHandlers) processHotelsRequest(ctx context.Context, req
 	for legacyEvent := range legacyEventCh {
 		unifiedEvent := h.convertLegacyEvent(legacyEvent, req)
 		streamingpkg.SendEventSafe(ctx, eventCh, unifiedEvent, time.Second*2)
-		
+
 		if legacyEvent.IsFinal {
-			completeEvent := streamingpkg.NewCompleteEvent(req.SessionID, req.RequestType, 
+			completeEvent := streamingpkg.NewCompleteEvent(req.SessionID, req.RequestType,
 				fmt.Sprintf("/hotels?sessionId=%s", req.SessionID))
 			streamingpkg.SendEventSafe(ctx, eventCh, completeEvent, time.Second*2)
 			break
@@ -255,7 +255,7 @@ func (h *UnifiedStreamingHandlers) processRestaurantsRequest(ctx context.Context
 	streamingpkg.SendEventSafe(ctx, eventCh, progressEvent, time.Second*2)
 
 	legacyEventCh := make(chan models.StreamEvent, 100)
-	
+
 	go func() {
 		defer close(legacyEventCh)
 		err := h.llmService.ProcessUnifiedChatMessageStreamFree(
@@ -269,9 +269,9 @@ func (h *UnifiedStreamingHandlers) processRestaurantsRequest(ctx context.Context
 	for legacyEvent := range legacyEventCh {
 		unifiedEvent := h.convertLegacyEvent(legacyEvent, req)
 		streamingpkg.SendEventSafe(ctx, eventCh, unifiedEvent, time.Second*2)
-		
+
 		if legacyEvent.IsFinal {
-			completeEvent := streamingpkg.NewCompleteEvent(req.SessionID, req.RequestType, 
+			completeEvent := streamingpkg.NewCompleteEvent(req.SessionID, req.RequestType,
 				fmt.Sprintf("/restaurants?sessionId=%s", req.SessionID))
 			streamingpkg.SendEventSafe(ctx, eventCh, completeEvent, time.Second*2)
 			break
@@ -279,13 +279,13 @@ func (h *UnifiedStreamingHandlers) processRestaurantsRequest(ctx context.Context
 	}
 }
 
-// processActivitiesRequest handles activity-specific streaming  
+// processActivitiesRequest handles activity-specific streaming
 func (h *UnifiedStreamingHandlers) processActivitiesRequest(ctx context.Context, req streamingpkg.StreamRequest, eventCh chan streamingpkg.UnifiedStreamEvent) {
 	progressEvent := streamingpkg.NewProgressEvent(req.SessionID, req.RequestType, "Discovering exciting activities...")
 	streamingpkg.SendEventSafe(ctx, eventCh, progressEvent, time.Second*2)
 
 	legacyEventCh := make(chan models.StreamEvent, 100)
-	
+
 	go func() {
 		defer close(legacyEventCh)
 		err := h.llmService.ProcessUnifiedChatMessageStreamFree(
@@ -299,9 +299,9 @@ func (h *UnifiedStreamingHandlers) processActivitiesRequest(ctx context.Context,
 	for legacyEvent := range legacyEventCh {
 		unifiedEvent := h.convertLegacyEvent(legacyEvent, req)
 		streamingpkg.SendEventSafe(ctx, eventCh, unifiedEvent, time.Second*2)
-		
+
 		if legacyEvent.IsFinal {
-			completeEvent := streamingpkg.NewCompleteEvent(req.SessionID, req.RequestType, 
+			completeEvent := streamingpkg.NewCompleteEvent(req.SessionID, req.RequestType,
 				fmt.Sprintf("/activities?sessionId=%s", req.SessionID))
 			streamingpkg.SendEventSafe(ctx, eventCh, completeEvent, time.Second*2)
 			break
@@ -339,28 +339,28 @@ func (h *UnifiedStreamingHandlers) renderEventAsHTML(ctx context.Context, event 
 	switch event.Type {
 	case models.EventTypeProgress:
 		component = streamingfeatures.ProgressMessage(event.Message, event.Timestamp.Format("15:04:05"))
-		
+
 	case models.EventTypeError:
 		component = streamingfeatures.ErrorMessage(event.Error, event.SessionID)
-		
+
 	case models.EventTypeComplete:
 		navURL := ""
 		if event.Navigation != nil {
 			navURL = event.Navigation.URL
 		}
 		component = streamingfeatures.CompletionActions(string(event.RequestType), event.SessionID, navURL)
-		
+
 	case models.EventTypeCityData:
 		if cityData, ok := event.Data.(*models.GeneralCityData); ok && cityData != nil {
 			component = streamingfeatures.StreamingCityInfo(*cityData, event.SessionID)
 		}
-		
+
 	case models.EventTypePersonalizedPOI, models.EventTypeItinerary:
 		// Handle POI data based on request type
 		if pois, ok := event.Data.([]models.POIDetailedInfo); ok {
 			return h.renderPOIsByType(ctx, pois, event.RequestType, event.SessionID)
 		}
-		
+
 	default:
 		// Skip unknown event types
 		return "", nil
@@ -369,7 +369,9 @@ func (h *UnifiedStreamingHandlers) renderEventAsHTML(ctx context.Context, event 
 	if component != nil {
 		// Use reflection or type assertion to render the component
 		// This is a simplified approach - you may need to adjust based on your templ setup
-		if renderable, ok := component.(interface{ Render(context.Context, *bytes.Buffer) error }); ok {
+		if renderable, ok := component.(interface {
+			Render(context.Context, *bytes.Buffer) error
+		}); ok {
 			if err := renderable.Render(ctx, &buffer); err != nil {
 				return "", fmt.Errorf("failed to render component: %w", err)
 			}
@@ -383,11 +385,11 @@ func (h *UnifiedStreamingHandlers) renderEventAsHTML(ctx context.Context, event 
 // renderPOIsByType renders POIs based on the request type
 func (h *UnifiedStreamingHandlers) renderPOIsByType(ctx context.Context, pois []models.POIDetailedInfo, requestType streamingpkg.RequestType, sessionID string) (string, error) {
 	var htmlParts []string
-	
+
 	for i, poi := range pois {
 		var component interface{}
 		var buffer bytes.Buffer
-		
+
 		switch requestType {
 		case streamingpkg.RequestTypeItinerary:
 			component = streamingfeatures.StreamingItineraryCard(poi, i+1, sessionID)
@@ -398,9 +400,11 @@ func (h *UnifiedStreamingHandlers) renderPOIsByType(ctx context.Context, pois []
 		case streamingpkg.RequestTypeActivities:
 			component = streamingfeatures.StreamingActivityCard(poi, sessionID)
 		}
-		
+
 		if component != nil {
-			if renderable, ok := component.(interface{ Render(context.Context, *bytes.Buffer) error }); ok {
+			if renderable, ok := component.(interface {
+				Render(context.Context, *bytes.Buffer) error
+			}); ok {
 				if err := renderable.Render(ctx, &buffer); err != nil {
 					h.logger.ErrorContext(ctx, "Failed to render POI component", slog.Any("error", err))
 					continue
@@ -409,7 +413,7 @@ func (h *UnifiedStreamingHandlers) renderPOIsByType(ctx context.Context, pois []
 			}
 		}
 	}
-	
+
 	return fmt.Sprintf("<div>%s</div>", fmt.Sprintf("%v", htmlParts)), nil
 }
 
@@ -432,10 +436,10 @@ func (h *UnifiedStreamingHandlers) getSSEEventType(event streamingpkg.UnifiedStr
 // HandleRetryStream handles retry requests
 func (h *UnifiedStreamingHandlers) HandleRetryStream(c *gin.Context) {
 	sessionID := c.Param("sessionId")
-	
+
 	// Close existing stream if any
 	h.streamManager.CloseStream(sessionID)
-	
+
 	// Return an error message or redirect to restart
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Please refresh the page to try again",

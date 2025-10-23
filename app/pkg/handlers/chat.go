@@ -578,23 +578,6 @@ func (h *ChatHandlers) callLLMStreamingServiceWithData(query, userID string) (ma
 	return llmData, redirectURL, nil
 }
 
-// mapIntentToDomain maps intent types to domain strings
-func (h *ChatHandlers) mapIntentToDomain(intent string) string {
-	intent = strings.ToLower(intent)
-	switch intent {
-	case "find_restaurants", "restaurants", "food", "dining", "eat":
-		return "dining"
-	case "find_hotels", "hotels", "accommodation", "stay", "book_hotel":
-		return "accommodation"
-	case "modify_itinerary", "change_date", "create_itinerary", "plan_trip", "plan_itinerary", "generate_itinerary":
-		return "itinerary"
-	case "activities", "activity", "attractions", "things_to_do":
-		return "activities"
-	default:
-		return "activities"
-	}
-}
-
 // mapDomainToURL maps domain types to appropriate URLs with query parameters
 func (h *ChatHandlers) mapDomainToURL(domain models.DomainType, query string) string {
 	// URL encode the query
@@ -1059,7 +1042,7 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 				logger.Log.Error("Failed to write to file", zap.Error(err), zap.String("file", filePath))
 				continue
 			}
-			
+
 			fmt.Fprintf(c.Writer, "data: %s\n\n", eventData)
 			flusher.Flush()
 
@@ -1079,144 +1062,6 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 			return
 		}
 	}
-}
-
-// generateStreamingResponse creates the initial HTML response with streaming content
-func (h *ChatHandlers) generateStreamingResponse(query string) string {
-	return fmt.Sprintf(`
-		<div class="max-w-4xl mx-auto mt-8 space-y-6">
-			<!-- Search Query Display -->
-			<div class="bg-card rounded-xl p-6 shadow-lg border">
-				<div class="flex items-start gap-4">
-					<div class="flex-shrink-0">
-						<div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-							<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-							</svg>
-						</div>
-					</div>
-					<div class="flex-1">
-						<h3 class="font-semibold text-card-foreground mb-1">Your Search</h3>
-						<p class="text-muted-foreground">"%s"</p>
-					</div>
-				</div>
-			</div>
-
-			<!-- AI Response Section -->
-			<div class="bg-card rounded-xl p-6 shadow-lg border">
-				<div class="flex items-start gap-4">
-					<div class="flex-shrink-0">
-						<div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-							<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
-							</svg>
-						</div>
-					</div>
-					<div class="flex-1">
-						<h3 class="font-semibold text-card-foreground mb-4 flex items-center gap-2">
-							Loci AI Recommendations
-							<div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-						</h3>
-						<div id="llm-streaming-content" class="space-y-4">
-							<div class="flex items-center gap-3 text-muted-foreground">
-								<div class="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-								<span class="text-sm">AI is analyzing your request and preparing personalized recommendations...</span>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<!-- Example Results Placeholder -->
-			<div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="results-placeholder">
-				<div class="bg-card rounded-xl overflow-hidden shadow-sm border opacity-50">
-					<div class="aspect-video bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 animate-pulse"></div>
-					<div class="p-4">
-						<div class="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2"></div>
-						<div class="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-3/4 mb-2"></div>
-						<div class="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-1/2"></div>
-					</div>
-				</div>
-				<div class="bg-card rounded-xl overflow-hidden shadow-sm border opacity-50">
-					<div class="aspect-video bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 animate-pulse"></div>
-					<div class="p-4">
-						<div class="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2"></div>
-						<div class="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-3/4 mb-2"></div>
-						<div class="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-1/2"></div>
-					</div>
-				</div>
-			</div>
-
-			<!-- CTA Section -->
-			<div class="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 text-center border">
-				<h3 class="text-lg font-semibold text-card-foreground mb-2">Want More Personalized Recommendations?</h3>
-				<p class="text-muted-foreground mb-4 text-sm">
-					Sign up for free to get AI recommendations tailored to your preferences, save your favorite places, and create custom itineraries.
-				</p>
-				<div class="flex gap-3 justify-center">
-					<a href="/auth/signup" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">
-						Get Started Free
-					</a>
-					<a href="/about" class="border hover:bg-accent text-foreground px-6 py-2 rounded-lg text-sm font-medium transition-colors">
-						Learn More
-					</a>
-				</div>
-			</div>
-		</div>
-
-		<script>
-		// Auto-scroll to results
-		document.getElementById('search-results').scrollIntoView({ behavior: 'smooth' });
-		
-		// Simulate streaming content update (in production, this would be real streaming)
-		setTimeout(() => {
-			const content = document.getElementById('llm-streaming-content');
-			if (content) {
-				content.innerHTML = `+"`"+`
-					<div class="space-y-4">
-						<div class="border-l-4 border-blue-500 pl-4">
-							<h4 class="font-medium text-card-foreground mb-2">Top Recommendations</h4>
-							<p class="text-sm text-muted-foreground mb-3">Based on your search for "%s", here are some amazing places to discover:</p>
-							<ul class="space-y-2 text-sm">
-								<li class="flex items-start gap-2">
-									<span class="text-blue-500 mt-1">•</span>
-									<span class="text-muted-foreground">Hidden local cafés with authentic atmosphere</span>
-								</li>
-								<li class="flex items-start gap-2">
-									<span class="text-blue-500 mt-1">•</span>
-									<span class="text-muted-foreground">Cultural landmarks off the beaten path</span>
-								</li>
-								<li class="flex items-start gap-2">
-									<span class="text-blue-500 mt-1">•</span>
-									<span class="text-muted-foreground">Local markets and unique shopping experiences</span>
-								</li>
-							</ul>
-						</div>
-						<div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4">
-							<div class="flex items-start gap-3">
-								<svg class="w-5 h-5 text-amber-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-								</svg>
-								<div>
-									<h5 class="font-medium text-amber-800 dark:text-amber-200 text-sm mb-1">Limited Free Results</h5>
-									<p class="text-amber-700 dark:text-amber-300 text-sm">
-										This is a sample of what our AI can discover. Sign up for free to get detailed recommendations, maps, and personalized itineraries!
-									</p>
-								</div>
-							</div>
-						</div>
-					</div>
-				`+"`"+`;
-			}
-			
-			// Hide placeholder results
-			const placeholder = document.getElementById('results-placeholder');
-			if (placeholder) {
-				placeholder.style.display = 'none';
-			}
-		}, 3000);
-		</script>
-	`, query, query)
 }
 
 // HandleChatStream handles SSE streaming for chat messages in itinerary modification

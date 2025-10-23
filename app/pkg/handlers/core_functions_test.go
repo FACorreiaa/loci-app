@@ -78,7 +78,7 @@ func TestFilteringFunctions(t *testing.T) {
 		}
 
 		for _, poi := range filtered {
-			assert.True(t, activityCategories[poi.Category], 
+			assert.True(t, activityCategories[poi.Category],
 				"POI '%s' with category '%s' should not be in activities filter", poi.Name, poi.Category)
 		}
 
@@ -108,7 +108,7 @@ func TestFilteringFunctions(t *testing.T) {
 		}
 
 		for _, hotel := range filtered {
-			assert.True(t, hotelCategories[hotel.Category], 
+			assert.True(t, hotelCategories[hotel.Category],
 				"POI '%s' with category '%s' should not be in hotels filter", hotel.Name, hotel.Category)
 		}
 
@@ -139,7 +139,7 @@ func TestFilteringFunctions(t *testing.T) {
 		}
 
 		for _, restaurant := range filtered {
-			assert.True(t, restaurantCategories[restaurant.Category], 
+			assert.True(t, restaurantCategories[restaurant.Category],
 				"POI '%s' with category '%s' should not be in restaurants filter", restaurant.Name, restaurant.Category)
 		}
 
@@ -168,7 +168,7 @@ func TestFilteringFunctions(t *testing.T) {
 		restaurants := filterPOIsForRestaurants(mixedCasePOIs)
 
 		assert.Len(t, activities, 1, "Should handle case insensitive museum category")
-		assert.Len(t, hotels, 1, "Should handle case insensitive hotel category") 
+		assert.Len(t, hotels, 1, "Should handle case insensitive hotel category")
 		assert.Len(t, restaurants, 1, "Should handle case insensitive restaurant category")
 	})
 
@@ -283,9 +283,9 @@ func TestConversionFunctions(t *testing.T) {
 			PhoneNumber: "+39 06 3509 2152",
 			Website:     "https://www.lapergolaroma.com",
 			OpeningHours: map[string]string{
-				"Tuesday": "19:30-23:30",
+				"Tuesday":   "19:30-23:30",
 				"Wednesday": "19:30-23:30",
-				"Thursday": "19:30-23:30",
+				"Thursday":  "19:30-23:30",
 			},
 			PriceLevel:       "$$$$",
 			CuisineType:      "Mediterranean",
@@ -397,4 +397,3 @@ func extractRestaurantNames(restaurants []models.RestaurantDetailedInfo) []strin
 	}
 	return names
 }
-

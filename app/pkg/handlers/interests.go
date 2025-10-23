@@ -63,7 +63,7 @@ func (h *InterestsHandler) GetInterests(c *gin.Context) {
 // @Router /api/interests [post]
 func (h *InterestsHandler) CreateInterest(c *gin.Context) {
 	userIDStr := middleware.GetUserIDFromContext(c)
-	
+
 	var req models.CreateInterestRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		logger.Log.Error("Invalid request body", zap.Error(err))

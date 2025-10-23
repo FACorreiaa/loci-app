@@ -2006,7 +2006,6 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 	}
 
 	// Step 4: Cache Integration - Generate cache key based on session parameters
-	// TODO LATER
 	//var finalItineraryResult models.AIItineraryResponse
 	//var finalCityData models.GeneralCityData
 	//var finalItineraryStream models.AIItineraryResponse
@@ -2708,14 +2707,30 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 		if itineraryBuilder, exists := responses["itinerary"]; exists && itineraryBuilder != nil {
 			itineraryResponse := itineraryBuilder.String()
 			if itinerary, err := parseItineraryFromResponse(itineraryResponse, l.logger); err == nil {
+				// Print JSON data for debugging (individual itinerary part)
+				jsonData, err := json.MarshalIndent(itinerary, "", "  ")
+				if err != nil {
+					l.logger.ErrorContext(ctx, "Failed to marshal individual itinerary to JSON", slog.Any("error", err))
+				} else {
+					l.logger.InfoContext(ctx, "Individual itinerary JSON structure", slog.String("json", string(jsonData)))
+				}
+
 				l.logger.InfoContext(ctx, "Caching itinerary data",
 					slog.String("sessionID", sessionID.String()))
 				middleware.ItineraryCache.Set(sessionID.String(), *itinerary)
 			}
 		}
-		
+
 		// Cache complete response with all parts (city_data + general_pois + itinerary)
 		if completeResponse, err := l.parseCompleteResponseFromParts(responses, sessionID); err == nil {
+			// Print JSON data for debugging
+			jsonData, err := json.MarshalIndent(completeResponse, "", "  ")
+			if err != nil {
+				l.logger.ErrorContext(ctx, "Failed to marshal completeResponse to JSON", slog.Any("error", err))
+			} else {
+				l.logger.InfoContext(ctx, "Complete itinerary JSON structure", slog.String("json", string(jsonData)))
+			}
+
 			l.logger.InfoContext(ctx, "Caching complete itinerary response",
 				slog.String("sessionID", sessionID.String()),
 				slog.String("city", completeResponse.GeneralCityData.City),
@@ -2723,14 +2738,22 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 				slog.Int("itineraryPOIs", len(completeResponse.AIItineraryResponse.PointsOfInterest)))
 			middleware.CompleteItineraryCache.Set(sessionID.String(), *completeResponse)
 		} else {
-			l.logger.WarnContext(ctx, "Failed to cache complete itinerary response", 
-				slog.String("sessionID", sessionID.String()), 
+			l.logger.WarnContext(ctx, "Failed to cache complete itinerary response",
+				slog.String("sessionID", sessionID.String()),
 				slog.Any("error", err))
 		}
 	case "restaurants":
 		if restaurantBuilder, exists := responses["restaurants"]; exists && restaurantBuilder != nil {
 			restaurantResponse := restaurantBuilder.String()
 			if restaurants, err := parseRestaurantsFromResponse(restaurantResponse, l.logger); err == nil && len(restaurants) > 0 {
+				// Print JSON data for debugging
+				jsonData, err := json.MarshalIndent(restaurants, "", "  ")
+				if err != nil {
+					l.logger.ErrorContext(ctx, "Failed to marshal restaurants to JSON", slog.Any("error", err))
+				} else {
+					l.logger.InfoContext(ctx, "Restaurants JSON structure", slog.String("json", string(jsonData)))
+				}
+
 				l.logger.InfoContext(ctx, "Caching restaurant data",
 					slog.String("sessionID", sessionID.String()),
 					slog.Int("restaurantsCount", len(restaurants)))
@@ -2741,6 +2764,14 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 		if activityBuilder, exists := responses["activities"]; exists && activityBuilder != nil {
 			activityResponse := activityBuilder.String()
 			if activities, err := parseActivitiesFromResponse(activityResponse, l.logger); err == nil && len(activities) > 0 {
+				// Print JSON data for debugging
+				jsonData, err := json.MarshalIndent(activities, "", "  ")
+				if err != nil {
+					l.logger.ErrorContext(ctx, "Failed to marshal activities to JSON", slog.Any("error", err))
+				} else {
+					l.logger.InfoContext(ctx, "Activities JSON structure", slog.String("json", string(jsonData)))
+				}
+
 				l.logger.InfoContext(ctx, "Caching activity data",
 					slog.String("sessionID", sessionID.String()),
 					slog.Int("activitiesCount", len(activities)))
@@ -2751,6 +2782,14 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 		if hotelBuilder, exists := responses["hotels"]; exists && hotelBuilder != nil {
 			hotelResponse := hotelBuilder.String()
 			if hotels, err := parseHotelsFromResponse(hotelResponse, l.logger); err == nil && len(hotels) > 0 {
+				// Print JSON data for debugging
+				jsonData, err := json.MarshalIndent(hotels, "", "  ")
+				if err != nil {
+					l.logger.ErrorContext(ctx, "Failed to marshal hotels to JSON", slog.Any("error", err))
+				} else {
+					l.logger.InfoContext(ctx, "Hotels JSON structure", slog.String("json", string(jsonData)))
+				}
+
 				l.logger.InfoContext(ctx, "Caching hotel data",
 					slog.String("sessionID", sessionID.String()),
 					slog.Int("hotelsCount", len(hotels)))

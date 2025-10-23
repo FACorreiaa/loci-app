@@ -13,6 +13,7 @@ import (
 	mapcomponents "github.com/FACorreiaa/go-templui/app/internal/components/map"
 	"github.com/FACorreiaa/go-templui/app/internal/components/navbar"
 	"github.com/FACorreiaa/go-templui/app/internal/components/pwa"
+	"github.com/FACorreiaa/go-templui/app/internal/features/results"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
 )
 
@@ -44,13 +45,13 @@ func LayoutPage(l models.LayoutTempl) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(l.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/pages/layout.templ`, Line: 17, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/pages/layout.templ`, Line: 18, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " - TemplUI</title><meta name=\"description\" content=\"Explore and discover amazing places with Loci, your personal travel assistant.\"><link rel=\"stylesheet\" href=\"/assets/css/output.css\"><link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin><link rel=\"manifest\" href=\"/static/manifest.json\"><meta name=\"theme-color\" content=\"#2563eb\"><link rel=\"apple-touch-icon\" href=\"/static/images/icons/icon-192x192.png\"><link rel=\"icon\" type=\"image/png\" sizes=\"144x144\" href=\"/static/images/icons/icon-144x144.png\"><link rel=\"icon\" type=\"image/png\" sizes=\"192x192\" href=\"/static/images/icons/icon-192x192.png\"><link rel=\"icon\" type=\"image/png\" sizes=\"512x512\" href=\"/static/images/icons/icon-512x512.png\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"default\"><meta name=\"apple-mobile-web-app-title\" content=\"Loci\"><meta name=\"mobile-web-app-capable\" content=\"yes\"><meta name=\"application-name\" content=\"Loci\"><link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap\" rel=\"stylesheet\"><link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css\"><style>\n\t\t\t\t[x-cloak] { display: none !important; }\n\t\t\t</style><script src=\"https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js\" integrity=\"sha384-ZBXiYtYQ6hJ2Y0ZNoYuI+Nq5MqWBr+chMrS/RkXpNzQCApHEhOt2aY8EJgqwHLkJ\" crossorigin=\"anonymous\"></script><script src=\"https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.2\" integrity=\"sha384-Y4gc0CK6Kg+hmulDc6rZPJu0tqvk7EWlih0Oh+2OkAi1ZDlCbBDCQEE2uVk472Ky\" crossorigin=\"anonymous\"></script><script defer src=\"https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js\"></script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " - TemplUI</title><meta name=\"description\" content=\"Explore and discover amazing places with Loci, your personal travel assistant.\"><link rel=\"stylesheet\" href=\"/assets/css/output.css\"><link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin><link rel=\"manifest\" href=\"/static/manifest.json\"><meta name=\"theme-color\" content=\"#2563eb\"><link rel=\"apple-touch-icon\" href=\"/static/images/icons/icon-192x192.png\"><link rel=\"icon\" type=\"image/png\" sizes=\"144x144\" href=\"/static/images/icons/icon-144x144.png\"><link rel=\"icon\" type=\"image/png\" sizes=\"192x192\" href=\"/static/images/icons/icon-192x192.png\"><link rel=\"icon\" type=\"image/png\" sizes=\"512x512\" href=\"/static/images/icons/icon-512x512.png\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"default\"><meta name=\"apple-mobile-web-app-title\" content=\"Loci\"><meta name=\"mobile-web-app-capable\" content=\"yes\"><meta name=\"application-name\" content=\"Loci\"><link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap\" rel=\"stylesheet\"><link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css\" integrity=\"sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==\" crossorigin=\"anonymous\"><style>\n\t\t\t\t[x-cloak] { display: none !important; }\n\t\t\t</style><script src=\"https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js\" integrity=\"sha384-ZBXiYtYQ6hJ2Y0ZNoYuI+Nq5MqWBr+chMrS/RkXpNzQCApHEhOt2aY8EJgqwHLkJ\" crossorigin=\"anonymous\"></script><script src=\"https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.2\" integrity=\"sha384-BkCCd4DbvhfvRLfThp+5RN2KiB1FBROoAtwZFfceJishUnpFW1eF/aqG14M5TwA2\" crossorigin=\"anonymous\"></script><script defer src=\"https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js\" integrity=\"sha384-O8NPfezTLQ/sgLfQYBJEnezJLlum9L6KOqHsfIWauzaFfD1TQSuvA4iUpgWGHeuZ\" crossorigin=\"anonymous\"></script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -58,7 +59,19 @@ func LayoutPage(l models.LayoutTempl) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<script>\n\t\t\t\t// Initialize theme on page load\n\t\t\t\tdocument.addEventListener('DOMContentLoaded', function() {\n\t\t\t\t\tconst theme = localStorage.getItem('theme') || 'light';\n\t\t\t\t\tif (theme === 'dark') {\n\t\t\t\t\t\tdocument.documentElement.classList.add('dark');\n\t\t\t\t\t}\n\t\t\t\t});\n\t\t\t</script></head><body hx-boost=\"true\" class=\"min-h-screen bg-background text-foreground font-inter antialiased\"><script type=\"module\">\n                          function registerServiceWorkers() {\n                            // check if the browser supports service workers, otherwise abort.\n                            if (!(\"serviceWorker\" in navigator)) {\n                              console.error(\"Browser doesn't support service workers\");\n                              return;\n                            }\n                            // it's really important to make sure that the app is fully loaded, since the service worker won't be loaded before that.\n                            window.addEventListener(\"load\", () => {\n                              navigator.serviceWorker\n                                // this is the service worker's path, since we put it under /static earlier, and static is already registered as a file server.\n                                .register(\"/static/sw.js\")\n                                .then((reg) => {\n                                  console.log(\"Service Worker Registered\", reg);\n                                })\n                                .catch((err) => {\n                                  console.log(\"Service Worker Registration failed:\", err);\n                                });\n                            });\n                          }\n                          // call the function, you might wonder why isn't everything working as expected, but then it's just a missing function call :)\n                          registerServiceWorkers();\n                        </script><div class=\"flex flex-col min-h-screen\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<script>\n\t\t\t\t// Initialize theme on page load\n\t\t\t\tdocument.addEventListener('DOMContentLoaded', function() {\n\t\t\t\t\tconst theme = localStorage.getItem('theme') || 'light';\n\t\t\t\t\tif (theme === 'dark') {\n\t\t\t\t\t\tdocument.documentElement.classList.add('dark');\n\t\t\t\t\t}\n\t\t\t\t});\n\t\t\t</script>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = results.ItineraryStateScript().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = results.POIModalScript().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</head><body hx-boost=\"true\" class=\"min-h-screen bg-background text-foreground font-inter antialiased\"><script type=\"module\">\n                          function registerServiceWorkers() {\n                            // check if the browser supports service workers, otherwise abort.\n                            if (!(\"serviceWorker\" in navigator)) {\n                              console.error(\"Browser doesn't support service workers\");\n                              return;\n                            }\n                            // it's really important to make sure that the app is fully loaded, since the service worker won't be loaded before that.\n                            window.addEventListener(\"load\", () => {\n                              navigator.serviceWorker\n                                // this is the service worker's path, since we put it under /static earlier, and static is already registered as a file server.\n                                .register(\"/static/sw.js\")\n                                .then((reg) => {\n                                  console.log(\"Service Worker Registered\", reg);\n                                })\n                                .catch((err) => {\n                                  console.log(\"Service Worker Registration failed:\", err);\n                                });\n                            });\n                          }\n                          // call the function, you might wonder why isn't everything working as expected, but then it's just a missing function call :)\n                          registerServiceWorkers();\n                        </script><div class=\"flex flex-col min-h-screen\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -70,7 +83,7 @@ func LayoutPage(l models.LayoutTempl) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<main class=\"flex-1\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<main class=\"flex-1\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -78,7 +91,7 @@ func LayoutPage(l models.LayoutTempl) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</main>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</main>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -86,7 +99,7 @@ func LayoutPage(l models.LayoutTempl) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</div><!-- PWA Install Button -->")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</div><!-- PWA Install Button -->")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -94,7 +107,7 @@ func LayoutPage(l models.LayoutTempl) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

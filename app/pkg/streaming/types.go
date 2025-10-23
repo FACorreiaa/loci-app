@@ -13,56 +13,56 @@ import (
 type RequestType string
 
 const (
-	RequestTypeItinerary    RequestType = "itinerary"
-	RequestTypeHotels       RequestType = "hotels"
-	RequestTypeRestaurants  RequestType = "restaurants"
-	RequestTypeActivities   RequestType = "activities"
+	RequestTypeItinerary   RequestType = "itinerary"
+	RequestTypeHotels      RequestType = "hotels"
+	RequestTypeRestaurants RequestType = "restaurants"
+	RequestTypeActivities  RequestType = "activities"
 )
 
 // StreamRequest contains the unified request data for streaming
 type StreamRequest struct {
-	Query        string                  `json:"query"`
-	RequestType  RequestType             `json:"request_type"`
-	SessionID    string                  `json:"session_id"`
-	UserLocation *models.UserLocation    `json:"user_location,omitempty"`
-	Domain       models.DomainType       `json:"domain"`
-	CityName     string                  `json:"city_name,omitempty"`
+	Query        string               `json:"query"`
+	RequestType  RequestType          `json:"request_type"`
+	SessionID    string               `json:"session_id"`
+	UserLocation *models.UserLocation `json:"user_location,omitempty"`
+	Domain       models.DomainType    `json:"domain"`
+	CityName     string               `json:"city_name,omitempty"`
 	// Add any additional filters or parameters
-	Filters      map[string]interface{}  `json:"filters,omitempty"`
+	Filters map[string]interface{} `json:"filters,omitempty"`
 }
 
 // StreamEvent represents a unified streaming event that can handle any content type
 type UnifiedStreamEvent struct {
-	Type          string                    `json:"type"`
-	RequestType   RequestType               `json:"request_type"`
-	Message       string                    `json:"message,omitempty"`
-	SessionID     string                    `json:"session_id"`
-	Timestamp     time.Time                 `json:"timestamp"`
-	EventID       string                    `json:"event_id"`
-	IsFinal       bool                      `json:"is_final,omitempty"`
-	
+	Type        string      `json:"type"`
+	RequestType RequestType `json:"request_type"`
+	Message     string      `json:"message,omitempty"`
+	SessionID   string      `json:"session_id"`
+	Timestamp   time.Time   `json:"timestamp"`
+	EventID     string      `json:"event_id"`
+	IsFinal     bool        `json:"is_final,omitempty"`
+
 	// Content-specific data
-	CityData      *models.GeneralCityData   `json:"city_data,omitempty"`
-	POIs          []models.POIDetailedInfo  `json:"pois,omitempty"`
-	Hotels        []models.POIDetailedInfo  `json:"hotels,omitempty"`
-	Restaurants   []models.POIDetailedInfo  `json:"restaurants,omitempty"`
-	Activities    []models.POIDetailedInfo  `json:"activities,omitempty"`
-	Itinerary     *models.AIItineraryResponse `json:"itinerary,omitempty"`
-	
+	CityData    *models.GeneralCityData     `json:"city_data,omitempty"`
+	POIs        []models.POIDetailedInfo    `json:"pois,omitempty"`
+	Hotels      []models.POIDetailedInfo    `json:"hotels,omitempty"`
+	Restaurants []models.POIDetailedInfo    `json:"restaurants,omitempty"`
+	Activities  []models.POIDetailedInfo    `json:"activities,omitempty"`
+	Itinerary   *models.AIItineraryResponse `json:"itinerary,omitempty"`
+
 	// Generic data for extensibility
-	Data          interface{}               `json:"data,omitempty"`
-	Error         string                    `json:"error,omitempty"`
-	
+	Data  interface{} `json:"data,omitempty"`
+	Error string      `json:"error,omitempty"`
+
 	// Navigation data for redirects
-	Navigation    *models.NavigationData    `json:"navigation,omitempty"`
+	Navigation *models.NavigationData `json:"navigation,omitempty"`
 }
 
 // StreamChannel holds the channel and metadata for a streaming session
 type StreamChannel struct {
-	Channel   chan UnifiedStreamEvent
-	CreatedAt time.Time
+	Channel     chan UnifiedStreamEvent
+	CreatedAt   time.Time
 	RequestType RequestType
-	SessionID string
+	SessionID   string
 }
 
 // StreamManager manages all active streaming sessions
@@ -82,7 +82,7 @@ func NewStreamManager() *StreamManager {
 func (sm *StreamManager) CreateStream(sessionID string, requestType RequestType) chan UnifiedStreamEvent {
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
-	
+
 	ch := make(chan UnifiedStreamEvent, 100)
 	sm.channels[sessionID] = &StreamChannel{
 		Channel:     ch,
@@ -90,7 +90,7 @@ func (sm *StreamManager) CreateStream(sessionID string, requestType RequestType)
 		RequestType: requestType,
 		SessionID:   sessionID,
 	}
-	
+
 	return ch
 }
 
@@ -98,12 +98,12 @@ func (sm *StreamManager) CreateStream(sessionID string, requestType RequestType)
 func (sm *StreamManager) GetStream(sessionID string) (chan UnifiedStreamEvent, bool) {
 	sm.mutex.RLock()
 	defer sm.mutex.RUnlock()
-	
+
 	streamChan, exists := sm.channels[sessionID]
 	if !exists {
 		return nil, false
 	}
-	
+
 	return streamChan.Channel, true
 }
 
@@ -111,7 +111,7 @@ func (sm *StreamManager) GetStream(sessionID string) (chan UnifiedStreamEvent, b
 func (sm *StreamManager) CloseStream(sessionID string) {
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
-	
+
 	if streamChan, exists := sm.channels[sessionID]; exists {
 		close(streamChan.Channel)
 		delete(sm.channels, sessionID)
@@ -122,7 +122,7 @@ func (sm *StreamManager) CloseStream(sessionID string) {
 func (sm *StreamManager) CleanupExpiredStreams(maxAge time.Duration) {
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
-	
+
 	cutoff := time.Now().Add(-maxAge)
 	for sessionID, streamChan := range sm.channels {
 		if streamChan.CreatedAt.Before(cutoff) {
@@ -156,7 +156,7 @@ func NewDataEvent(sessionID string, requestType RequestType, data interface{}) U
 		EventID:     uuid.New().String(),
 		Data:        data,
 	}
-	
+
 	// Type-specific data mapping
 	switch requestType {
 	case RequestTypeItinerary:
@@ -178,7 +178,7 @@ func NewDataEvent(sessionID string, requestType RequestType, data interface{}) U
 			event.Activities = activities
 		}
 	}
-	
+
 	return event
 }
 
@@ -203,7 +203,7 @@ func NewCompleteEvent(sessionID string, requestType RequestType, navigationURL s
 		EventID:     uuid.New().String(),
 		IsFinal:     true,
 	}
-	
+
 	if navigationURL != "" {
 		event.Navigation = &models.NavigationData{
 			URL:       navigationURL,
@@ -213,7 +213,7 @@ func NewCompleteEvent(sessionID string, requestType RequestType, navigationURL s
 			},
 		}
 	}
-	
+
 	return event
 }
 

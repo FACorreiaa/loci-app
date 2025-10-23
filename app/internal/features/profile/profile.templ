@@ -1,6 +1,8 @@
 package profile
 
-templ ProfilePage() {
+import "github.com/FACorreiaa/go-templui/app/internal/models"
+
+templ ProfilePage(user *models.UserProfile) {
 	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
 		<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
 			<!-- Profile Header -->
@@ -21,8 +23,25 @@ templ ProfilePage() {
 							</button>
 						</div>
 						<div>
-							<h1 class="text-2xl font-bold text-card-foreground">John Doe</h1>
-							<p class="text-muted-foreground">Travel enthusiast • NYC</p>
+							<h1 class="text-2xl font-bold text-card-foreground">
+							if user != nil && user.Firstname != nil && user.Lastname != nil {
+								{ *user.Firstname } { *user.Lastname }
+							} else if user != nil && user.DisplayName != nil {
+								{ *user.DisplayName }
+							} else if user != nil {
+								{ user.Email }
+							} else {
+								Guest User
+							}
+						</h1>
+							<p class="text-muted-foreground">
+							Travel enthusiast
+							if user != nil && user.City != nil {
+								 • { *user.City }
+							} else if user != nil && user.Location != nil {
+								 • { *user.Location }
+							}
+						</p>
 							<div class="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
 								<span class="flex items-center gap-1">
 									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -75,12 +94,22 @@ templ ProfilePage() {
 						</div>
 						<!-- Personal Information -->
 						<div>
-							<label for="fullName" class="block text-sm font-medium text-card-foreground mb-2">Full Name</label>
+							<label for="firstname" class="block text-sm font-medium text-card-foreground mb-2">First Name</label>
 							<input
 								type="text"
-								id="fullName"
-								name="fullName"
-								value="John Doe"
+								id="firstname"
+								name="firstname"
+								value={ getStringValue(user.Firstname) }
+								class="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background"
+							/>
+						</div>
+						<div>
+							<label for="lastname" class="block text-sm font-medium text-card-foreground mb-2">Last Name</label>
+							<input
+								type="text"
+								id="lastname"
+								name="lastname"
+								value={ getStringValue(user.Lastname) }
 								class="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background"
 							/>
 						</div>
@@ -90,7 +119,7 @@ templ ProfilePage() {
 								type="email"
 								id="email"
 								name="email"
-								value="john.doe@example.com"
+								value={ getEmailValue(user) }
 								class="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background"
 							/>
 						</div>
@@ -100,7 +129,7 @@ templ ProfilePage() {
 								type="text"
 								id="location"
 								name="location"
-								value="New York City"
+								value={ getLocationValue(user) }
 								class="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background"
 							/>
 						</div>
@@ -110,7 +139,7 @@ templ ProfilePage() {
 								type="tel"
 								id="phone"
 								name="phone"
-								value="+1 (555) 123-4567"
+								value={ getStringValue(user.PhoneNumber) }
 								class="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background"
 							/>
 						</div>
@@ -123,7 +152,7 @@ templ ProfilePage() {
 								rows="4"
 								placeholder="Tell us about yourself..."
 								class="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background resize-none"
-							>Travel enthusiast who loves discovering hidden gems around the world. Always planning the next adventure!</textarea>
+							>{ getBioValue(user) }</textarea>
 						</div>
 						<!-- Travel Preferences -->
 						<div class="md:col-span-2">
@@ -375,4 +404,44 @@ templ AchievementBadge(title string, description string, emoji string, earned bo
 			</div>
 		}
 	</div>
+}
+
+func getStringValue(val *string) string {
+	if val != nil {
+		return *val
+	}
+	return ""
+}
+
+func getEmailValue(user *models.UserProfile) string {
+	if user != nil {
+		return user.Email
+	}
+	return ""
+}
+
+func getLocationValue(user *models.UserProfile) string {
+	if user == nil {
+		return ""
+	}
+	if user.Location != nil {
+		return *user.Location
+	}
+	if user.City != nil {
+		return *user.City
+	}
+	return ""
+}
+
+func getBioValue(user *models.UserProfile) string {
+	if user == nil {
+		return ""
+	}
+	if user.Bio != nil {
+		return *user.Bio
+	}
+	if user.AboutYou != nil {
+		return *user.AboutYou
+	}
+	return ""
 }

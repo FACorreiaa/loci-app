@@ -104,7 +104,7 @@ func (l *ServiceImpl) parseCompleteResponseFromParts(responses map[string]*strin
 }
 
 // parseRestaurantsFromResponse parses restaurant data from SSE response
-func parseRestaurantsFromResponse(responseText string, logger *slog.Logger) ([]models.RestaurantDetailedInfo, error) {
+func parseRestaurantsFromResponse(responseText string, _ *slog.Logger) ([]models.RestaurantDetailedInfo, error) {
 	if responseText == "" {
 		return nil, fmt.Errorf("empty restaurant response text")
 	}
@@ -129,7 +129,7 @@ func parseRestaurantsFromResponse(responseText string, logger *slog.Logger) ([]m
 }
 
 // parseActivitiesFromResponse parses activity data from SSE response
-func parseActivitiesFromResponse(responseText string, logger *slog.Logger) ([]models.POIDetailedInfo, error) {
+func parseActivitiesFromResponse(responseText string, _ *slog.Logger) ([]models.POIDetailedInfo, error) {
 	if responseText == "" {
 		return nil, fmt.Errorf("empty activities response text")
 	}
@@ -154,7 +154,7 @@ func parseActivitiesFromResponse(responseText string, logger *slog.Logger) ([]mo
 }
 
 // parseHotelsFromResponse parses hotel data from SSE response
-func parseHotelsFromResponse(responseText string, logger *slog.Logger) ([]models.HotelDetailedInfo, error) {
+func parseHotelsFromResponse(responseText string, _ *slog.Logger) ([]models.HotelDetailedInfo, error) {
 	if responseText == "" {
 		return nil, fmt.Errorf("empty hotels response text")
 	}

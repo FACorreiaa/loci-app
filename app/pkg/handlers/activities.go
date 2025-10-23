@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -24,28 +25,30 @@ import (
 type ActivitiesHandlers struct {
 	chatRepo         llmchat.Repository
 	itineraryService *services.ItineraryService
+	logger           *slog.Logger
 }
 
-func NewActivitiesHandlers(chatRepo llmchat.Repository) *ActivitiesHandlers {
+func NewActivitiesHandlers(chatRepo llmchat.Repository, logger *slog.Logger) *ActivitiesHandlers {
 	return &ActivitiesHandlers{
 		chatRepo:         chatRepo,
 		itineraryService: services.NewItineraryService(),
+		logger:           logger,
 	}
 }
 
 // HandleActivitiesPage handles the main activities page logic
 func (h *ActivitiesHandlers) HandleActivitiesPage(c *gin.Context) templ.Component {
 	query := c.Query("q")
-	sessionIdParam := c.Query("sessionId")
+	sessionIDParam := c.Query("sessionId")
 
 	logger.Log.Info("Activities page accessed",
 		zap.String("ip", c.ClientIP()),
 		zap.String("query", query),
-		zap.String("sessionId", sessionIdParam))
+		zap.String("sessionId", sessionIDParam))
 
 	// Handle session-based loading
-	if sessionIdParam != "" {
-		return h.loadActivitiesBySession(sessionIdParam)
+	if sessionIDParam != "" {
+		return h.loadActivitiesBySession(sessionIDParam)
 	}
 
 	// Handle query-based loading
@@ -58,11 +61,11 @@ func (h *ActivitiesHandlers) HandleActivitiesPage(c *gin.Context) templ.Componen
 }
 
 // loadActivitiesBySession loads activities using IDENTICAL logic as itinerary
-func (h *ActivitiesHandlers) loadActivitiesBySession(sessionIdParam string) templ.Component {
-	logger.Log.Info("Attempting to load activities from cache", zap.String("sessionID", sessionIdParam))
+func (h *ActivitiesHandlers) loadActivitiesBySession(sessionIDParam string) templ.Component {
+	logger.Log.Info("Attempting to load activities from cache", zap.String("sessionID", sessionIDParam))
 
 	// Try complete cache first (IDENTICAL to itinerary logic)
-	if completeData, found := middleware.CompleteItineraryCache.Get(sessionIdParam); found {
+	if completeData, found := middleware.CompleteItineraryCache.Get(sessionIDParam); found {
 
 		logger.Log.Info("Complete activities found in cache. Rendering results.",
 			zap.String("city", completeData.GeneralCityData.City),
@@ -78,7 +81,7 @@ func (h *ActivitiesHandlers) loadActivitiesBySession(sessionIdParam string) temp
 	}
 
 	//// Try legacy cache (IDENTICAL to itinerary logic)
-	//if itineraryData, found := middleware.ItineraryCache.Get(sessionIdParam); found {
+	//if itineraryData, found := middleware.ItineraryCache.Get(sessionIDParam); found {
 	//	logger.Log.Info("Legacy activities found in cache. Rendering results.",
 	//		zap.Int("personalizedPOIs", len(itineraryData.PointsOfInterest)))
 	//
@@ -91,17 +94,17 @@ func (h *ActivitiesHandlers) loadActivitiesBySession(sessionIdParam string) temp
 	//}
 
 	// Load from database (IDENTICAL to itinerary logic)
-	return h.loadActivitiesFromDatabase(sessionIdParam)
+	return h.loadActivitiesFromDatabase(sessionIDParam)
 }
 
 // loadActivitiesFromDatabase loads activities from database when not found in cache
-func (h *ActivitiesHandlers) loadActivitiesFromDatabase(sessionIdParam string) templ.Component {
-	logger.Log.Info("Activities not found in cache, attempting to load from database", zap.String("sessionID", sessionIdParam))
+func (h *ActivitiesHandlers) loadActivitiesFromDatabase(sessionIDParam string) templ.Component {
+	logger.Log.Info("Activities not found in cache, attempting to load from database", zap.String("sessionID", sessionIDParam))
 
 	// Parse sessionID as UUID
-	sessionID, err := uuid.Parse(sessionIdParam)
+	sessionID, err := uuid.Parse(sessionIDParam)
 	if err != nil {
-		logger.Log.Warn("Invalid session ID format", zap.String("sessionID", sessionIdParam), zap.Error(err))
+		logger.Log.Warn("Invalid session ID format", zap.String("sessionID", sessionIDParam), zap.Error(err))
 		return results.PageNotFound("Invalid session ID")
 	}
 
@@ -110,7 +113,7 @@ func (h *ActivitiesHandlers) loadActivitiesFromDatabase(sessionIdParam string) t
 	interaction, err := h.chatRepo.GetLatestInteractionBySessionID(ctx, sessionID)
 	if err != nil || interaction == nil {
 		logger.Log.Warn("No interaction found in database for session",
-			zap.String("sessionID", sessionIdParam),
+			zap.String("sessionID", sessionIDParam),
 			zap.Error(err))
 		// Return empty results instead of PageNotFound - data might still be processing
 		emptyCityData := models.GeneralCityData{}
@@ -122,7 +125,7 @@ func (h *ActivitiesHandlers) loadActivitiesFromDatabase(sessionIdParam string) t
 	completeData, err := h.itineraryService.ParseCompleteItineraryResponse(interaction.ResponseText, slog.Default())
 	if err != nil || completeData == nil {
 		logger.Log.Warn("Could not parse complete data from stored response",
-			zap.String("sessionID", sessionIdParam),
+			zap.String("sessionID", sessionIDParam),
 			zap.Error(err))
 		// Return empty results instead of PageNotFound for parsing errors
 		emptyCityData := models.GeneralCityData{}
@@ -131,7 +134,7 @@ func (h *ActivitiesHandlers) loadActivitiesFromDatabase(sessionIdParam string) t
 	}
 
 	logger.Log.Info("Successfully loaded complete data from database for activities",
-		zap.String("sessionID", sessionIdParam),
+		zap.String("sessionID", sessionIDParam),
 		zap.String("city", completeData.GeneralCityData.City),
 		zap.Int("totalPOIs", len(completeData.PointsOfInterest)))
 
@@ -173,55 +176,67 @@ func filterPOIsForActivities(allPOIs []models.POIDetailedInfo) []models.POIDetai
 // HandleActivitiesPageSSE handles the activities page with SSE support
 func (h *ActivitiesHandlers) HandleActivitiesPageSSE(c *gin.Context) templ.Component {
 	query := c.Query("q")
-	sessionIdParam := c.Query("sessionId")
+	sessionIDParam := c.Query("sessionId")
 
 	logger.Log.Info("Activities SSE page accessed",
 		zap.String("ip", c.ClientIP()),
 		zap.String("query", query),
-		zap.String("sessionId", sessionIdParam))
+		zap.String("sessionId", sessionIDParam))
 
-	if sessionIdParam == "" {
+	if sessionIDParam == "" {
 		logger.Log.Info("Direct navigation to /activities SSE. Showing default page.")
 		return activities.ActivitiesPage()
 	}
 
 	// Load activities data for session with SSE support
-	return h.loadActivitiesBySessionSSE(sessionIdParam)
+	return h.loadActivitiesBySessionSSE(sessionIDParam)
 }
 
 // loadActivitiesBySessionSSE loads activities with SSE support
-func (h *ActivitiesHandlers) loadActivitiesBySessionSSE(sessionIdParam string) templ.Component {
-	logger.Log.Info("Attempting to load activities from cache with SSE", zap.String("sessionID", sessionIdParam))
+func (h *ActivitiesHandlers) loadActivitiesBySessionSSE(sessionIDParam string) templ.Component {
+	logger.Log.Info("Attempting to load activities from cache with SSE", zap.String("sessionID", sessionIDParam))
 
 	// Try complete cache first
-	if completeData, found := middleware.CompleteItineraryCache.Get(sessionIdParam); found {
-		logger.Log.Info("Complete activities found in cache. Rendering SSE results with data.",
-			zap.String("city", completeData.GeneralCityData.City),
-			zap.Int("totalPOIs", len(completeData.PointsOfInterest)))
-
+	if completeData, found := middleware.CompleteItineraryCache.Get(sessionIDParam); found {
 		// Filter POIs for activities
 		activityPOIs := filterPOIsForActivities(completeData.PointsOfInterest)
-		
+
+		// Print JSON data for debugging what activities will be displayed
+		jsonData, err := json.MarshalIndent(map[string]interface{}{
+			"city_data":     completeData.GeneralCityData,
+			"activity_pois": activityPOIs,
+		}, "", "  ")
+		if err != nil {
+			logger.Log.Error("Failed to marshal activities data to JSON", zap.Error(err))
+		} else {
+			logger.Log.Info("Activities data being displayed in view", zap.String("json", string(jsonData)))
+		}
+
+		logger.Log.Info("Complete activities found in cache. Rendering SSE results with data.",
+			zap.String("city", completeData.GeneralCityData.City),
+			zap.Int("totalPOIs", len(completeData.PointsOfInterest)),
+			zap.Int("activityPOIs", len(activityPOIs)))
+
 		return results.ActivitiesResultsSSE(
-			sessionIdParam,
+			sessionIDParam,
 			completeData.GeneralCityData,
 			activityPOIs,
 			true) // hasData = true
 	}
 
 	// Try legacy cache
-	if itineraryData, found := middleware.ItineraryCache.Get(sessionIdParam); found {
+	if itineraryData, found := middleware.ItineraryCache.Get(sessionIDParam); found {
 		logger.Log.Info("Legacy activities found in cache. Rendering SSE results with data.",
 			zap.Int("personalizedPOIs", len(itineraryData.PointsOfInterest)))
 
 		// Create empty city data for legacy cached data
 		emptyCityData := models.GeneralCityData{}
-		
+
 		// Filter activities from legacy data
 		activityPOIs := filterPOIsForActivities(itineraryData.PointsOfInterest)
-		
+
 		return results.ActivitiesResultsSSE(
-			sessionIdParam,
+			sessionIDParam,
 			emptyCityData,
 			activityPOIs,
 			true) // hasData = true
@@ -229,13 +244,13 @@ func (h *ActivitiesHandlers) loadActivitiesBySessionSSE(sessionIdParam string) t
 
 	// No cached data found - show loading interface with SSE
 	logger.Log.Info("No activities found in cache. Rendering SSE loading interface.",
-		zap.String("sessionID", sessionIdParam))
+		zap.String("sessionID", sessionIDParam))
 
 	emptyCityData := models.GeneralCityData{}
 	emptyActivities := []models.POIDetailedInfo{}
 
 	return results.ActivitiesResultsSSE(
-		sessionIdParam,
+		sessionIDParam,
 		emptyCityData,
 		emptyActivities,
 		false) // hasData = false, will show loading and connect to SSE
@@ -249,7 +264,7 @@ func (h *ActivitiesHandlers) HandleActivitiesSSE(c *gin.Context) {
 		return
 	}
 
-	logger.Log.Info("SSE connection established for activities", 
+	logger.Log.Info("SSE connection established for activities",
 		zap.String("sessionId", sessionID))
 
 	// Set SSE headers
@@ -271,20 +286,21 @@ func (h *ActivitiesHandlers) HandleActivitiesSSE(c *gin.Context) {
 		select {
 		case event := <-updateChan:
 			if event.Type == "complete" {
-				logger.Log.Info("Sending activities completion event", 
+				logger.Log.Info("Sending activities completion event",
 					zap.String("sessionId", sessionID))
-				
+
 				// Send final completion event
 				c.SSEvent("activities-complete", map[string]interface{}{
 					"sessionId": sessionID,
-					"message": "Activity search complete",
+					"message":   "Activity search complete",
 				})
 				flusher.Flush()
 				return
 			}
 
 			// Send HTML fragment updates based on event type
-			if event.Type == "header-update" {
+			switch event.Type {
+			case "header-update":
 				if data, ok := event.Data.(map[string]interface{}); ok {
 					if completeData, exists := data["completeData"]; exists {
 						if complete, valid := completeData.(models.AiCityResponse); valid {
@@ -294,7 +310,7 @@ func (h *ActivitiesHandlers) HandleActivitiesSSE(c *gin.Context) {
 						}
 					}
 				}
-			} else if event.Type == "content-update" {
+			case "content-update":
 				if data, ok := event.Data.(map[string]interface{}); ok {
 					if completeData, exists := data["completeData"]; exists {
 						if complete, valid := completeData.(models.AiCityResponse); valid {
@@ -304,14 +320,14 @@ func (h *ActivitiesHandlers) HandleActivitiesSSE(c *gin.Context) {
 						}
 					}
 				}
-			} else {
+			default:
 				// Send progress update
 				c.SSEvent(event.Type, event.Data)
 			}
 			flusher.Flush()
 
 		case <-c.Request.Context().Done():
-			logger.Log.Info("SSE connection closed", 
+			logger.Log.Info("SSE connection closed",
 				zap.String("sessionId", sessionID))
 			return
 		}
@@ -324,25 +340,25 @@ func (h *ActivitiesHandlers) monitorActivityUpdates(sessionID string, updateChan
 	if completeData, found := middleware.CompleteItineraryCache.Get(sessionID); found {
 		logger.Log.Info("Complete data found in cache, sending activities completion immediately",
 			zap.String("sessionId", sessionID))
-		
+
 		// Send header update
 		updateChan <- models.ItinerarySSEEvent{
 			Type: "header-update",
 			Data: map[string]interface{}{
-				"sessionId": sessionID,
+				"sessionId":    sessionID,
 				"completeData": completeData,
 			},
 		}
-		
+
 		// Send content update
 		updateChan <- models.ItinerarySSEEvent{
 			Type: "content-update",
 			Data: map[string]interface{}{
-				"sessionId": sessionID,
+				"sessionId":    sessionID,
 				"completeData": completeData,
 			},
 		}
-		
+
 		// Send completion
 		updateChan <- models.ItinerarySSEEvent{
 			Type: "complete",
@@ -358,11 +374,11 @@ func (h *ActivitiesHandlers) monitorActivityUpdates(sessionID string, updateChan
 	if itineraryData, found := middleware.ItineraryCache.Get(sessionID); found {
 		logger.Log.Info("Legacy data found in cache, sending activities completion immediately",
 			zap.String("sessionId", sessionID))
-		
+
 		updateChan <- models.ItinerarySSEEvent{
-			Type: "complete", 
+			Type: "complete",
 			Data: map[string]interface{}{
-				"sessionId": sessionID,
+				"sessionId":        sessionID,
 				"personalizedPOIs": len(itineraryData.PointsOfInterest),
 			},
 		}
@@ -374,7 +390,7 @@ func (h *ActivitiesHandlers) monitorActivityUpdates(sessionID string, updateChan
 	defer ticker.Stop()
 
 	timeout := time.After(5 * time.Minute) // 5 minute timeout
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -382,25 +398,25 @@ func (h *ActivitiesHandlers) monitorActivityUpdates(sessionID string, updateChan
 			if completeData, found := middleware.CompleteItineraryCache.Get(sessionID); found {
 				logger.Log.Info("Complete data appeared in cache for activities",
 					zap.String("sessionId", sessionID))
-				
+
 				// Send header update
 				updateChan <- models.ItinerarySSEEvent{
 					Type: "header-update",
 					Data: map[string]interface{}{
-						"sessionId": sessionID,
+						"sessionId":    sessionID,
 						"completeData": completeData,
 					},
 				}
-				
+
 				// Send content update
 				updateChan <- models.ItinerarySSEEvent{
 					Type: "content-update",
 					Data: map[string]interface{}{
-						"sessionId": sessionID,
+						"sessionId":    sessionID,
 						"completeData": completeData,
 					},
 				}
-				
+
 				// Send completion
 				updateChan <- models.ItinerarySSEEvent{
 					Type: "complete",
@@ -415,11 +431,11 @@ func (h *ActivitiesHandlers) monitorActivityUpdates(sessionID string, updateChan
 			if itineraryData, found := middleware.ItineraryCache.Get(sessionID); found {
 				logger.Log.Info("Legacy data appeared in cache for activities",
 					zap.String("sessionId", sessionID))
-				
+
 				updateChan <- models.ItinerarySSEEvent{
 					Type: "complete",
 					Data: map[string]interface{}{
-						"sessionId": sessionID,
+						"sessionId":        sessionID,
 						"personalizedPOIs": len(itineraryData.PointsOfInterest),
 					},
 				}
@@ -431,7 +447,7 @@ func (h *ActivitiesHandlers) monitorActivityUpdates(sessionID string, updateChan
 				Type: "progress",
 				Data: map[string]interface{}{
 					"sessionId": sessionID,
-					"message": "Finding activities...",
+					"message":   "Finding activities...",
 					"timestamp": time.Now().Unix(),
 				},
 			}
@@ -442,7 +458,7 @@ func (h *ActivitiesHandlers) monitorActivityUpdates(sessionID string, updateChan
 				Type: "error",
 				Data: map[string]interface{}{
 					"sessionId": sessionID,
-					"message": "Request timed out. Please try again.",
+					"message":   "Request timed out. Please try again.",
 				},
 			}
 			return
@@ -454,14 +470,20 @@ func (h *ActivitiesHandlers) monitorActivityUpdates(sessionID string, updateChan
 func (h *ActivitiesHandlers) renderActivitiesHeaderHTML(cityData models.GeneralCityData, activities []models.POIDetailedInfo) string {
 	buf := &strings.Builder{}
 	component := results.ActivitiesHeaderComplete(cityData, activities)
-	component.Render(context.Background(), buf)
+	err := component.Render(context.Background(), buf)
+	if err != nil {
+		h.logger.Error("failed to render activities header", slog.Any("error", err))
+	}
 	return buf.String()
 }
 
-// renderActivitiesContentHTML renders content HTML fragment for SSE  
+// renderActivitiesContentHTML renders content HTML fragment for SSE
 func (h *ActivitiesHandlers) renderActivitiesContentHTML(cityData models.GeneralCityData, activities []models.POIDetailedInfo) string {
 	buf := &strings.Builder{}
 	component := results.ActivitiesContentComplete(cityData, activities)
-	component.Render(context.Background(), buf)
+	err := component.Render(context.Background(), buf)
+	if err != nil {
+		h.logger.Error("failed to render activities content", slog.Any("error", err))
+	}
 	return buf.String()
 }

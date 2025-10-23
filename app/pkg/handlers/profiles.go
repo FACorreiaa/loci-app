@@ -28,51 +28,51 @@ func NewProfilesHandler(profileService profiles.Service) *ProfilesHandler {
 // handleProfileError provides consistent error handling for profile operations
 func (h *ProfilesHandler) handleProfileError(c *gin.Context, err error, operation string) {
 	logger.Log.Error("Profile operation failed", zap.String("operation", operation), zap.Error(err))
-	
+
 	switch {
 	case errors.Is(err, models.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Profile not found", 
+			"error":   "Profile not found",
 			"details": "The requested profile does not exist or you don't have permission to access it",
 		})
 	case errors.Is(err, models.ErrConflict):
 		c.JSON(http.StatusConflict, gin.H{
-			"error": "Profile name conflict", 
+			"error":   "Profile name conflict",
 			"details": "A profile with this name already exists for your account",
 		})
 	case errors.Is(err, models.ErrBadRequest):
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid profile data", 
+			"error":   "Invalid profile data",
 			"details": err.Error(),
 		})
 	case errors.Is(err, models.ErrProfileNameEmpty):
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Profile name required", 
+			"error":   "Profile name required",
 			"details": "Profile name cannot be empty",
 		})
 	case errors.Is(err, models.ErrProfileNameTooLong):
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Profile name too long", 
+			"error":   "Profile name too long",
 			"details": "Profile name cannot exceed 100 characters",
 		})
 	case errors.Is(err, models.ErrCannotDeleteDefault):
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Cannot delete default profile", 
+			"error":   "Cannot delete default profile",
 			"details": "You must have at least one profile, and cannot delete your default profile",
 		})
 	case errors.Is(err, models.ErrForbidden):
 		c.JSON(http.StatusForbidden, gin.H{
-			"error": "Access denied", 
+			"error":   "Access denied",
 			"details": "You don't have permission to perform this operation on this profile",
 		})
 	case errors.Is(err, models.ErrValidation):
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Validation failed", 
+			"error":   "Validation failed",
 			"details": err.Error(),
 		})
 	default:
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": fmt.Sprintf("Failed to %s profile", operation), 
+			"error":   fmt.Sprintf("Failed to %s profile", operation),
 			"details": "An internal error occurred. Please try again later.",
 		})
 	}
@@ -92,14 +92,14 @@ func (h *ProfilesHandler) GetProfiles(c *gin.Context) {
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
-		
+
 		// Check if this is an HTMX request (for select dropdown)
 		if c.GetHeader("HX-Request") == "true" {
 			c.Header("Content-Type", "text/html")
 			c.String(http.StatusBadRequest, `<option value="">Error: Invalid user session</option>`)
 			return
 		}
-		
+
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
@@ -107,14 +107,14 @@ func (h *ProfilesHandler) GetProfiles(c *gin.Context) {
 	profiles, err := h.profileService.GetSearchProfiles(c.Request.Context(), userID)
 	if err != nil {
 		logger.Log.Error("Failed to get profiles", zap.String("userID", userIDStr), zap.Error(err))
-		
+
 		// Check if this is an HTMX request (for select dropdown)
 		if c.GetHeader("HX-Request") == "true" {
 			c.Header("Content-Type", "text/html")
 			c.String(http.StatusInternalServerError, `<option value="">Error loading profiles</option>`)
 			return
 		}
-		
+
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve profiles"})
 		return
 	}
@@ -122,12 +122,12 @@ func (h *ProfilesHandler) GetProfiles(c *gin.Context) {
 	// Check if this is an HTMX request (for select dropdown)
 	if c.GetHeader("HX-Request") == "true" {
 		c.Header("Content-Type", "text/html")
-		
+
 		if len(profiles) == 0 {
 			c.String(http.StatusOK, `<option value="">No profiles found - create one in Settings</option>`)
 			return
 		}
-		
+
 		// Build HTML options
 		html := `<option value="">Auto-select profile</option>`
 		for _, profile := range profiles {
@@ -139,10 +139,10 @@ func (h *ProfilesHandler) GetProfiles(c *gin.Context) {
 			if profile.IsDefault {
 				suffix = " (Default)"
 			}
-			html += fmt.Sprintf(`<option value="%s"%s>%s%s</option>`, 
+			html += fmt.Sprintf(`<option value="%s"%s>%s%s</option>`,
 				profile.ID, selected, profile.ProfileName, suffix)
 		}
-		
+
 		c.String(http.StatusOK, html)
 		return
 	}

@@ -219,15 +219,15 @@ func (h *ResultsHandlers) HandleItinerarySearch(c *gin.Context) {
 	// For legacy handlers, create empty city data and general POIs
 	emptyCityData := models.GeneralCityData{}
 	emptyGeneralPOIs := []models.POIDetailedInfo{}
-	
+
 	c.HTML(http.StatusOK, "", results.ItineraryResults(
-		emptyCityData,   // cityData
+		emptyCityData,    // cityData
 		emptyGeneralPOIs, // generalPOIs
-		itinerary,       // itinerary
-		false,          // compact
-		true,           // showToggle
-		5,              // initialLimit
-		favorites,      // favorites
+		itinerary,        // itinerary
+		false,            // compact
+		true,             // showToggle
+		5,                // initialLimit
+		favorites,        // favorites
 	))
 }
 
@@ -332,27 +332,17 @@ func (h *ResultsHandlers) HandleItineraryStreamSearch(c *gin.Context) {
 	)
 
 	sessionID := c.Query("session_id")
-	cityName := c.Query("city")
-	originalQuery := c.Query("query")
 
 	if sessionID == "" {
 		c.String(http.StatusBadRequest, `<div class="text-red-500">Session ID is required for streaming.</div>`)
 		return
 	}
 
-	if cityName == "" {
-		cityName = "Unknown City"
-	}
-
-	if originalQuery == "" {
-		originalQuery = "Itinerary planning"
-	}
-
 	// Render the SSE itinerary results page with empty data initially
 	emptyCityData := models.GeneralCityData{}
 	emptyGeneralPOIs := []models.POIDetailedInfo{}
 	emptyItinerary := models.AIItineraryResponse{}
-	
+
 	c.HTML(http.StatusOK, "", results.ItineraryResults(emptyCityData, emptyGeneralPOIs, emptyItinerary, true, false, 5, []string{}))
 }
 
@@ -373,7 +363,7 @@ type LLMStreamResponse struct {
 	Itinerary   *models.AIItineraryResponse     `json:"itinerary"`
 }
 
-func (h *ResultsHandlers) callLLMForRestaurants(endpoint string, payload map[string]interface{}) ([]models.RestaurantDetailedInfo, error) {
+func (h *ResultsHandlers) callLLMForRestaurants(_ string, _ map[string]interface{}) ([]models.RestaurantDetailedInfo, error) {
 	// Use mock data directly - no external calls
 	logger.Log.Info("Using mock restaurant data (no external LLM calls)")
 	return h.getMockRestaurants(), nil
@@ -412,7 +402,7 @@ func (h *ResultsHandlers) getMockRestaurants() []models.RestaurantDetailedInfo {
 	}
 }
 
-func (h *ResultsHandlers) callLLMForActivities(endpoint string, payload map[string]interface{}) ([]models.POIDetailedInfo, error) {
+func (h *ResultsHandlers) callLLMForActivities(_ string, _ map[string]interface{}) ([]models.POIDetailedInfo, error) {
 	// Use mock data directly - no external calls
 	logger.Log.Info("Using mock activities data (no external LLM calls)")
 	return h.getMockActivities(), nil
@@ -444,7 +434,7 @@ func (h *ResultsHandlers) getMockActivities() []models.POIDetailedInfo {
 	}
 }
 
-func (h *ResultsHandlers) callLLMForHotels(endpoint string, payload map[string]interface{}) ([]models.HotelDetailedInfo, error) {
+func (h *ResultsHandlers) callLLMForHotels(_ string, _ map[string]interface{}) ([]models.HotelDetailedInfo, error) {
 	// Use mock data directly - no external calls
 	logger.Log.Info("Using mock hotels data (no external LLM calls)")
 	return h.getMockHotels(), nil
@@ -476,7 +466,7 @@ func (h *ResultsHandlers) getMockHotels() []models.HotelDetailedInfo {
 	}
 }
 
-func (h *ResultsHandlers) callLLMForItinerary(endpoint string, payload map[string]interface{}) (models.AIItineraryResponse, error) {
+func (h *ResultsHandlers) callLLMForItinerary(_ string, _ map[string]interface{}) (models.AIItineraryResponse, error) {
 	// Use mock data directly - no external calls
 	logger.Log.Info("Using mock itinerary data (no external LLM calls)")
 	return h.getMockItinerary(), nil

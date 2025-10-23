@@ -1,0 +1,304 @@
+package components
+
+// LocationRequestBanner shows when the app wants to request location
+templ LocationRequestBanner(showLocation bool) {
+	<div 
+		x-data="locationManager()"
+		x-show="!locationPermissionChecked && showLocationRequest"
+		x-cloak
+		class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 shadow-lg"
+	>
+		<div class="max-w-4xl mx-auto flex items-center justify-between">
+			<div class="flex items-center gap-4">
+				<div class="flex-shrink-0">
+					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+					</svg>
+				</div>
+				<div>
+					<h3 class="font-semibold text-sm">Get personalized recommendations near you</h3>
+					<p class="text-white/80 text-xs">Allow location access for better local suggestions</p>
+				</div>
+			</div>
+			<div class="flex items-center gap-3">
+				<button 
+					@click="requestLocation()"
+					:disabled="isRequestingLocation"
+					class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+				>
+					<span x-show="!isRequestingLocation">Allow Location</span>
+					<span x-show="isRequestingLocation" class="flex items-center gap-2">
+						<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+						Getting location...
+					</span>
+				</button>
+				<button 
+					@click="dismissLocationRequest()"
+					class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors"
+				>
+					Not now
+				</button>
+			</div>
+		</div>
+	</div>
+}
+
+// FloatingLocationButton for bottom-right corner
+templ FloatingLocationButton() {
+	<div 
+		x-data="locationManager()"
+		x-show="!userLocation && locationPermissionChecked && !locationDenied"
+		x-cloak
+		class="fixed bottom-6 left-6 z-40"
+	>
+		<button 
+			@click="requestLocation()"
+			:disabled="isRequestingLocation"
+			class="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
+			title="Get location for personalized recommendations"
+		>
+			<svg x-show="!isRequestingLocation" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+			</svg>
+			<div x-show="isRequestingLocation" class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+		</button>
+	</div>
+}
+
+// LocationStatusIndicator to show current location status
+templ LocationStatusIndicator() {
+	<div x-data="locationManager()" class="flex items-center gap-2">
+		<!-- Location enabled -->
+		<div x-show="userLocation" class="flex items-center gap-2 text-green-600 text-sm">
+			<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+			</svg>
+			<span>Location enabled</span>
+		</div>
+		
+		<!-- Location disabled -->
+		<div x-show="locationDenied" class="flex items-center gap-2 text-gray-500 text-sm">
+			<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"></path>
+			</svg>
+			<span>Location disabled</span>
+		</div>
+		
+		<!-- Location requesting -->
+		<div x-show="isRequestingLocation" class="flex items-center gap-2 text-blue-600 text-sm">
+			<div class="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+			<span>Getting location...</span>
+		</div>
+	</div>
+}
+
+// LocationScript provides JavaScript functionality for location management
+script LocationScript() {
+    function locationManager() {
+        return {
+            userLocation: null,
+            locationPermissionChecked: false,
+            locationDenied: false,
+            isRequestingLocation: false,
+            showLocationRequest: true,
+            
+            init() {
+                // Check if we already have location permission
+                this.checkExistingPermission();
+            },
+            
+            async checkExistingPermission() {
+                if ('geolocation' in navigator && 'permissions' in navigator) {
+                    try {
+                        const permission = await navigator.permissions.query({name: 'geolocation'});
+                        this.locationPermissionChecked = true;
+                        
+                        if (permission.state === 'granted') {
+                            this.getCurrentLocation();
+                        } else if (permission.state === 'denied') {
+                            this.locationDenied = true;
+                            this.showLocationRequest = false;
+                        }
+                        
+                        // Listen for permission changes
+                        permission.onchange = () => {
+                            if (permission.state === 'granted') {
+                                this.locationDenied = false;
+                                this.getCurrentLocation();
+                            } else if (permission.state === 'denied') {
+                                this.locationDenied = true;
+                                this.userLocation = null;
+                            }
+                        };
+                    } catch (error) {
+                        console.log('Permission API not supported:', error);
+                        this.locationPermissionChecked = true;
+                    }
+                } else {
+                    this.locationPermissionChecked = true;
+                }
+            },
+            
+            async requestLocation() {
+                if (!('geolocation' in navigator)) {
+                    this.showLocationError('Geolocation is not supported by your browser');
+                    return;
+                }
+                
+                this.isRequestingLocation = true;
+                
+                const options = {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 300000 // 5 minutes
+                };
+                
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        this.onLocationSuccess(position);
+                    },
+                    (error) => {
+                        this.onLocationError(error);
+                    },
+                    options
+                );
+            },
+            
+            getCurrentLocation() {
+                if (!('geolocation' in navigator)) return;
+                
+                const options = {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 300000 // 5 minutes
+                };
+                
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        this.onLocationSuccess(position);
+                    },
+                    (error) => {
+                        console.log('Location error:', error);
+                    },
+                    options
+                );
+            },
+            
+            onLocationSuccess(position) {
+                this.isRequestingLocation = false;
+                this.locationDenied = false;
+                this.showLocationRequest = false;
+                
+                const location = {
+                    user_lat: position.coords.latitude,
+                    user_lon: position.coords.longitude,
+                    search_radius_km: 5.0, // Default 5km radius
+                    accuracy: position.coords.accuracy,
+                    timestamp: position.timestamp
+                };
+                
+                this.userLocation = location;
+                
+                // Store in localStorage for persistence
+                localStorage.setItem('userLocation', JSON.stringify(location));
+                
+                // Dispatch custom event that other parts of the app can listen to
+                window.dispatchEvent(new CustomEvent('locationUpdated', { 
+                    detail: location 
+                }));
+                
+                console.log('Location obtained:', location);
+            },
+            
+            onLocationError(error) {
+                this.isRequestingLocation = false;
+                
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        this.locationDenied = true;
+                        this.showLocationRequest = false;
+                        this.showLocationError("Location access denied. Enable location in your browser settings for better recommendations.");
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        this.showLocationError("Location information unavailable. Please try again.");
+                        break;
+                    case error.TIMEOUT:
+                        this.showLocationError("Location request timed out. Please try again.");
+                        break;
+                    default:
+                        this.showLocationError("An error occurred while getting your location.");
+                        break;
+                }
+            },
+            
+            dismissLocationRequest() {
+                this.showLocationRequest = false;
+                // Remember the dismissal for this session
+                sessionStorage.setItem('locationRequestDismissed', 'true');
+            },
+            
+            showLocationError(message) {
+                // Create a temporary notification
+                const notification = document.createElement('div');
+                notification.className = 'fixed top-4 right-4 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 max-w-sm';
+                notification.innerHTML = `
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div class="text-sm">${message}</div>
+                    </div>
+                `;
+                
+                document.body.appendChild(notification);
+                
+                // Auto remove after 5 seconds
+                setTimeout(() => {
+                    notification.remove();
+                }, 5000);
+            },
+            
+            // Utility method to get current location for API calls
+            getUserLocationForAPI() {
+                if (this.userLocation) {
+                    return {
+                        user_lat: this.userLocation.user_lat,
+                        user_lon: this.userLocation.user_lon,
+                        search_radius_km: this.userLocation.search_radius_km || 5.0
+                    };
+                }
+                return null;
+            }
+        };
+    }
+    
+    // Make location manager globally available
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('locationManager', locationManager);
+        
+        // Store global reference for other scripts to use
+        window.locationManager = locationManager;
+    });
+    
+    // Restore location from localStorage on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const storedLocation = localStorage.getItem('userLocation');
+        if (storedLocation) {
+            try {
+                const location = JSON.parse(storedLocation);
+                // Check if location is not too old (1 hour)
+                if (Date.now() - location.timestamp < 3600000) {
+                    window.dispatchEvent(new CustomEvent('locationUpdated', { 
+                        detail: location 
+                    }));
+                }
+            } catch (error) {
+                console.log('Error parsing stored location:', error);
+                localStorage.removeItem('userLocation');
+            }
+        }
+    });
+}

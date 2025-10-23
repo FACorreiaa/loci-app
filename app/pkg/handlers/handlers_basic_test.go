@@ -22,7 +22,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic("Failed to initialize logger: " + err.Error())
 	}
-	
+
 	exitCode := m.Run()
 	os.Exit(exitCode)
 }
@@ -33,13 +33,15 @@ func TestHandlers_BasicInstantiation(t *testing.T) {
 	t.Run("should handle nil repository gracefully in page load", func(t *testing.T) {
 		// This tests that handlers don't panic on basic operations
 		// even with nil repository (for default page rendering)
-		
+
 		// Test Activities Handler
 		activitiesHandler := &ActivitiesHandlers{chatRepo: nil, itineraryService: nil}
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
-		c.Request, _ = http.NewRequest("GET", "/activities", nil)
-		
+		var err error
+		c.Request, err = http.NewRequest("GET", "/activities", nil)
+		assert.NoError(t, err)
+
 		// Should not panic and return some component
 		component := activitiesHandler.HandleActivitiesPage(c)
 		assert.NotNil(t, component, "Activities handler should return a component")
@@ -48,8 +50,9 @@ func TestHandlers_BasicInstantiation(t *testing.T) {
 		hotelsHandler := &HotelsHandlers{chatRepo: nil, itineraryService: nil}
 		w = httptest.NewRecorder()
 		c, _ = gin.CreateTestContext(w)
-		c.Request, _ = http.NewRequest("GET", "/hotels", nil)
-		
+		c.Request, err = http.NewRequest("GET", "/hotels", nil)
+		assert.NoError(t, err)
+
 		component = hotelsHandler.HandleHotelsPage(c)
 		assert.NotNil(t, component, "Hotels handler should return a component")
 
@@ -57,8 +60,9 @@ func TestHandlers_BasicInstantiation(t *testing.T) {
 		restaurantsHandler := &RestaurantsHandlers{chatRepo: nil, itineraryService: nil}
 		w = httptest.NewRecorder()
 		c, _ = gin.CreateTestContext(w)
-		c.Request, _ = http.NewRequest("GET", "/restaurants", nil)
-		
+		c.Request, err = http.NewRequest("GET", "/restaurants", nil)
+		assert.NoError(t, err)
+
 		component = restaurantsHandler.HandleRestaurantsPage(c)
 		assert.NotNil(t, component, "Restaurants handler should return a component")
 	})
@@ -66,11 +70,13 @@ func TestHandlers_BasicInstantiation(t *testing.T) {
 	t.Run("should handle query parameters without crashing", func(t *testing.T) {
 		// Test with query parameters
 		activitiesHandler := &ActivitiesHandlers{chatRepo: nil, itineraryService: nil}
-		
+
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
-		c.Request, _ = http.NewRequest("GET", "/activities?q=museums", nil)
-		
+		var err error
+		c.Request, err = http.NewRequest("GET", "/activities?q=museums", nil)
+		assert.NoError(t, err)
+
 		component := activitiesHandler.HandleActivitiesPage(c)
 		assert.NotNil(t, component, "Activities handler should handle query parameters")
 	})
@@ -121,14 +127,14 @@ func TestUnifiedDataSourceConcept(t *testing.T) {
 
 		// Verify total coverage (no POIs lost or duplicated across domains)
 		totalFiltered := len(activities) + len(hotels) + len(restaurants)
-		assert.Equal(t, len(allPOIs), totalFiltered, 
+		assert.Equal(t, len(allPOIs), totalFiltered,
 			"All POIs should be captured by exactly one domain filter")
 	})
 
 	t.Run("should work with cache data structure", func(t *testing.T) {
 		// Test that our filtering works with the actual cache data structure
 		sessionID := "test-unified-data-session"
-		
+
 		testData := models.AiCityResponse{
 			GeneralCityData: models.GeneralCityData{
 				City:    "Barcelona",

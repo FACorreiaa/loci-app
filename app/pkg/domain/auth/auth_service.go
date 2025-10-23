@@ -9,7 +9,6 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/markbates/goth"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -36,7 +35,6 @@ type AuthService interface {
 	GetUserByEmail(ctx context.Context, email string) (*models.UserAuth, error)
 	VerifyPassword(ctx context.Context, userID, password string) error
 	GenerateTokens(ctx context.Context, user *models.UserAuth, sub *models.Subscription) (accessToken string, refreshToken string, err error)
-	GetOrCreateUserFromProvider(ctx context.Context, provider string, providerUser goth.User) (*models.UserAuth, error)
 
 	// Token and utility methods
 	GenerateToken(userID, email, name string) (string, error)
@@ -383,50 +381,6 @@ func (d *dummySubsRepo) CreateDefaultSubscription(_ context.Context, _ string) e
 }
 func NewDummySubsRepo() models.SubscriptionRepository { return &dummySubsRepo{} }
 
-// provider
-func (s *AuthServiceImpl) GetOrCreateUserFromProvider(ctx context.Context, provider string, providerUser goth.User) (*models.UserAuth, error) {
-	// Check if the user exists based on provider and provider_user_id
-	userID, err := s.repo.GetUserIDByProvider(ctx, provider, providerUser.UserID)
-	if err == nil {
-		// User exists, retrieve them
-		return s.repo.GetUserByID(ctx, userID)
-	}
-
-	// Check if the email is already taken
-	existingUser, err := s.repo.GetUserByEmail(ctx, providerUser.Email)
-	if err == nil && existingUser != nil {
-		return nil, models.ErrConflict
-	}
-
-	// Create a new user
-	newUser := &models.UserAuth{
-		Username: providerUser.Name,
-		Email:    providerUser.Email,
-		Role:     "user", // Default role
-	}
-	err = s.repo.CreateUser(ctx, newUser)
-	if err != nil {
-		return nil, err
-	}
-
-	// Link the provider
-	err = s.repo.CreateUserProvider(ctx, newUser.ID, provider, providerUser.UserID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create default profile for new user
-	err = s.createDefaultProfile(ctx, newUser.ID)
-	if err != nil {
-		// Log error but don't fail user creation
-		s.logger.WarnContext(ctx, "Failed to create default profile for new user", 
-			slog.String("userID", newUser.ID), 
-			slog.Any("error", err))
-	}
-
-	return newUser, nil
-}
-
 // --- Token and utility methods implementation ---
 
 func (s *AuthServiceImpl) GenerateToken(userID, email, name string) (string, error) {
@@ -463,22 +417,4 @@ func (s *AuthServiceImpl) HashPassword(password string) (string, error) {
 func (s *AuthServiceImpl) CheckPassword(hashedPassword, password string) bool {
 	jwtService := NewJWTService()
 	return jwtService.CheckPassword(hashedPassword, password)
-}
-
-// createDefaultProfile creates a default profile for a new user
-// This is a placeholder implementation - in a production system, you would
-// inject a ProfileService dependency into AuthServiceImpl
-func (s *AuthServiceImpl) createDefaultProfile(ctx context.Context, userIDStr string) error {
-	// For now, just log that we should create a default profile
-	// In a proper implementation, you would:
-	// 1. Parse userIDStr to uuid.UUID
-	// 2. Call profileService.CreateSearchProfile with default values
-	// 3. Handle any errors appropriately
-	
-	s.logger.InfoContext(ctx, "Default profile creation needed", 
-		slog.String("userID", userIDStr),
-		slog.String("note", "Profile service integration required"))
-	
-	// TODO: Implement actual profile creation when profile service is injected
-	return nil
 }

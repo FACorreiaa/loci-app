@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-
 func TestChatHandlers_SendMessage(t *testing.T) {
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)

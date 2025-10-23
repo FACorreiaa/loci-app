@@ -3,8 +3,10 @@ package routes
 import (
 	"log/slog"
 	"net/http"
+	"net/http/pprof"
 
 	"github.com/a-h/templ"
+	"github.com/google/uuid"
 
 	"github.com/FACorreiaa/go-templui/app/internal/features"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
@@ -17,6 +19,7 @@ import (
 	poiPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/poi"
 	profilesPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/profiles"
 	tagsPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/tags"
+	userPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/user"
 	handlers2 "github.com/FACorreiaa/go-templui/app/pkg/handlers"
 	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
@@ -69,6 +72,23 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 	r.StaticFile("/sw.js", "./assets/static/sw.js")
 	r.StaticFile("/manifest.json", "./assets/static/manifest.json")
 
+	// Pprof debugging routes
+	debugGroup := r.Group("/debug/pprof")
+	{
+		debugGroup.GET("/", gin.WrapH(http.HandlerFunc(pprof.Index)))
+		debugGroup.GET("/cmdline", gin.WrapH(http.HandlerFunc(pprof.Cmdline)))
+		debugGroup.GET("/profile", gin.WrapH(http.HandlerFunc(pprof.Profile)))
+		debugGroup.POST("/symbol", gin.WrapH(http.HandlerFunc(pprof.Symbol)))
+		debugGroup.GET("/symbol", gin.WrapH(http.HandlerFunc(pprof.Symbol)))
+		debugGroup.GET("/trace", gin.WrapH(http.HandlerFunc(pprof.Trace)))
+		debugGroup.GET("/allocs", gin.WrapH(pprof.Handler("allocs")))
+		debugGroup.GET("/block", gin.WrapH(pprof.Handler("block")))
+		debugGroup.GET("/goroutine", gin.WrapH(pprof.Handler("goroutine")))
+		debugGroup.GET("/heap", gin.WrapH(pprof.Handler("heap")))
+		debugGroup.GET("/mutex", gin.WrapH(pprof.Handler("mutex")))
+		debugGroup.GET("/threadcreate", gin.WrapH(pprof.Handler("threadcreate")))
+	}
+
 	// Initialize handlers
 	cfg, err := config.Load()
 	if err != nil {
@@ -85,9 +105,11 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 	cityRepo := cityPkg.NewCityRepository(dbPool, slog.Default())
 	poiRepo := poiPkg.NewRepository(dbPool, slog.Default())
 	tagsRepo := tagsPkg.NewRepositoryImpl(dbPool, slog.Default())
+	userRepo := userPkg.NewPostgresUserRepo(dbPool, slog.Default())
 
 	// Create services
 	profilesService := profilesPkg.NewUserProfilesService(profilesRepo, interestsRepo, tagsRepo, slog.Default())
+	userService := userPkg.NewUserService(userRepo, slog.Default())
 
 	// Create handlers
 	authHandlers := authPkg.NewAuthHandlers(authRepo, cfg, slog.Default())
@@ -112,9 +134,9 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 	discoverHandlers := handlers2.NewDiscoverHandlers()
 	nearbyHandlers := handlers2.NewNearbyHandlers()
 	itineraryHandlers := handlers2.NewItineraryHandlers(chatRepo)
-	activitiesHandlers := handlers2.NewActivitiesHandlers(chatRepo)
-	hotelsHandlers := handlers2.NewHotelsHandlers(chatRepo)
-	restaurantsHandlers := handlers2.NewRestaurantsHandlers(chatRepo)
+	activitiesHandlers := handlers2.NewActivitiesHandlers(chatRepo, slog.Default())
+	hotelsHandlers := handlers2.NewHotelsHandlers(chatRepo, slog.Default())
+	restaurantsHandlers := handlers2.NewRestaurantsHandlers(chatRepo, slog.Default())
 	settingsHandlers := handlers2.NewSettingsHandlers()
 	resultsHandlers := handlers2.NewResultsHandlers()
 
@@ -267,34 +289,13 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 	protected := r.Group("/")
 	protected.Use(middleware.AuthMiddleware())
 	{
-		// Itinerary
-		// protected.GET("/itinerary", func(c *gin.Context) {
-		// 	content := itineraryHandlers.HandleItineraryPage(c)
-		// 	c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
-		// 		Title:   "Travel Planner - Loci",
-		// 		Content: content,
-		// 		Nav: models.Navigation{
-		// 			Items: []models.NavItem{
-		// 				{Name: "Dashboard", URL: "/dashboard"},
-		// 				{Name: "Discover", URL: "/discover"},
-		// 				{Name: "Nearby", URL: "/nearby"},
-		// 				{Name: "Itinerary", URL: "/itinerary"},
-		// 				{Name: "Chat", URL: "/chat"},
-		// 				{Name: "Favorites", URL: "/favorites"},
-		// 			},
-		// 		},
-		// 		ActiveNav: "Itinerary",
-		// 		User:      getUserFromContext(c),
-		// 	}))
-		// })
-
 		// Itinerary SSE
 		protected.GET("/itinerary", func(c *gin.Context) {
 			query := c.Query("q")
-			sessionIdParam := c.Query("sessionId")
+			sessionIDParam := c.Query("sessionId")
 
-			// If there's a query but no sessionId, start new streaming
-			if query != "" && sessionIdParam == "" {
+			// If there's a query but no sessionID, start new streaming
+			if query != "" && sessionIDParam == "" {
 				// Return the streaming trigger page wrapped in layout
 				content := streamingfeatures.StreamingTriggerPage(query, "itinerary")
 				c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
@@ -540,10 +541,32 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 
 		// Profile
 		protected.GET("/profile", func(c *gin.Context) {
-			logger.Log.Info("Profile page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
+			userID := middleware.GetUserIDFromContext(c)
+			logger.Log.Info("Profile page accessed", zap.String("user", userID))
+
+			// Parse user ID from string to UUID
+			userUUID, err := uuid.Parse(userID)
+			if err != nil {
+				logger.Log.Error("Invalid user ID", zap.String("userID", userID), zap.Error(err))
+				c.HTML(http.StatusBadRequest, "", pages.LayoutPage(models.LayoutTempl{
+					Title:   "Error - Loci",
+					Content: profile.ProfilePage(nil),
+					User:    getUserFromContext(c),
+				}))
+				return
+			}
+
+			// Fetch user profile from database
+			userProfile, err := userService.GetUserProfile(c.Request.Context(), userUUID)
+			if err != nil {
+				logger.Log.Error("Failed to fetch user profile", zap.String("userID", userID), zap.Error(err))
+				// Still show the page but with nil profile
+				userProfile = nil
+			}
+
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Profile - Loci",
-				Content: profile.ProfilePage(),
+				Content: profile.ProfilePage(userProfile),
 				Nav: models.Navigation{
 					Items: []models.NavItem{
 						{Name: "Dashboard", URL: "/dashboard"},

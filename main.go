@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	_ "net/http/pprof"
 
 	"github.com/joho/godotenv"
 
@@ -28,19 +29,19 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	// Initialize logger
-	err = logger.Init(zapcore.InfoLevel, zap.String("service", "loci-templui"))
-	if err != nil {
-		panic(fmt.Sprintf("Failed to initialize logger: %v", err))
-	}
-
-	logger.Log.Info("Starting Loci TemplUI application")
-
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
 		logger.Log.Fatal("Failed to load configuration", zap.Error(err))
 	}
+
+	// Initialize logger
+	err = logger.Init(zapcore.InfoLevel, zap.String("port", cfg.ServerPort), zap.String("service", "loci-templui"))
+	if err != nil {
+		panic(fmt.Sprintf("Failed to initialize logger: %v", err))
+	}
+
+	logger.Log.Info("Starting Loci TemplUI application")
 
 	// Initialize observability (OpenTelemetry)
 	otelShutdown, err := tracer.InitOtelProviders("loci-templui", ":9092")

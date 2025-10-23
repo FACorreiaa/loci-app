@@ -41,34 +41,64 @@ func ChatInterface(sessionId string) templ.Component {
 // Chat JavaScript for handling chat functionality
 func ChatScript(sessionId string) templ.ComponentScript {
 	return templ.ComponentScript{
-		Name: `__templ_ChatScript_bc0b`,
-		Function: `function __templ_ChatScript_bc0b(sessionId){// Initialize chat functionality
+		Name: `__templ_ChatScript_1464`,
+		Function: `function __templ_ChatScript_1464(sessionId){// Initialize chat functionality
     document.addEventListener('DOMContentLoaded', function() {
         // Chat message handling
         window.sendChatMessage = function() {
-            const store = Alpine.store('itinerary');
-            const message = store.chatMessage.trim();
-            if (!message || store.chatLoading) return;
+            // Try to get the chat message from the textarea directly
+            const chatInput = document.querySelector('[x-ref="chatInput"]');
+            if (!chatInput) {
+                console.error('Chat input not found');
+                return;
+            }
+            
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            // Check if already loading by looking for a loading state indicator
+            const loadingIndicator = document.querySelector('[x-show="chatLoading"]');
+            if (loadingIndicator && !loadingIndicator.hasAttribute('style')) {
+                return; // Already loading
+            }
 
             // Add user message to chat
             addChatMessage(message, 'user');
             
-            // Clear input and set loading state
-            store.chatMessage = '';
-            store.chatLoading = true;
+            // Clear input and trigger Alpine.js update
+            chatInput.value = '';
+            chatInput.dispatchEvent(new Event('input'));
+            
+            // Dispatch loading state event
+            document.dispatchEvent(new CustomEvent('chat-loading-start'));
 
             // Send message to server
             const sessionId = { templ.JSONString(sessionId) };
+            
+            // Get user location if available
+            let userLocation = null;
+            if (window.locationManager) {
+                const locationInstance = window.locationManager();
+                userLocation = locationInstance.getUserLocationForAPI();
+            }
+            
+            const requestBody = {
+                message: message,
+                session_id: sessionId,
+                context: 'itinerary_refinement'
+            };
+            
+            // Include location data if available
+            if (userLocation) {
+                requestBody.user_location = userLocation;
+            }
+            
             fetch('/api/chat/unified', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    message: message,
-                    session_id: sessionId,
-                    context: 'itinerary_refinement'
-                })
+                body: JSON.stringify(requestBody)
             })
             .then(response => {
                 if (!response.ok) {
@@ -83,7 +113,7 @@ func ChatScript(sessionId string) templ.ComponentScript {
                 function readStream() {
                     return reader.read().then(({ done, value }) => {
                         if (done) {
-                            store.chatLoading = false;
+                            document.dispatchEvent(new CustomEvent('chat-loading-end'));
                             return;
                         }
 
@@ -99,7 +129,7 @@ func ChatScript(sessionId string) templ.ComponentScript {
                                         updateChatMessage(assistantMessage, 'assistant');
                                     }
                                     if (data.done) {
-                                        store.chatLoading = false;
+                                        document.dispatchEvent(new CustomEvent('chat-loading-end'));
                                         return;
                                     }
                                 } catch (e) {
@@ -119,15 +149,18 @@ func ChatScript(sessionId string) templ.ComponentScript {
             .catch(error => {
                 console.error('Chat error:', error);
                 addChatMessage('Sorry, I encountered an error. Please try again.', 'assistant');
-                store.chatLoading = false;
+                document.dispatchEvent(new CustomEvent('chat-loading-end'));
             });
         };
 
         // Set chat message helper
         window.setChatMessage = function(message) {
-            Alpine.store('itinerary').chatMessage = message;
             const input = document.querySelector('[x-ref="chatInput"]');
-            if (input) input.focus();
+            if (input) {
+                input.value = message;
+                input.dispatchEvent(new Event('input')); // Trigger Alpine.js reactivity
+                input.focus();
+            }
         };
 
         // Add message to chat
@@ -191,8 +224,8 @@ func ChatScript(sessionId string) templ.ComponentScript {
         }
     });
 }`,
-		Call:       templ.SafeScript(`__templ_ChatScript_bc0b`, sessionId),
-		CallInline: templ.SafeScriptInline(`__templ_ChatScript_bc0b`, sessionId),
+		Call:       templ.SafeScript(`__templ_ChatScript_1464`, sessionId),
+		CallInline: templ.SafeScriptInline(`__templ_ChatScript_1464`, sessionId),
 	}
 }
 
