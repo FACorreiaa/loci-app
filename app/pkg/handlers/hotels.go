@@ -270,7 +270,9 @@ func (h *HotelsHandlers) loadCityDataFromDatabase(sessionIDParam string) models.
 
 	logger.Log.Info("City data loaded from database",
 		zap.String("sessionID", sessionIDParam),
-		zap.String("city", completeData.GeneralCityData.City))
+		zap.String("city", completeData.GeneralCityData.City),
+		zap.String("country", completeData.GeneralCityData.Country),
+		zap.String("description", completeData.GeneralCityData.Description))
 
 	return completeData.GeneralCityData
 }

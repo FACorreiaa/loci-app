@@ -82,6 +82,19 @@ func (h *RestaurantsHandlers) loadRestaurantsBySession(sessionIDParam string, ca
 			// Try to get city data from complete cache
 			var cityData models.GeneralCityData
 			if completeData, found := middleware.CompleteItineraryCache.Get(cacheKey); found {
+				jsonData, err := json.MarshalIndent(completeData, "", "  ")
+				if err != nil {
+					logger.Log.Error("Failed to marshal completeData to JSON", zap.Error(err))
+				} else {
+					filename := "complete_restaurant.json" // Or fmt.Sprintf("complete_itinerary_%s.json", sessionID)
+					if writeErr := os.WriteFile(filename, jsonData, 0644); writeErr != nil {
+						logger.Log.Error("Failed to write completeData to file", zap.String("file", filename), zap.Error(writeErr))
+					} else {
+						logger.Log.Info("Complete itinerary data written to file", zap.String("file", filename))
+					}
+					logger.Log.Info("Complete itinerary data being displayed in view", zap.String("json", string(jsonData)))
+				}
+
 				cityData = completeData.GeneralCityData
 				logger.Log.Info("City data loaded from complete cache",
 					zap.String("city", cityData.City))
@@ -311,7 +324,9 @@ func (h *RestaurantsHandlers) loadCityDataFromDatabase(sessionIDParam string) mo
 
 	logger.Log.Info("City data loaded from database",
 		zap.String("sessionID", sessionIDParam),
-		zap.String("city", completeData.GeneralCityData.City))
+		zap.String("city", completeData.GeneralCityData.City),
+		zap.String("country", completeData.GeneralCityData.Country),
+		zap.String("description", completeData.GeneralCityData.Description))
 
 	return completeData.GeneralCityData
 }

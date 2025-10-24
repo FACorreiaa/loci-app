@@ -449,4 +449,71 @@ Build the handlers keeping in mind im using HTMX and Go full stack.
 10.2 I want to have a way of users having discount codes and special offer codes to be able to use the sub
 
 11. Restaurants has two structs, cityData that is empty and restaurants which has the data including the city name. on the view, the title is being populated with cityData which then is populating the title empty. We need to have either the cityData being populated for Restaurants, Hotels and Activities so the title can be filled or fill the view with the right structure since city data is empty.
-12. 
+12. We need to rethink how the cache is being done:
+```go
+	if cacheKey != "" {
+		if restaurantsData, found := middleware.RestaurantsCache.Get(cacheKey); found {
+
+			logger.Log.Info("Restaurants found in cache. Rendering results.",
+
+				zap.Int("restaurants", len(restaurantsData)))
+
+			// Try to get city data from complete cache
+			var cityData models.GeneralCityData
+			if completeData, found := middleware.CompleteItineraryCache.Get(cacheKey); found {
+				cityData = completeData.GeneralCityData
+				logger.Log.Info("City data loaded from complete cache",
+					zap.String("city", cityData.City))
+			} else {
+				// Fallback: load from database using sessionID
+				cityData = h.loadCityDataFromDatabase(sessionIDParam)
+			}
+
+			// Return static template when data is available
+
+			return results.RestaurantsResults(
+
+				cityData,
+
+				restaurantsData,
+
+				true, true, 15, []string{})
+		}
+	}
+
+```
+Its confusing to have RestaurantsCache and CompleteItineraryCache. 
+Each handler should have its own cache?
+Or abstract and have a middleware that abstracts this away?
+Use case:
+User searches Restaurant ABC + Preference 1,2,3 = LLM Search.
+User searches Restaurant ABC + Preference 1,2,3 = cached response
+User searches Restaurant ABC + Preference 1,2,4 = New preference, new LLM Search
+User searches Restaurant ABC + Preference 1,2,4 = cached response
+User searches Restaurant XYZ + Preference 1,2,4 = New restaurant, new LLM Search
+
+This logic should be applied to all intents in order to save LLM calls, tokens and budgets. 
+
+13. Discover should work as it does under go-ai-poi-client and go-ai-poi-server
+Analyse the /discover route and implement the same logic using htmx to filter by 5km, 10km, 15km etc.
+Same logic, postgis included, should be used. 
+
+14. Similar to Discover, I have a new view called nearby. The nearby should update new views when user locations changes without the user needing to update this. 
+Use websockets, htmx and whatever needed. The idea is the user to be able to walk, and when the coordinates of the user changes, the AI generates new points of interest around the user dynamically.
+Elaborate on the effort for this and build the UI and Service logic. 
+
+15. The Recents page should have all the recents itineraries, restaurants, hotels, activities or chats built and should be able to sort by date
+All this data should be available on the Database so for recents only queries and displays should be needed.
+
+16. The chat view should work as it does under go-ai-poi-client and go-ai-poi-server but improved. The chat should be able to return an intent data (restaurant, itinerary, hotel, activity) and upon writing "Add" or "Remove" should add to the current context more points and writing "New" on chat creates a new conversation with the Agent.
+17. Favourites tab should contain all the favourited items from the database. Search and filter by type should work and be implemented. Pagination as well.  
+18. Bookmarks tab should contain all the bookmarked itineraries from the database. Search and filter by type should work and be implemented. Pagination as well. 
+19. Lists should also work as it does under go-ai-poi-client and go-ai-poi-server. On a list an user should be able to create a new one and be able to add diverse activities already searched from the database. 
+To discuss: A list should be a mix of itineraries, hotels, activities and restaurants or only itineraries?
+20. The settings page should be working like go-ai-poi-client and go-ai-poi-server saving on the database the data from the tabs:
+    20.1 Account Settings
+    20.2 Travel Preferences
+    20.3 Privacy and Security
+    20.4 Notifications
+21. On Pricing, add an "Enterprise column" where companies and travel agencies should be able to contact me for a one time purchase of the whole pack. 
+22. Adapt the footer for Loci instead of the current hardcodded TemplUI
