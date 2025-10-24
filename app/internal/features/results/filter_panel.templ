@@ -1,0 +1,184 @@
+package results
+
+import (
+	"fmt"
+)
+
+// FilterPanel creates a comprehensive filter panel for POI results
+// domain: "restaurants", "hotels", "activities", or "itinerary"
+// cacheKey: unique identifier for the current search
+templ FilterPanel(domain string, cacheKey string, sessionID string) {
+	<div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
+		<form
+			hx-get={ fmt.Sprintf("/api/filter/%s", domain) }
+			hx-target="#results-list-container"
+			hx-swap="innerHTML"
+			hx-trigger="change delay:300ms"
+			hx-include="[name='categories[]'],[name='priceRange[]'],[name='rating'],[name='features[]']"
+			hx-vals={ fmt.Sprintf(`{"cacheKey": "%s", "sessionId": "%s"}`, cacheKey, sessionID) }
+			class="space-y-6"
+		>
+			<div class="flex items-center justify-between mb-4">
+				<h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+					</svg>
+					Filters
+				</h3>
+				<button
+					type="button"
+					hx-get={ fmt.Sprintf("/api/filter/%s/clear", domain) }
+					hx-target="#results-list-container"
+					hx-swap="innerHTML"
+					hx-vals={ fmt.Sprintf(`{"cacheKey": "%s", "sessionId": "%s"}`, cacheKey, sessionID) }
+					class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
+				>
+					Clear all
+				</button>
+			</div>
+
+			<div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
+				<!-- Category Filters (Domain-specific) -->
+				<div class="space-y-3">
+					<label class="text-sm font-medium text-gray-700 dark:text-gray-300 block">
+						if domain == "restaurants" {
+							Cuisine Type
+						} else if domain == "hotels" {
+							Hotel Type
+						} else if domain == "activities" {
+							Activity Type
+						} else {
+							Category
+						}
+					</label>
+					<div class="space-y-2 max-h-48 overflow-y-auto">
+						@CategoryFilters(domain)
+					</div>
+				</div>
+
+				<!-- Price Range Filters -->
+				<div class="space-y-3">
+					<label class="text-sm font-medium text-gray-700 dark:text-gray-300 block">Price Range</label>
+					<div class="space-y-2">
+						@PriceRangeFilters(domain)
+					</div>
+				</div>
+
+				<!-- Rating Filter -->
+				<div class="space-y-3">
+					<label class="text-sm font-medium text-gray-700 dark:text-gray-300 block">Minimum Rating</label>
+					<select
+						name="rating"
+						class="w-full text-sm border-gray-300 dark:border-gray-600 rounded-md focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+					>
+						<option value="">Any rating</option>
+						<option value="4.5">4.5+ stars</option>
+						<option value="4.0">4.0+ stars</option>
+						<option value="3.5">3.5+ stars</option>
+						<option value="3.0">3.0+ stars</option>
+					</select>
+				</div>
+
+				<!-- Feature Filters (Domain-specific) -->
+				<div class="space-y-3">
+					<label class="text-sm font-medium text-gray-700 dark:text-gray-300 block">Features</label>
+					<div class="space-y-2 max-h-48 overflow-y-auto">
+						@FeatureFilters(domain)
+					</div>
+				</div>
+			</div>
+
+			<!-- Active Filters Display -->
+			@FilterBadges(domain, cacheKey, sessionID)
+		</form>
+	</div>
+	@FilterBadgesScript()
+}
+
+// CategoryFilters renders domain-specific category checkboxes
+templ CategoryFilters(domain string) {
+	if domain == "restaurants" {
+		@CheckboxFilter("categories[]", "Portuguese", "portuguese")
+		@CheckboxFilter("categories[]", "Seafood", "seafood")
+		@CheckboxFilter("categories[]", "International", "international")
+		@CheckboxFilter("categories[]", "Italian", "italian")
+		@CheckboxFilter("categories[]", "Asian", "asian")
+		@CheckboxFilter("categories[]", "Mexican", "mexican")
+		@CheckboxFilter("categories[]", "Mediterranean", "mediterranean")
+		@CheckboxFilter("categories[]", "Vegetarian", "vegetarian")
+	} else if domain == "hotels" {
+		@CheckboxFilter("categories[]", "Luxury", "luxury")
+		@CheckboxFilter("categories[]", "Boutique", "boutique")
+		@CheckboxFilter("categories[]", "Historic", "historic")
+		@CheckboxFilter("categories[]", "Business", "business")
+		@CheckboxFilter("categories[]", "Resort", "resort")
+		@CheckboxFilter("categories[]", "Budget", "budget")
+		@CheckboxFilter("categories[]", "Family", "family")
+	} else if domain == "activities" {
+		@CheckboxFilter("categories[]", "Cultural", "cultural")
+		@CheckboxFilter("categories[]", "Entertainment", "entertainment")
+		@CheckboxFilter("categories[]", "Outdoor", "outdoor")
+		@CheckboxFilter("categories[]", "Adventure", "adventure")
+		@CheckboxFilter("categories[]", "Museum", "museum")
+		@CheckboxFilter("categories[]", "Sports", "sports")
+		@CheckboxFilter("categories[]", "Nature", "nature")
+	} else {
+		@CheckboxFilter("categories[]", "Restaurant", "restaurant")
+		@CheckboxFilter("categories[]", "Hotel", "hotel")
+		@CheckboxFilter("categories[]", "Activity", "activity")
+		@CheckboxFilter("categories[]", "Attraction", "attraction")
+	}
+}
+
+// PriceRangeFilters renders price range checkboxes
+templ PriceRangeFilters(domain string) {
+	if domain == "restaurants" || domain == "hotels" {
+		@CheckboxFilter("priceRange[]", "€ - Budget", "$")
+		@CheckboxFilter("priceRange[]", "€€ - Moderate", "$$")
+		@CheckboxFilter("priceRange[]", "€€€ - Expensive", "$$$")
+		@CheckboxFilter("priceRange[]", "€€€€ - Luxury", "$$$$")
+	} else {
+		@CheckboxFilter("priceRange[]", "Free", "free")
+		@CheckboxFilter("priceRange[]", "€ - Budget", "$")
+		@CheckboxFilter("priceRange[]", "€€ - Moderate", "$$")
+		@CheckboxFilter("priceRange[]", "€€€+ - Premium", "$$$")
+	}
+}
+
+// FeatureFilters renders domain-specific feature checkboxes
+templ FeatureFilters(domain string) {
+	if domain == "restaurants" {
+		@CheckboxFilter("features[]", "Michelin Star", "michelin")
+		@CheckboxFilter("features[]", "Outdoor Seating", "outdoor")
+		@CheckboxFilter("features[]", "River View", "river-view")
+		@CheckboxFilter("features[]", "Vegetarian Options", "vegetarian")
+		@CheckboxFilter("features[]", "Family Friendly", "family-friendly")
+		@CheckboxFilter("features[]", "Romantic", "romantic")
+	} else if domain == "hotels" {
+		@CheckboxFilter("features[]", "Pool", "pool")
+		@CheckboxFilter("features[]", "Spa", "spa")
+		@CheckboxFilter("features[]", "Pet Friendly", "pet-friendly")
+		@CheckboxFilter("features[]", "Free WiFi", "wifi")
+		@CheckboxFilter("features[]", "Parking", "parking")
+		@CheckboxFilter("features[]", "River View", "river-view")
+	} else if domain == "activities" {
+		@CheckboxFilter("features[]", "Kid Friendly", "kid-friendly")
+		@CheckboxFilter("features[]", "Wheelchair Accessible", "accessible")
+		@CheckboxFilter("features[]", "Guided Tour", "guided")
+		@CheckboxFilter("features[]", "Indoor", "indoor")
+		@CheckboxFilter("features[]", "Booking Required", "booking")
+	}
+}
+
+// CheckboxFilter renders a single checkbox filter option
+templ CheckboxFilter(name string, label string, value string) {
+	<label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded cursor-pointer">
+		<input
+			type="checkbox"
+			name={ name }
+			value={ value }
+			class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+		/>
+		<span>{ label }</span>
+	</label>
+}

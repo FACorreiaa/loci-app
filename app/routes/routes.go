@@ -139,6 +139,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 	restaurantsHandlers := handlers2.NewRestaurantsHandlers(chatRepo, slog.Default())
 	settingsHandlers := handlers2.NewSettingsHandlers()
 	resultsHandlers := handlers2.NewResultsHandlers()
+	filterHandlers := handlers2.NewFilterHandlers(slog.Default())
 
 	// Public routes (with optional auth)
 	r.GET("/", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
@@ -755,6 +756,13 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		htmxGroup.GET("/itinerary/summary", itineraryHandlers.GetItinerarySummary)
 		htmxGroup.GET("/itinerary/stream", chatHandlers.HandleItineraryStream)
 		htmxGroup.GET("/itinerary/sse", itineraryHandlers.HandleItinerarySSE)
+
+		// Filter endpoints (HTMX fragments)
+		htmxGroup.GET("/api/filter/restaurants", filterHandlers.HandleFilterRestaurants)
+		htmxGroup.GET("/api/filter/hotels", filterHandlers.HandleFilterHotels)
+		htmxGroup.GET("/api/filter/activities", filterHandlers.HandleFilterActivities)
+		htmxGroup.GET("/api/filter/itinerary", filterHandlers.HandleFilterItinerary)
+		htmxGroup.GET("/api/filter/:domain/clear", filterHandlers.HandleClearFilters)
 
 		// Settings endpoints (protected)
 		settingsGroup := htmxGroup.Group("/settings")
