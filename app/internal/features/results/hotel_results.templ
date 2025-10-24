@@ -20,7 +20,11 @@ templ HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetail
 							</div>
 							<div class="flex-1 min-w-0">
 								<h1 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl truncate">
-									Hotels in { cityData.City }
+									if cityData.City != "" {
+										Hotels in { cityData.City }
+									} else {
+										Hotels
+									}
 								</h1>
 								<!-- City Location Info -->
 								if cityData.City != "" {
@@ -324,7 +328,7 @@ templ HotelGridCard(hotel models.HotelDetailedInfo, index int) {
 // HotelsMapContainer for map view
 templ HotelsMapContainer(hotels []models.HotelDetailedInfo, cityData *models.GeneralCityData, sessionId string) {
 	<div class="relative w-full h-full min-h-[500px]">
-		@MapContainer(hotelsToPOIs(hotels), cityData, sessionId, true, true, "green")
+		@MapContainer(hotelsToPOIs(hotels), cityData, sessionId, true, true, "green", "hotels")
 	</div>
 }
 

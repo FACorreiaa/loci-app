@@ -195,22 +195,81 @@
     - `app/internal/features/results/itinerary_results.templ` - Line 220
   - Result: All result pages have identical layout with working maps, split view, and numbered markers
 
+- [x] **4.2. Advanced Map Features (Route Lines, Clustering, Filtering)** ✓ COMPLETE
+  - Issue: Map lacked route visualization, clustering, and dynamic filtering
+  - Solution: Implemented three advanced map features using HTMX-first approach
+  - Implementation details:
+    - **Route Lines** (`map_container.templ`):
+      - GeoJSON LineString connecting POIs in sequential order
+      - Dashed blue lines with 60% opacity for subtle appearance
+      - Automatic updates when filters are applied
+      - Color matches marker theme (blue/orange/green/purple)
+    - **Marker Clustering** (`map_container.templ`):
+      - Intelligent clustering activates for 20+ POIs
+      - Color-coded clusters: Blue (1-9), Yellow (10-29), Pink (30+)
+      - Click to zoom and expand clusters
+      - Individual numbered markers for <20 POIs
+    - **HTMX Filtering System**:
+      - Filter panel component with category, price, and rating filters
+      - Server-side filtering returns HTML fragments (not JSON)
+      - Map automatically updates via `htmx:afterSwap` event
+      - 500ms debounce on filter changes
+      - Synchronizes list and map views
+  - Files created:
+    - `app/internal/features/results/filter_panel.templ` - HTMX filter component
+    - `app/pkg/handlers/filters.go` - Server-side filter logic
+    - `app/internal/features/results/list_fragments.templ` - HTML fragments for HTMX
+  - Files modified:
+    - `app/internal/features/results/map_container.templ` - Added route lines, clustering, HTMX listeners
+    - `app/routes/routes.go` - Registered filter routes
+  - Result: Fully interactive maps with route visualization, smart clustering, and real-time filtering
+
+- [x] **4.3. City Information Panel Fixes** ✓ COMPLETE
+  - Issue: City names not appearing in Hotels/Activities/Restaurants page titles when loading from cache
+  - Root cause: Handlers were passing empty `GeneralCityData{}` when retrieving from domain-specific caches
+  - Solution: Implemented two-tier city data loading strategy
+  - Implementation details:
+    - **Fixed page titles** (all three templates):
+      - Added conditional display: Shows "Restaurants in {city}" when city data available, "Restaurants" when empty
+      - Prevents awkward "Restaurants in " display
+      - Applied to restaurants, hotels, and activities templates
+    - **City data loading strategy** (all three handlers):
+      - Primary: Check `CompleteItineraryCache` for city data (fast cache lookup)
+      - Fallback: Load from database using `sessionID` (slower but reliable)
+      - Added `loadCityDataFromDatabase()` helper function to each handler
+      - Comprehensive error handling and logging at each step
+    - **Enhanced city information display**:
+      - Rich city panel with gradient backgrounds (already existed, now properly populated)
+      - Shows: City description, area, timezone, language, population
+      - Color-coded by domain: orange (restaurants), green (hotels), purple (activities)
+      - Grid layout with icons for each stat
+  - Files modified:
+    - `app/internal/features/results/restaurant_results_enhanced.templ` - Lines 22-28 (title fix)
+    - `app/internal/features/results/hotel_results.templ` - Lines 22-28 (title fix)
+    - `app/internal/features/results/activities_results_enhanced.templ` - Lines 21-27 (title fix)
+    - `app/pkg/handlers/restaurants.go` - Lines 74-103 (cache lookup), 280-310 (helper)
+    - `app/pkg/handlers/hotels.go` - Lines 68-91 (cache lookup), 238-268 (helper)
+    - `app/pkg/handlers/activities.go` - Lines 68-91 (cache lookup), 186-216 (helper)
+  - Result: City names and information now display correctly on all pages, with graceful fallbacks
+
 ### Missing Features from SolidJS Implementation
 
 #### High Priority (Core Functionality)
-1. **Map Integration** - ✓ COMPLETED
-   - ✓ Full Mapbox GL integration with marker visualization
-   - ✓ Marker styling with numbered markers
-   - ✓ View modes: Map/List/Grid view implemented
-   - ✓ Markers with same numbers as the list items
-   - ⏳ Route optimization algorithm connecting POIs (not yet implemented)
-   - ⏳ Marker clustering for dense areas (not yet implemented)
-   - ⏳ Dynamic marker updates based on filters (not yet implemented)
+1. **Map Integration** - ✅ FULLY COMPLETED
+   - ✅ Full Mapbox GL integration with marker visualization
+   - ✅ Marker styling with numbered markers
+   - ✅ View modes: Map/List/Split/Grid view implemented
+   - ✅ Markers with same numbers as the list items
+   - ✅ Route lines connecting POIs in order (dashed lines)
+   - ✅ Marker clustering for dense areas (20+ POIs)
+   - ✅ HTMX-based filtering with dynamic marker updates
 
-2. **City Information Panel**
-   - General city data display (population, language, weather, timezone, area)
-   - City description with metadata stats
-   - Quick facts section with icons
+2. **City Information Panel** - ✅ COMPLETED
+   - ✅ General city data display (population, language, weather, timezone, area)
+   - ✅ City description with metadata stats
+   - ✅ Quick facts section with icons
+   - ✅ Fixed city name display in Hotels/Activities/Restaurants titles
+   - ✅ Implemented city data loading from cache with database fallback 
 
 3. **Advanced Filtering System**
    - Consistent filter panel across all result pages
@@ -399,6 +458,12 @@ Analyse go-ai-poi-server and make the changes needed.
   9.2. [] I want you to start preparing the /continue transcation that should be used on this server side rendering with HTMX. The /continue has the same functionality as the REST API: 
   - On full pages allows to "Add" or "Remove" items from the page refreshing the page 
   - On Chats it allows the user to do the same with the LLM replying with the new data and the previous data. If necessary for this task do cd .. and also analise go-ai-poi-client
+
+10. Analyse my Stripe services and implement the handlers for my business needs. An user can subscribe to the services I offer and eventually have in item purchases but for now I only the subscriptions. 
+Build the handlers keeping in mind im using HTMX and Go full stack.
+
+10.1 For the payments I want to have a proper middleware that connects the users with their benefits
+10.2 I want to have a way of users having discount codes and special offer codes to be able to use the sub
 
 ## Verification Steps
 After fixing each issue:

@@ -79,15 +79,22 @@ func (h *RestaurantsHandlers) loadRestaurantsBySession(sessionIDParam string, ca
 
 				zap.Int("restaurants", len(restaurantsData)))
 
-			// Create empty city data for now
-
-			emptyCityData := models.GeneralCityData{}
+			// Try to get city data from complete cache
+			var cityData models.GeneralCityData
+			if completeData, found := middleware.CompleteItineraryCache.Get(cacheKey); found {
+				cityData = completeData.GeneralCityData
+				logger.Log.Info("City data loaded from complete cache",
+					zap.String("city", cityData.City))
+			} else {
+				// Fallback: load from database using sessionID
+				cityData = h.loadCityDataFromDatabase(sessionIDParam)
+			}
 
 			// Return static template when data is available
 
 			return results.RestaurantsResults(
 
-				emptyCityData,
+				cityData,
 
 				restaurantsData,
 
@@ -275,4 +282,36 @@ func convertPOIToRestaurant(poi models.POIDetailedInfo) models.RestaurantDetaile
 		Rating:           poi.Rating,
 		LlmInteractionID: poi.LlmInteractionID,
 	}
+}
+
+// loadCityDataFromDatabase loads city data from database by sessionID
+func (h *RestaurantsHandlers) loadCityDataFromDatabase(sessionIDParam string) models.GeneralCityData {
+	sessionID, err := uuid.Parse(sessionIDParam)
+	if err != nil {
+		logger.Log.Warn("Invalid session ID format when loading city data", zap.String("sessionID", sessionIDParam), zap.Error(err))
+		return models.GeneralCityData{}
+	}
+
+	ctx := context.Background()
+	interaction, err := h.chatRepo.GetLatestInteractionBySessionID(ctx, sessionID)
+	if err != nil || interaction == nil {
+		logger.Log.Warn("No interaction found in database for city data",
+			zap.String("sessionID", sessionIDParam),
+			zap.Error(err))
+		return models.GeneralCityData{}
+	}
+
+	completeData, err := h.itineraryService.ParseCompleteItineraryResponse(interaction.ResponseText, slog.Default())
+	if err != nil || completeData == nil {
+		logger.Log.Warn("Could not parse complete data from stored response for city data",
+			zap.String("sessionID", sessionIDParam),
+			zap.Error(err))
+		return models.GeneralCityData{}
+	}
+
+	logger.Log.Info("City data loaded from database",
+		zap.String("sessionID", sessionIDParam),
+		zap.String("city", completeData.GeneralCityData.City))
+
+	return completeData.GeneralCityData
 }

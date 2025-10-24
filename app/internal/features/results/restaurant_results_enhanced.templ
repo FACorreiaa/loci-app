@@ -20,7 +20,11 @@ templ RestaurantsResults(cityData models.GeneralCityData, restaurants []models.R
 							</div>
 							<div class="flex-1 min-w-0">
 								<h1 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl truncate">
-									Restaurants in { cityData.City }
+									if cityData.City != "" {
+										Restaurants in { cityData.City }
+									} else {
+										Restaurants
+									}
 								</h1>
 								<!-- City Location Info -->
 								if cityData.City != "" {
@@ -324,7 +328,7 @@ templ RestaurantGridCard(restaurant models.RestaurantDetailedInfo, index int) {
 // RestaurantsMapContainer for map view
 templ RestaurantsMapContainer(restaurants []models.RestaurantDetailedInfo, cityData *models.GeneralCityData, sessionId string) {
 	<div class="relative w-full h-full min-h-[500px]">
-		@MapContainer(restaurantsToPOIs(restaurants), cityData, sessionId, true, true, "orange")
+		@MapContainer(restaurantsToPOIs(restaurants), cityData, sessionId, true, true, "orange", "restaurants")
 	</div>
 }
 

@@ -8,7 +8,7 @@ import (
 // package results (no changes to imports or helpers like poisToJSON, cityDataToJSON)
 
 // MapContainer displays the interactive Mapbox map with POI markers
-templ MapContainer(pois []models.POIDetailedInfo, cityData *models.GeneralCityData, sessionId string, showLegend bool, useNumberedMarkers bool, markerColor string) {
+templ MapContainer(pois []models.POIDetailedInfo, cityData *models.GeneralCityData, sessionId string, showLegend bool, useNumberedMarkers bool, markerColor string, domain string) {
     <div class="relative w-full h-full min-h-[500px] bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden" x-data="{ mapLoaded: false }" style="min-height: 500px;">
         <!-- Map Element -->
         <div id="map" class="w-full h-full" style="min-height: 500px;"></div>
@@ -52,12 +52,32 @@ templ MapContainer(pois []models.POIDetailedInfo, cityData *models.GeneralCityDa
                 <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Legend</h4>
                 <div class="space-y-1">
                     <div class="flex items-center gap-2">
-                        <div class="w-3 h-3 bg-blue-600 rounded-full"></div>
-                        <span class="text-xs text-gray-600 dark:text-gray-300">Points of Interest</span>
+                        <div class="w-3 h-3 rounded-full" style={ "background-color: " + markerColor }></div>
+                        <span class="text-xs text-gray-600 dark:text-gray-300">
+                            if domain == "restaurants" {
+                                Restaurants
+                            } else if domain == "hotels" {
+                                Hotels
+                            } else if domain == "activities" {
+                                Activities
+                            } else {
+                                Points of Interest
+                            }
+                        </span>
                     </div>
                     <div class="flex items-center gap-2">
                         <div class="w-3 h-3 bg-red-600 rounded-full"></div>
-                        <span class="text-xs text-gray-600 dark:text-gray-300">Selected POI</span>
+                        <span class="text-xs text-gray-600 dark:text-gray-300">
+                            if domain == "restaurants" {
+                                Selected Restaurant
+                            } else if domain == "hotels" {
+                                Selected Hotel
+                            } else if domain == "activities" {
+                                Selected Activity
+                            } else {
+                                Selected POI
+                            }
+                        </span>
                     </div>
                 </div>
             </div>

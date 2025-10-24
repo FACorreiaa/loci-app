@@ -19,7 +19,11 @@ templ ActivitiesResults(cityData models.GeneralCityData, activities []models.POI
 							</div>
 							<div class="flex-1 min-w-0">
 								<h1 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl truncate">
-									Activities in { cityData.City }
+									if cityData.City != "" {
+										Activities in { cityData.City }
+									} else {
+										Activities
+									}
 								</h1>
 								<!-- City Location Info -->
 								if cityData.City != "" {
@@ -323,7 +327,7 @@ templ ActivityGridCard(activity models.POIDetailedInfo, index int) {
 // ActivitiesMapContainer for map view
 templ ActivitiesMapContainer(activities []models.POIDetailedInfo, cityData *models.GeneralCityData, sessionId string) {
 	<div class="relative w-full h-full min-h-[500px]">
-		@MapContainer(activities, cityData, sessionId, true, true, "purple")
+		@MapContainer(activities, cityData, sessionId, true, true, "purple", "activities")
 	</div>
 }
 

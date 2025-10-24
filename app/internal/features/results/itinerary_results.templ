@@ -217,7 +217,7 @@ templ ItineraryResults(cityData models.GeneralCityData, generalPOIs []models.POI
 					:class="viewMode === 'map' ? 'h-[calc(100vh-200px)] md:h-[600px]' : viewMode === 'split' ? 'h-[300px] md:h-[400px] lg:h-[500px]' : 'h-[400px]'"
 					class="w-full"
 				>
-					@MapContainer(itinerary.PointsOfInterest, nil, "session-placeholder", true, true, "blue")
+					@MapContainer(itinerary.PointsOfInterest, nil, "session-placeholder", true, true, "blue", "itinerary")
 				</div>
 			</div>
 			<!-- Content Layout for List/Split View -->

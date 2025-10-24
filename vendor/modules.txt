@@ -341,6 +341,19 @@ github.com/stretchr/testify/assert
 github.com/stretchr/testify/assert/yaml
 github.com/stretchr/testify/mock
 github.com/stretchr/testify/require
+# github.com/stripe/stripe-go/v83 v83.0.2
+## explicit; go 1.20
+github.com/stripe/stripe-go/v83
+github.com/stripe/stripe-go/v83/account
+github.com/stripe/stripe-go/v83/accountlink
+github.com/stripe/stripe-go/v83/customer
+github.com/stripe/stripe-go/v83/form
+github.com/stripe/stripe-go/v83/loginlink
+github.com/stripe/stripe-go/v83/paymentintent
+github.com/stripe/stripe-go/v83/price
+github.com/stripe/stripe-go/v83/product
+github.com/stripe/stripe-go/v83/refund
+github.com/stripe/stripe-go/v83/subscription
 # github.com/twitchyliquid64/golang-asm v0.15.1
 ## explicit; go 1.13
 github.com/twitchyliquid64/golang-asm/asm/arch
