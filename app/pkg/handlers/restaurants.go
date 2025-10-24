@@ -2,9 +2,7 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
-	"os"
 	"strings"
 
 	"github.com/a-h/templ"
@@ -15,6 +13,7 @@ import (
 	"github.com/FACorreiaa/go-templui/app/internal/features/restaurants"
 	"github.com/FACorreiaa/go-templui/app/internal/features/results"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
+	"github.com/FACorreiaa/go-templui/app/pkg/debugger"
 	llmchat "github.com/FACorreiaa/go-templui/app/pkg/domain/chat_prompt"
 	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
@@ -24,10 +23,10 @@ import (
 type RestaurantsHandlers struct {
 	chatRepo         llmchat.Repository
 	itineraryService *services.ItineraryService
-	logger           *slog.Logger
+	logger           *zap.SugaredLogger
 }
 
-func NewRestaurantsHandlers(chatRepo llmchat.Repository, logger *slog.Logger) *RestaurantsHandlers {
+func NewRestaurantsHandlers(chatRepo llmchat.Repository, logger *zap.SugaredLogger) *RestaurantsHandlers {
 	return &RestaurantsHandlers{
 		chatRepo:         chatRepo,
 		itineraryService: services.NewItineraryService(),
@@ -82,19 +81,6 @@ func (h *RestaurantsHandlers) loadRestaurantsBySession(sessionIDParam string, ca
 			// Try to get city data from complete cache
 			var cityData models.GeneralCityData
 			if completeData, found := middleware.CompleteItineraryCache.Get(cacheKey); found {
-				jsonData, err := json.MarshalIndent(completeData, "", "  ")
-				if err != nil {
-					logger.Log.Error("Failed to marshal completeData to JSON", zap.Error(err))
-				} else {
-					filename := "complete_restaurant.json" // Or fmt.Sprintf("complete_itinerary_%s.json", sessionID)
-					if writeErr := os.WriteFile(filename, jsonData, 0644); writeErr != nil {
-						logger.Log.Error("Failed to write completeData to file", zap.String("file", filename), zap.Error(writeErr))
-					} else {
-						logger.Log.Info("Complete itinerary data written to file", zap.String("file", filename))
-					}
-					logger.Log.Info("Complete itinerary data being displayed in view", zap.String("json", string(jsonData)))
-				}
-
 				cityData = completeData.GeneralCityData
 				logger.Log.Info("City data loaded from complete cache",
 					zap.String("city", cityData.City))
@@ -157,15 +143,17 @@ func (h *RestaurantsHandlers) loadRestaurantsFromDatabase(sessionIDParam string)
 		return results.RestaurantsResults(emptyCityData, emptyRestaurants, true, true, 5, []string{})
 	}
 
+	debugger.DebugCompleteItinerary(h.logger, completeData, sessionIDParam)
+
 	// Print JSON data for debugging
-	jsonData, err := json.MarshalIndent(completeData, "", "  ")
-	if err != nil {
-		logger.Log.Error("Failed to marshal completeData to JSON", zap.Error(err))
-	} else {
-		if err := os.WriteFile("complete_restaurant.json", jsonData, 0644); err != nil {
-			logger.Log.Error("Failed to write JSON to file", zap.Error(err))
-		}
-	}
+	//jsonData, err := json.MarshalIndent(completeData, "", "  ")
+	//if err != nil {
+	//	logger.Log.Error("Failed to marshal completeData to JSON", zap.Error(err))
+	//} else {
+	//	if err := os.WriteFile("complete_restaurant.json", jsonData, 0644); err != nil {
+	//		logger.Log.Error("Failed to write JSON to file", zap.Error(err))
+	//	}
+	//}
 
 	logger.Log.Info("Successfully loaded complete data from database for restaurants",
 		zap.String("sessionID", sessionIDParam),

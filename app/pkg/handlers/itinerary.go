@@ -384,20 +384,6 @@ func (h *ItineraryHandlers) loadItineraryBySessionSSE(sessionIDParam string, cac
 	// Try complete cache first with cacheKey (for reusable cache hits)
 	if cacheKey != "" {
 		if completeData, found := middleware.CompleteItineraryCache.Get(cacheKey); found {
-			// Print JSON data for debugging what will be displayed
-			jsonData, err := json.MarshalIndent(completeData, "", "  ")
-			if err != nil {
-				logger.Log.Error("Failed to marshal completeData to JSON", zap.Error(err))
-			} else {
-				filename := "complete_itinerary.json" // Or fmt.Sprintf("complete_itinerary_%s.json", sessionID)
-				if writeErr := os.WriteFile(filename, jsonData, 0644); writeErr != nil {
-					logger.Log.Error("Failed to write completeData to file", zap.String("file", filename), zap.Error(writeErr))
-				} else {
-					logger.Log.Info("Complete itinerary data written to file", zap.String("file", filename))
-				}
-				logger.Log.Info("Complete itinerary data being displayed in view", zap.String("json", string(jsonData)))
-			}
-
 			logger.Log.Info("Complete itinerary found in cache. Rendering SSE results with data.",
 				zap.String("city", completeData.GeneralCityData.City),
 				zap.Int("generalPOIs", len(completeData.PointsOfInterest)),

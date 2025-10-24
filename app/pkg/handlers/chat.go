@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -786,48 +785,6 @@ func (h *ChatHandlers) getRedirectURL(intent string) string {
 	}
 }
 
-// generateDiscoveryResponse creates the response before redirect
-//func (h *ChatHandlers) generateDiscoveryResponse(query, intent, _ string) string {
-//	var intentLabel string
-//	var icon string
-//
-//	switch intent {
-//	case "restaurants":
-//		intentLabel = "Food & Dining"
-//		icon = "🍽️"
-//	case "hotels":
-//		intentLabel = "Hotels & Accommodation"
-//		icon = "🏨"
-//	case "activities":
-//		intentLabel = "Activities & Attractions"
-//		icon = "🎯"
-//	case "itinerary":
-//		intentLabel = "Travel Planning"
-//		icon = "📋"
-//	default:
-//		intentLabel = "Discovery"
-//		icon = "✨"
-//	}
-//
-//	return fmt.Sprintf(`
-//		<div class="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 border mb-4">
-//			<div class="flex items-center gap-4">
-//				<div class="text-4xl">%s</div>
-//				<div class="flex-1">
-//					<h3 class="font-semibold text-card-foreground mb-1">Taking you to %s</h3>
-//					<p class="text-sm text-muted-foreground">Based on your query: "%s"</p>
-//					<div class="mt-3">
-//						<div class="flex items-center gap-2 text-blue-600">
-//							<div class="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-//							<span class="text-sm font-medium">Redirecting to personalized recommendations...</span>
-//						</div>
-//					</div>
-//				</div>
-//			</div>
-//		</div>
-//	`, icon, intentLabel, query)
-//}
-
 // generateDiscoveryResponseByURL creates response based on redirect URL
 func (h *ChatHandlers) generateDiscoveryResponseByURL(query, redirectURL string) string {
 	var intentLabel string
@@ -1029,19 +986,20 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 			// Print streamed response to terminal
 			fmt.Printf("SSE >> %s\n", eventData)
 
-			filePath := "events.json" // Change to "events.txt" for text format
-			f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			if err != nil {
-				logger.Log.Error("Failed to open file", zap.Error(err), zap.String("file", filePath))
-				continue
-			}
-			defer f.Close()
+			//debugger.DebugPrintEvents(_, eventData)
+			//filePath := "events.json" // Change to "events.txt" for text format
+			//f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			//if err != nil {
+			//	logger.Log.Error("Failed to open file", zap.Error(err), zap.String("file", filePath))
+			//	continue
+			//}
+			//defer f.Close()
 
 			// For JSON: Write eventData with a newline for separation
-			if _, err := f.Write(append(eventData, '\n')); err != nil {
-				logger.Log.Error("Failed to write to file", zap.Error(err), zap.String("file", filePath))
-				continue
-			}
+			//if _, err := f.Write(append(eventData, '\n')); err != nil {
+			//	logger.Log.Error("Failed to write to file", zap.Error(err), zap.String("file", filePath))
+			//	continue
+			//}
 
 			fmt.Fprintf(c.Writer, "data: %s\n\n", eventData)
 			flusher.Flush()

@@ -1,0 +1,199 @@
+package scripts
+
+// ViewModeManagerScript provides view mode persistence and smooth transitions
+templ ViewModeManagerScript() {
+	<script type="text/javascript">
+	// View Mode Manager - Handles view mode persistence and transitions
+	(function() {
+		const VIEW_MODE_KEY = 'loci_view_mode_preference';
+		const VALID_MODES = ['list', 'map', 'split', 'grid'];
+		const DEFAULT_MODE = 'list';
+
+		class ViewModeManager {
+			constructor() {
+				this.currentMode = this.loadViewMode();
+				this.init();
+			}
+
+			init() {
+				// Expose globally
+				window.viewModeManager = this;
+
+				// Set initial mode if Alpine.js context exists
+				this.applyInitialMode();
+
+				// Listen for view mode changes
+				document.addEventListener('alpine:initialized', () => {
+					console.log('Alpine initialized, view mode:', this.currentMode);
+				});
+
+				console.log('View Mode Manager initialized', { currentMode: this.currentMode });
+			}
+
+			loadViewMode() {
+				try {
+					const stored = localStorage.getItem(VIEW_MODE_KEY);
+					if (stored && VALID_MODES.includes(stored)) {
+						return stored;
+					}
+				} catch (e) {
+					console.error('Failed to load view mode preference', e);
+				}
+				return DEFAULT_MODE;
+			}
+
+			saveViewMode(mode) {
+				if (!VALID_MODES.includes(mode)) {
+					console.warn('Invalid view mode:', mode);
+					return;
+				}
+
+				try {
+					localStorage.setItem(VIEW_MODE_KEY, mode);
+					this.currentMode = mode;
+					console.log('View mode saved:', mode);
+				} catch (e) {
+					console.error('Failed to save view mode preference', e);
+				}
+			}
+
+			getViewMode() {
+				return this.currentMode;
+			}
+
+			setViewMode(mode, alpineContext) {
+				this.saveViewMode(mode);
+
+				// Update Alpine context if provided
+				if (alpineContext && alpineContext.viewMode !== undefined) {
+					alpineContext.viewMode = mode;
+				}
+
+				// Trigger custom event for other components
+				window.dispatchEvent(new CustomEvent('viewModeChanged', {
+					detail: { mode }
+				}));
+			}
+
+			applyInitialMode() {
+				// Try to set initial mode on page load
+				setTimeout(() => {
+					const alpineData = window.Alpine?.store('results');
+					if (alpineData) {
+						alpineData.viewMode = this.currentMode;
+					}
+				}, 100);
+			}
+
+			// Helper to create view mode toggle with persistence
+			createViewModeToggle(initialMode) {
+				return {
+					viewMode: this.currentMode || initialMode || DEFAULT_MODE,
+					setMode(mode) {
+						this.viewMode = mode;
+						window.viewModeManager?.saveViewMode(mode);
+					}
+				};
+			}
+		}
+
+		// Initialize view mode manager
+		new ViewModeManager();
+
+		// Global helper function for creating view mode data
+		window.createViewModeData = function(initialMode) {
+			return window.viewModeManager?.createViewModeToggle(initialMode) || {
+				viewMode: initialMode || DEFAULT_MODE,
+				setMode(mode) {
+					this.viewMode = mode;
+				}
+			};
+		};
+
+		// CSS for smooth transitions (inject if not already present)
+		if (!document.getElementById('view-mode-transitions')) {
+			const style = document.createElement('style');
+			style.id = 'view-mode-transitions';
+			style.textContent = `
+				/* View Mode Transition Styles */
+				.view-mode-transition {
+					transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+				}
+
+				.view-mode-fade-enter {
+					opacity: 0;
+					transform: translateY(10px);
+				}
+
+				.view-mode-fade-enter-active {
+					transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+				}
+
+				.view-mode-fade-enter-to {
+					opacity: 1;
+					transform: translateY(0);
+				}
+
+				.view-mode-fade-leave {
+					opacity: 1;
+				}
+
+				.view-mode-fade-leave-active {
+					transition: opacity 0.2s ease-in;
+				}
+
+				.view-mode-fade-leave-to {
+					opacity: 0;
+				}
+
+				/* Split view enhancements */
+				.split-view-container {
+					display: grid;
+					grid-template-columns: 1fr;
+					gap: 1rem;
+					transition: grid-template-columns 0.3s ease;
+				}
+
+				@media (min-width: 1024px) {
+					.split-view-container.split-active {
+						grid-template-columns: 1fr 1fr;
+					}
+				}
+
+				/* Map container height transitions */
+				.map-container {
+					transition: height 0.3s ease, max-height 0.3s ease;
+				}
+
+				.map-container.full-height {
+					height: calc(100vh - 200px);
+					max-height: none;
+				}
+
+				.map-container.split-height {
+					height: 500px;
+					max-height: 500px;
+				}
+
+				/* Button active states */
+				.view-mode-btn {
+					transition: all 0.2s ease;
+				}
+
+				.view-mode-btn.active {
+					background: rgb(59 130 246);
+					color: white;
+					transform: scale(1.05);
+				}
+
+				.view-mode-btn:not(.active):hover {
+					background: rgba(59, 130, 246, 0.1);
+				}
+			`;
+			document.head.appendChild(style);
+		}
+
+		console.log('View Mode Manager and transitions loaded');
+	})();
+	</script>
+}

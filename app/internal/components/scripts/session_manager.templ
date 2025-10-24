@@ -1,0 +1,233 @@
+package scripts
+
+// SessionManagerScript provides session management, URL parameter handling, and deep linking support
+templ SessionManagerScript() {
+	<script type="text/javascript">
+	// Session Manager - Handles session persistence, URL params, and deep linking
+	(function() {
+		const SESSION_STORAGE_KEY = 'loci_session_data';
+		const SESSION_EXPIRY_HOURS = 24;
+
+		// Session Manager Class
+		class SessionManager {
+			constructor() {
+				this.init();
+			}
+
+			init() {
+				// Extract URL parameters
+				const urlParams = this.getURLParams();
+
+				// Load or create session
+				let sessionData = this.loadSession();
+
+				// Merge URL params into session (URL params take precedence)
+				if (urlParams.sessionId) {
+					sessionData.sessionId = urlParams.sessionId;
+				}
+				if (urlParams.cityName) {
+					sessionData.cityName = urlParams.cityName;
+				}
+				if (urlParams.cacheKey) {
+					sessionData.cacheKey = urlParams.cacheKey;
+				}
+
+				// Check if session is expired
+				if (this.isSessionExpired(sessionData)) {
+					console.log('Session expired, creating new session');
+					sessionData = this.createNewSession(urlParams);
+				}
+
+				// Save updated session
+				this.saveSession(sessionData);
+
+				// Expose session data globally
+				window.lociSession = sessionData;
+
+				// Add URL update helpers
+				window.updateSessionURL = this.updateURL.bind(this);
+				window.getDeepLink = this.getDeepLink.bind(this);
+
+				console.log('Session Manager initialized', sessionData);
+			}
+
+			getURLParams() {
+				const params = new URLSearchParams(window.location.search);
+				return {
+					sessionId: params.get('sessionId') || params.get('session_id'),
+					cityName: params.get('cityName') || params.get('city'),
+					cacheKey: params.get('cacheKey') || params.get('cache_key'),
+					domain: params.get('domain'), // restaurants, hotels, activities, itinerary
+				};
+			}
+
+			loadSession() {
+				try {
+					const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
+					if (stored) {
+						return JSON.parse(stored);
+					}
+				} catch (e) {
+					console.error('Failed to load session from storage', e);
+				}
+
+				// Return empty session if nothing stored
+				return {
+					sessionId: null,
+					cityName: null,
+					cacheKey: null,
+					createdAt: Date.now(),
+					expiresAt: Date.now() + (SESSION_EXPIRY_HOURS * 60 * 60 * 1000),
+				};
+			}
+
+			saveSession(sessionData) {
+				try {
+					sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
+				} catch (e) {
+					console.error('Failed to save session to storage', e);
+				}
+			}
+
+			createNewSession(urlParams = {}) {
+				const now = Date.now();
+				return {
+					sessionId: urlParams.sessionId || this.generateSessionId(),
+					cityName: urlParams.cityName || null,
+					cacheKey: urlParams.cacheKey || null,
+					createdAt: now,
+					expiresAt: now + (SESSION_EXPIRY_HOURS * 60 * 60 * 1000),
+				};
+			}
+
+			isSessionExpired(sessionData) {
+				if (!sessionData.expiresAt) {
+					return true;
+				}
+				return Date.now() > sessionData.expiresAt;
+			}
+
+			generateSessionId() {
+				// Generate a simple UUID-like session ID
+				return 'sess_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
+			}
+
+			updateURL(params) {
+				// Update URL without page reload
+				const url = new URL(window.location);
+
+				Object.keys(params).forEach(key => {
+					if (params[key]) {
+						url.searchParams.set(key, params[key]);
+					} else {
+						url.searchParams.delete(key);
+					}
+				});
+
+				window.history.pushState({}, '', url);
+
+				// Update session storage
+				const sessionData = this.loadSession();
+				if (params.sessionId) sessionData.sessionId = params.sessionId;
+				if (params.cityName) sessionData.cityName = params.cityName;
+				if (params.cacheKey) sessionData.cacheKey = params.cacheKey;
+				this.saveSession(sessionData);
+			}
+
+			getDeepLink(domain, params = {}) {
+				// Generate deep link URL for specific results
+				// domain: 'restaurants', 'hotels', 'activities', 'itinerary'
+				const baseUrl = window.location.origin;
+				const sessionData = window.lociSession || this.loadSession();
+
+				const url = new URL(`${baseUrl}/${domain}`, window.location);
+
+				// Add session parameters
+				if (sessionData.sessionId) {
+					url.searchParams.set('sessionId', sessionData.sessionId);
+				}
+				if (sessionData.cityName) {
+					url.searchParams.set('cityName', sessionData.cityName);
+				}
+				if (sessionData.cacheKey) {
+					url.searchParams.set('cacheKey', sessionData.cacheKey);
+				}
+
+				// Add custom parameters
+				Object.keys(params).forEach(key => {
+					url.searchParams.set(key, params[key]);
+				});
+
+				return url.toString();
+			}
+
+			clearSession() {
+				sessionStorage.removeItem(SESSION_STORAGE_KEY);
+				window.lociSession = null;
+			}
+		}
+
+		// Initialize session manager
+		window.sessionManager = new SessionManager();
+
+		// Helper functions for easy access
+		window.getSessionId = function() {
+			return window.lociSession?.sessionId || null;
+		};
+
+		window.getCityName = function() {
+			return window.lociSession?.cityName || null;
+		};
+
+		window.getCacheKey = function() {
+			return window.lociSession?.cacheKey || null;
+		};
+
+		// Share functionality with deep linking
+		window.shareResults = function(domain) {
+			const deepLink = window.getDeepLink(domain);
+
+			if (navigator.share) {
+				navigator.share({
+					title: `Check out these ${domain} in ${window.getCityName() || 'this city'}!`,
+					text: `I found some great ${domain} you might like.`,
+					url: deepLink
+				}).catch(err => {
+					console.log('Share cancelled or failed', err);
+					copyToClipboard(deepLink);
+				});
+			} else {
+				copyToClipboard(deepLink);
+			}
+		};
+
+		function copyToClipboard(text) {
+			navigator.clipboard.writeText(text).then(() => {
+				showNotification('Link copied to clipboard!', 'success');
+			}).catch(err => {
+				console.error('Failed to copy link', err);
+				showNotification('Failed to copy link', 'error');
+			});
+		}
+
+		function showNotification(message, type = 'info') {
+			// Simple notification (you can enhance this with better UI)
+			const notification = document.createElement('div');
+			notification.className = `fixed top-4 right-4 px-4 py-3 rounded-lg shadow-lg z-50 transition-opacity duration-300 ${
+				type === 'success' ? 'bg-green-500 text-white' :
+				type === 'error' ? 'bg-red-500 text-white' :
+				'bg-blue-500 text-white'
+			}`;
+			notification.textContent = message;
+			document.body.appendChild(notification);
+
+			setTimeout(() => {
+				notification.style.opacity = '0';
+				setTimeout(() => notification.remove(), 300);
+			}, 3000);
+		}
+
+		console.log('Session Manager loaded successfully');
+	})();
+	</script>
+}

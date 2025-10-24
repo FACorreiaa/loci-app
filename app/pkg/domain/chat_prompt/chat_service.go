@@ -903,9 +903,10 @@ func (l *ServiceImpl) GetPOIDetailedInfosResponse(ctx context.Context, userID uu
 
 	resultCh := make(chan models.POIDetailedInfo, 1)
 	var wg sync.WaitGroup
-	wg.Add(1)
 
-	go l.getPOIDetailedInfos(&wg, ctx, city, lat, lon, userID, resultCh, &genai.GenerateContentConfig{Temperature: genai.Ptr[float32](defaultTemperature)})
+	wg.Go(func() {
+		l.getPOIDetailedInfos(&wg, ctx, city, lat, lon, userID, resultCh, &genai.GenerateContentConfig{Temperature: genai.Ptr[float32](defaultTemperature)})
+	})
 
 	go func() {
 		wg.Wait()
@@ -2095,58 +2096,68 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 	// Step 6: Spawn streaming workers based on domain with cache support
 	switch domain {
 	case models.DomainItinerary, models.DomainGeneral:
-		wg.Add(3)
-
 		// Worker 1: Stream City Data with cache
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			prompt := getCityDataPrompt(cityName)
 			partCacheKey := cacheKey + "_city_data"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "city_data", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 		// Worker 2: Stream General POIs with cache
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			prompt := getGeneralPOIPrompt(cityName)
 			partCacheKey := cacheKey + "_general_pois"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "general_pois", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 		// Worker 3: Stream Personalized Itinerary with cache
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			prompt := getPersonalizedItineraryPrompt(cityName, basePreferences)
 			partCacheKey := cacheKey + "_itinerary"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "itinerary", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 	case models.DomainAccommodation:
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		// Worker 1: Stream City Data with cache
+		wg.Go(func() {
+			prompt := getCityDataPrompt(cityName)
+			partCacheKey := cacheKey + "_city_data"
+			l.streamWorkerWithResponseAndCache(ctx, prompt, "city_data", sendEventWithResponse, domain, partCacheKey)
+		})
+
+		wg.Go(func() {
 			prompt := getAccommodationPrompt(cityName, lat, lon, basePreferences)
 			partCacheKey := cacheKey + "_hotels"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "hotels", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 	case models.DomainDining:
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		// Worker 1: Stream City Data with cache
+		wg.Go(func() {
+			prompt := getCityDataPrompt(cityName)
+			partCacheKey := cacheKey + "_city_data"
+			l.streamWorkerWithResponseAndCache(ctx, prompt, "city_data", sendEventWithResponse, domain, partCacheKey)
+		})
+
+		wg.Go(func() {
 			prompt := getDiningPrompt(cityName, lat, lon, basePreferences)
 			partCacheKey := cacheKey + "_restaurants"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "restaurants", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 	case models.DomainActivities:
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		// Worker 1: Stream City Data with cache
+		wg.Go(func() {
+			prompt := getCityDataPrompt(cityName)
+			partCacheKey := cacheKey + "_city_data"
+			l.streamWorkerWithResponseAndCache(ctx, prompt, "city_data", sendEventWithResponse, domain, partCacheKey)
+		})
+
+		wg.Go(func() {
 			prompt := getActivitiesPrompt(cityName, lat, lon, basePreferences)
 			partCacheKey := cacheKey + "_activities"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "activities", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 	default:
 		sendEventWithResponse(models.StreamEvent{Type: models.EventTypeError, Error: fmt.Sprintf("unhandled domain: %s", domain)})
@@ -2400,58 +2411,46 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStreamFree(ctx context.Context, c
 	// Step 6: Spawn streaming workers based on domain with cache support
 	switch domain {
 	case models.DomainItinerary, models.DomainGeneral:
-		wg.Add(3)
-
-		// Worker 1: Stream City Data with cache
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			prompt := getCityDataPrompt(cityName)
 			partCacheKey := cacheKey + "_city_data"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "city_data", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 		// Worker 2: Stream General POIs with cache
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			prompt := getGeneralPOIPrompt(cityName)
 			partCacheKey := cacheKey + "_general_pois"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "general_pois", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 		// Worker 3: Stream Personalized Itinerary with cache
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			prompt := getGeneralizedItineraryPrompt(cityName)
 			partCacheKey := cacheKey + "_itinerary"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "itinerary", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 	case models.DomainAccommodation:
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			prompt := getGeneralAccommodationPrompt(cityName)
 			partCacheKey := cacheKey + "_hotels"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "hotels", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 	case models.DomainDining:
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			prompt := getGeneralDiningPrompt(cityName)
 			partCacheKey := cacheKey + "_restaurants"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "restaurants", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 	case models.DomainActivities:
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			prompt := getGeneralActivitiesPrompt(cityName)
 			partCacheKey := cacheKey + "_activities"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "activities", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 	default:
 		sendEventWithResponse(models.StreamEvent{Type: models.EventTypeError, Error: fmt.Sprintf("unhandled domain: %s", domain)})

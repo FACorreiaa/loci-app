@@ -271,32 +271,43 @@
    - ✅ Fixed city name display in Hotels/Activities/Restaurants titles
    - ✅ Implemented city data loading from cache with database fallback 
 
-3. **Advanced Filtering System**
-   - Consistent filter panel across all result pages
-   - Multi-select filters with checkboxes
-   - Price range filters (€ to €€€€)
-   - Rating-based filtering
-   - Category filters specific to each domain:
+3. **Advanced Filtering System** - ✅ COMPLETED
+   - ✅ Consistent filter panel across all result pages (`filter_panel.templ`)
+   - ✅ Multi-select filters with checkboxes
+   - ✅ Price range filters (€ to €€€€)
+   - ✅ Rating-based filtering
+   - ✅ Category filters specific to each domain:
      - Restaurants: Cuisine type (Portuguese, Seafood, International)
      - Hotels: Type (Luxury, Boutique, Historic, Business)
      - Activities: Type (Cultural, Entertainment, Outdoor, Adventure)
-   - Feature filters (Michelin Star, River View, Pet Friendly, etc.)
-   - Filter badges showing active filters
+   - ✅ Feature filters (Michelin Star, River View, Pet Friendly, etc.)
+   - ✅ Filter badges showing active filters with JavaScript management
+   - ✅ HTMX integration for dynamic filtering
 
-4. **Enhanced Card Design**
-   - Consistent emoji and icon system per domain
-   - Metadata label badges with color coding
-   - Priority indicators (Must Visit, Recommended, Popular)
-   - Enhanced footer with price/budget and feature tags
-   - Duration/time-to-spend indicators
-   - Special feature badges (Vegetarian, Terrace, Family-friendly)
+4. **Enhanced Card Design** - ✅ COMPLETED
+   - ✅ Consistent emoji and icon system per domain
+     - Restaurants: `getCuisineEmoji()` with 15+ cuisines
+     - Hotels: `getAmenityIcon()` templ component
+     - Activities: `getCategoryEmoji()` with 18+ categories
+   - ✅ Metadata label badges with color coding
+     - Rating colors: `getRatingColorClass()`
+     - Price badge colors: `getPriceBadgeColor()`
+     - Budget colors: `getBudgetColorClass()`
+   - ✅ Enhanced footer with price/budget and feature tags
+   - ✅ Duration/time-to-spend indicators
+   - ✅ Special feature badges (tags display)
 
 #### Medium Priority (UX Improvements)
-5. **General POIs Section**
-   - "All Points of Interest" section showing broader city context
-   - Separate from curated/personalized recommendations
-   - Collapsible "show all" with pagination
-   - Grid layout with responsive columns
+5. **General POIs Section** - ✅ ENHANCED
+   - ✅ "All Points of Interest" section showing broader city context (`itinerary_results.templ:282-327`)
+   - ✅ Separate from curated/personalized recommendations
+   - ✅ Collapsible "show more" functionality with Alpine.js
+     - Shows 6 POIs initially
+     - "Show all X places" button with animated expand/collapse
+     - Smooth transitions with Alpine.js x-transition
+   - ✅ Responsive grid layout (1 col mobile, 2 cols tablet, 3 cols desktop)
+   - ✅ Count badge showing total number of places
+   - ✅ Enhanced GeneralPOICard with images, ratings, tags, and actions 
 
 6. **Session Management & Deep Linking**
    - URL parameter support for sessionId and cityName
@@ -321,8 +332,11 @@
 9. **Chat Session Continuity**
    - Persistent session IDs across page navigation
    - Multi-location session ID extraction
-   - Continue conversation after returning to page
-
+     - Continue conversation after returning to page
+     9.2 I want you to start preparing the /continue transcation that should be used on this server side rendering with HTMX. The /continue has the same functionality as the REST API.
+     Do cd .. to check go-ai-poi-client and go-ai-poi-server if needed. 
+   - On full pages allows to "Add" or "Remove" items from the page (refreshing the page?) as it works on the API and on the client.
+   - On Chats (/chat) it allows the user to do the same with the LLM replying with the new data and the previous data. If necessary for this task do cd .. and also analise go-ai-poi-client
 10. **Banner Messaging System**
     - Success banners after operations
     - Authentication promotion for guests
@@ -336,6 +350,7 @@
     - Show "Location TBD" for cards without coordinates
     - Fallback center point for invalid data
 
+12. **Chat session button on intent view"
 ### Implementation Recommendations
 
 **Phase 1: Core Functionality** (Do First)
@@ -360,11 +375,6 @@
 - Banner system
 - Coordinate validation
 - Chat continuity
-
-- [] 3.2 When I make a search for itinerary, everything works fine. 
-But when I make a retrocess on the page, we still have the state of the previous page. 
-Upon coming back to the main page, we should have a new state instead of having 
-"Redirecting to results..." under the input and have the terminal under an eternal search. 
 
 - [x] **5. Map Integration** ✓ COMPLETE
   - Issue: Multiple errors with map initialization, then needed responsive sizing for all screen sizes
@@ -448,8 +458,8 @@ Build the handlers keeping in mind im using HTMX and Go full stack.
 10.1 For the payments I want to have a proper middleware that connects the users with their benefits
 10.2 I want to have a way of users having discount codes and special offer codes to be able to use the sub
 
-11. Restaurants has two structs, cityData that is empty and restaurants which has the data including the city name. on the view, the title is being populated with cityData which then is populating the title empty. We need to have either the cityData being populated for Restaurants, Hotels and Activities so the title can be filled or fill the view with the right structure since city data is empty.
-12. We need to rethink how the cache is being done:
+11. [x] **Restaurants has two structs, cityData that is empty and restaurants which has the data including the city name. on the view, the title is being populated with cityData which then is populating the title empty. We need to have either the cityData being populated for Restaurants, Hotels and Activities so the title can be filled or fill the view with the right structure since city data is empty.**
+12 [x]. **We need to rethink how the cache is being done:**
 ```go
 	if cacheKey != "" {
 		if restaurantsData, found := middleware.RestaurantsCache.Get(cacheKey); found {
@@ -493,6 +503,7 @@ User searches Restaurant ABC + Preference 1,2,4 = cached response
 User searches Restaurant XYZ + Preference 1,2,4 = New restaurant, new LLM Search
 
 This logic should be applied to all intents in order to save LLM calls, tokens and budgets. 
+12.1 Think about caching with PGVector to return vector data from DB
 
 13. Discover should work as it does under go-ai-poi-client and go-ai-poi-server
 Analyse the /discover route and implement the same logic using htmx to filter by 5km, 10km, 15km etc.
@@ -517,3 +528,19 @@ To discuss: A list should be a mix of itineraries, hotels, activities and restau
     20.4 Notifications
 21. On Pricing, add an "Enterprise column" where companies and travel agencies should be able to contact me for a one time purchase of the whole pack. 
 22. Adapt the footer for Loci instead of the current hardcodded TemplUI
+23. Currently the Auth is too simplistic. We need to add email verification and sms verification when an user Signs up instead of redirecting right away to the app. The login is fine. 
+24. 2025-10-24T11:36:08.953+0100    ERROR   auth/handlers.go:164    Failed to register user {"port": "8090", "service": "loci-templui", "line": "42", "error": "registration failed: email or username already exists: item already exists or conflict"} On error, the user should see an error message on the form instead of the constant loading button. Also when creating account, only one message should be on the button. "Creating account" with the loader. The state still shows the loader indicator with the label.
+25. On the dashboard there is a settings icon. The settings should either be:
+    25.1 A popup with the same settings for /settings for the user to be able to modify fast the travel preferences
+    25.2 (Preferences) a side bar where the user gets the same views of the Travel Preferences in /settings to be able to modify the settings fast before a search.
+26. On Dashboard there is hardcodded data for Saved Places, Itineraries, Cities Explored and Discoveries.
+    26.1 Saved places should be the count of favourited items (itineraries, hotels, activities and )
+    26.2 Itineraries should be the count of bookmarked itineraries
+    26.3 Should be the count of cities explored
+    26.4 Discoveries should be the number of times user finds place under Discover tab
+If the queries for each item doesn't exist, create them. 
+27.   When I make a search for itinerary, everything works fine.
+      But when I make a retrocess on the page, we still have the state of the previous page.
+      Upon coming back to the main page, we should have a new state instead of having
+      "Redirecting to results..." under the input and have the terminal under an eternal search. 
+28. Clicking on each favorite item on the restaurant, hotel and activity card should add the item to the favorite table on the DB with a visual indicator. 

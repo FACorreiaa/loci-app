@@ -275,7 +275,7 @@ func (s *AuthServiceImpl) GetUserByID(ctx context.Context, userID string) (*mode
 func (s *AuthServiceImpl) GetUserByEmail(ctx context.Context, email string) (*models.UserAuth, error) {
 	l := s.logger.With(slog.String("method", "GetUserByEmail"), slog.String("email", email))
 	l.DebugContext(ctx, "Fetching user by email")
-	user, err := s.repo.GetUserByID(ctx, email)
+	user, err := s.repo.GetUserByEmail(ctx, email)
 	if err != nil {
 		l.ErrorContext(ctx, "Failed to fetch user by email", slog.Any("error", err))
 		return nil, fmt.Errorf("failed to fetch user: %w", err)

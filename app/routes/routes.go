@@ -1,9 +1,11 @@
 package routes
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"net/http/pprof"
+	"os"
 
 	"github.com/a-h/templ"
 	"github.com/google/uuid"
@@ -20,9 +22,11 @@ import (
 	profilesPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/profiles"
 	tagsPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/tags"
 	userPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/user"
-	handlers2 "github.com/FACorreiaa/go-templui/app/pkg/handlers"
+	h "github.com/FACorreiaa/go-templui/app/pkg/handlers"
 	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
+
+	generativeAI "github.com/FACorreiaa/go-genai-sdk/lib"
 
 	"github.com/FACorreiaa/go-templui/app/internal/features/about"
 	"github.com/FACorreiaa/go-templui/app/internal/features/auth"
@@ -111,11 +115,25 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 	profilesService := profilesPkg.NewUserProfilesService(profilesRepo, interestsRepo, tagsRepo, slog.Default())
 	userService := userPkg.NewUserService(userRepo, slog.Default())
 
+	// Create embedding service for POI (can be nil if not using semantic search)
+	// Change later GeminiAPIKey env variable
+	var embeddingService *generativeAI.EmbeddingService
+	if os.Getenv("GEMINI_API_KEY") != "" { // Check env var directly
+		ctx := context.Background()                                      // Use a background context for initialization
+		l := slog.Default()                                              // Use default logger
+		embeddingService, err = generativeAI.NewEmbeddingService(ctx, l) // Call with correct args
+		if err != nil {
+			slog.Error("Failed to create embedding service", "error", err) // Handle error appropriately
+		}
+	}
+
+	poiService := poiPkg.NewServiceImpl(poiRepo, embeddingService, cityRepo, slog.Default())
+
 	// Create handlers
 	authHandlers := authPkg.NewAuthHandlers(authRepo, cfg, slog.Default())
-	profilesHandlers := handlers2.NewProfilesHandler(profilesService)
-	interestsHandlers := handlers2.NewInterestsHandler(interestsRepo)
-	tagsHandlers := handlers2.NewTagsHandler(tagsRepo)
+	profilesHandlers := h.NewProfilesHandler(profilesService)
+	interestsHandlers := h.NewInterestsHandler(interestsRepo)
+	tagsHandlers := h.NewTagsHandler(tagsRepo)
 	// Create chat LLM service
 	chatRepo := llmchat.NewRepositoryImpl(dbPool, slog.Default())
 	chatService := llmchat.NewLlmInteractiontService(
@@ -128,18 +146,18 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		poiRepo,
 		slog.Default(),
 	)
-	chatHandlers := handlers2.NewChatHandlers(chatService, profilesService, chatRepo)
-	favoritesHandlers := handlers2.NewFavoritesHandlers()
-	bookmarksHandlers := handlers2.NewBookmarksHandlers()
-	discoverHandlers := handlers2.NewDiscoverHandlers()
-	nearbyHandlers := handlers2.NewNearbyHandlers()
-	itineraryHandlers := handlers2.NewItineraryHandlers(chatRepo)
-	activitiesHandlers := handlers2.NewActivitiesHandlers(chatRepo, slog.Default())
-	hotelsHandlers := handlers2.NewHotelsHandlers(chatRepo, slog.Default())
-	restaurantsHandlers := handlers2.NewRestaurantsHandlers(chatRepo, slog.Default())
-	settingsHandlers := handlers2.NewSettingsHandlers()
-	resultsHandlers := handlers2.NewResultsHandlers()
-	filterHandlers := handlers2.NewFilterHandlers(slog.Default())
+	chatHandlers := h.NewChatHandlers(chatService, profilesService, chatRepo)
+	favoritesHandlers := h.NewFavoritesHandlers(poiService)
+	bookmarksHandlers := h.NewBookmarksHandlers()
+	discoverHandlers := h.NewDiscoverHandlers()
+	nearbyHandlers := h.NewNearbyHandlers()
+	itineraryHandlers := h.NewItineraryHandlers(chatRepo)
+	activitiesHandlers := h.NewActivitiesHandlers(chatRepo, logger.Log.Sugar())
+	hotelsHandlers := h.NewHotelsHandlers(chatRepo, logger.Log.Sugar())
+	restaurantsHandlers := h.NewRestaurantsHandlers(chatRepo, logger.Log.Sugar())
+	settingsHandlers := h.NewSettingsHandlers()
+	resultsHandlers := h.NewResultsHandlers()
+	filterHandlers := h.NewFilterHandlers(logger.Log.Sugar())
 
 	// Public routes (with optional auth)
 	r.GET("/", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {

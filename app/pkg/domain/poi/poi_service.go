@@ -23,6 +23,7 @@ import (
 
 	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"github.com/FACorreiaa/go-templui/app/pkg/domain/city"
+	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
 )
 
 var _ Service = (*ServiceImpl)(nil)
@@ -264,16 +265,67 @@ func (s *ServiceImpl) SearchPOIsSemantic(ctx context.Context, query string, limi
 		return nil, err
 	}
 
-	// Generate embedding for the query
-	queryEmbedding, err := s.embeddingService.GenerateQueryEmbedding(ctx, query)
-	if err != nil {
-		l.ErrorContext(ctx, "Failed to generate query embedding",
-			slog.Any("error", err),
-			slog.String("query", query))
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to generate query embedding")
-		return nil, fmt.Errorf("failed to generate query embedding: %w", err)
+	// Build cache key for exact match
+	cacheKey := middleware.BuildVectorCacheKey(query, "", nil)
+
+	// Check for exact cache hit
+	if cachedEntry, found := middleware.Cache.VectorSearch.Get(cacheKey); found {
+		l.InfoContext(ctx, "Vector cache hit (exact)",
+			slog.String("query", query),
+			slog.Int("cached_results", len(cachedEntry.Results)))
+		span.SetAttributes(
+			attribute.Bool("cache.hit", true),
+			attribute.String("cache.type", "exact"),
+		)
+		span.SetStatus(codes.Ok, "Semantic search completed (cached)")
+		return cachedEntry.Results, nil
 	}
+
+	// Check embedding cache for query embedding
+	embeddingKey := fmt.Sprintf("query:%s", query)
+	var queryEmbedding []float32
+	var err error
+
+	if cachedEmbedding, found := middleware.Cache.Embeddings.Get(embeddingKey); found {
+		queryEmbedding = cachedEmbedding
+		l.DebugContext(ctx, "Query embedding retrieved from cache", slog.String("query", query))
+		span.SetAttributes(attribute.Bool("embedding.cached", true))
+	} else {
+		// Generate embedding for the query
+		queryEmbedding, err = s.embeddingService.GenerateQueryEmbedding(ctx, query)
+		if err != nil {
+			l.ErrorContext(ctx, "Failed to generate query embedding",
+				slog.Any("error", err),
+				slog.String("query", query))
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "Failed to generate query embedding")
+			return nil, fmt.Errorf("failed to generate query embedding: %w", err)
+		}
+
+		// Cache the embedding for future use
+		middleware.Cache.Embeddings.Set(embeddingKey, queryEmbedding, fmt.Sprintf("query: %s", query))
+		span.SetAttributes(attribute.Bool("embedding.cached", false))
+	}
+
+	// Check for semantic cache hit (similar queries)
+	if cachedEntry, similarity, found := middleware.Cache.VectorSearch.GetSimilar(queryEmbedding, "", nil); found {
+		l.InfoContext(ctx, "Vector cache hit (semantic)",
+			slog.String("query", query),
+			slog.String("cached_query", cachedEntry.QueryText),
+			slog.Float64("similarity", similarity),
+			slog.Int("cached_results", len(cachedEntry.Results)))
+		span.SetAttributes(
+			attribute.Bool("cache.hit", true),
+			attribute.String("cache.type", "semantic"),
+			attribute.Float64("cache.similarity", similarity),
+		)
+		span.SetStatus(codes.Ok, "Semantic search completed (semantic cache)")
+		return cachedEntry.Results, nil
+	}
+
+	// Cache miss - perform actual vector search
+	l.DebugContext(ctx, "Vector cache miss, performing database search", slog.String("query", query))
+	span.SetAttributes(attribute.Bool("cache.hit", false))
 
 	// Search for similar POIs
 	pois, err := s.poiRepository.FindSimilarPOIs(ctx, queryEmbedding, limit)
@@ -283,6 +335,16 @@ func (s *ServiceImpl) SearchPOIsSemantic(ctx context.Context, query string, limi
 		span.SetStatus(codes.Error, "Failed to find similar POIs")
 		return nil, fmt.Errorf("failed to find similar POIs: %w", err)
 	}
+
+	// Store results in vector cache
+	cacheEntry := &middleware.VectorCacheEntry{
+		QueryText:    query,
+		Embedding:    queryEmbedding,
+		Results:      pois,
+		SearchParams: nil,
+		CityID:       "",
+	}
+	middleware.Cache.VectorSearch.Set(cacheKey, cacheEntry)
 
 	l.InfoContext(ctx, "Semantic search completed",
 		slog.String("query", query),
@@ -315,16 +377,73 @@ func (s *ServiceImpl) SearchPOIsSemanticByCity(ctx context.Context, query string
 		return nil, err
 	}
 
-	// Generate embedding for the query
-	queryEmbedding, err := s.embeddingService.GenerateQueryEmbedding(ctx, query)
-	if err != nil {
-		l.ErrorContext(ctx, "Failed to generate query embedding",
-			slog.Any("error", err),
-			slog.String("query", query))
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to generate query embedding")
-		return nil, fmt.Errorf("failed to generate query embedding: %w", err)
+	// Build cache key for exact match (includes city filter)
+	cacheKey := middleware.BuildVectorCacheKey(query, cityID.String(), nil)
+
+	// Check for exact cache hit
+	if cachedEntry, found := middleware.Cache.VectorSearch.Get(cacheKey); found {
+		l.InfoContext(ctx, "Vector cache hit (exact) for city",
+			slog.String("query", query),
+			slog.String("city_id", cityID.String()),
+			slog.Int("cached_results", len(cachedEntry.Results)))
+		span.SetAttributes(
+			attribute.Bool("cache.hit", true),
+			attribute.String("cache.type", "exact"),
+		)
+		span.SetStatus(codes.Ok, "Semantic search by city completed (cached)")
+		return cachedEntry.Results, nil
 	}
+
+	// Check embedding cache for query embedding
+	embeddingKey := fmt.Sprintf("query:%s", query)
+	var queryEmbedding []float32
+	var err error
+
+	if cachedEmbedding, found := middleware.Cache.Embeddings.Get(embeddingKey); found {
+		queryEmbedding = cachedEmbedding
+		l.DebugContext(ctx, "Query embedding retrieved from cache",
+			slog.String("query", query),
+			slog.String("city_id", cityID.String()))
+		span.SetAttributes(attribute.Bool("embedding.cached", true))
+	} else {
+		// Generate embedding for the query
+		queryEmbedding, err = s.embeddingService.GenerateQueryEmbedding(ctx, query)
+		if err != nil {
+			l.ErrorContext(ctx, "Failed to generate query embedding",
+				slog.Any("error", err),
+				slog.String("query", query))
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "Failed to generate query embedding")
+			return nil, fmt.Errorf("failed to generate query embedding: %w", err)
+		}
+
+		// Cache the embedding for future use
+		middleware.Cache.Embeddings.Set(embeddingKey, queryEmbedding, fmt.Sprintf("query: %s", query))
+		span.SetAttributes(attribute.Bool("embedding.cached", false))
+	}
+
+	// Check for semantic cache hit (similar queries in same city)
+	if cachedEntry, similarity, found := middleware.Cache.VectorSearch.GetSimilar(queryEmbedding, cityID.String(), nil); found {
+		l.InfoContext(ctx, "Vector cache hit (semantic) for city",
+			slog.String("query", query),
+			slog.String("cached_query", cachedEntry.QueryText),
+			slog.String("city_id", cityID.String()),
+			slog.Float64("similarity", similarity),
+			slog.Int("cached_results", len(cachedEntry.Results)))
+		span.SetAttributes(
+			attribute.Bool("cache.hit", true),
+			attribute.String("cache.type", "semantic"),
+			attribute.Float64("cache.similarity", similarity),
+		)
+		span.SetStatus(codes.Ok, "Semantic search by city completed (semantic cache)")
+		return cachedEntry.Results, nil
+	}
+
+	// Cache miss - perform actual vector search
+	l.DebugContext(ctx, "Vector cache miss for city, performing database search",
+		slog.String("query", query),
+		slog.String("city_id", cityID.String()))
+	span.SetAttributes(attribute.Bool("cache.hit", false))
 
 	// Search for similar POIs in the specified city
 	pois, err := s.poiRepository.FindSimilarPOIsByCity(ctx, queryEmbedding, cityID, limit)
@@ -334,6 +453,16 @@ func (s *ServiceImpl) SearchPOIsSemanticByCity(ctx context.Context, query string
 		span.SetStatus(codes.Error, "Failed to find similar POIs by city")
 		return nil, fmt.Errorf("failed to find similar POIs by city: %w", err)
 	}
+
+	// Store results in vector cache
+	cacheEntry := &middleware.VectorCacheEntry{
+		QueryText:    query,
+		Embedding:    queryEmbedding,
+		Results:      pois,
+		SearchParams: nil,
+		CityID:       cityID.String(),
+	}
+	middleware.Cache.VectorSearch.Set(cacheKey, cacheEntry)
 
 	l.InfoContext(ctx, "Semantic search by city completed",
 		slog.String("query", query),
@@ -379,16 +508,81 @@ func (s *ServiceImpl) SearchPOIsHybrid(ctx context.Context, filter models.POIFil
 		return nil, err
 	}
 
-	// Generate embedding for the query
-	queryEmbedding, err := s.embeddingService.GenerateQueryEmbedding(ctx, query)
-	if err != nil {
-		l.ErrorContext(ctx, "Failed to generate query embedding",
-			slog.Any("error", err),
-			slog.String("query", query))
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to generate query embedding")
-		return nil, fmt.Errorf("failed to generate query embedding: %w", err)
+	// Build search params for cache key
+	searchParams := map[string]interface{}{
+		"latitude":        filter.Location.Latitude,
+		"longitude":       filter.Location.Longitude,
+		"radius":          filter.Radius,
+		"semantic_weight": semanticWeight,
+		"category":        filter.Category,
 	}
+
+	// Build cache key for exact match (no cityID in POIFilter)
+	cacheKey := middleware.BuildVectorCacheKey(query, "", searchParams)
+
+	// Check for exact cache hit
+	if cachedEntry, found := middleware.Cache.VectorSearch.Get(cacheKey); found {
+		l.InfoContext(ctx, "Vector cache hit (exact) for hybrid search",
+			slog.String("query", query),
+			slog.Float64("semantic_weight", semanticWeight),
+			slog.Int("cached_results", len(cachedEntry.Results)))
+		span.SetAttributes(
+			attribute.Bool("cache.hit", true),
+			attribute.String("cache.type", "exact"),
+		)
+		span.SetStatus(codes.Ok, "Hybrid search completed (cached)")
+		return cachedEntry.Results, nil
+	}
+
+	// Check embedding cache for query embedding
+	embeddingKey := fmt.Sprintf("query:%s", query)
+	var queryEmbedding []float32
+	var err error
+
+	if cachedEmbedding, found := middleware.Cache.Embeddings.Get(embeddingKey); found {
+		queryEmbedding = cachedEmbedding
+		l.DebugContext(ctx, "Query embedding retrieved from cache for hybrid search",
+			slog.String("query", query))
+		span.SetAttributes(attribute.Bool("embedding.cached", true))
+	} else {
+		// Generate embedding for the query
+		queryEmbedding, err = s.embeddingService.GenerateQueryEmbedding(ctx, query)
+		if err != nil {
+			l.ErrorContext(ctx, "Failed to generate query embedding",
+				slog.Any("error", err),
+				slog.String("query", query))
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "Failed to generate query embedding")
+			return nil, fmt.Errorf("failed to generate query embedding: %w", err)
+		}
+
+		// Cache the embedding for future use
+		middleware.Cache.Embeddings.Set(embeddingKey, queryEmbedding, fmt.Sprintf("query: %s", query))
+		span.SetAttributes(attribute.Bool("embedding.cached", false))
+	}
+
+	// Check for semantic cache hit (similar queries with matching params)
+	if cachedEntry, similarity, found := middleware.Cache.VectorSearch.GetSimilar(queryEmbedding, "", searchParams); found {
+		l.InfoContext(ctx, "Vector cache hit (semantic) for hybrid search",
+			slog.String("query", query),
+			slog.String("cached_query", cachedEntry.QueryText),
+			slog.Float64("similarity", similarity),
+			slog.Float64("semantic_weight", semanticWeight),
+			slog.Int("cached_results", len(cachedEntry.Results)))
+		span.SetAttributes(
+			attribute.Bool("cache.hit", true),
+			attribute.String("cache.type", "semantic"),
+			attribute.Float64("cache.similarity", similarity),
+		)
+		span.SetStatus(codes.Ok, "Hybrid search completed (semantic cache)")
+		return cachedEntry.Results, nil
+	}
+
+	// Cache miss - perform actual hybrid search
+	l.DebugContext(ctx, "Vector cache miss for hybrid search, performing database search",
+		slog.String("query", query),
+		slog.Float64("semantic_weight", semanticWeight))
+	span.SetAttributes(attribute.Bool("cache.hit", false))
 
 	// Perform hybrid search
 	pois, err := s.poiRepository.SearchPOIsHybrid(ctx, filter, queryEmbedding, semanticWeight)
@@ -398,6 +592,16 @@ func (s *ServiceImpl) SearchPOIsHybrid(ctx context.Context, filter models.POIFil
 		span.SetStatus(codes.Error, "Failed to perform hybrid search")
 		return nil, fmt.Errorf("failed to perform hybrid search: %w", err)
 	}
+
+	// Store results in vector cache
+	cacheEntry := &middleware.VectorCacheEntry{
+		QueryText:    query,
+		Embedding:    queryEmbedding,
+		Results:      pois,
+		SearchParams: searchParams,
+		CityID:       "",
+	}
+	middleware.Cache.VectorSearch.Set(cacheKey, cacheEntry)
 
 	l.InfoContext(ctx, "Hybrid search completed",
 		slog.String("query", query),
@@ -644,12 +848,13 @@ func (s *ServiceImpl) GetGeneralPOIByDistance(ctx context.Context, userID uuid.U
 func (s *ServiceImpl) generatePOIsFromLLM(ctx context.Context, userID uuid.UUID, lat, lon, distance float64) (*models.GenAIResponse, error) {
 	resultCh := make(chan models.GenAIResponse, 1)
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go s.getGeneralPOIByDistance(&wg, ctx, userID, lat, lon, distance, resultCh, &genai.GenerateContentConfig{
-		Temperature:     genai.Ptr[float32](0.7),
-		MaxOutputTokens: 16384,
+	wg.Go(func() {
+		s.getGeneralPOIByDistance(&wg, ctx, userID, lat, lon, distance, resultCh, &genai.GenerateContentConfig{
+			Temperature:     genai.Ptr[float32](0.7),
+			MaxOutputTokens: 16384,
+		})
 	})
-	wg.Wait()
+	go wg.Wait()
 	close(resultCh)
 
 	result := <-resultCh
@@ -1090,10 +1295,11 @@ func (s *ServiceImpl) filterAttractions(attractions []models.POIDetailedInfo, at
 func (s *ServiceImpl) generateRestaurantsFromLLM(ctx context.Context, userID uuid.UUID, lat, lon, distance float64, _, _ string) (*models.GenAIResponse, error) {
 	resultCh := make(chan models.GenAIResponse, 1)
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go s.getGeneralRestaurantByDistance(&wg, ctx, userID, lat, lon, distance, resultCh, &genai.GenerateContentConfig{
-		Temperature:     genai.Ptr[float32](0.7),
-		MaxOutputTokens: 16384,
+	wg.Go(func() {
+		s.getGeneralRestaurantByDistance(&wg, ctx, userID, lat, lon, distance, resultCh, &genai.GenerateContentConfig{
+			Temperature:     genai.Ptr[float32](0.7),
+			MaxOutputTokens: 16384,
+		})
 	})
 	wg.Wait()
 	close(resultCh)
@@ -1190,10 +1396,11 @@ func (s *ServiceImpl) getGeneralRestaurantByDistance(wg *sync.WaitGroup,
 func (s *ServiceImpl) generateActivitiesFromLLM(ctx context.Context, userID uuid.UUID, lat, lon, distance float64, _, _ string) (*models.GenAIResponse, error) {
 	resultCh := make(chan models.GenAIResponse, 1)
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go s.getGeneralActivitiesByDistance(&wg, ctx, userID, lat, lon, distance, resultCh, &genai.GenerateContentConfig{
-		Temperature:     genai.Ptr[float32](0.7),
-		MaxOutputTokens: 16384,
+	wg.Go(func() {
+		s.getGeneralActivitiesByDistance(&wg, ctx, userID, lat, lon, distance, resultCh, &genai.GenerateContentConfig{
+			Temperature:     genai.Ptr[float32](0.7),
+			MaxOutputTokens: 16384,
+		})
 	})
 	wg.Wait()
 	close(resultCh)
@@ -1290,10 +1497,11 @@ func (s *ServiceImpl) getGeneralActivitiesByDistance(wg *sync.WaitGroup,
 func (s *ServiceImpl) generateHotelsFromLLM(ctx context.Context, userID uuid.UUID, lat, lon, distance float64, _, _ string) (*models.GenAIResponse, error) {
 	resultCh := make(chan models.GenAIResponse, 1)
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go s.getGeneralHotelsByDistance(&wg, ctx, userID, lat, lon, distance, resultCh, &genai.GenerateContentConfig{
-		Temperature:     genai.Ptr[float32](0.7),
-		MaxOutputTokens: 16384,
+	wg.Go(func() {
+		s.getGeneralHotelsByDistance(&wg, ctx, userID, lat, lon, distance, resultCh, &genai.GenerateContentConfig{
+			Temperature:     genai.Ptr[float32](0.7),
+			MaxOutputTokens: 16384,
+		})
 	})
 	wg.Wait()
 	close(resultCh)
@@ -1390,10 +1598,11 @@ func (s *ServiceImpl) getGeneralHotelsByDistance(wg *sync.WaitGroup,
 func (s *ServiceImpl) generateAttractionsFromLLM(ctx context.Context, userID uuid.UUID, lat, lon, distance float64, _, _ string) (*models.GenAIResponse, error) {
 	resultCh := make(chan models.GenAIResponse, 1)
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go s.getGeneralAttractionsByDistance(&wg, ctx, userID, lat, lon, distance, resultCh, &genai.GenerateContentConfig{
-		Temperature:     genai.Ptr[float32](0.7),
-		MaxOutputTokens: 16384,
+	wg.Go(func() {
+		s.getGeneralAttractionsByDistance(&wg, ctx, userID, lat, lon, distance, resultCh, &genai.GenerateContentConfig{
+			Temperature:     genai.Ptr[float32](0.7),
+			MaxOutputTokens: 16384,
+		})
 	})
 	wg.Wait()
 	close(resultCh)

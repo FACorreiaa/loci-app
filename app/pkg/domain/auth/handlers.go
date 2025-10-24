@@ -139,8 +139,8 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
 	confirmPassword := r.FormValue("confirm_password")
 
-	if firstName == "" || lastName == "" || email == "" || password == "" {
-		w.Header().Set("HX-Retarget", "#register-form")
+	if firstName == "" || lastName == "" || email == "" || password == "" || confirmPassword == "" {
+		w.Header().Set("HX-Retarget", "#signup-response")
 		w.WriteHeader(http.StatusBadRequest)
 		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">All required fields must be filled</div>`)); err != nil {
 			logger.Log.Error("Failed to write response", zap.Error(err))
@@ -149,7 +149,7 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if password != confirmPassword {
-		w.Header().Set("HX-Retarget", "#register-form")
+		w.Header().Set("HX-Retarget", "#signup-response")
 		w.WriteHeader(http.StatusBadRequest)
 		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Passwords do not match</div>`)); err != nil {
 			logger.Log.Error("Failed to write response", zap.Error(err))
@@ -162,7 +162,7 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	userID, err := h.authService.Register(r.Context(), fullName, email, password, "user")
 	if err != nil {
 		logger.Log.Error("Failed to register user", zap.Error(err))
-		w.Header().Set("HX-Retarget", "#register-form")
+		w.Header().Set("HX-Retarget", "#signup-response")
 		w.WriteHeader(http.StatusBadRequest)
 		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Registration failed. Email may already be registered.</div>`)); err != nil {
 			logger.Log.Error("Failed to write response", zap.Error(err))

@@ -88,9 +88,10 @@ templ FilterPanel(domain string, cacheKey string, sessionID string) {
 				</div>
 			</div>
 
-			<!-- Active Filters Display -->
-			@FilterBadges(domain, cacheKey, sessionID)
 		</form>
+
+		<!-- Active Filters Display - shown outside form -->
+		<div id="filter-badges-container" class="mt-4"></div>
 	</div>
 	@FilterBadgesScript()
 }
@@ -177,8 +178,83 @@ templ CheckboxFilter(name string, label string, value string) {
 			type="checkbox"
 			name={ name }
 			value={ value }
-			class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+			class="filter-checkbox rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+			data-label={ label }
 		/>
 		<span>{ label }</span>
 	</label>
+}
+
+// FilterBadgesScript adds JavaScript for managing active filter badges
+templ FilterBadgesScript() {
+	<script type="text/javascript">
+	function updateFilterBadges() {
+		const container = document.getElementById('filter-badges-container');
+		if (!container) return;
+
+		const badges = [];
+
+		const checkboxes = document.querySelectorAll('.filter-checkbox:checked');
+		checkboxes.forEach(checkbox => {
+			const label = checkbox.getAttribute('data-label');
+			const name = checkbox.name;
+			const value = checkbox.value;
+
+			badges.push({
+				label: label,
+				name: name,
+				value: value,
+				element: checkbox
+			});
+		});
+
+		const ratingSelect = document.querySelector('select[name="rating"]');
+		if (ratingSelect && ratingSelect.value) {
+			badges.push({
+				label: 'Rating: ' + ratingSelect.value + '+ stars',
+				name: 'rating',
+				value: ratingSelect.value,
+				element: ratingSelect
+			});
+		}
+
+		if (badges.length === 0) {
+			container.innerHTML = '';
+			container.classList.add('hidden');
+		} else {
+			container.classList.remove('hidden');
+			const badgeHTML = badges.map(badge => {
+				return '<button type="button" class="inline-flex items-center gap-1.5 px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors" onclick="removeFilter(\'' + badge.name + '\', \'' + badge.value + '\')"><span>' + badge.label + '</span><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>';
+			}).join('');
+			container.innerHTML = '<div class="flex items-center gap-2 flex-wrap"><span class="text-sm font-medium text-gray-700 dark:text-gray-300">Active Filters:</span>' + badgeHTML + '</div>';
+		}
+	}
+
+	window.removeFilter = function(name, value) {
+		if (name === 'rating') {
+			const select = document.querySelector('select[name="rating"]');
+			if (select) {
+				select.value = '';
+				select.dispatchEvent(new Event('change'));
+			}
+		} else {
+			const checkbox = document.querySelector('.filter-checkbox[name="' + name + '"][value="' + value + '"]');
+			if (checkbox) {
+				checkbox.checked = false;
+				checkbox.dispatchEvent(new Event('change'));
+			}
+		}
+		updateFilterBadges();
+	};
+
+	document.addEventListener('DOMContentLoaded', function() {
+		document.querySelectorAll('.filter-checkbox, select[name="rating"]').forEach(function(input) {
+			input.addEventListener('change', updateFilterBadges);
+		});
+
+		updateFilterBadges();
+	});
+
+	document.body.addEventListener('htmx:afterSwap', updateFilterBadges);
+	</script>
 }

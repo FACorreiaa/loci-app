@@ -82,8 +82,8 @@ func (r *PostgresAuthRepo) GetUserByEmail(ctx context.Context, email string) (*m
 func (r *PostgresAuthRepo) GetUserByID(ctx context.Context, userID string) (*models.UserAuth, error) {
 	var user models.UserAuth
 	// Select fields needed by token generation or other logic
-	query := `SELECT id, username, email FROM users WHERE id = $1 AND is_active = TRUE`
-	err := r.pgpool.QueryRow(ctx, query, userID).Scan(&user.ID, &user.Username, &user.Email)
+	query := `SELECT id, username, email, password_hash FROM users WHERE id = $1 AND is_active = TRUE`
+	err := r.pgpool.QueryRow(ctx, query, userID).Scan(&user.ID, &user.Username, &user.Email, &user.Password)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user with ID %s not found: %w", userID, models.ErrNotFound) // Use a domain error
