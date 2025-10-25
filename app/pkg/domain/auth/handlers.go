@@ -7,6 +7,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/FACorreiaa/go-templui/app/internal/components/banner"
 	"github.com/FACorreiaa/go-templui/app/pkg/config"
 	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 )
@@ -67,8 +68,15 @@ func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		logger.Log.Warn("Missing email or password")
 		w.Header().Set("HX-Retarget", "#login-form")
 		w.WriteHeader(http.StatusBadRequest)
-		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Email and password are required</div>`)); err != nil {
-			logger.Log.Error("Failed to write response", zap.Error(err))
+		component := banner.Banner(banner.BannerProps{
+			Type:        banner.BannerError,
+			Message:     "Email and password are required",
+			Dismissable: true,
+			ID:          "login-error",
+			AutoDismiss: 5,
+		})
+		if err := component.Render(r.Context(), w); err != nil {
+			logger.Log.Error("Failed to render banner", zap.Error(err))
 		}
 		return
 	}
@@ -81,8 +89,16 @@ func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		)
 		w.Header().Set("HX-Retarget", "#login-form")
 		w.WriteHeader(http.StatusUnauthorized)
-		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Invalid email or password</div>`)); err != nil {
-			logger.Log.Error("Failed to write response", zap.Error(err))
+		component := banner.Banner(banner.BannerProps{
+			Type:        banner.BannerError,
+			Message:     "Invalid email or password",
+			Description: "Please check your credentials and try again",
+			Dismissable: true,
+			ID:          "login-invalid",
+			AutoDismiss: 5,
+		})
+		if err := component.Render(r.Context(), w); err != nil {
+			logger.Log.Error("Failed to render banner", zap.Error(err))
 		}
 		return
 	}
@@ -142,8 +158,15 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if firstName == "" || lastName == "" || email == "" || password == "" || confirmPassword == "" {
 		w.Header().Set("HX-Retarget", "#signup-response")
 		w.WriteHeader(http.StatusBadRequest)
-		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">All required fields must be filled</div>`)); err != nil {
-			logger.Log.Error("Failed to write response", zap.Error(err))
+		component := banner.Banner(banner.BannerProps{
+			Type:        banner.BannerError,
+			Message:     "All required fields must be filled",
+			Dismissable: true,
+			ID:          "signup-required",
+			AutoDismiss: 5,
+		})
+		if err := component.Render(r.Context(), w); err != nil {
+			logger.Log.Error("Failed to render banner", zap.Error(err))
 		}
 		return
 	}
@@ -151,8 +174,16 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if password != confirmPassword {
 		w.Header().Set("HX-Retarget", "#signup-response")
 		w.WriteHeader(http.StatusBadRequest)
-		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Passwords do not match</div>`)); err != nil {
-			logger.Log.Error("Failed to write response", zap.Error(err))
+		component := banner.Banner(banner.BannerProps{
+			Type:        banner.BannerError,
+			Message:     "Passwords do not match",
+			Description: "Please ensure both password fields are identical",
+			Dismissable: true,
+			ID:          "signup-password-mismatch",
+			AutoDismiss: 5,
+		})
+		if err := component.Render(r.Context(), w); err != nil {
+			logger.Log.Error("Failed to render banner", zap.Error(err))
 		}
 		return
 	}
@@ -164,8 +195,16 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		logger.Log.Error("Failed to register user", zap.Error(err))
 		w.Header().Set("HX-Retarget", "#signup-response")
 		w.WriteHeader(http.StatusBadRequest)
-		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Registration failed. Email may already be registered.</div>`)); err != nil {
-			logger.Log.Error("Failed to write response", zap.Error(err))
+		component := banner.Banner(banner.BannerProps{
+			Type:        banner.BannerError,
+			Message:     "Registration failed",
+			Description: "Email may already be registered. Please try signing in or use a different email.",
+			Dismissable: true,
+			ID:          "signup-failed",
+			AutoDismiss: 8,
+		})
+		if err := component.Render(r.Context(), w); err != nil {
+			logger.Log.Error("Failed to render banner", zap.Error(err))
 		}
 		return
 	}

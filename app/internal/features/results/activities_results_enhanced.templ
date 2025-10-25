@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"strings"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
+	"github.com/FACorreiaa/go-templui/app/internal/components/chat"
+	"github.com/FACorreiaa/go-templui/app/internal/components/banner"
 )
 
-templ ActivitiesResults(cityData models.GeneralCityData, activities []models.POIDetailedInfo, compact bool, showToggle bool, initialLimit int, favorites []string) {
+templ ActivitiesResults(cityData models.GeneralCityData, activities []models.POIDetailedInfo, compact bool, showToggle bool, initialLimit int, favorites []string, sessionID string) {
 	<div class="min-h-screen bg-gray-50 dark:bg-gray-900 activities-results" id="activities-container" x-data="activitiesPage()">
 		<!-- Mobile-First Enhanced Header -->
 		<div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
@@ -48,6 +50,14 @@ templ ActivitiesResults(cityData models.GeneralCityData, activities []models.POI
 										</svg>
 										<span>{ fmt.Sprintf("%d", len(activities)) } activities found</span>
 									</div>
+									if len(favorites) > 0 {
+										<div class="flex items-center gap-1">
+											<svg class="w-3 h-3 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+												<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+											</svg>
+											<span>{ fmt.Sprintf("%d", len(favorites)) } favorites</span>
+										</div>
+									}
 								</div>
 							</div>
 						</div>
@@ -118,7 +128,8 @@ templ ActivitiesResults(cityData models.GeneralCityData, activities []models.POI
 				</div>
 			</div>
 		</div>
-
+		<!-- Authentication Promotion Banner for Guests -->
+		@banner.AuthPromoBanner()
 		<!-- Main Content Area -->
 		<div class="flex-1 min-h-0">
 			<!-- Map Container (shown in map and split views) -->
@@ -196,7 +207,7 @@ templ ActivitiesResults(cityData models.GeneralCityData, activities []models.POI
 					}
 
 					<!-- Activity List -->
-					<div class="space-y-4">
+					<div id="activities-list" class="space-y-4">
 						for i, activity := range activities {
 							@ActivityListCard(activity, i+1)
 						}
@@ -204,13 +215,24 @@ templ ActivitiesResults(cityData models.GeneralCityData, activities []models.POI
 				</div>
 
 				<!-- Grid View -->
-				<div x-show="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+				<div id="activities-grid" x-show="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
 					for i, activity := range activities {
 						@ActivityGridCard(activity, i+1)
 					}
 				</div>
 			</div>
 		</div>
+
+		<!-- Chat Panel for continuing conversation -->
+		if sessionID != "" {
+			@chat.ChatPanel(chat.ChatPanelProps{
+				SessionID:   sessionID,
+				CityName:    cityData.City,
+				Domain:      "activities",
+				Placeholder: "Ask to add more activities...",
+				ShowByDefault: false,
+			})
+		}
 	</div>
 
 	<script>
@@ -224,7 +246,146 @@ templ ActivitiesResults(cityData models.GeneralCityData, activities []models.POI
 				sortBy: 'name',
 
 				init() {
-					// Initialize the component
+					// Set up SSE event listeners for dynamic activity management
+					document.addEventListener('htmx:sseMessage', (event) => {
+						const sseEvent = event.detail;
+						let eventData;
+						try {
+							eventData = typeof sseEvent.data === 'string' ? JSON.parse(sseEvent.data) : sseEvent.data;
+						} catch (e) {
+							console.log('Non-JSON SSE event:', sseEvent);
+							return;
+						}
+
+						console.log('SSE Event received (activities):', eventData);
+
+						if (eventData.type === 'item_added' && eventData.domain === 'activities') {
+							this.handleItemAdded(eventData);
+						}
+						if (eventData.type === 'item_removed' && eventData.domain === 'activities') {
+							this.handleItemRemoved(eventData);
+						}
+						if (eventData.type === 'item_updated' && eventData.domain === 'activities') {
+							this.handleItemUpdated(eventData);
+						}
+					});
+
+					console.log('Activities SSE listeners initialized');
+				},
+
+				handleItemAdded(eventData) {
+					const listContainer = document.getElementById('activities-list');
+					const gridContainer = document.getElementById('activities-grid');
+					if (!listContainer || !gridContainer) return;
+
+					const tempDiv = document.createElement('div');
+					tempDiv.innerHTML = eventData.html;
+					const newElement = tempDiv.firstElementChild;
+
+					if (newElement) {
+						listContainer.appendChild(newElement.cloneNode(true));
+						gridContainer.appendChild(newElement.cloneNode(true));
+						if (eventData.item_data && eventData.item_data.latitude && eventData.item_data.longitude) {
+							this.addMarkerToMap(eventData.item_data);
+						}
+						console.log('Activity added successfully:', eventData.message);
+					}
+				},
+
+				handleItemRemoved(eventData) {
+					const listElement = document.querySelector(`#activities-list [id*="activity-${eventData.item_id}"]`);
+					const gridElement = document.querySelector(`#activities-grid [id*="activity-${eventData.item_id}"]`);
+					if (listElement) listElement.remove();
+					if (gridElement) gridElement.remove();
+					this.removeMarkerFromMap(eventData.item_id);
+					console.log('Activity removed successfully:', eventData.message);
+				},
+
+				handleItemUpdated(eventData) {
+					const listElement = document.querySelector(`#activities-list [id*="activity-${eventData.item_id}"]`);
+					const gridElement = document.querySelector(`#activities-grid [id*="activity-${eventData.item_id}"]`);
+					if (eventData.html) {
+						const tempDiv = document.createElement('div');
+						tempDiv.innerHTML = eventData.html;
+						const newElement = tempDiv.firstElementChild;
+						if (newElement) {
+							if (listElement) listElement.replaceWith(newElement.cloneNode(true));
+							if (gridElement) gridElement.replaceWith(newElement.cloneNode(true));
+							if (eventData.item_data && eventData.item_data.latitude && eventData.item_data.longitude) {
+								this.removeMarkerFromMap(eventData.item_id);
+								this.addMarkerToMap(eventData.item_data);
+							}
+							console.log('Activity updated successfully:', eventData.message);
+						}
+					}
+				},
+
+				addMarkerToMap(itemData) {
+					if (!window.map || !window.mapboxgl) return;
+					const { latitude, longitude, name, category, index } = itemData;
+					if (!latitude || !longitude || (latitude === 0 && longitude === 0)) return;
+
+					const markerEl = document.createElement('div');
+					markerEl.className = 'poi-marker';
+					markerEl.style.cssText = `
+						width: 32px; height: 32px; background-color: white;
+						border: 3px solid #9333ea; border-radius: 50%; cursor: pointer;
+						box-shadow: 0 2px 4px rgba(0,0,0,0.2); display: flex;
+						align-items: center; justify-content: center; font-weight: bold;
+						font-size: 14px; color: #9333ea;
+					`;
+					markerEl.textContent = index ? index.toString() : '●';
+					markerEl.dataset.itemId = itemData.item_id || name;
+
+					const popup = new mapboxgl.Popup({ offset: 25, closeButton: true, closeOnClick: false }).setHTML(`
+						<div class="p-2 max-w-xs">
+							<h3 class="font-medium text-gray-900 mb-1">${name}</h3>
+							<div class="flex items-center gap-1 text-xs text-gray-500">
+								<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+									<path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+								</svg>
+								${category || 'Activity'}
+							</div>
+						</div>
+					`);
+
+					const marker = new mapboxgl.Marker(markerEl)
+						.setLngLat([longitude, latitude])
+						.setPopup(popup)
+						.addTo(window.map);
+
+					if (!window.activityMarkers) window.activityMarkers = new Map();
+					window.activityMarkers.set(itemData.item_id || name, marker);
+					this.recalculateMapBounds();
+					console.log('Activity marker added to map:', name);
+				},
+
+				removeMarkerFromMap(itemId) {
+					if (!window.activityMarkers || !window.activityMarkers.has(itemId)) return;
+					const marker = window.activityMarkers.get(itemId);
+					marker.remove();
+					window.activityMarkers.delete(itemId);
+					this.recalculateMapBounds();
+					console.log('Activity marker removed from map:', itemId);
+				},
+
+				recalculateMapBounds() {
+					if (!window.map || !window.mapboxgl) return;
+					const markers = window.activityMarkers ? Array.from(window.activityMarkers.values()) : [];
+					if (markers.length === 0) return;
+
+					const bounds = new mapboxgl.LngLatBounds();
+					markers.forEach(marker => bounds.extend(marker.getLngLat()));
+
+					const padding = {
+						top: window.innerWidth < 640 ? 40 : 60,
+						bottom: window.innerWidth < 640 ? 40 : 80,
+						left: window.innerWidth < 640 ? 20 : 60,
+						right: window.innerWidth < 640 ? 20 : 60
+					};
+
+					window.map.fitBounds(bounds, { padding: padding, maxZoom: 15, duration: 1000 });
+					console.log('Map bounds recalculated for activities');
 				},
 
 				setViewMode(mode) {
@@ -355,9 +516,23 @@ templ ActivityListCard(activity models.POIDetailedInfo, index int) {
 						href={ templ.URL(activity.Website) }
 						target="_blank"
 						rel="noopener noreferrer"
-						class="text-xs text-purple-600 dark:text-purple-400 hover:underline font-medium"
+						class="text-xs text-purple-600 dark:text-purple-400 hover:underline font-medium flex items-center gap-1"
 					>
-						Learn More →
+						<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+						</svg>
+						Learn More
+					</a>
+				}
+				if activity.PhoneNumber != "" {
+					<a
+						href={ templ.URL("tel:" + activity.PhoneNumber) }
+						class="text-xs text-purple-600 dark:text-purple-400 hover:underline font-medium flex items-center gap-1"
+					>
+						<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+						</svg>
+						Call
 					</a>
 				}
 			</div>

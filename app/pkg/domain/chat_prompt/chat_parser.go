@@ -111,16 +111,24 @@ func (l *ServiceImpl) parseCompleteResponseFromParts(responses map[string]*strin
 		if restaurants, err := parseRestaurantsFromResponse(restaurantStr, l.logger); err == nil && len(restaurants) > 0 {
 			var pois []models.POIDetailedInfo
 			for _, r := range restaurants {
+				// Helper function to safely dereference string pointers
+				getStringValue := func(s *string) string {
+					if s != nil {
+						return *s
+					}
+					return ""
+				}
+
 				pois = append(pois, models.POIDetailedInfo{
 					Name:        r.Name,
 					Category:    "Restaurant",
 					Description: r.Description,
 					Latitude:    r.Latitude,
 					Longitude:   r.Longitude,
-					Address:     *r.Address,
-					Website:     *r.Website,
-					PhoneNumber: *r.PhoneNumber,
-					PriceLevel:  *r.PriceLevel,
+					Address:     getStringValue(r.Address),
+					Website:     getStringValue(r.Website),
+					PhoneNumber: getStringValue(r.PhoneNumber),
+					PriceLevel:  getStringValue(r.PriceLevel),
 					Rating:      r.Rating,
 					Tags:        r.Tags,
 					Images:      r.Images,

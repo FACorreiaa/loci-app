@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
-	_ "net/http/pprof"
+
+	"github.com/gin-contrib/pprof"
 
 	"github.com/joho/godotenv"
 
@@ -84,9 +85,23 @@ func main() {
 		c.Next()
 	})
 
-	// Setup routes with database pool
 	routes.Setup(r, dbPool)
 
+	// --- pprof Router (Private) ---
+	pprofRouter := gin.New()
+	// Use the pprof.Register helper on this separate router
+	pprof.Register(pprofRouter)
+
+	// Start the pprof server in a separate goroutine on a private port
+	// This port (e.g., 6060) should NOT be exposed to the public internet.
+	// It should only be accessible internally or via an SSH tunnel.
+	go func() {
+		log.Println("Starting pprof server on :6060")
+		if err := pprofRouter.Run(":6060"); err != nil {
+			log.Fatalf("Failed to start pprof server: %v", err)
+		}
+	}()
+	
 	// Start server
 	serverPort := ":" + cfg.ServerPort
 	logger.Log.Info("Server starting", zap.String("port", cfg.ServerPort))

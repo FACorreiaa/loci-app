@@ -110,12 +110,14 @@ func (r *PostgresAuthRepo) Register(ctx context.Context, username, email, hashed
 	//startTime := time.Now()
 
 	var userID string
-	query := `INSERT INTO users (username, email, password_hash, created_at) VALUES ($1, $2, $3, $4) RETURNING id`
-	err := r.pgpool.QueryRow(ctx, query, username, email, hashedPassword, time.Now()).Scan(&userID)
+
+	// Insert user - database trigger will automatically create default profile
+	// See migration 0008_user_profile.up.sql: trigger_create_user_profile_after_insert
+	userQuery := `INSERT INTO users (username, email, password_hash, created_at) VALUES ($1, $2, $3, $4) RETURNING id`
+	err := r.pgpool.QueryRow(ctx, userQuery, username, email, hashedPassword, time.Now()).Scan(&userID)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Database error")
-		//dbQueryErrorsTotal.Add(ctx, 1)
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			return "", fmt.Errorf("email or username already exists: %w", models.ErrConflict)
@@ -124,11 +126,8 @@ func (r *PostgresAuthRepo) Register(ctx context.Context, username, email, hashed
 		return "", fmt.Errorf("database error registering user: %w", err)
 	}
 
-	// Record query duration
-	//duration := time.Since(startTime).Seconds()
-	//dbQueryDurationSeconds.Record(ctx, duration)
-
-	span.SetStatus(codes.Ok, "User inserted into database")
+	span.SetStatus(codes.Ok, "User and default profile created via trigger")
+	r.logger.InfoContext(ctx, "User registered successfully with default profile", slog.String("userID", userID))
 	return userID, nil
 }
 

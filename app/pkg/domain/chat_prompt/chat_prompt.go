@@ -606,3 +606,53 @@ Respond with JSON:
     ]
 }`, cityName, cityName)
 }
+
+// GetDiscoverSearchPrompt creates a prompt for generic discovery searches
+// Example: "5 star hotel" in "Madrid", "romantic restaurants" in "Paris"
+func GetDiscoverSearchPrompt(query, location string) string {
+	return fmt.Sprintf(`
+You are a travel discovery assistant. Find places matching the search query in the specified location.
+
+SEARCH QUERY: "%s"
+LOCATION: "%s"
+
+Interpret the query intelligently:
+- If it mentions hotels/lodging, return hotels
+- If it mentions restaurants/dining/food, return restaurants
+- If it mentions activities/entertainment/things to do, return activities
+- If it mentions attractions/sights/landmarks, return points of interest
+- Handle quality indicators: "5 star", "luxury", "budget", "cheap", "romantic", "family-friendly", etc.
+
+Return 6-12 relevant results with accurate coordinates for the location.
+
+Respond with JSON:
+{
+    "results": [
+        {
+            "name": "Place Name",
+            "latitude": <float>,
+            "longitude": <float>,
+            "category": "Hotel|Restaurant|Activity|Attraction",
+            "description": "Detailed description highlighting why it matches the query",
+            "address": "Full address",
+            "website": "URL or null",
+            "phone_number": "Phone number or null",
+            "opening_hours": "Hours string or null",
+            "price_level": "$|$$|$$$|$$$$",
+            "rating": <float 0-5>,
+            "tags": ["tag1", "tag2"],
+            "images": [],
+            "cuisine_type": "For restaurants only, or null",
+            "star_rating": "For hotels only (e.g., '5 star'), or null"
+        }
+    ]
+}
+
+IMPORTANT:
+- All coordinates must be accurate for %s
+- Prioritize well-known, highly-rated establishments
+- Match the quality level implied in the query (luxury vs budget)
+- Include specific details that match the search query
+- Ensure descriptions explain why each result matches the query
+`, query, location, location)
+}

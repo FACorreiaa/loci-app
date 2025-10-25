@@ -1211,6 +1211,51 @@ func (l *ServiceImpl) generateSemanticPOIRecommendations(ctx context.Context, us
 	return pois, nil
 }
 
+// updateCacheAfterModification updates the CompleteItineraryCache when items are added/removed
+func (l *ServiceImpl) updateCacheAfterModification(ctx context.Context, session *models.ChatSession) {
+	ctx, span := otel.Tracer("LlmInteractionService").Start(ctx, "updateCacheAfterModification")
+	defer span.End()
+
+	// Generate cache key using same logic as StartChatMessageStream
+	cacheKeyData := map[string]interface{}{
+		"user_id":    session.UserID.String(),
+		"profile_id": session.ProfileID.String(),
+		"city":       session.SessionContext.CityName,
+		"domain":     "itinerary",
+	}
+
+	cacheKeyBytes, err := json.Marshal(cacheKeyData)
+	if err != nil {
+		l.logger.WarnContext(ctx, "Failed to marshal cache key for modification update",
+			slog.Any("error", err))
+		return
+	}
+
+	hash := md5.Sum(cacheKeyBytes)
+	cacheKey := hex.EncodeToString(hash[:])
+
+	// Create updated complete response from current session state
+	completeResponse := &models.AiCityResponse{
+		GeneralCityData:     session.CurrentItinerary.GeneralCityData,
+		PointsOfInterest:    session.CurrentItinerary.PointsOfInterest,
+		AIItineraryResponse: session.CurrentItinerary.AIItineraryResponse,
+		SessionID:           session.ID,
+	}
+
+	// Update the cache
+	middleware.CompleteItineraryCache.Set(cacheKey, *completeResponse)
+
+	l.logger.InfoContext(ctx, "Updated cache after itinerary modification",
+		slog.String("session_id", session.ID.String()),
+		slog.String("cache_key", cacheKey),
+		slog.Int("poi_count", len(session.CurrentItinerary.AIItineraryResponse.PointsOfInterest)))
+
+	span.SetAttributes(
+		attribute.String("cache.key", cacheKey),
+		attribute.Int("poi.count", len(session.CurrentItinerary.AIItineraryResponse.PointsOfInterest)),
+	)
+}
+
 // handleSemanticRemovePOI handles removing POIs with semantic understanding
 func (l *ServiceImpl) handleSemanticRemovePOI(ctx context.Context, message string, session *models.ChatSession) string {
 	ctx, span := otel.Tracer("LlmInteractionService").Start(ctx, "handleSemanticRemovePOI")
@@ -1229,13 +1274,20 @@ func (l *ServiceImpl) handleSemanticRemovePOI(ctx context.Context, message strin
 			strings.Contains(strings.ToLower(poiName), strings.ToLower(p.Name)) {
 
 			removedName := p.Name
+
+			// Remove from itinerary
 			session.CurrentItinerary.AIItineraryResponse.PointsOfInterest = append(
 				session.CurrentItinerary.AIItineraryResponse.PointsOfInterest[:i],
 				session.CurrentItinerary.AIItineraryResponse.PointsOfInterest[i+1:]...,
 			)
+
 			l.logger.InfoContext(ctx, "Removed POI from itinerary",
 				slog.String("removed_poi", removedName))
 			span.SetAttributes(attribute.String("removed_poi", removedName))
+
+			// Update cache after removal
+			l.updateCacheAfterModification(ctx, session)
+
 			return fmt.Sprintf("I've removed %s from your itinerary.", removedName)
 		}
 	}
@@ -1856,24 +1908,40 @@ func (l *ServiceImpl) handleSemanticAddPOIStreamed(ctx context.Context, message 
 			}
 
 			if !alreadyExists {
-				l.sendEvent(ctx, eventCh, models.StreamEvent{
-					Type: "semantic_poi_added",
-					Data: map[string]interface{}{
-						"poi_name":       semanticPOI.Name,
-						"poi_category":   semanticPOI.Category,
-						"latitude":       semanticPOI.Latitude,
-						"longitude":      semanticPOI.Longitude,
-						"description":    semanticPOI.DescriptionPOI,
-						"semantic_match": true,
-					},
-				}, 3)
-
-				// Add semantic POI to itinerary
+				// Add semantic POI to itinerary first
 				session.CurrentItinerary.AIItineraryResponse.PointsOfInterest = append(
 					session.CurrentItinerary.AIItineraryResponse.PointsOfInterest, semanticPOI)
+				newIndex := len(session.CurrentItinerary.AIItineraryResponse.PointsOfInterest) - 1
+
+				// Render HTML fragment for the new POI
+				htmlFragment, renderErr := l.RenderItemHTML(ctx, "itinerary", semanticPOI, newIndex+1)
+				if renderErr != nil {
+					l.logger.WarnContext(ctx, "Failed to render POI HTML", slog.Any("error", renderErr))
+				}
+
+				// Send item_added event with HTML
+				l.sendEvent(ctx, eventCh, models.StreamEvent{
+					Type:   models.EventTypeItemAdded,
+					Domain: "itinerary",
+					ItemID: semanticPOI.ID.String(),
+					HTML:   htmlFragment,
+					ItemData: map[string]interface{}{
+						"name":        semanticPOI.Name,
+						"category":    semanticPOI.Category,
+						"latitude":    semanticPOI.Latitude,
+						"longitude":   semanticPOI.Longitude,
+						"description": semanticPOI.DescriptionPOI,
+						"index":       newIndex + 1,
+					},
+					Message: fmt.Sprintf("Added %s to your itinerary", semanticPOI.Name),
+				}, 3)
+
 				l.logger.InfoContext(ctx, "Added semantic POI to streaming itinerary",
 					slog.String("poi_name", semanticPOI.Name))
 				span.SetAttributes(attribute.String("added_poi", semanticPOI.Name))
+
+				// Update cache with modified itinerary
+				l.updateCacheAfterModification(ctx, session)
 
 				return fmt.Sprintf("Great! I found %s which matches what you're looking for. I've added it to your itinerary. %s",
 					semanticPOI.Name, semanticPOI.DescriptionPOI), nil

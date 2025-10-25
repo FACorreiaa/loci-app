@@ -98,7 +98,7 @@ func RestaurantsResultsSSE(sessionID string, cityData models.GeneralCityData, re
 			return templ_7745c5c3_Err
 		}
 		if hasData {
-			templ_7745c5c3_Err = RestaurantsContentComplete(cityData, restaurants).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = RestaurantsContentComplete(cityData, restaurants, sessionID).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -271,7 +271,7 @@ func RestaurantsHeaderLoading() templ.Component {
 }
 
 // RestaurantsContentComplete renders the complete content area
-func RestaurantsContentComplete(cityData models.GeneralCityData, restaurants []models.RestaurantDetailedInfo) templ.Component {
+func RestaurantsContentComplete(cityData models.GeneralCityData, restaurants []models.RestaurantDetailedInfo, sessionID string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -296,7 +296,7 @@ func RestaurantsContentComplete(cityData models.GeneralCityData, restaurants []m
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = RestaurantsResults(cityData, restaurants, true, true, 15, []string{}).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = RestaurantsResults(cityData, restaurants, true, true, 15, []string{}, sessionID).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

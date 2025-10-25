@@ -192,6 +192,11 @@ type StreamEvent struct {
 	EventID    string          `json:"event_id"`
 	IsFinal    bool            `json:"is_final,omitempty"`
 	Navigation *NavigationData `json:"navigation,omitempty"`
+	// New fields for dynamic item management
+	HTML     string `json:"html,omitempty"`      // Rendered HTML fragment for item_added/item_removed
+	Domain   string `json:"domain,omitempty"`    // restaurants, hotels, activities, itinerary
+	ItemID   string `json:"item_id,omitempty"`   // ID of the item being added/removed
+	ItemData interface{} `json:"item_data,omitempty"` // Full item data with coordinates
 }
 
 // NavigationData contains information for URL navigation
@@ -219,6 +224,9 @@ const (
 	EventTypeHotels          = "hotels"
 	EventTypeRestaurants     = "restaurants"
 	EventTypeChunk           = "chunk" // For immediate text chunks (Google GenAI pattern)
+	EventTypeItemAdded       = "item_added"
+	EventTypeItemRemoved     = "item_removed"
+	EventTypeItemUpdated     = "item_updated"
 )
 
 // StreamingResponse wraps the streaming channel and metadata

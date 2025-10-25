@@ -356,7 +356,7 @@ func (h *ItineraryHandlers) loadItineraryBySession(sessionIDParam string) templ.
 			completeData.GeneralCityData,
 			completeData.PointsOfInterest,
 			completeData.AIItineraryResponse,
-			true, true, 15, []string{})
+			true, true, 15, []string{}, sessionIDParam)
 	}
 
 	// Try legacy cache
@@ -368,7 +368,7 @@ func (h *ItineraryHandlers) loadItineraryBySession(sessionIDParam string) templ.
 		emptyCityData := models.GeneralCityData{}
 		emptyGeneralPOIs := []models.POIDetailedInfo{}
 
-		return results.ItineraryResults(emptyCityData, emptyGeneralPOIs, itineraryData, true, true, 5, []string{})
+		return results.ItineraryResults(emptyCityData, emptyGeneralPOIs, itineraryData, true, true, 5, []string{}, sessionIDParam)
 	}
 
 	// Load from database
@@ -396,7 +396,7 @@ func (h *ItineraryHandlers) loadItineraryBySessionSSE(sessionIDParam string, cac
 				true,
 				true,
 				15,
-				[]string{})
+				[]string{}, cacheKey)
 		}
 	}
 
@@ -621,5 +621,5 @@ func (h *ItineraryHandlers) loadItineraryFromDatabase(sessionIDParam string) tem
 		completeData.GeneralCityData,
 		completeData.PointsOfInterest,
 		completeData.AIItineraryResponse,
-		true, true, 5, []string{})
+		true, true, 5, []string{}, sessionIDParam)
 }

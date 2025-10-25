@@ -69,7 +69,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 	// Setup custom templ renderer
 	ginHTMLRenderer := r.HTMLRender
 	r.HTMLRender = &renderer.HTMLTemplRenderer{FallbackHTMLRenderer: ginHTMLRenderer}
-
+	
 	// Assets
 	r.Static("/assets", "./assets")
 	r.Static("/static", "./assets/static")
@@ -149,8 +149,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 	chatHandlers := h.NewChatHandlers(chatService, profilesService, chatRepo)
 	favoritesHandlers := h.NewFavoritesHandlers(poiService)
 	bookmarksHandlers := h.NewBookmarksHandlers()
-	discoverHandlers := h.NewDiscoverHandlers()
-	nearbyHandlers := h.NewNearbyHandlers()
+	discoverHandlers := h.NewDiscoverHandlers(poiRepo, chatService, slog.Default())
 	itineraryHandlers := h.NewItineraryHandlers(chatRepo)
 	activitiesHandlers := h.NewActivitiesHandlers(chatRepo, logger.Log.Sugar())
 	hotelsHandlers := h.NewHotelsHandlers(chatRepo, logger.Log.Sugar())
@@ -241,6 +240,25 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 				},
 			},
 			ActiveNav: "Discover",
+			User:      getUserFromContext(c),
+		}))
+	})
+
+	// Nearby (location-based discovery - public)
+	r.GET("/nearby", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
+		logger.Log.Info("Nearby page accessed", zap.String("ip", c.ClientIP()))
+		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			Title:   "Nearby - Loci",
+			Content: nearby.NearbyPage(),
+			Nav: models.Navigation{
+				Items: []models.NavItem{
+					{Name: "Home", URL: "/"},
+					{Name: "Discover", URL: "/discover"},
+					{Name: "Nearby", URL: "/nearby"},
+					{Name: "About", URL: "/about"},
+				},
+			},
+			ActiveNav: "Nearby",
 			User:      getUserFromContext(c),
 		}))
 	})
@@ -525,27 +543,6 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 			}))
 		})
 
-		// Nearby
-		protected.GET("/nearby", func(c *gin.Context) {
-			logger.Log.Info("Nearby page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
-				Title:   "Nearby Places - Loci",
-				Content: nearby.NearbyPage(),
-				Nav: models.Navigation{
-					Items: []models.NavItem{
-						{Name: "Dashboard", URL: "/dashboard"},
-						{Name: "Discover", URL: "/discover"},
-						{Name: "Nearby", URL: "/nearby"},
-						{Name: "Itinerary", URL: "/itinerary"},
-						{Name: "Chat", URL: "/chat"},
-						{Name: "Favorites", URL: "/favorites"},
-					},
-				},
-				ActiveNav: "Nearby",
-				User:      getUserFromContext(c),
-			}))
-		})
-
 		// Favorites
 		protected.GET("/favorites", func(c *gin.Context) {
 			logger.Log.Info("Favorites page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
@@ -739,6 +736,9 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		htmxGroup.GET("/chat/stream", middleware.OptionalAuthMiddleware(), chatHandlers.ProcessUnifiedChatMessageStream)
 		htmxGroup.POST("/chat/stream", middleware.OptionalAuthMiddleware(), chatHandlers.ProcessUnifiedChatMessageStream)
 
+		// Continue chat session endpoint (for adding/removing items to existing sessions)
+		htmxGroup.POST("/chat/continue/:sessionID", middleware.OptionalAuthMiddleware(), chatHandlers.ContinueChatSession)
+
 		// Favorites endpoints
 		htmxGroup.POST("/favorites/add/:id", favoritesHandlers.AddFavorite)
 		htmxGroup.DELETE("/favorites/:id", favoritesHandlers.RemoveFavorite)
@@ -753,6 +753,9 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		htmxGroup.POST("/discover/search", discoverHandlers.Search)
 		htmxGroup.GET("/discover/category/:category", discoverHandlers.GetCategory)
 
+		// Nearby endpoints (location-based discovery)
+		htmxGroup.GET("/nearby/search", discoverHandlers.GetNearbyPOIs)
+
 		// Results endpoints (LLM-backed searches)
 		htmxGroup.POST("/restaurants/search", resultsHandlers.HandleRestaurantSearch)
 		htmxGroup.POST("/activities/search", resultsHandlers.HandleActivitySearch)
@@ -760,11 +763,8 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		htmxGroup.POST("/itinerary/search", resultsHandlers.HandleItinerarySearch)
 		htmxGroup.GET("/itinerary/stream/results", resultsHandlers.HandleItinerarySearch)
 
-		// Nearby endpoints
-		htmxGroup.POST("/nearby/search", nearbyHandlers.SearchPOIs)
-		htmxGroup.POST("/nearby/category/:category", nearbyHandlers.GetPOIsByCategory)
-		htmxGroup.POST("/nearby/filter", nearbyHandlers.FilterPOIs)
-		htmxGroup.GET("/nearby/map", nearbyHandlers.GetMapData)
+		// Nearby endpoints - using PostGIS-based discover handlers
+		// (old nearby handlers with mock data are deprecated)
 
 		// Itinerary endpoints
 		htmxGroup.POST("/itinerary/destination", itineraryHandlers.HandleDestination)

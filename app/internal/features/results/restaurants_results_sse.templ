@@ -77,15 +77,15 @@ templ RestaurantsResultsSSE(sessionID string, cityData models.GeneralCityData, r
 		<!-- Main Content Area -->
 		<div class="flex flex-1 overflow-hidden">
 			<!-- Content Area with SSE Zone -->
-			<div id="restaurants-content" 
-				 x-show="viewMode !== 'map'" 
+			<div id="restaurants-content"
+				 x-show="viewMode !== 'map'"
 				 class="flex-1 overflow-auto"
 				 if !hasData {
 				 	sse-swap="restaurants-content"
 				 }
 				>
 				if hasData {
-					@RestaurantsContentComplete(cityData, restaurants)
+					@RestaurantsContentComplete(cityData, restaurants, sessionID)
 				} else {
 					@RestaurantsContentLoading()
 				}
@@ -209,10 +209,10 @@ templ RestaurantsHeaderLoading() {
 }
 
 // RestaurantsContentComplete renders the complete content area
-templ RestaurantsContentComplete(cityData models.GeneralCityData, restaurants []models.RestaurantDetailedInfo) {
+templ RestaurantsContentComplete(cityData models.GeneralCityData, restaurants []models.RestaurantDetailedInfo, sessionID string) {
 	<div class="p-4">
 		<!-- Use existing RestaurantsResults content components -->
-		@RestaurantsResults(cityData, restaurants, true, true, 15, []string{})
+		@RestaurantsResults(cityData, restaurants, true, true, 15, []string{}, sessionID)
 	</div>
 }
 

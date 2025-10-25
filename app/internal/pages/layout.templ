@@ -5,6 +5,8 @@ import (
 	mapcomponents "github.com/FACorreiaa/go-templui/app/internal/components/map"
 	"github.com/FACorreiaa/go-templui/app/internal/components/navbar"
 	"github.com/FACorreiaa/go-templui/app/internal/components/pwa"
+	"github.com/FACorreiaa/go-templui/app/internal/components/scripts"
+	"github.com/FACorreiaa/go-templui/app/internal/components/styles"
 	"github.com/FACorreiaa/go-templui/app/internal/features/results"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"os"
@@ -55,6 +57,9 @@ templ LayoutPage(l models.LayoutTempl) {
 			</script>
 			@results.ItineraryStateScript()
 			@results.POIModalScript()
+			@scripts.SessionManagerScript()
+			@scripts.ViewModeManagerScript()
+			@styles.AnimationsCSS()
 		</head>
 		<body hx-boost="true" class="min-h-screen bg-background text-foreground font-inter antialiased">
 			<script type="module">

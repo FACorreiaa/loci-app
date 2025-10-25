@@ -86,7 +86,7 @@ func (h *HotelsHandlers) loadHotelsBySession(sessionIDParam string, cacheKey str
 			return results.HotelsResults(
 				cityData,
 				hotelsData,
-				true, true, 15, []string{})
+				true, true, 15, []string{}, sessionIDParam)
 		}
 	}
 
@@ -115,7 +115,7 @@ func (h *HotelsHandlers) loadHotelsFromDatabase(sessionIDParam string) templ.Com
 		// Return empty results instead of PageNotFound - data might still be processing
 		emptyCityData := models.GeneralCityData{}
 		emptyHotels := []models.HotelDetailedInfo{}
-		return results.HotelsResults(emptyCityData, emptyHotels, true, true, 5, []string{})
+		return results.HotelsResults(emptyCityData, emptyHotels, true, true, 5, []string{}, sessionIDParam)
 	}
 
 	// Parse the stored response as complete data
@@ -127,7 +127,7 @@ func (h *HotelsHandlers) loadHotelsFromDatabase(sessionIDParam string) templ.Com
 		// Return empty results instead of PageNotFound for parsing errors
 		emptyCityData := models.GeneralCityData{}
 		emptyHotels := []models.HotelDetailedInfo{}
-		return results.HotelsResults(emptyCityData, emptyHotels, true, true, 5, []string{})
+		return results.HotelsResults(emptyCityData, emptyHotels, true, true, 5, []string{}, sessionIDParam)
 	}
 
 	logger.Log.Info("Successfully loaded complete data from database for hotels",
@@ -140,7 +140,7 @@ func (h *HotelsHandlers) loadHotelsFromDatabase(sessionIDParam string) templ.Com
 	return results.HotelsResults(
 		completeData.GeneralCityData,
 		hotelPOIs,
-		true, true, 5, []string{})
+		true, true, 5, []string{}, sessionIDParam)
 }
 
 // filterPOIsForHotels filters POIs to show only accommodation-related categories

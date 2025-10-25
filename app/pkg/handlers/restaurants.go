@@ -97,7 +97,7 @@ func (h *RestaurantsHandlers) loadRestaurantsBySession(sessionIDParam string, ca
 
 				restaurantsData,
 
-				true, true, 15, []string{})
+				true, true, 15, []string{}, sessionIDParam)
 		}
 	}
 
@@ -128,7 +128,7 @@ func (h *RestaurantsHandlers) loadRestaurantsFromDatabase(sessionIDParam string)
 		// Return empty results instead of PageNotFound - data might still be processing
 		emptyCityData := models.GeneralCityData{}
 		emptyRestaurants := []models.RestaurantDetailedInfo{}
-		return results.RestaurantsResults(emptyCityData, emptyRestaurants, true, true, 5, []string{})
+		return results.RestaurantsResults(emptyCityData, emptyRestaurants, true, true, 5, []string{}, sessionIDParam)
 	}
 
 	// Parse the stored response as complete data
@@ -140,7 +140,7 @@ func (h *RestaurantsHandlers) loadRestaurantsFromDatabase(sessionIDParam string)
 		// Return empty results instead of PageNotFound for parsing errors
 		emptyCityData := models.GeneralCityData{}
 		emptyRestaurants := []models.RestaurantDetailedInfo{}
-		return results.RestaurantsResults(emptyCityData, emptyRestaurants, true, true, 5, []string{})
+		return results.RestaurantsResults(emptyCityData, emptyRestaurants, true, true, 5, []string{}, sessionIDParam)
 	}
 
 	debugger.DebugCompleteItinerary(h.logger, completeData, sessionIDParam)
@@ -165,7 +165,7 @@ func (h *RestaurantsHandlers) loadRestaurantsFromDatabase(sessionIDParam string)
 	return results.RestaurantsResults(
 		completeData.GeneralCityData,
 		restaurantPOIs,
-		true, true, 5, []string{})
+		true, true, 5, []string{}, sessionIDParam)
 }
 
 // HandleRestaurantsPageSSE handles the restaurants page with SSE support
