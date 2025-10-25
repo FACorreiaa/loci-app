@@ -85,7 +85,7 @@ func main() {
 		c.Next()
 	})
 
-	routes.Setup(r, dbPool)
+	routes.Setup(r, dbPool, logger.Log)
 
 	// --- pprof Router (Private) ---
 	pprofRouter := gin.New()
@@ -101,7 +101,7 @@ func main() {
 			log.Fatalf("Failed to start pprof server: %v", err)
 		}
 	}()
-	
+
 	// Start server
 	serverPort := ":" + cfg.ServerPort
 	logger.Log.Info("Server starting", zap.String("port", cfg.ServerPort))

@@ -23,10 +23,10 @@ import (
 type RestaurantsHandlers struct {
 	chatRepo         llmchat.Repository
 	itineraryService *services.ItineraryService
-	logger           *zap.SugaredLogger
+	logger           *zap.Logger
 }
 
-func NewRestaurantsHandlers(chatRepo llmchat.Repository, logger *zap.SugaredLogger) *RestaurantsHandlers {
+func NewRestaurantsHandlers(chatRepo llmchat.Repository, logger *zap.Logger) *RestaurantsHandlers {
 	return &RestaurantsHandlers{
 		chatRepo:         chatRepo,
 		itineraryService: services.NewItineraryService(),

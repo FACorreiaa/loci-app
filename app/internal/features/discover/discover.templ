@@ -1,9 +1,10 @@
 package discover
 
 import "fmt"
+import "github.com/FACorreiaa/go-templui/app/internal/models"
 
-templ DiscoverPage() {
-	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+templ DiscoverPage(recentDiscoveries []models.ChatSession) {
+	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900" x-data="{ searching: false }">
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
 			<!-- Header -->
 			<div class="mb-8">
@@ -20,7 +21,13 @@ templ DiscoverPage() {
 				</div>
 				<!-- Enhanced Search Bar -->
 				<div class="bg-card rounded-xl shadow-lg border p-6">
-					<form hx-post="/discover/search" hx-target="#discover-results" hx-indicator="#search-loading">
+					<form
+						hx-post="/discover/search"
+						hx-target="#discover-results"
+						hx-indicator="#search-loading"
+						@htmx:before-request="searching = true"
+						@htmx:after-request="searching = false"
+					>
 						<div class="flex flex-col md:flex-row gap-4">
 							<div class="flex-1 relative">
 								<input
@@ -42,13 +49,18 @@ templ DiscoverPage() {
 								/>
 								<button
 									type="submit"
-									class="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all font-medium"
+									class="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all font-medium flex items-center justify-center"
 								>
-									<span id="search-loading" class="htmx-indicator">
-										<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block mr-2"></div>
+									<span x-show="searching" class="inline-flex items-center">
+										<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
 										Searching...
 									</span>
-									<span class="htmx-request:hidden">Search</span>
+									<span x-show="!searching" class="flex items-center gap-2">
+										<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+										</svg>
+										Search
+									</span>
 								</button>
 							</div>
 						</div>
@@ -110,17 +122,22 @@ templ DiscoverPage() {
 			</div>
 			<!-- Search Results Container -->
 			<div id="discover-results" class="space-y-6">
-				<!-- Recent Discoveries (Default Content) -->
+				<!-- Recent Discoveries (Dynamic Content) -->
 				<div>
 					<h2 class="text-lg font-semibold text-foreground mb-4">Recent Discoveries</h2>
-					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-						@DiscoveryCard("Restaurant", "Sukiyabashi Jiro", "Tokyo, Japan", "World-renowned sushi master's intimate restaurant", "🍣", "michelin", "4.8")
-						@DiscoveryCard("Hotel", "Amanzoe", "Peloponnese, Greece", "Luxury resort overlooking the Aegean Sea", "🏛️", "luxury", "4.9")
-						@DiscoveryCard("Activity", "Northern Lights Tour", "Reykjavik, Iceland", "Magical aurora hunting experience", "🌌", "adventure", "4.7")
-						@DiscoveryCard("Attraction", "Antelope Canyon", "Arizona, USA", "Stunning slot canyon photography location", "📸", "natural", "4.6")
-						@DiscoveryCard("Restaurant", "Osteria Francescana", "Modena, Italy", "Three Michelin star Italian cuisine", "🍝", "michelin", "4.9")
-						@DiscoveryCard("Activity", "Milford Sound Cruise", "New Zealand", "Breathtaking fjord scenery and wildlife", "🦭", "nature", "4.8")
-					</div>
+					if len(recentDiscoveries) > 0 {
+						<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+							for _, session := range recentDiscoveries {
+								@RecentDiscoveryCard(session)
+							}
+						</div>
+					} else {
+						<div class="text-center py-12">
+							<div class="text-4xl mb-4">🔍</div>
+							<p class="text-muted-foreground mb-2">No recent discoveries yet</p>
+							<p class="text-sm text-muted-foreground">Start exploring to see your search history here</p>
+						</div>
+					}
 				</div>
 			</div>
 		</div>
@@ -253,6 +270,54 @@ templ DiscoveryCard(category string, title string, location string, description 
 					<button class="text-muted-foreground hover:text-foreground text-sm">
 						Share
 					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+templ RecentDiscoveryCard(session models.ChatSession) {
+	<div class="bg-card rounded-xl shadow-sm border hover:shadow-md transition-shadow cursor-pointer">
+		<div class="p-6">
+			<div class="flex items-start justify-between mb-4">
+				<div class="flex items-center gap-3">
+					<span class="text-3xl">🗺️</span>
+					<div class="flex flex-col gap-1">
+						<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+							Itinerary
+						</span>
+					</div>
+				</div>
+			</div>
+			<div class="space-y-3">
+				<h3 class="font-semibold text-card-foreground group-hover:text-blue-600 transition-colors">
+					{ session.CityName }
+				</h3>
+				<div class="flex items-center gap-2 text-sm text-muted-foreground">
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+					</svg>
+					{ session.CreatedAt.Format("Jan 2, 2006") }
+				</div>
+				if len(session.ConversationHistory) > 0 {
+					<p class="text-muted-foreground text-sm line-clamp-2">
+						{ session.ConversationHistory[0].Content }
+					</p>
+				} else {
+					<p class="text-muted-foreground text-sm italic">
+						No conversation history
+					</p>
+				}
+			</div>
+			<div class="flex items-center justify-between mt-4 pt-4 border-t border-border">
+				<a
+					href={ templ.URL(fmt.Sprintf("/itinerary?sessionId=%s&city=%s", session.ID.String(), session.CityName)) }
+					class="text-blue-600 hover:text-blue-700 text-sm font-medium"
+				>
+					View Details
+				</a>
+				<div class="flex items-center gap-2 text-xs text-muted-foreground">
+					<span>{ fmt.Sprintf("%d messages", len(session.ConversationHistory)) }</span>
 				</div>
 			</div>
 		</div>

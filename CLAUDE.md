@@ -941,11 +941,16 @@ This logic should be applied to all intents in order to save LLM calls, tokens a
     - `app/routes/routes.go` - Updated handler initialization and route registration
   - Result: Full feature parity with go-ai-poi-server discover functionality using HTMX and PostGIS 
 
-13.0
-The chat bubble is not appearing on /itinerary /restaurant /activity / hotels
-it should be visible to the user and when the user clicks on it, open a modal with the chat continuity session. (this was working before)
+13.0 TODO
+- The chat bubble is not showing under /itinerary
+- The chat bubble shows on the other views but disappears when clicked and the chat window isn't showing. 
 
-13.1 Discover when clicking for results is returning something like:
+13.1 
+13.1.1 [x]On discover there is the "search" and when a search is undergoing a "searching" appears which is fine but the "search label is still showing"
+13.1.2 [x]Discover when clicking for results is returning something like:
+13.1.3 [x] After searching on /discover I see 6 Results for "5 star hotels" in Munich but I dont see the recents under. After refreshing /discover page, I see that Recent Discoveries
+
+is still hardcodded
 ```bash
   2025-10-25T10:39:22.102+0100    INFO    handlers/discover.go:57 Discovery search requested      {"port": "8090", "service": "loci-templui", "line": "42", "query": "5 star restaurant", "location": "Berlin", "user": "f04eaf02-e1fa-4bbe-b4f6-506767a4fa8d", "ip": "::1"}
 2025/10/25 10:39:22 INFO Calling LLM for discover search query="5 star restaurant" location=Berlin
@@ -959,14 +964,156 @@ it should be visible to the user and when the user clicks on it, open a modal wi
 2025-10-25T10:39:37.799+0100    WARN    middleware/middleware.go:76     HTTP Request    {"port": "8090", "service": "loci-templui", "line": "42", "method": "GET", "path": "/chat/continue/e9bb9201-e24f-444b-b8ee-423cd4a3b6d2", "ip": "::1", "status": 404, "latency": 0.000345458, "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"}
 2025/10/25 10:39:41 traces export: parse "http://http:%2F%2Fotel-collector:4318/v1/traces": invalid URL escape "%2F" 
 ```
+13.1.4 Currently in /discover im seeing the results I see when I search for something on the main page. This query should be in /recents.
+In /discover we should see only the results we search inside the /discover view. Under recents we should have everything, what is searched under discover, on the main page hotels, itinerary, restaurants, activities,etc.
 
-13.2 I need you to go to go-ai-poi-server (cd ..) and analyse the routes:
+13.2 Save LLM information on DB
+
+13.2.1 Save LLM related data to database
+We need to store LLM related data in the database. Every LLM endpoint should be saving this for future use or for search repeated cities with PGVector.
+
+Core LLM-Specific Data:
+
+request_id: Unique UUID for each call (for tracing across systems).
+timestamp: When the request was made (UTC for consistency).
+prompt: The full user prompt (or a hashed/anonymized version for privacy).
+response: The LLM's output (again, anonymized if needed; store truncated if too long).
+tokens_input: Number of tokens in the prompt.
+tokens_output: Number of tokens in the response.
+tokens_total: Sum of input + output.
+model: Exact model name/version (e.g., "gpt-4o", "claude-3.5-sonnet").
+latency_ms: Total time in milliseconds from request to full response.
+status_code: HTTP status or error code (e.g., 200 for success, 429 for rate limit).
+error_message: If the call failed (e.g., "rate limit exceeded").
+provider: If using multiple (e.g., "openai", "anthropic") for multi-vendor setups.
+temperature / top_p / other params: If you're tuning these, log them to correlate with response quality.
+
+
+App/Context-Specific Data (from your suggestions):
+
+user_id: Yes, essential for per-user analytics (e.g., heavy users, personalization). Use anonymized IDs if privacy is a concern.
+intent: Yes, categorize the query (e.g., "itinerary", "restaurant", "hotel", "activity"). This helps segment metrics—e.g., "restaurant" intents might use more tokens due to detailed recommendations.
+city_id: Yes, if your app is location-based (e.g., travel planning). Log it as an ID or name/code (e.g., "NYC") to analyze regional trends, like higher latency in certain areas or popular cities.
+
+
+Other Useful Data:
+
+session_id: If requests are part of a conversation/thread, link them for context.
+device_type or platform: (e.g., "iOS", "web") to spot platform-specific issues.
+cost_estimate: Calculated field (tokens * per-token price) for quick aggregations.
+feedback: If users rate responses post-call, link it here for quality analysis.
+cache_hit: If you're caching responses, log whether it was a hit/miss to measure efficiency.
+
+currently we already have llm_interactions and llm_suggestion_pois and the db to use should be the same that is used under go-ai-poi-server.
+do cd .. and verify the usage under the functions used here. 
 ```go
 // Unified chat endpoints - more specific routes first
 	r.Post("/prompt-response/chat/sessions/stream/{profileID}", HandlerImpl.StartChatMessageStream)
 	r.Post("/prompt-response/chat/sessions/{sessionID}/continue", HandlerImpl.ContinueChatSessionStream) // POST http://localhost:8000/api/v1/llm/prompt-response/chat/sessions/{sessionID}/continue
 ```
-on go-ai-poi-server we are storing LLM data either by LLM_interactions or LLM_Siggested_pois
+In this version of the app, it should also be used on discover, nearby and every LLM usage.
+Implementation Tips
+
+- Storage Efficiency: Use JSON fields for flexible data (e.g., store params as JSON). Rotate/purge old logs (e.g., keep 30-90 days).
+- Privacy: Avoid storing raw PII in prompts/responses. Use data redaction tools.
+- Tools: Integrate with observability platforms like Datadog, New Relic (Maybe to implement), Prometheus and Grafana stack(currently have this), or ELK Stack for dashboards. For analysis, query aggregates like AVG(latency) GROUP BY intent.
+- When to Skip: If calls are extremely high-volume (e.g., millions/day), log asynchronously to avoid slowing your app, or use sampling (e.g., log 10% of requests).
+
+Wrap your Gemini calls in a logging function to capture data post-response.
+Usage example:
+```go
+type LLMLog struct {
+    RequestID    uuid.UUID
+    UserID       uuid.UUID
+    Intent       string
+    CityID       int
+    Timestamp    time.Time
+    Model        string
+    TokensInput  int
+    TokensOutput int
+    TokensTotal  int
+    LatencyMS    int64
+    StatusCode   int
+    ErrorMessage string
+    Prompt       string
+    Response     string
+    SessionID    uuid.UUID
+}
+
+// Wrapper function
+func CallGeminiAndLog(ctx context.Context, client *generativelanguage.Client, req *generativelanguagepb.GenerateContentRequest, db *pgxpool.Pool, userID uuid.UUID, intent string, cityID int, sessionID uuid.UUID) (*generativelanguagepb.GenerateContentResponse, error) {
+    requestID := uuid.New()
+    start := time.Now()
+
+    resp, err := client.GenerateContent(ctx, req)
+    latency := time.Since(start).Milliseconds()
+
+    // Async log
+    go func(resp *generativelanguagepb.GenerateContentResponse, err error) {
+        logEntry := LLMLog{
+            RequestID:    requestID,
+            UserID:       userID,
+            Intent:       intent,
+            CityID:       cityID,
+            Timestamp:    time.Now().UTC(),
+            Model:        req.Model,  // Or from your config
+            LatencyMS:    latency,
+            StatusCode:   200,  // Or from error handling
+            ErrorMessage: "",
+            Prompt:       req.Contents[0].Parts[0].GetText(),  // Simplify; anonymize if needed
+            SessionID:    sessionID,
+        }
+        if err != nil {
+            logEntry.StatusCode = 500  // Or actual code
+            logEntry.ErrorMessage = err.Error()
+        } else {
+            logEntry.TokensInput = int(resp.UsageMetadata.GetPromptTokenCount())
+            logEntry.TokensOutput = int(resp.UsageMetadata.GetCandidatesTokenCount())
+            logEntry.TokensTotal = int(resp.UsageMetadata.GetTotalTokenCount())
+            logEntry.Response = resp.Candidates[0].Content.Parts[0].GetText()  // Truncate
+        }
+        _, dbErr := db.Exec(context.Background(), `
+            INSERT INTO llm_logs (
+                created_at, updated_at, deleted_at,
+                request_id, user_id, intent, city_id, timestamp, model,
+                tokens_input, tokens_output, tokens_total,
+                latency_ms, status_code, error_message, prompt, response, session_id
+            ) VALUES (
+                NOW(), NOW(), NULL,
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+            )`,
+            logEntry.RequestID, logEntry.UserID, logEntry.Intent, logEntry.CityID, logEntry.Timestamp, logEntry.Model,
+            logEntry.TokensInput, logEntry.TokensOutput, logEntry.TokensTotal,
+            logEntry.LatencyMS, logEntry.StatusCode, logEntry.ErrorMessage, logEntry.Prompt, logEntry.Response, logEntry.SessionID,
+        )
+        if dbErr != nil {
+            log.Printf("Failed to log LLM call: %v", dbErr)
+        }
+    }(resp, err)
+
+    return resp, err
+}
+
+// In your handler (e.g., HTTP with HTMX)
+func YourHandler(w http.ResponseWriter, r *http.Request) {
+    // Parse HTMX params for intent, city_id, user_id, session_id
+    // Call CallGeminiAndLog(...)
+    // Render with Templ
+}
+
+```
+We already have an llm_interactions table, we dont need to create llm_logs so adapt to the current code.
+Performance: Async logging prevents blocking, but monitor DB writes. For high traffic, use a queue like Redis or switch to a time-series DB (e.g., TimescaleDB on Postgres).
+Install TimescaleDB and use it for efficient logging.
+Monitoring: Integrate with Prometheus/Grafana for Go metrics, querying your logs table.
+
+13.2.2 I need you to go to go-ai-poi-server (cd ..) and analyse the routes:
+```go
+// Unified chat endpoints - more specific routes first
+	r.Post("/prompt-response/chat/sessions/stream/{profileID}", HandlerImpl.StartChatMessageStream)
+	r.Post("/prompt-response/chat/sessions/{sessionID}/continue", HandlerImpl.ContinueChatSessionStream) // POST http://localhost:8000/api/v1/llm/prompt-response/chat/sessions/{sessionID}/continue
+```
+on go-ai-poi-server we are storing LLM data either by LLM_interactions or LLM_Siggested_pois or itineraries. 
 We should do the same because in the end we want to have a query that makes a search first on the database. 
 Either search first with PGVector and see if we find the data first on the DB, and if not, return from LLM.
 User searches Itinerary ABC + Preference 1,2,3 = LLM Search, Save on DB (no need to block the search, can save on the background with a go routine).
@@ -990,7 +1137,7 @@ This could be due to the 13.1 error or the chat not having the chat sessionID bu
 
 14. Similar to Discover, I have a new view called nearby. The nearby should update new views when user locations changes without the user needing to update this. 
 Use websockets, htmx and whatever needed. The idea is the user to be able to walk, and when the coordinates of the user changes, the AI generates new points of interest around the user dynamically.
-Elaborate on the effort for this and build the UI and Service logic. 
+Elaborate on the effort for this and build the UI and Service logic. go to go-ai-poi-server (cd ..), this implementation should be similar to the /discover endpoint on the old api. 
 
 15. The Recents page should have all the recents itineraries, restaurants, hotels, activities or chats built and should be able to sort by date
 All this data should be available on the Database so for recents only queries and displays should be needed.
@@ -1079,4 +1226,4 @@ created by github.com/FACorreiaa/go-templui/app/pkg/domain/chat_prompt.(*Service
         /Users/fernando_idwell/Projects/Loci/go-templui/app/pkg/domain/chat_prompt/chat_service.go:2168 +0x1c74
 exit status 2
 ```
-35. 
+35. My current Travel preferences under my settings seem to simplistic. Add more options based on what is already done on the database

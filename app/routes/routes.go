@@ -33,7 +33,6 @@ import (
 	"github.com/FACorreiaa/go-templui/app/internal/features/billing"
 	"github.com/FACorreiaa/go-templui/app/internal/features/bookmarks"
 	"github.com/FACorreiaa/go-templui/app/internal/features/chat"
-	"github.com/FACorreiaa/go-templui/app/internal/features/discover"
 	"github.com/FACorreiaa/go-templui/app/internal/features/favorites"
 	"github.com/FACorreiaa/go-templui/app/internal/features/home"
 	"github.com/FACorreiaa/go-templui/app/internal/features/lists"
@@ -64,12 +63,12 @@ func getUserFromContext(c *gin.Context) *models.User {
 	}
 }
 
-func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
+func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	//r.Use(middleware.AuthMiddleware())
 	// Setup custom templ renderer
 	ginHTMLRenderer := r.HTMLRender
 	r.HTMLRender = &renderer.HTMLTemplRenderer{FallbackHTMLRenderer: ginHTMLRenderer}
-	
+
 	// Assets
 	r.Static("/assets", "./assets")
 	r.Static("/static", "./assets/static")
@@ -149,11 +148,11 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 	chatHandlers := h.NewChatHandlers(chatService, profilesService, chatRepo)
 	favoritesHandlers := h.NewFavoritesHandlers(poiService)
 	bookmarksHandlers := h.NewBookmarksHandlers()
-	discoverHandlers := h.NewDiscoverHandlers(poiRepo, chatService, slog.Default())
+	discoverHandlers := h.NewDiscoverHandlers(poiRepo, chatRepo, chatService, slog.Default())
 	itineraryHandlers := h.NewItineraryHandlers(chatRepo)
-	activitiesHandlers := h.NewActivitiesHandlers(chatRepo, logger.Log.Sugar())
-	hotelsHandlers := h.NewHotelsHandlers(chatRepo, logger.Log.Sugar())
-	restaurantsHandlers := h.NewRestaurantsHandlers(chatRepo, logger.Log.Sugar())
+	activitiesHandlers := h.NewActivitiesHandlers(chatRepo, log)
+	hotelsHandlers := h.NewHotelsHandlers(chatRepo, log)
+	restaurantsHandlers := h.NewRestaurantsHandlers(chatRepo, log)
 	settingsHandlers := h.NewSettingsHandlers()
 	resultsHandlers := h.NewResultsHandlers()
 	filterHandlers := h.NewFilterHandlers(logger.Log.Sugar())
@@ -231,7 +230,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		logger.Log.Info("Discover page accessed", zap.String("ip", c.ClientIP()))
 		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 			Title:   "Discover - Loci",
-			Content: discover.DiscoverPage(),
+			Content: discoverHandlers.Show(c),
 			Nav: models.Navigation{
 				Items: []models.NavItem{
 					{Name: "Home", URL: "/"},

@@ -71,6 +71,7 @@ type LlmInteractiontService interface {
 
 	// Chat session management
 	GetUserChatSessions(ctx context.Context, userID uuid.UUID, page, limit int) (*models.ChatSessionsResponse, error)
+	GetRecentDiscoveries(ctx context.Context, userID uuid.UUID, limit int) (*models.ChatSessionsResponse, error)
 }
 
 type IntentClassifier interface {
@@ -741,6 +742,44 @@ func (l *ServiceImpl) GetUserChatSessions(ctx context.Context, userID uuid.UUID,
 	)
 	span.SetStatus(codes.Ok, "Chat sessions retrieved successfully")
 	return response, nil
+}
+
+func (l *ServiceImpl) GetRecentDiscoveries(ctx context.Context, userID uuid.UUID, limit int) (*models.ChatSessionsResponse, error) {
+	ctx, span := otel.Tracer("LlmInteractionService").Start(ctx, "GetRecentDiscoveries", trace.WithAttributes(
+		attribute.String("user.id", userID.String()),
+		attribute.Int("limit", limit),
+	))
+	defer span.End()
+
+	l.logger.InfoContext(ctx, "Retrieving recent discoveries for user",
+		slog.String("userID", userID.String()),
+		slog.Int("limit", limit))
+
+	// TODO: Replace this with proper discoveries table
+	// For now, query chat_sessions directly as a workaround
+	sessions, err := l.llmInteractionRepo.GetRecentChatSessionsByType(ctx, userID, models.SearchTypeDiscover, limit)
+	if err != nil {
+		l.logger.ErrorContext(ctx, "Failed to get recent chat sessions", slog.Any("error", err))
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to get recent chat sessions")
+		return nil, fmt.Errorf("failed to get recent chat sessions: %w", err)
+	}
+
+	l.logger.InfoContext(ctx, "Successfully retrieved recent discoveries",
+		slog.String("userID", userID.String()),
+		slog.Int("discoveryCount", len(sessions)))
+	span.SetAttributes(
+		attribute.Int("discoveries.count", len(sessions)),
+	)
+	span.SetStatus(codes.Ok, "Recent discoveries retrieved successfully")
+
+	return &models.ChatSessionsResponse{
+		Sessions: sessions,
+		Total:    len(sessions),
+		Page:     1,
+		Limit:    limit,
+		HasMore:  false,
+	}, nil
 }
 
 // getPOIDetailedInfos returns a formatted string with POI details.

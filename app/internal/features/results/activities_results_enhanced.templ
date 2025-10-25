@@ -5,7 +5,6 @@ import (
 	"strings"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"github.com/FACorreiaa/go-templui/app/internal/components/chat"
-	"github.com/FACorreiaa/go-templui/app/internal/components/banner"
 )
 
 templ ActivitiesResults(cityData models.GeneralCityData, activities []models.POIDetailedInfo, compact bool, showToggle bool, initialLimit int, favorites []string, sessionID string) {
@@ -128,8 +127,6 @@ templ ActivitiesResults(cityData models.GeneralCityData, activities []models.POI
 				</div>
 			</div>
 		</div>
-		<!-- Authentication Promotion Banner for Guests -->
-		@banner.AuthPromoBanner()
 		<!-- Main Content Area -->
 		<div class="flex-1 min-h-0">
 			<!-- Map Container (shown in map and split views) -->

@@ -23,7 +23,8 @@ type ChatSession struct {
 	CreatedAt           time.Time             `json:"created_at"`
 	UpdatedAt           time.Time             `json:"updated_at"`
 	ExpiresAt           time.Time             `json:"expires_at"`
-	Status              SessionStatus         `json:"status"` // "active", "expired", etc.
+	Status              SessionStatus         `json:"status"`      // "active", "expired", etc.
+	SearchType          SearchType            `json:"search_type"` // "discover", "itinerary", "restaurant", "hotel", "activity"
 
 	// Enriched fields for better chat history display
 	PerformanceMetrics SessionPerformanceMetrics `json:"performance_metrics"`
@@ -88,6 +89,16 @@ const (
 	StatusActive  SessionStatus = "active"
 	StatusExpired SessionStatus = "expired"
 	StatusClosed  SessionStatus = "closed"
+)
+
+type SearchType string
+
+const (
+	SearchTypeDiscover    SearchType = "discover"
+	SearchTypeItinerary   SearchType = "itinerary"
+	SearchTypeRestaurant  SearchType = "restaurant"
+	SearchTypeHotel       SearchType = "hotel"
+	SearchTypeActivity    SearchType = "activity"
 )
 
 // Request/Response types for chat API

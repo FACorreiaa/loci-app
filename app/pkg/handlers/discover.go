@@ -9,11 +9,16 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/a-h/templ"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+
+	"github.com/FACorreiaa/go-templui/app/internal/features/discover"
 
 	generativeAI "github.com/FACorreiaa/go-genai-sdk/lib"
 	genai "google.golang.org/genai"
@@ -27,12 +32,13 @@ import (
 
 type DiscoverHandlers struct {
 	poiRepo    poi.Repository
+	chatRepo   llmchat.Repository
 	llmService llmchat.LlmInteractiontService
 	aiClient   *generativeAI.LLMChatClient
 	logger     *slog.Logger
 }
 
-func NewDiscoverHandlers(poiRepo poi.Repository, llmService llmchat.LlmInteractiontService, logger *slog.Logger) *DiscoverHandlers {
+func NewDiscoverHandlers(poiRepo poi.Repository, chatRepo llmchat.Repository, llmService llmchat.LlmInteractiontService, logger *slog.Logger) *DiscoverHandlers {
 	// Initialize AI client for discover search
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	aiClient, err := generativeAI.NewLLMChatClient(context.Background(), apiKey)
@@ -42,10 +48,28 @@ func NewDiscoverHandlers(poiRepo poi.Repository, llmService llmchat.LlmInteracti
 
 	return &DiscoverHandlers{
 		poiRepo:    poiRepo,
+		chatRepo:   chatRepo,
 		llmService: llmService,
 		aiClient:   aiClient,
 		logger:     logger,
 	}
+}
+
+func (h *DiscoverHandlers) Show(c *gin.Context) templ.Component {
+	var recentDiscoveries []models.ChatSession
+	userID, exists := c.Get("userID")
+	if exists && userID != "" && userID != "anonymous" {
+		userUUID, err := uuid.Parse(userID.(string))
+		if err == nil {
+			response, err := h.llmService.GetRecentDiscoveries(c.Request.Context(), userUUID, 6) // Fetching 6 recent discoveries
+			if err == nil && response != nil {
+				recentDiscoveries = response.Sessions
+			} else {
+				h.logger.Error("Failed to get recent discoveries", slog.Any("error", err))
+			}
+		}
+	}
+	return discover.DiscoverPage(recentDiscoveries)
 }
 
 func (h *DiscoverHandlers) Search(c *gin.Context) {
@@ -60,6 +84,7 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 		zap.String("user", user),
 		zap.String("ip", c.ClientIP()),
 	)
+	h.logger.Info("User from context in Search", slog.String("user", user))
 
 	if query == "" {
 		logger.Log.Warn("Empty search query")
@@ -105,6 +130,20 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 	}
 
 	responseStr := responseText.String()
+
+	// Clean markdown code blocks if present
+	responseStr = strings.TrimSpace(responseStr)
+	if strings.HasPrefix(responseStr, "```json") {
+		responseStr = strings.TrimPrefix(responseStr, "```json")
+		responseStr = strings.TrimPrefix(responseStr, "```")
+		responseStr = strings.TrimSuffix(responseStr, "```")
+		responseStr = strings.TrimSpace(responseStr)
+	} else if strings.HasPrefix(responseStr, "```") {
+		responseStr = strings.TrimPrefix(responseStr, "```")
+		responseStr = strings.TrimSuffix(responseStr, "```")
+		responseStr = strings.TrimSpace(responseStr)
+	}
+
 	if err := json.Unmarshal([]byte(responseStr), &searchResponse); err != nil {
 		h.logger.ErrorContext(ctx, "Failed to parse LLM response", slog.Any("error", err), slog.String("response", responseStr))
 		c.HTML(http.StatusInternalServerError, "", `<div class="text-red-500 text-center py-8">Failed to parse search results. Please try again.</div>`)
@@ -118,9 +157,67 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 		zap.String("user", user),
 	)
 
+	// Save discover search as chat session for authenticated users
+	if user != "" && user != "anonymous" {
+		userID, err := uuid.Parse(user)
+		if err == nil {
+			sessionID := uuid.New()
+			now := time.Now()
+			expiresAt := now.Add(72 * time.Hour) // 3 days expiry
+
+			// Create conversation message for the search
+			conversationHistory := []models.ConversationMessage{
+				{
+					ID:          uuid.New(),
+					Role:        models.RoleUser,
+					Content:     fmt.Sprintf("%s in %s", query, location),
+					MessageType: models.TypeInitialRequest,
+					Timestamp:   now,
+				},
+				{
+					ID:          uuid.New(),
+					Role:        models.RoleAssistant,
+					Content:     fmt.Sprintf("Found %d results", len(searchResponse.Results)),
+					MessageType: models.TypeResponse,
+					Timestamp:   now,
+				},
+			}
+
+			session := models.ChatSession{
+				ID:                  sessionID,
+				UserID:              userID,
+				ProfileID:           uuid.Nil, // No profile for discover searches
+				CityName:            location,
+				ConversationHistory: conversationHistory,
+				SessionContext: models.SessionContext{
+					CityName: location,
+				},
+				CreatedAt:  now,
+				UpdatedAt:  now,
+				ExpiresAt:  expiresAt,
+				Status:     models.StatusActive,
+				SearchType: models.SearchTypeDiscover, // Mark as discover search
+			}
+
+			if err := h.chatRepo.CreateSession(ctx, session); err != nil {
+				h.logger.ErrorContext(ctx, "Failed to save discover session", slog.Any("error", err))
+				// Don't fail the request if session saving fails
+			} else {
+				h.logger.InfoContext(ctx, "Discover session saved",
+					slog.String("session_id", sessionID.String()),
+					slog.String("user_id", userID.String()),
+					slog.String("location", location))
+			}
+		} else {
+			h.logger.ErrorContext(ctx, "Failed to parse user ID from context", slog.Any("error", err), slog.String("user", user))
+		}
+	} else {
+		h.logger.InfoContext(ctx, "User is anonymous, not saving session")
+	}
+
 	// Render results as HTML
 	html := renderDiscoverResults(searchResponse.Results, query, location)
-	c.HTML(http.StatusOK, "", html)
+	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
 }
 
 func (h *DiscoverHandlers) GetCategory(c *gin.Context) {

@@ -50,6 +50,14 @@ func (m *MockRepository) GetUserChatSessions(_ context.Context, _ uuid.UUID, _ i
 	return &models.ChatSessionsResponse{}, nil
 }
 
+func (m *MockRepository) GetRecentChatSessions(_ context.Context, _ uuid.UUID, _ int) ([]models.ChatSession, error) {
+	return []models.ChatSession{}, nil
+}
+
+func (m *MockRepository) GetRecentChatSessionsByType(_ context.Context, _ uuid.UUID, _ models.SearchType, _ int) ([]models.ChatSession, error) {
+	return []models.ChatSession{}, nil
+}
+
 func (m *MockRepository) AddChatToBookmark(_ context.Context, _ *models.UserSavedItinerary) (uuid.UUID, error) {
 	return uuid.New(), nil
 }
@@ -120,6 +128,10 @@ func (m *MockLlmService) ProcessUnifiedChatMessageStream(_ context.Context, _ uu
 }
 
 func (m *MockLlmService) GetUserChatSessions(_ context.Context, _ uuid.UUID, _ int, _ int) (*models.ChatSessionsResponse, error) {
+	return &models.ChatSessionsResponse{}, nil
+}
+
+func (m *MockLlmService) GetRecentDiscoveries(_ context.Context, _ uuid.UUID, _ int) (*models.ChatSessionsResponse, error) {
 	return &models.ChatSessionsResponse{}, nil
 }
 

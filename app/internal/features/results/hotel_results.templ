@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"github.com/FACorreiaa/go-templui/app/internal/components/chat"
-	"github.com/FACorreiaa/go-templui/app/internal/components/banner"
 	"strings"
 )
 
@@ -128,8 +127,6 @@ templ HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetail
 				</div>
 			</div>
 		</div>
-		<!-- Authentication Promotion Banner for Guests -->
-		@banner.AuthPromoBanner()
 		<!-- Main Content Area -->
 		<div class="flex-1 min-h-0">
 			<!-- Map Container (shown in map and split views) -->

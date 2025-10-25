@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func DebugCompleteItinerary(logger *zap.SugaredLogger, completeData interface{}, sessionID string) {
+func DebugCompleteItinerary(logger *zap.Logger, completeData interface{}, sessionID string) {
 	jsonData, err := json.MarshalIndent(completeData, "", "  ")
 	if err != nil {
 		logger.Error("Failed to marshal completeData to JSON", zap.Error(err))

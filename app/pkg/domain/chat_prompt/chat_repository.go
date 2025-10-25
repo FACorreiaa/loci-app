@@ -51,6 +51,11 @@ type Repository interface {
 	// RAG
 	//SaveInteractionWithEmbedding(ctx context.Context, interaction models.LlmInteraction, embedding []float32) (uuid.UUID, error)
 	//FindSimilarInteractions(ctx context.Context, queryEmbedding []float32, limit int, threshold float32) ([]models.LlmInteraction, error)
+
+	// Simple query to get recent chat sessions directly from chat_sessions table
+	GetRecentChatSessions(ctx context.Context, userID uuid.UUID, limit int) ([]models.ChatSession, error)
+	// Get recent chat sessions filtered by search_type
+	GetRecentChatSessionsByType(ctx context.Context, userID uuid.UUID, searchType models.SearchType, limit int) ([]models.ChatSession, error)
 }
 
 type RepositoryImpl struct {
@@ -843,8 +848,8 @@ func (r *RepositoryImpl) CreateSession(ctx context.Context, session models.ChatS
 	query := `
         INSERT INTO chat_sessions (
             id, user_id, profile_id, city_name, current_itinerary, conversation_history, session_context,
-            created_at, updated_at, expires_at, status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            created_at, updated_at, expires_at, status, search_type
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     `
 	itineraryJSON, err := json.Marshal(session.CurrentItinerary)
 	if err != nil {
@@ -862,8 +867,14 @@ func (r *RepositoryImpl) CreateSession(ctx context.Context, session models.ChatS
 		return fmt.Errorf("failed to marshal context: %w", err)
 	}
 
+	// Default to 'itinerary' if search_type is not set
+	searchType := session.SearchType
+	if searchType == "" {
+		searchType = models.SearchTypeItinerary
+	}
+
 	_, err = tx.Exec(ctx, query, session.ID, session.UserID, session.ProfileID, session.CityName,
-		itineraryJSON, historyJSON, contextJSON, session.CreatedAt, session.UpdatedAt, session.ExpiresAt, session.Status)
+		itineraryJSON, historyJSON, contextJSON, session.CreatedAt, session.UpdatedAt, session.ExpiresAt, session.Status, searchType)
 	if err != nil {
 		r.logger.ErrorContext(ctx, "Failed to create session", slog.Any("error", err))
 		return fmt.Errorf("failed to create session: %w", err)
@@ -881,7 +892,7 @@ func (r *RepositoryImpl) CreateSession(ctx context.Context, session models.ChatS
 func (r *RepositoryImpl) GetSession(ctx context.Context, sessionID uuid.UUID) (*models.ChatSession, error) {
 	query := `
         SELECT id, user_id, profile_id, city_name, current_itinerary, conversation_history, session_context,
-               created_at, updated_at, expires_at, status
+               created_at, updated_at, expires_at, status, COALESCE(search_type, 'itinerary') as search_type
         FROM chat_sessions WHERE id = $1
     `
 	row := r.pgpool.QueryRow(ctx, query, sessionID)
@@ -889,7 +900,7 @@ func (r *RepositoryImpl) GetSession(ctx context.Context, sessionID uuid.UUID) (*
 	var session models.ChatSession
 	var itineraryJSON, historyJSON, contextJSON []byte
 	err := row.Scan(&session.ID, &session.UserID, &session.ProfileID, &session.CityName,
-		&itineraryJSON, &historyJSON, &contextJSON, &session.CreatedAt, &session.UpdatedAt, &session.ExpiresAt, &session.Status)
+		&itineraryJSON, &historyJSON, &contextJSON, &session.CreatedAt, &session.UpdatedAt, &session.ExpiresAt, &session.Status, &session.SearchType)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("session %s not found", sessionID)
@@ -2101,4 +2112,95 @@ func uniqueStringSlice(slice []string) []string {
 	}
 
 	return result
+}
+
+//GetRecentChatSessions directly queries chat_sessions table for recent sessions
+func (r *RepositoryImpl) GetRecentChatSessions(ctx context.Context, userID uuid.UUID, limit int) ([]models.ChatSession, error) {
+	query := `
+		SELECT id, user_id, profile_id, city_name, conversation_history, created_at, updated_at, COALESCE(search_type, 'itinerary') as search_type
+		FROM chat_sessions
+		WHERE user_id = $1 AND status = 'active'
+		ORDER BY created_at DESC
+		LIMIT $2
+	`
+
+	rows, err := r.pgpool.Query(ctx, query, userID, limit)
+	if err != nil {
+		r.logger.ErrorContext(ctx, "Failed to query recent chat sessions", slog.Any("error", err))
+		return nil, fmt.Errorf("failed to query recent chat sessions: %w", err)
+	}
+	defer rows.Close()
+
+	var sessions []models.ChatSession
+	for rows.Next() {
+		var session models.ChatSession
+		var historyJSON []byte
+		err := rows.Scan(&session.ID, &session.UserID, &session.ProfileID, &session.CityName,
+			&historyJSON, &session.CreatedAt, &session.UpdatedAt, &session.SearchType)
+		if err != nil {
+			r.logger.WarnContext(ctx, "Failed to scan session row", slog.Any("error", err))
+			continue
+		}
+
+		// Parse conversation history JSON
+		if len(historyJSON) > 0 {
+			if err := json.Unmarshal(historyJSON, &session.ConversationHistory); err != nil {
+				r.logger.WarnContext(ctx, "Failed to parse conversation history", slog.Any("error", err))
+				session.ConversationHistory = []models.ConversationMessage{}
+			}
+		}
+
+		sessions = append(sessions, session)
+	}
+
+	return sessions, nil
+}
+
+// GetRecentChatSessionsByType directly queries chat_sessions table for recent sessions filtered by search_type
+func (r *RepositoryImpl) GetRecentChatSessionsByType(ctx context.Context, userID uuid.UUID, searchType models.SearchType, limit int) ([]models.ChatSession, error) {
+	query := `
+		SELECT id, user_id, profile_id, city_name, conversation_history, created_at, updated_at, search_type
+		FROM chat_sessions
+		WHERE user_id = $1 AND status = 'active' AND search_type = $2
+		ORDER BY created_at DESC
+		LIMIT $3
+	`
+
+	rows, err := r.pgpool.Query(ctx, query, userID, searchType, limit)
+	if err != nil {
+		r.logger.ErrorContext(ctx, "Failed to query recent chat sessions by type",
+			slog.Any("error", err),
+			slog.String("search_type", string(searchType)))
+		return nil, fmt.Errorf("failed to query recent chat sessions by type: %w", err)
+	}
+	defer rows.Close()
+
+	var sessions []models.ChatSession
+	for rows.Next() {
+		var session models.ChatSession
+		var historyJSON []byte
+		err := rows.Scan(&session.ID, &session.UserID, &session.ProfileID, &session.CityName,
+			&historyJSON, &session.CreatedAt, &session.UpdatedAt, &session.SearchType)
+		if err != nil {
+			r.logger.WarnContext(ctx, "Failed to scan session row", slog.Any("error", err))
+			continue
+		}
+
+		// Parse conversation history JSON
+		if len(historyJSON) > 0 {
+			if err := json.Unmarshal(historyJSON, &session.ConversationHistory); err != nil {
+				r.logger.WarnContext(ctx, "Failed to parse conversation history", slog.Any("error", err))
+				session.ConversationHistory = []models.ConversationMessage{}
+			}
+		}
+
+		sessions = append(sessions, session)
+	}
+
+	r.logger.InfoContext(ctx, "Retrieved chat sessions by type",
+		slog.String("user_id", userID.String()),
+		slog.String("search_type", string(searchType)),
+		slog.Int("count", len(sessions)))
+
+	return sessions, nil
 }

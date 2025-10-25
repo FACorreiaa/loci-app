@@ -16,11 +16,11 @@ type ChatPanelProps struct {
 // ChatPanel creates a collapsible chat interface with HTMX SSE for continuing sessions
 // Note: This component uses Alpine.js showChat variable from parent page scope
 templ ChatPanel(props ChatPanelProps) {
-	<div x-data="chatPanelState()">
+	<div>
 		<!-- Chat Toggle Button (Floating Action Button) -->
 		<button
-			@click="$parent.showChat = !$parent.showChat"
-			x-show="!$parent.showChat"
+			@click="showChat = !showChat"
+			x-show="!showChat"
 			class="fixed bottom-6 right-6 z-50 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-200 hover:scale-110"
 			title={ fmt.Sprintf("Continue conversation about %s", props.CityName) }
 		>
@@ -31,7 +31,7 @@ templ ChatPanel(props ChatPanelProps) {
 		</button>
 		<!-- Chat Panel -->
 		<div
-			x-show="$parent.showChat"
+			x-show="showChat"
 			x-transition:enter="transition ease-out duration-300"
 			x-transition:enter-start="opacity-0 transform translate-y-4"
 			x-transition:enter-end="opacity-1 transform translate-y-0"
@@ -41,32 +41,32 @@ templ ChatPanel(props ChatPanelProps) {
 			class="fixed bottom-20 right-6 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 w-96 max-h-[600px] flex flex-col"
 			x-cloak
 		>
-			<!-- Header -->
-			<div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-t-lg">
-				<div class="flex items-center gap-2">
-					<div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-						<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
-						</svg>
-					</div>
-					<div>
-						<h3 class="font-semibold text-gray-900 dark:text-white text-sm">Continue Planning</h3>
-						<p class="text-xs text-gray-600 dark:text-gray-300">{ props.CityName }</p>
-					</div>
-				</div>
-				<button
-					@click="$parent.showChat = false"
-					class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-				>
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+		<!-- Header -->
+		<div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-t-lg">
+			<div class="flex items-center gap-2">
+				<div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+					<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
 					</svg>
-					<span class="sr-only">Close chat</span>
-				</button>
+				</div>
+				<div>
+					<h3 class="font-semibold text-gray-900 dark:text-white text-sm">Continue Planning</h3>
+					<p class="text-xs text-gray-600 dark:text-gray-300">{ props.CityName }</p>
+				</div>
 			</div>
+			<button
+				@click="showChat = false"
+				class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+			>
+				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+				</svg>
+				<span class="sr-only">Close chat</span>
+			</button>
+		</div>
 
-			<!-- Messages Container -->
-			<div
+		<!-- Messages Container -->
+		<div
 				id="chat-messages"
 				class="flex-1 overflow-y-auto p-4 space-y-3 min-h-[300px] max-h-[400px]"
 			>
@@ -106,7 +106,7 @@ templ ChatPanel(props ChatPanelProps) {
 			</div>
 
 			<!-- Input Area -->
-			<div class="p-4 border-t border-gray-200 dark:border-gray-700">
+			<div class="p-4 border-t border-gray-200 dark:border-gray-700" x-data="{ message: '', isLoading: false, messages: [] }">
 				<form
 					hx-post={ fmt.Sprintf("/chat/continue/%s", props.SessionID) }
 					hx-ext="sse"
@@ -178,26 +178,17 @@ templ ChatPanel(props ChatPanelProps) {
 			</div>
 		</div>
 
-	<!-- Auto-scroll script -->
-	<script>
-		document.addEventListener('htmx:sseMessage', function(event) {
-			const container = document.getElementById('chat-messages');
-			if (container) {
-				// Auto-scroll to bottom when new message arrives
-				setTimeout(() => {
-					container.scrollTop = container.scrollHeight;
-				}, 100);
-			}
-		});
-
-		// Chat panel state - provides local state while accessing parent's showChat
-		function chatPanelState() {
-			return {
-				message: '',
-				isLoading: false,
-				messages: []
-			};
-		}
-	</script>
+		<!-- Auto-scroll script -->
+		<script>
+			document.addEventListener('htmx:sseMessage', function(event) {
+				const container = document.getElementById('chat-messages');
+				if (container) {
+					// Auto-scroll to bottom when new message arrives
+					setTimeout(() => {
+						container.scrollTop = container.scrollHeight;
+					}, 100);
+				}
+			});
+		</script>
 	</div>
 }
