@@ -128,7 +128,7 @@ func DiscoverPage(recentDiscoveries []models.ChatSession) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</div></div></div><!-- Search Results Container --><div id=\"discover-results\" class=\"space-y-6\"><!-- Recent Discoveries (Dynamic Content) --><div><h2 class=\"text-lg font-semibold text-foreground mb-4\">Recent Discoveries</h2>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</div></div></div><!-- Search Results Container --><div id=\"discover-results\" class=\"space-y-6\"></div><!-- Recent Discoveries (Dynamic Content) --><div><h2 class=\"text-lg font-semibold text-foreground mb-4\">Recent Discoveries</h2>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -153,7 +153,7 @@ func DiscoverPage(recentDiscoveries []models.ChatSession) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</div></div></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

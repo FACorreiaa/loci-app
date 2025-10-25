@@ -121,24 +121,24 @@ templ DiscoverPage(recentDiscoveries []models.ChatSession) {
 				</div>
 			</div>
 			<!-- Search Results Container -->
-			<div id="discover-results" class="space-y-6">
-				<!-- Recent Discoveries (Dynamic Content) -->
-				<div>
-					<h2 class="text-lg font-semibold text-foreground mb-4">Recent Discoveries</h2>
-					if len(recentDiscoveries) > 0 {
-						<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-							for _, session := range recentDiscoveries {
-								@RecentDiscoveryCard(session)
-							}
-						</div>
-					} else {
-						<div class="text-center py-12">
-							<div class="text-4xl mb-4">🔍</div>
-							<p class="text-muted-foreground mb-2">No recent discoveries yet</p>
-							<p class="text-sm text-muted-foreground">Start exploring to see your search history here</p>
-						</div>
-					}
-				</div>
+			<div id="discover-results" class="space-y-6"></div>
+
+			<!-- Recent Discoveries (Dynamic Content) -->
+			<div>
+				<h2 class="text-lg font-semibold text-foreground mb-4">Recent Discoveries</h2>
+				if len(recentDiscoveries) > 0 {
+					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+						for _, session := range recentDiscoveries {
+							@RecentDiscoveryCard(session)
+						}
+					</div>
+				} else {
+					<div class="text-center py-12">
+						<div class="text-4xl mb-4">🔍</div>
+						<p class="text-muted-foreground mb-2">No recent discoveries yet</p>
+						<p class="text-sm text-muted-foreground">Start exploring to see your search history here</p>
+					</div>
+				}
 			</div>
 		</div>
 	</div>
