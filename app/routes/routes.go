@@ -1,9 +1,11 @@
 package routes
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"net/http/pprof"
+	"os"
 
 	"github.com/a-h/templ"
 	"github.com/google/uuid"
@@ -20,16 +22,17 @@ import (
 	profilesPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/profiles"
 	tagsPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/tags"
 	userPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/user"
-	handlers2 "github.com/FACorreiaa/go-templui/app/pkg/handlers"
+	h "github.com/FACorreiaa/go-templui/app/pkg/handlers"
 	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
+
+	generativeAI "github.com/FACorreiaa/go-genai-sdk/lib"
 
 	"github.com/FACorreiaa/go-templui/app/internal/features/about"
 	"github.com/FACorreiaa/go-templui/app/internal/features/auth"
 	"github.com/FACorreiaa/go-templui/app/internal/features/billing"
 	"github.com/FACorreiaa/go-templui/app/internal/features/bookmarks"
 	"github.com/FACorreiaa/go-templui/app/internal/features/chat"
-	"github.com/FACorreiaa/go-templui/app/internal/features/discover"
 	"github.com/FACorreiaa/go-templui/app/internal/features/favorites"
 	"github.com/FACorreiaa/go-templui/app/internal/features/home"
 	"github.com/FACorreiaa/go-templui/app/internal/features/lists"
@@ -60,7 +63,7 @@ func getUserFromContext(c *gin.Context) *models.User {
 	}
 }
 
-func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
+func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	//r.Use(middleware.AuthMiddleware())
 	// Setup custom templ renderer
 	ginHTMLRenderer := r.HTMLRender
@@ -111,11 +114,25 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 	profilesService := profilesPkg.NewUserProfilesService(profilesRepo, interestsRepo, tagsRepo, slog.Default())
 	userService := userPkg.NewUserService(userRepo, slog.Default())
 
+	// Create embedding service for POI (can be nil if not using semantic search)
+	// Change later GeminiAPIKey env variable
+	var embeddingService *generativeAI.EmbeddingService
+	if os.Getenv("GEMINI_API_KEY") != "" { // Check env var directly
+		ctx := context.Background()                                      // Use a background context for initialization
+		l := slog.Default()                                              // Use default logger
+		embeddingService, err = generativeAI.NewEmbeddingService(ctx, l) // Call with correct args
+		if err != nil {
+			slog.Error("Failed to create embedding service", "error", err) // Handle error appropriately
+		}
+	}
+
+	poiService := poiPkg.NewServiceImpl(poiRepo, embeddingService, cityRepo, slog.Default())
+
 	// Create handlers
 	authHandlers := authPkg.NewAuthHandlers(authRepo, cfg, slog.Default())
-	profilesHandlers := handlers2.NewProfilesHandler(profilesService)
-	interestsHandlers := handlers2.NewInterestsHandler(interestsRepo)
-	tagsHandlers := handlers2.NewTagsHandler(tagsRepo)
+	profilesHandlers := h.NewProfilesHandler(profilesService)
+	interestsHandlers := h.NewInterestsHandler(interestsRepo)
+	tagsHandlers := h.NewTagsHandler(tagsRepo)
 	// Create chat LLM service
 	chatRepo := llmchat.NewRepositoryImpl(dbPool, slog.Default())
 	chatService := llmchat.NewLlmInteractiontService(
@@ -128,18 +145,17 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		poiRepo,
 		slog.Default(),
 	)
-	chatHandlers := handlers2.NewChatHandlers(chatService, profilesService, chatRepo)
-	favoritesHandlers := handlers2.NewFavoritesHandlers()
-	bookmarksHandlers := handlers2.NewBookmarksHandlers()
-	discoverHandlers := handlers2.NewDiscoverHandlers()
-	nearbyHandlers := handlers2.NewNearbyHandlers()
-	itineraryHandlers := handlers2.NewItineraryHandlers(chatRepo)
-	activitiesHandlers := handlers2.NewActivitiesHandlers(chatRepo, slog.Default())
-	hotelsHandlers := handlers2.NewHotelsHandlers(chatRepo, slog.Default())
-	restaurantsHandlers := handlers2.NewRestaurantsHandlers(chatRepo, slog.Default())
-	settingsHandlers := handlers2.NewSettingsHandlers()
-	resultsHandlers := handlers2.NewResultsHandlers()
-	filterHandlers := handlers2.NewFilterHandlers(slog.Default())
+	chatHandlers := h.NewChatHandlers(chatService, profilesService, chatRepo)
+	favoritesHandlers := h.NewFavoritesHandlers(poiService)
+	bookmarksHandlers := h.NewBookmarksHandlers()
+	discoverHandlers := h.NewDiscoverHandlers(poiRepo, chatRepo, chatService, slog.Default())
+	itineraryHandlers := h.NewItineraryHandlers(chatRepo)
+	activitiesHandlers := h.NewActivitiesHandlers(chatRepo, log)
+	hotelsHandlers := h.NewHotelsHandlers(chatRepo, log)
+	restaurantsHandlers := h.NewRestaurantsHandlers(chatRepo, log)
+	settingsHandlers := h.NewSettingsHandlers()
+	resultsHandlers := h.NewResultsHandlers()
+	filterHandlers := h.NewFilterHandlers(logger.Log.Sugar())
 
 	// Public routes (with optional auth)
 	r.GET("/", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
@@ -214,7 +230,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		logger.Log.Info("Discover page accessed", zap.String("ip", c.ClientIP()))
 		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 			Title:   "Discover - Loci",
-			Content: discover.DiscoverPage(),
+			Content: discoverHandlers.Show(c),
 			Nav: models.Navigation{
 				Items: []models.NavItem{
 					{Name: "Home", URL: "/"},
@@ -223,6 +239,25 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 				},
 			},
 			ActiveNav: "Discover",
+			User:      getUserFromContext(c),
+		}))
+	})
+
+	// Nearby (location-based discovery - public)
+	r.GET("/nearby", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
+		logger.Log.Info("Nearby page accessed", zap.String("ip", c.ClientIP()))
+		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			Title:   "Nearby - Loci",
+			Content: nearby.NearbyPage(),
+			Nav: models.Navigation{
+				Items: []models.NavItem{
+					{Name: "Home", URL: "/"},
+					{Name: "Discover", URL: "/discover"},
+					{Name: "Nearby", URL: "/nearby"},
+					{Name: "About", URL: "/about"},
+				},
+			},
+			ActiveNav: "Nearby",
 			User:      getUserFromContext(c),
 		}))
 	})
@@ -507,27 +542,6 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 			}))
 		})
 
-		// Nearby
-		protected.GET("/nearby", func(c *gin.Context) {
-			logger.Log.Info("Nearby page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
-				Title:   "Nearby Places - Loci",
-				Content: nearby.NearbyPage(),
-				Nav: models.Navigation{
-					Items: []models.NavItem{
-						{Name: "Dashboard", URL: "/dashboard"},
-						{Name: "Discover", URL: "/discover"},
-						{Name: "Nearby", URL: "/nearby"},
-						{Name: "Itinerary", URL: "/itinerary"},
-						{Name: "Chat", URL: "/chat"},
-						{Name: "Favorites", URL: "/favorites"},
-					},
-				},
-				ActiveNav: "Nearby",
-				User:      getUserFromContext(c),
-			}))
-		})
-
 		// Favorites
 		protected.GET("/favorites", func(c *gin.Context) {
 			logger.Log.Info("Favorites page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
@@ -721,6 +735,9 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		htmxGroup.GET("/chat/stream", middleware.OptionalAuthMiddleware(), chatHandlers.ProcessUnifiedChatMessageStream)
 		htmxGroup.POST("/chat/stream", middleware.OptionalAuthMiddleware(), chatHandlers.ProcessUnifiedChatMessageStream)
 
+		// Continue chat session endpoint (for adding/removing items to existing sessions)
+		htmxGroup.POST("/chat/continue/:sessionID", middleware.OptionalAuthMiddleware(), chatHandlers.ContinueChatSession)
+
 		// Favorites endpoints
 		htmxGroup.POST("/favorites/add/:id", favoritesHandlers.AddFavorite)
 		htmxGroup.DELETE("/favorites/:id", favoritesHandlers.RemoveFavorite)
@@ -735,6 +752,9 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		htmxGroup.POST("/discover/search", discoverHandlers.Search)
 		htmxGroup.GET("/discover/category/:category", discoverHandlers.GetCategory)
 
+		// Nearby endpoints (location-based discovery)
+		htmxGroup.GET("/nearby/search", discoverHandlers.GetNearbyPOIs)
+
 		// Results endpoints (LLM-backed searches)
 		htmxGroup.POST("/restaurants/search", resultsHandlers.HandleRestaurantSearch)
 		htmxGroup.POST("/activities/search", resultsHandlers.HandleActivitySearch)
@@ -742,11 +762,8 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool) {
 		htmxGroup.POST("/itinerary/search", resultsHandlers.HandleItinerarySearch)
 		htmxGroup.GET("/itinerary/stream/results", resultsHandlers.HandleItinerarySearch)
 
-		// Nearby endpoints
-		htmxGroup.POST("/nearby/search", nearbyHandlers.SearchPOIs)
-		htmxGroup.POST("/nearby/category/:category", nearbyHandlers.GetPOIsByCategory)
-		htmxGroup.POST("/nearby/filter", nearbyHandlers.FilterPOIs)
-		htmxGroup.GET("/nearby/map", nearbyHandlers.GetMapData)
+		// Nearby endpoints - using PostGIS-based discover handlers
+		// (old nearby handlers with mock data are deprecated)
 
 		// Itinerary endpoints
 		htmxGroup.POST("/itinerary/destination", itineraryHandlers.HandleDestination)

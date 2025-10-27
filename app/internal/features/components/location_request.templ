@@ -2,7 +2,7 @@ package components
 
 // LocationRequestBanner shows when the app wants to request location
 templ LocationRequestBanner(showLocation bool) {
-	<div 
+	<div
 		x-data="locationManager()"
 		x-show="!locationPermissionChecked && showLocationRequest"
 		x-cloak
@@ -22,7 +22,7 @@ templ LocationRequestBanner(showLocation bool) {
 				</div>
 			</div>
 			<div class="flex items-center gap-3">
-				<button 
+				<button
 					@click="requestLocation()"
 					:disabled="isRequestingLocation"
 					class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
@@ -33,7 +33,7 @@ templ LocationRequestBanner(showLocation bool) {
 						Getting location...
 					</span>
 				</button>
-				<button 
+				<button
 					@click="dismissLocationRequest()"
 					class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors"
 				>
@@ -46,13 +46,13 @@ templ LocationRequestBanner(showLocation bool) {
 
 // FloatingLocationButton for bottom-right corner
 templ FloatingLocationButton() {
-	<div 
+	<div
 		x-data="locationManager()"
 		x-show="!userLocation && locationPermissionChecked && !locationDenied"
 		x-cloak
 		class="fixed bottom-6 left-6 z-40"
 	>
-		<button 
+		<button
 			@click="requestLocation()"
 			:disabled="isRequestingLocation"
 			class="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
@@ -78,7 +78,6 @@ templ LocationStatusIndicator() {
 			</svg>
 			<span>Location enabled</span>
 		</div>
-		
 		<!-- Location disabled -->
 		<div x-show="locationDenied" class="flex items-center gap-2 text-gray-500 text-sm">
 			<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -86,7 +85,6 @@ templ LocationStatusIndicator() {
 			</svg>
 			<span>Location disabled</span>
 		</div>
-		
 		<!-- Location requesting -->
 		<div x-show="isRequestingLocation" class="flex items-center gap-2 text-blue-600 text-sm">
 			<div class="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -96,6 +94,7 @@ templ LocationStatusIndicator() {
 }
 
 // LocationScript provides JavaScript functionality for location management
+
 script LocationScript() {
     function locationManager() {
         return {

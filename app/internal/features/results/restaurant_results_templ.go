@@ -473,7 +473,7 @@ func getPriceColor(priceRange string) string {
 	}
 }
 
-func getCuisineEmoji(cuisineType *string) string {
+func getRestaurantCuisineEmoji(cuisineType *string) string {
 	if cuisineType == nil {
 		return "🍽️"
 	}

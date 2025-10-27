@@ -5,6 +5,8 @@ linters:
   enable:
     - revive
     - godox
+    - gofmt
+    - goimports
   settings:
     errcheck:
       check-blank: true

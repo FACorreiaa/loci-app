@@ -148,7 +148,7 @@ func TestUnifiedDataSource_Integration(t *testing.T) {
 			// Verify filtering worked correctly
 			filteredActivities := filterPOIsForActivities(testPOIs)
 			assert.Len(t, filteredActivities, 2) // museum and park
-			
+
 			activityNames := make([]string, len(filteredActivities))
 			for i, poi := range filteredActivities {
 				activityNames[i] = poi.Name
@@ -171,7 +171,7 @@ func TestUnifiedDataSource_Integration(t *testing.T) {
 			// Verify filtering and conversion worked correctly
 			filteredHotels := filterPOIsForHotels(testPOIs)
 			assert.Len(t, filteredHotels, 2) // hotel and hostel
-			
+
 			hotelNames := make([]string, len(filteredHotels))
 			for i, hotel := range filteredHotels {
 				hotelNames[i] = hotel.Name
@@ -204,7 +204,7 @@ func TestUnifiedDataSource_Integration(t *testing.T) {
 			// Verify filtering and conversion worked correctly
 			filteredRestaurants := filterPOIsForRestaurants(testPOIs)
 			assert.Len(t, filteredRestaurants, 2) // restaurant and cafe
-			
+
 			restaurantNames := make([]string, len(filteredRestaurants))
 			for i, restaurant := range filteredRestaurants {
 				restaurantNames[i] = restaurant.Name
@@ -240,7 +240,7 @@ func TestUnifiedDataSource_DatabaseFallback(t *testing.T) {
 		// Create a test interaction in the database
 		sessionID := uuid.New()
 		userID := uuid.New()
-		
+
 		testCompleteData := models.CompleteItineraryData{
 			GeneralCityData: models.GeneralCityData{
 				City:    "Berlin",
@@ -301,7 +301,7 @@ func TestUnifiedDataSource_LegacyCacheFallback(t *testing.T) {
 
 	t.Run("should fallback to legacy cache when complete cache is empty", func(t *testing.T) {
 		sessionID := "legacy-cache-test-session"
-		
+
 		// Create legacy cache data
 		legacyData := models.AIItineraryResponse{
 			City: "Vienna",
@@ -321,7 +321,7 @@ func TestUnifiedDataSource_LegacyCacheFallback(t *testing.T) {
 
 		// Store in legacy cache only
 		middleware.ItineraryCache.Set(sessionID, legacyData, time.Hour)
-		
+
 		// Ensure complete cache is empty
 		middleware.CompleteItineraryCache.Delete(sessionID)
 
@@ -417,9 +417,9 @@ func TestUnifiedDataSource_CacheConsistency(t *testing.T) {
 		hotels := filterPOIsForHotels(testCompleteData.PointsOfInterest)
 		restaurants := filterPOIsForRestaurants(testCompleteData.PointsOfInterest)
 
-		assert.Len(t, activities, 1)   // Prague Castle
-		assert.Len(t, hotels, 1)       // Hotel Golden Well
-		assert.Len(t, restaurants, 1)  // Lokál Dlouhááá
+		assert.Len(t, activities, 1)  // Prague Castle
+		assert.Len(t, hotels, 1)      // Hotel Golden Well
+		assert.Len(t, restaurants, 1) // Lokál Dlouhááá
 
 		// Verify they all come from the same city
 		assert.Equal(t, "Prague", activities[0].City)
@@ -444,7 +444,7 @@ func TestUnifiedDataSource_ErrorScenarios(t *testing.T) {
 
 	t.Run("should handle empty cache and no database entry with empty results", func(t *testing.T) {
 		nonExistentSessionID := uuid.New().String()
-		
+
 		// Note: Cache delete methods may not exist, but that's okay - they'll be empty anyway
 
 		w := httptest.NewRecorder()
@@ -457,13 +457,13 @@ func TestUnifiedDataSource_ErrorScenarios(t *testing.T) {
 
 	t.Run("should handle corrupted cache data", func(t *testing.T) {
 		sessionID := "corrupted-data-session"
-		
+
 		// Store invalid data structure in cache
 		corruptedData := models.CompleteItineraryData{
 			GeneralCityData:  models.GeneralCityData{}, // Empty city data
 			PointsOfInterest: nil,                      // Nil POIs
 		}
-		
+
 		middleware.CompleteItineraryCache.Set(sessionID, corruptedData, time.Hour)
 
 		w := httptest.NewRecorder()

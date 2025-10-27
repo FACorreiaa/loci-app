@@ -5,6 +5,8 @@ import (
 	mapcomponents "github.com/FACorreiaa/go-templui/app/internal/components/map"
 	"github.com/FACorreiaa/go-templui/app/internal/components/navbar"
 	"github.com/FACorreiaa/go-templui/app/internal/components/pwa"
+	"github.com/FACorreiaa/go-templui/app/internal/components/scripts"
+	"github.com/FACorreiaa/go-templui/app/internal/components/styles"
 	"github.com/FACorreiaa/go-templui/app/internal/features/results"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"os"
@@ -40,8 +42,9 @@ templ LayoutPage(l models.LayoutTempl) {
 			<style>
 				[x-cloak] { display: none !important; }
 			</style>
+			<script src="https://kit.fontawesome.com/66fb26a2e8.js" crossorigin="anonymous"></script>
 			<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js" integrity="sha384-ZBXiYtYQ6hJ2Y0ZNoYuI+Nq5MqWBr+chMrS/RkXpNzQCApHEhOt2aY8EJgqwHLkJ" crossorigin="anonymous"></script>
-            <script src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.2" integrity="sha384-BkCCd4DbvhfvRLfThp+5RN2KiB1FBROoAtwZFfceJishUnpFW1eF/aqG14M5TwA2" crossorigin="anonymous"></script>
+			<script src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.2" integrity="sha384-BkCCd4DbvhfvRLfThp+5RN2KiB1FBROoAtwZFfceJishUnpFW1eF/aqG14M5TwA2" crossorigin="anonymous"></script>
 			<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js" integrity="sha384-O8NPfezTLQ/sgLfQYBJEnezJLlum9L6KOqHsfIWauzaFfD1TQSuvA4iUpgWGHeuZ" crossorigin="anonymous"></script>
 			@mapcomponents.MapboxScripts(os.Getenv("MAPBOX_API_KEY"))
 			<script>
@@ -55,6 +58,9 @@ templ LayoutPage(l models.LayoutTempl) {
 			</script>
 			@results.ItineraryStateScript()
 			@results.POIModalScript()
+			@scripts.SessionManagerScript()
+			@scripts.ViewModeManagerScript()
+			@styles.AnimationsCSS()
 		</head>
 		<body hx-boost="true" class="min-h-screen bg-background text-foreground font-inter antialiased">
 			<script type="module">

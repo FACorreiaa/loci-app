@@ -10,6 +10,7 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
 )
 
@@ -49,7 +50,7 @@ func MapContainer(pois []models.POIDetailedInfo, cityData *models.GeneralCityDat
 			var templ_7745c5c3_Var2 string
 			templ_7745c5c3_Var2, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background-color: " + markerColor)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/map_container.templ`, Line: 55, Col: 100}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/map_container.templ`, Line: 56, Col: 82}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 			if templ_7745c5c3_Err != nil {
@@ -124,8 +125,18 @@ func MapContainer(pois []models.POIDetailedInfo, cityData *models.GeneralCityDat
 
 func MapInitScript(poisJSON, cityJSON string, useNumberedMarkers bool, markerColor string) templ.ComponentScript {
 	return templ.ComponentScript{
-		Name: `__templ_MapInitScript_16b1`,
-		Function: `function __templ_MapInitScript_16b1(poisJSON, cityJSON, useNumberedMarkers, markerColor){document.addEventListener('DOMContentLoaded', function() {
+		Name: `__templ_MapInitScript_7824`,
+		Function: `function __templ_MapInitScript_7824(poisJSON, cityJSON, useNumberedMarkers, markerColor){// Helper function to validate coordinates
+    function isValidCoordinate(lat, lng) {
+        // Check for valid ranges: lat [-90, 90], lng [-180, 180]
+        // Also reject 0,0 as it's often a placeholder for missing data
+        if (lat === 0 && lng === 0) return false;
+        if (lat < -90 || lat > 90) return false;
+        if (lng < -180 || lng > 180) return false;
+        return true;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
         if (!window.mapboxgl) {
             console.error('Mapbox GL JS not loaded');
             return;
@@ -141,6 +152,14 @@ func MapInitScript(poisJSON, cityJSON string, useNumberedMarkers bool, markerCol
         const poisData = JSON.parse(poisJSON);
         const cityDataParsed = JSON.parse(cityJSON);
         const cityCenter = getCityCenter(cityDataParsed);
+
+        // Filter POIs to only those with valid coordinates
+        const validPOIs = poisData.filter(poi => isValidCoordinate(poi.latitude, poi.longitude));
+        const invalidPOIsCount = poisData.length - validPOIs.length;
+
+        if (invalidPOIsCount > 0) {
+            console.warn(` + "`" + `Filtered out ${invalidPOIsCount} POI(s) with invalid coordinates` + "`" + `);
+        }
 
         // Initialize map with constraints for responsive behavior
         window.map = new mapboxgl.Map({
@@ -203,9 +222,10 @@ func MapInitScript(poisJSON, cityJSON string, useNumberedMarkers bool, markerCol
 
             const markerBgColor = getMarkerColor(markerColor);
 
-            // Add POI markers and extend bounds
-            poisData.forEach(function(poi, index) {
-                if (poi.latitude && poi.longitude) {
+            // Add POI markers and extend bounds (using only valid POIs)
+            validPOIs.forEach(function(poi, index) {
+                // Double-check validation (defensive programming)
+                if (isValidCoordinate(poi.latitude, poi.longitude)) {
                     hasValidCoordinates = true;
                     bounds.extend([poi.longitude, poi.latitude]);
 
@@ -348,16 +368,26 @@ func MapInitScript(poisJSON, cityJSON string, useNumberedMarkers bool, markerCol
         });
     });
 
-    // Helper function to get city center (unchanged)
+    // Helper function to get city center with validation
     function getCityCenter(cityData) {
         if (cityData && cityData.center_latitude && cityData.center_longitude) {
-            return [cityData.center_longitude, cityData.center_latitude];
+            const lat = cityData.center_latitude;
+            const lng = cityData.center_longitude;
+
+            // Validate city center coordinates
+            if (isValidCoordinate(lat, lng)) {
+                return [lng, lat];  // Mapbox uses [lng, lat] order
+            }
         }
-        return [0, 0];  // Default fallback
+
+        // Fallback to world center (0,0 is in the Atlantic Ocean)
+        // Better fallback: Greenwich, London [0, 51.5]
+        console.warn('Invalid or missing city center coordinates, using default fallback');
+        return [0, 51.5];
     }
 }`,
-		Call:       templ.SafeScript(`__templ_MapInitScript_16b1`, poisJSON, cityJSON, useNumberedMarkers, markerColor),
-		CallInline: templ.SafeScriptInline(`__templ_MapInitScript_16b1`, poisJSON, cityJSON, useNumberedMarkers, markerColor),
+		Call:       templ.SafeScript(`__templ_MapInitScript_7824`, poisJSON, cityJSON, useNumberedMarkers, markerColor),
+		CallInline: templ.SafeScriptInline(`__templ_MapInitScript_7824`, poisJSON, cityJSON, useNumberedMarkers, markerColor),
 	}
 }
 
@@ -386,6 +416,26 @@ func poisToJSON(pois []models.POIDetailedInfo) string {
 
 	jsonData, _ := json.Marshal(simplified)
 	return string(jsonData)
+}
+
+// Helper function to validate and format coordinates for display
+func formatCoordinates(lat, lng float64) string {
+	// Validate coordinates
+	if lat == 0 && lng == 0 {
+		return "Location TBD"
+	}
+	if lat < -90 || lat > 90 || lng < -180 || lng > 180 {
+		return "Location TBD"
+	}
+	return fmt.Sprintf("%.4f, %.4f", lat, lng)
+}
+
+// Helper function to check if coordinates are valid
+func hasValidCoordinates(lat, lng float64) bool {
+	if lat == 0 && lng == 0 {
+		return false
+	}
+	return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
 }
 
 // Helper function to convert city data to JSON

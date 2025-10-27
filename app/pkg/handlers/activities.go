@@ -22,10 +22,10 @@ import (
 type ActivitiesHandlers struct {
 	chatRepo         llmchat.Repository
 	itineraryService *services.ItineraryService
-	logger           *slog.Logger
+	logger           *zap.Logger
 }
 
-func NewActivitiesHandlers(chatRepo llmchat.Repository, logger *slog.Logger) *ActivitiesHandlers {
+func NewActivitiesHandlers(chatRepo llmchat.Repository, logger *zap.Logger) *ActivitiesHandlers {
 	return &ActivitiesHandlers{
 		chatRepo:         chatRepo,
 		itineraryService: services.NewItineraryService(),
@@ -86,7 +86,7 @@ func (h *ActivitiesHandlers) loadActivitiesBySession(sessionIDParam string, cach
 			return results.ActivitiesResults(
 				cityData,
 				activitiesData,
-				true, true, 15, []string{})
+				true, true, 15, []string{}, sessionIDParam)
 		}
 	}
 
@@ -115,7 +115,7 @@ func (h *ActivitiesHandlers) loadActivitiesFromDatabase(sessionIDParam string) t
 		// Return empty results instead of PageNotFound - data might still be processing
 		emptyCityData := models.GeneralCityData{}
 		emptyActivities := []models.POIDetailedInfo{}
-		return results.ActivitiesResults(emptyCityData, emptyActivities, true, true, 5, []string{})
+		return results.ActivitiesResults(emptyCityData, emptyActivities, true, true, 5, []string{}, sessionIDParam)
 	}
 
 	// Parse the stored response as complete data
@@ -127,7 +127,7 @@ func (h *ActivitiesHandlers) loadActivitiesFromDatabase(sessionIDParam string) t
 		// Return empty results instead of PageNotFound for parsing errors
 		emptyCityData := models.GeneralCityData{}
 		emptyActivities := []models.POIDetailedInfo{}
-		return results.ActivitiesResults(emptyCityData, emptyActivities, true, true, 5, []string{})
+		return results.ActivitiesResults(emptyCityData, emptyActivities, true, true, 5, []string{}, sessionIDParam)
 	}
 
 	logger.Log.Info("Successfully loaded complete data from database for activities",
@@ -140,7 +140,7 @@ func (h *ActivitiesHandlers) loadActivitiesFromDatabase(sessionIDParam string) t
 	return results.ActivitiesResults(
 		completeData.GeneralCityData,
 		activityPOIs,
-		true, true, 5, []string{})
+		true, true, 5, []string{}, sessionIDParam)
 }
 
 // filterPOIsForActivities filters POIs to show only activity-related categories

@@ -71,6 +71,7 @@ type LlmInteractiontService interface {
 
 	// Chat session management
 	GetUserChatSessions(ctx context.Context, userID uuid.UUID, page, limit int) (*models.ChatSessionsResponse, error)
+	GetRecentDiscoveries(ctx context.Context, userID uuid.UUID, limit int) (*models.ChatSessionsResponse, error)
 }
 
 type IntentClassifier interface {
@@ -743,6 +744,44 @@ func (l *ServiceImpl) GetUserChatSessions(ctx context.Context, userID uuid.UUID,
 	return response, nil
 }
 
+func (l *ServiceImpl) GetRecentDiscoveries(ctx context.Context, userID uuid.UUID, limit int) (*models.ChatSessionsResponse, error) {
+	ctx, span := otel.Tracer("LlmInteractionService").Start(ctx, "GetRecentDiscoveries", trace.WithAttributes(
+		attribute.String("user.id", userID.String()),
+		attribute.Int("limit", limit),
+	))
+	defer span.End()
+
+	l.logger.InfoContext(ctx, "Retrieving recent discoveries for user",
+		slog.String("userID", userID.String()),
+		slog.Int("limit", limit))
+
+	// TODO: Replace this with proper discoveries table
+	// For now, query chat_sessions directly as a workaround
+	sessions, err := l.llmInteractionRepo.GetRecentChatSessionsByType(ctx, userID, models.SearchTypeDiscover, limit)
+	if err != nil {
+		l.logger.ErrorContext(ctx, "Failed to get recent chat sessions", slog.Any("error", err))
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to get recent chat sessions")
+		return nil, fmt.Errorf("failed to get recent chat sessions: %w", err)
+	}
+
+	l.logger.InfoContext(ctx, "Successfully retrieved recent discoveries",
+		slog.String("userID", userID.String()),
+		slog.Int("discoveryCount", len(sessions)))
+	span.SetAttributes(
+		attribute.Int("discoveries.count", len(sessions)),
+	)
+	span.SetStatus(codes.Ok, "Recent discoveries retrieved successfully")
+
+	return &models.ChatSessionsResponse{
+		Sessions: sessions,
+		Total:    len(sessions),
+		Page:     1,
+		Limit:    limit,
+		HasMore:  false,
+	}, nil
+}
+
 // getPOIDetailedInfos returns a formatted string with POI details.
 func (l *ServiceImpl) getPOIDetailedInfos(wg *sync.WaitGroup, ctx context.Context,
 	city string, lat float64, lon float64, userID uuid.UUID,
@@ -903,9 +942,10 @@ func (l *ServiceImpl) GetPOIDetailedInfosResponse(ctx context.Context, userID uu
 
 	resultCh := make(chan models.POIDetailedInfo, 1)
 	var wg sync.WaitGroup
-	wg.Add(1)
 
-	go l.getPOIDetailedInfos(&wg, ctx, city, lat, lon, userID, resultCh, &genai.GenerateContentConfig{Temperature: genai.Ptr[float32](defaultTemperature)})
+	wg.Go(func() {
+		l.getPOIDetailedInfos(&wg, ctx, city, lat, lon, userID, resultCh, &genai.GenerateContentConfig{Temperature: genai.Ptr[float32](defaultTemperature)})
+	})
 
 	go func() {
 		wg.Wait()
@@ -1210,6 +1250,51 @@ func (l *ServiceImpl) generateSemanticPOIRecommendations(ctx context.Context, us
 	return pois, nil
 }
 
+// updateCacheAfterModification updates the CompleteItineraryCache when items are added/removed
+func (l *ServiceImpl) updateCacheAfterModification(ctx context.Context, session *models.ChatSession) {
+	ctx, span := otel.Tracer("LlmInteractionService").Start(ctx, "updateCacheAfterModification")
+	defer span.End()
+
+	// Generate cache key using same logic as StartChatMessageStream
+	cacheKeyData := map[string]interface{}{
+		"user_id":    session.UserID.String(),
+		"profile_id": session.ProfileID.String(),
+		"city":       session.SessionContext.CityName,
+		"domain":     "itinerary",
+	}
+
+	cacheKeyBytes, err := json.Marshal(cacheKeyData)
+	if err != nil {
+		l.logger.WarnContext(ctx, "Failed to marshal cache key for modification update",
+			slog.Any("error", err))
+		return
+	}
+
+	hash := md5.Sum(cacheKeyBytes)
+	cacheKey := hex.EncodeToString(hash[:])
+
+	// Create updated complete response from current session state
+	completeResponse := &models.AiCityResponse{
+		GeneralCityData:     session.CurrentItinerary.GeneralCityData,
+		PointsOfInterest:    session.CurrentItinerary.PointsOfInterest,
+		AIItineraryResponse: session.CurrentItinerary.AIItineraryResponse,
+		SessionID:           session.ID,
+	}
+
+	// Update the cache
+	middleware.CompleteItineraryCache.Set(cacheKey, *completeResponse)
+
+	l.logger.InfoContext(ctx, "Updated cache after itinerary modification",
+		slog.String("session_id", session.ID.String()),
+		slog.String("cache_key", cacheKey),
+		slog.Int("poi_count", len(session.CurrentItinerary.AIItineraryResponse.PointsOfInterest)))
+
+	span.SetAttributes(
+		attribute.String("cache.key", cacheKey),
+		attribute.Int("poi.count", len(session.CurrentItinerary.AIItineraryResponse.PointsOfInterest)),
+	)
+}
+
 // handleSemanticRemovePOI handles removing POIs with semantic understanding
 func (l *ServiceImpl) handleSemanticRemovePOI(ctx context.Context, message string, session *models.ChatSession) string {
 	ctx, span := otel.Tracer("LlmInteractionService").Start(ctx, "handleSemanticRemovePOI")
@@ -1228,13 +1313,20 @@ func (l *ServiceImpl) handleSemanticRemovePOI(ctx context.Context, message strin
 			strings.Contains(strings.ToLower(poiName), strings.ToLower(p.Name)) {
 
 			removedName := p.Name
+
+			// Remove from itinerary
 			session.CurrentItinerary.AIItineraryResponse.PointsOfInterest = append(
 				session.CurrentItinerary.AIItineraryResponse.PointsOfInterest[:i],
 				session.CurrentItinerary.AIItineraryResponse.PointsOfInterest[i+1:]...,
 			)
+
 			l.logger.InfoContext(ctx, "Removed POI from itinerary",
 				slog.String("removed_poi", removedName))
 			span.SetAttributes(attribute.String("removed_poi", removedName))
+
+			// Update cache after removal
+			l.updateCacheAfterModification(ctx, session)
+
 			return fmt.Sprintf("I've removed %s from your itinerary.", removedName)
 		}
 	}
@@ -1855,24 +1947,40 @@ func (l *ServiceImpl) handleSemanticAddPOIStreamed(ctx context.Context, message 
 			}
 
 			if !alreadyExists {
-				l.sendEvent(ctx, eventCh, models.StreamEvent{
-					Type: "semantic_poi_added",
-					Data: map[string]interface{}{
-						"poi_name":       semanticPOI.Name,
-						"poi_category":   semanticPOI.Category,
-						"latitude":       semanticPOI.Latitude,
-						"longitude":      semanticPOI.Longitude,
-						"description":    semanticPOI.DescriptionPOI,
-						"semantic_match": true,
-					},
-				}, 3)
-
-				// Add semantic POI to itinerary
+				// Add semantic POI to itinerary first
 				session.CurrentItinerary.AIItineraryResponse.PointsOfInterest = append(
 					session.CurrentItinerary.AIItineraryResponse.PointsOfInterest, semanticPOI)
+				newIndex := len(session.CurrentItinerary.AIItineraryResponse.PointsOfInterest) - 1
+
+				// Render HTML fragment for the new POI
+				htmlFragment, renderErr := l.RenderItemHTML(ctx, "itinerary", semanticPOI, newIndex+1)
+				if renderErr != nil {
+					l.logger.WarnContext(ctx, "Failed to render POI HTML", slog.Any("error", renderErr))
+				}
+
+				// Send item_added event with HTML
+				l.sendEvent(ctx, eventCh, models.StreamEvent{
+					Type:   models.EventTypeItemAdded,
+					Domain: "itinerary",
+					ItemID: semanticPOI.ID.String(),
+					HTML:   htmlFragment,
+					ItemData: map[string]interface{}{
+						"name":        semanticPOI.Name,
+						"category":    semanticPOI.Category,
+						"latitude":    semanticPOI.Latitude,
+						"longitude":   semanticPOI.Longitude,
+						"description": semanticPOI.DescriptionPOI,
+						"index":       newIndex + 1,
+					},
+					Message: fmt.Sprintf("Added %s to your itinerary", semanticPOI.Name),
+				}, 3)
+
 				l.logger.InfoContext(ctx, "Added semantic POI to streaming itinerary",
 					slog.String("poi_name", semanticPOI.Name))
 				span.SetAttributes(attribute.String("added_poi", semanticPOI.Name))
+
+				// Update cache with modified itinerary
+				l.updateCacheAfterModification(ctx, session)
 
 				return fmt.Sprintf("Great! I found %s which matches what you're looking for. I've added it to your itinerary. %s",
 					semanticPOI.Name, semanticPOI.DescriptionPOI), nil
@@ -2095,58 +2203,68 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 	// Step 6: Spawn streaming workers based on domain with cache support
 	switch domain {
 	case models.DomainItinerary, models.DomainGeneral:
-		wg.Add(3)
-
 		// Worker 1: Stream City Data with cache
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			prompt := getCityDataPrompt(cityName)
 			partCacheKey := cacheKey + "_city_data"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "city_data", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 		// Worker 2: Stream General POIs with cache
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			prompt := getGeneralPOIPrompt(cityName)
 			partCacheKey := cacheKey + "_general_pois"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "general_pois", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 		// Worker 3: Stream Personalized Itinerary with cache
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			prompt := getPersonalizedItineraryPrompt(cityName, basePreferences)
 			partCacheKey := cacheKey + "_itinerary"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "itinerary", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 	case models.DomainAccommodation:
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		// Worker 1: Stream City Data with cache
+		wg.Go(func() {
+			prompt := getCityDataPrompt(cityName)
+			partCacheKey := cacheKey + "_city_data"
+			l.streamWorkerWithResponseAndCache(ctx, prompt, "city_data", sendEventWithResponse, domain, partCacheKey)
+		})
+
+		wg.Go(func() {
 			prompt := getAccommodationPrompt(cityName, lat, lon, basePreferences)
 			partCacheKey := cacheKey + "_hotels"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "hotels", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 	case models.DomainDining:
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		// Worker 1: Stream City Data with cache
+		wg.Go(func() {
+			prompt := getCityDataPrompt(cityName)
+			partCacheKey := cacheKey + "_city_data"
+			l.streamWorkerWithResponseAndCache(ctx, prompt, "city_data", sendEventWithResponse, domain, partCacheKey)
+		})
+
+		wg.Go(func() {
 			prompt := getDiningPrompt(cityName, lat, lon, basePreferences)
 			partCacheKey := cacheKey + "_restaurants"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "restaurants", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 	case models.DomainActivities:
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		// Worker 1: Stream City Data with cache
+		wg.Go(func() {
+			prompt := getCityDataPrompt(cityName)
+			partCacheKey := cacheKey + "_city_data"
+			l.streamWorkerWithResponseAndCache(ctx, prompt, "city_data", sendEventWithResponse, domain, partCacheKey)
+		})
+
+		wg.Go(func() {
 			prompt := getActivitiesPrompt(cityName, lat, lon, basePreferences)
 			partCacheKey := cacheKey + "_activities"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "activities", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 	default:
 		sendEventWithResponse(models.StreamEvent{Type: models.EventTypeError, Error: fmt.Sprintf("unhandled domain: %s", domain)})
@@ -2400,58 +2518,46 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStreamFree(ctx context.Context, c
 	// Step 6: Spawn streaming workers based on domain with cache support
 	switch domain {
 	case models.DomainItinerary, models.DomainGeneral:
-		wg.Add(3)
-
-		// Worker 1: Stream City Data with cache
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			prompt := getCityDataPrompt(cityName)
 			partCacheKey := cacheKey + "_city_data"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "city_data", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 		// Worker 2: Stream General POIs with cache
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			prompt := getGeneralPOIPrompt(cityName)
 			partCacheKey := cacheKey + "_general_pois"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "general_pois", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 		// Worker 3: Stream Personalized Itinerary with cache
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			prompt := getGeneralizedItineraryPrompt(cityName)
 			partCacheKey := cacheKey + "_itinerary"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "itinerary", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 	case models.DomainAccommodation:
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			prompt := getGeneralAccommodationPrompt(cityName)
 			partCacheKey := cacheKey + "_hotels"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "hotels", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 	case models.DomainDining:
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			prompt := getGeneralDiningPrompt(cityName)
 			partCacheKey := cacheKey + "_restaurants"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "restaurants", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 	case models.DomainActivities:
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			prompt := getGeneralActivitiesPrompt(cityName)
 			partCacheKey := cacheKey + "_activities"
 			l.streamWorkerWithResponseAndCache(ctx, prompt, "activities", sendEventWithResponse, domain, partCacheKey)
-		}()
+		})
 
 	default:
 		sendEventWithResponse(models.StreamEvent{Type: models.EventTypeError, Error: fmt.Sprintf("unhandled domain: %s", domain)})

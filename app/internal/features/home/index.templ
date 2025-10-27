@@ -146,7 +146,7 @@ templ LoggedInDashboard() {
 					</form>
 					<div id="dashboard-results" class="mt-4"></div>
 					<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js" integrity="sha384-ZBXiYtYQ6hJ2Y0ZNoYuI+Nq5MqWBr+chMrS/RkXpNzQCApHEhOt2aY8EJgqwHLkJ" crossorigin="anonymous"></script>
-                    <script src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.2" integrity="sha384-BkCCd4DbvhfvRLfThp+5RN2KiB1FBROoAtwZFfceJishUnpFW1eF/aqG14M5TwA2" crossorigin="anonymous"></script>
+					<script src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.2" integrity="sha384-BkCCd4DbvhfvRLfThp+5RN2KiB1FBROoAtwZFfceJishUnpFW1eF/aqG14M5TwA2" crossorigin="anonymous"></script>
 					<script>
 						// Simple HTMX event handlers - no complex JS needed!
 						document.body.addEventListener('htmx:beforeRequest', function(evt) {
@@ -455,10 +455,8 @@ templ RecentActivity() {
 				</button>
 			</div>
 		</div>
-		
 		@components.LocationRequestBanner(true)
 		@components.FloatingLocationButton()
 	</div>
-	
 	@components.LocationScript()
 }

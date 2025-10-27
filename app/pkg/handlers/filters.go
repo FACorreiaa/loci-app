@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log/slog"
 	"strconv"
 	"strings"
 
@@ -15,10 +14,10 @@ import (
 )
 
 type FilterHandlers struct {
-	logger *slog.Logger
+	logger *zap.SugaredLogger
 }
 
-func NewFilterHandlers(logger *slog.Logger) *FilterHandlers {
+func NewFilterHandlers(logger *zap.SugaredLogger) *FilterHandlers {
 	return &FilterHandlers{
 		logger: logger,
 	}

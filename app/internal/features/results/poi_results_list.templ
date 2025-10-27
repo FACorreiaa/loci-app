@@ -197,7 +197,6 @@ func getUniqueCategories(pois []models.POIDetailedInfo) []string {
 	return result
 }
 
-
 // Helper function to convert POI to Alpine.js data
 func poiToAlpineData(poi models.POIDetailedInfo, index int) string {
 	return fmt.Sprintf(`{
@@ -208,4 +207,3 @@ func poiToAlpineData(poi models.POIDetailedInfo, index int) string {
         rating: %f
     }`, index, poi.Name, poi.Category, poi.Description, poi.Rating)
 }
-

@@ -2,6 +2,7 @@ package results
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
 )
 
@@ -9,84 +10,94 @@ import (
 
 // MapContainer displays the interactive Mapbox map with POI markers
 templ MapContainer(pois []models.POIDetailedInfo, cityData *models.GeneralCityData, sessionId string, showLegend bool, useNumberedMarkers bool, markerColor string, domain string) {
-    <div class="relative w-full h-full min-h-[500px] bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden" x-data="{ mapLoaded: false }" style="min-height: 500px;">
-        <!-- Map Element -->
-        <div id="map" class="w-full h-full" style="min-height: 500px;"></div>
-        <!-- Map Controls (keep these for usability, but style smaller if needed) -->
-        <div class="absolute top-4 right-4 z-10 flex flex-col gap-2">
-            <button
-                @click="window.map && window.map.zoomIn()"
-                class="w-8 h-8 bg-white dark:bg-gray-800 rounded-md shadow flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors text-sm"
-            >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-            </button>
-            <button
-                @click="window.map && window.map.zoomOut()"
-                class="w-8 h-8 bg-white dark:bg-gray-800 rounded-md shadow flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors text-sm"
-            >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
-                </svg>
-            </button>
-            <button
-                @click="window.resetMapView && window.resetMapView()"
-                class="w-8 h-8 bg-white dark:bg-gray-800 rounded-md shadow flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors text-sm"
-            >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                </svg>
-            </button>
-        </div>
-        <!-- Loading State -->
-        <div x-show="!mapLoaded" class="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-            <div class="flex flex-col items-center gap-3">
-                <div class="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                <p class="text-sm text-gray-600 dark:text-gray-300">Loading map...</p>
-            </div>
-        </div>
-        <!-- Map Legend (conditionally shown; pass showLegend=false to hide) -->
-        if showLegend {
-            <div class="absolute bottom-4 left-4 bg-white dark:bg-gray-800 rounded-lg shadow-md p-3 max-w-xs">
-                <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Legend</h4>
-                <div class="space-y-1">
-                    <div class="flex items-center gap-2">
-                        <div class="w-3 h-3 rounded-full" style={ "background-color: " + markerColor }></div>
-                        <span class="text-xs text-gray-600 dark:text-gray-300">
-                            if domain == "restaurants" {
-                                Restaurants
-                            } else if domain == "hotels" {
-                                Hotels
-                            } else if domain == "activities" {
-                                Activities
-                            } else {
-                                Points of Interest
-                            }
-                        </span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div class="w-3 h-3 bg-red-600 rounded-full"></div>
-                        <span class="text-xs text-gray-600 dark:text-gray-300">
-                            if domain == "restaurants" {
-                                Selected Restaurant
-                            } else if domain == "hotels" {
-                                Selected Hotel
-                            } else if domain == "activities" {
-                                Selected Activity
-                            } else {
-                                Selected POI
-                            }
-                        </span>
-                    </div>
-                </div>
-            </div>
-        }
-    </div>
-    @MapInitScript(poisToJSON(pois), cityDataToJSON(cityData), useNumberedMarkers, markerColor)
+	<div class="relative w-full h-full min-h-[500px] bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden" x-data="{ mapLoaded: false }" style="min-height: 500px;">
+		<!-- Map Element -->
+		<div id="map" class="w-full h-full" style="min-height: 500px;"></div>
+		<!-- Map Controls (keep these for usability, but style smaller if needed) -->
+		<div class="absolute top-4 right-4 z-10 flex flex-col gap-2">
+			<button
+				@click="window.map && window.map.zoomIn()"
+				class="w-8 h-8 bg-white dark:bg-gray-800 rounded-md shadow flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors text-sm"
+			>
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+				</svg>
+			</button>
+			<button
+				@click="window.map && window.map.zoomOut()"
+				class="w-8 h-8 bg-white dark:bg-gray-800 rounded-md shadow flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors text-sm"
+			>
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
+				</svg>
+			</button>
+			<button
+				@click="window.resetMapView && window.resetMapView()"
+				class="w-8 h-8 bg-white dark:bg-gray-800 rounded-md shadow flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors text-sm"
+			>
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+				</svg>
+			</button>
+		</div>
+		<!-- Loading State -->
+		<div x-show="!mapLoaded" class="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+			<div class="flex flex-col items-center gap-3">
+				<div class="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+				<p class="text-sm text-gray-600 dark:text-gray-300">Loading map...</p>
+			</div>
+		</div>
+		<!-- Map Legend (conditionally shown; pass showLegend=false to hide) -->
+		if showLegend {
+			<div class="absolute bottom-4 left-4 bg-white dark:bg-gray-800 rounded-lg shadow-md p-3 max-w-xs">
+				<h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Legend</h4>
+				<div class="space-y-1">
+					<div class="flex items-center gap-2">
+						<div class="w-3 h-3 rounded-full" style={ "background-color: " + markerColor }></div>
+						<span class="text-xs text-gray-600 dark:text-gray-300">
+							if domain == "restaurants" {
+								Restaurants
+							} else if domain == "hotels" {
+								Hotels
+							} else if domain == "activities" {
+								Activities
+							} else {
+								Points of Interest
+							}
+						</span>
+					</div>
+					<div class="flex items-center gap-2">
+						<div class="w-3 h-3 bg-red-600 rounded-full"></div>
+						<span class="text-xs text-gray-600 dark:text-gray-300">
+							if domain == "restaurants" {
+								Selected Restaurant
+							} else if domain == "hotels" {
+								Selected Hotel
+							} else if domain == "activities" {
+								Selected Activity
+							} else {
+								Selected POI
+							}
+						</span>
+					</div>
+				</div>
+			</div>
+		}
+	</div>
+	@MapInitScript(poisToJSON(pois), cityDataToJSON(cityData), useNumberedMarkers, markerColor)
 }
 
 script MapInitScript(poisJSON, cityJSON string, useNumberedMarkers bool, markerColor string) {
+    // Helper function to validate coordinates
+    function isValidCoordinate(lat, lng) {
+        // Check for valid ranges: lat [-90, 90], lng [-180, 180]
+        // Also reject 0,0 as it's often a placeholder for missing data
+        if (lat === 0 && lng === 0) return false;
+        if (lat < -90 || lat > 90) return false;
+        if (lng < -180 || lng > 180) return false;
+        return true;
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         if (!window.mapboxgl) {
             console.error('Mapbox GL JS not loaded');
@@ -103,6 +114,14 @@ script MapInitScript(poisJSON, cityJSON string, useNumberedMarkers bool, markerC
         const poisData = JSON.parse(poisJSON);
         const cityDataParsed = JSON.parse(cityJSON);
         const cityCenter = getCityCenter(cityDataParsed);
+
+        // Filter POIs to only those with valid coordinates
+        const validPOIs = poisData.filter(poi => isValidCoordinate(poi.latitude, poi.longitude));
+        const invalidPOIsCount = poisData.length - validPOIs.length;
+
+        if (invalidPOIsCount > 0) {
+            console.warn(`Filtered out ${invalidPOIsCount} POI(s) with invalid coordinates`);
+        }
 
         // Initialize map with constraints for responsive behavior
         window.map = new mapboxgl.Map({
@@ -165,9 +184,10 @@ script MapInitScript(poisJSON, cityJSON string, useNumberedMarkers bool, markerC
 
             const markerBgColor = getMarkerColor(markerColor);
 
-            // Add POI markers and extend bounds
-            poisData.forEach(function(poi, index) {
-                if (poi.latitude && poi.longitude) {
+            // Add POI markers and extend bounds (using only valid POIs)
+            validPOIs.forEach(function(poi, index) {
+                // Double-check validation (defensive programming)
+                if (isValidCoordinate(poi.latitude, poi.longitude)) {
                     hasValidCoordinates = true;
                     bounds.extend([poi.longitude, poi.latitude]);
 
@@ -310,12 +330,22 @@ script MapInitScript(poisJSON, cityJSON string, useNumberedMarkers bool, markerC
         });
     });
 
-    // Helper function to get city center (unchanged)
+    // Helper function to get city center with validation
     function getCityCenter(cityData) {
         if (cityData && cityData.center_latitude && cityData.center_longitude) {
-            return [cityData.center_longitude, cityData.center_latitude];
+            const lat = cityData.center_latitude;
+            const lng = cityData.center_longitude;
+
+            // Validate city center coordinates
+            if (isValidCoordinate(lat, lng)) {
+                return [lng, lat];  // Mapbox uses [lng, lat] order
+            }
         }
-        return [0, 0];  // Default fallback
+
+        // Fallback to world center (0,0 is in the Atlantic Ocean)
+        // Better fallback: Greenwich, London [0, 51.5]
+        console.warn('Invalid or missing city center coordinates, using default fallback');
+        return [0, 51.5];
     }
 }
 
@@ -344,6 +374,26 @@ func poisToJSON(pois []models.POIDetailedInfo) string {
 
 	jsonData, _ := json.Marshal(simplified)
 	return string(jsonData)
+}
+
+// Helper function to validate and format coordinates for display
+func formatCoordinates(lat, lng float64) string {
+	// Validate coordinates
+	if lat == 0 && lng == 0 {
+		return "Location TBD"
+	}
+	if lat < -90 || lat > 90 || lng < -180 || lng > 180 {
+		return "Location TBD"
+	}
+	return fmt.Sprintf("%.4f, %.4f", lat, lng)
+}
+
+// Helper function to check if coordinates are valid
+func hasValidCoordinates(lat, lng float64) bool {
+	if lat == 0 && lng == 0 {
+		return false
+	}
+	return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
 }
 
 // Helper function to convert city data to JSON

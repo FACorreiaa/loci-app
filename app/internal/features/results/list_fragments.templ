@@ -66,22 +66,18 @@ templ FilteredRestaurantCard(restaurant models.RestaurantDetailedInfo, index int
 		<div class="absolute top-4 right-4 w-8 h-8 bg-orange-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
 			{ fmt.Sprintf("%d", index) }
 		</div>
-
 		<div class="pr-12">
 			<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
 				{ restaurant.Name }
 			</h3>
-
 			if restaurant.CuisineType != nil {
 				<p class="text-sm text-orange-600 dark:text-orange-400 mb-2">
 					{ *restaurant.CuisineType }
 				</p>
 			}
-
 			<p class="text-sm text-gray-600 dark:text-gray-300 mb-3">
 				{ restaurant.Description }
 			</p>
-
 			<div class="flex flex-wrap items-center gap-3 text-sm">
 				if restaurant.Rating > 0 {
 					<div class="flex items-center gap-1">
@@ -91,7 +87,6 @@ templ FilteredRestaurantCard(restaurant models.RestaurantDetailedInfo, index int
 						<span>{ fmt.Sprintf("%.1f", restaurant.Rating) }</span>
 					</div>
 				}
-
 				if restaurant.PriceLevel != nil {
 					<div class="flex items-center gap-1">
 						<svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -101,7 +96,6 @@ templ FilteredRestaurantCard(restaurant models.RestaurantDetailedInfo, index int
 					</div>
 				}
 			</div>
-
 			if len(restaurant.Tags) > 0 {
 				<div class="flex flex-wrap gap-2 mt-3">
 					for _, tag := range restaurant.Tags {
@@ -128,20 +122,16 @@ templ FilteredHotelCard(hotel models.HotelDetailedInfo, index int) {
 		<div class="absolute top-4 right-4 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
 			{ fmt.Sprintf("%d", index) }
 		</div>
-
 		<div class="pr-12">
 			<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
 				{ hotel.Name }
 			</h3>
-
 			<p class="text-sm text-green-600 dark:text-green-400 mb-2">
 				{ hotel.Category }
 			</p>
-
 			<p class="text-sm text-gray-600 dark:text-gray-300 mb-3">
 				{ hotel.Description }
 			</p>
-
 			<div class="flex flex-wrap items-center gap-3 text-sm">
 				if hotel.Rating > 0 {
 					<div class="flex items-center gap-1">
@@ -151,7 +141,6 @@ templ FilteredHotelCard(hotel models.HotelDetailedInfo, index int) {
 						<span>{ fmt.Sprintf("%.1f", hotel.Rating) }</span>
 					</div>
 				}
-
 				if hotel.PriceRange != nil {
 					<div class="flex items-center gap-1">
 						<svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -161,7 +150,6 @@ templ FilteredHotelCard(hotel models.HotelDetailedInfo, index int) {
 					</div>
 				}
 			</div>
-
 			if len(hotel.Tags) > 0 {
 				<div class="flex flex-wrap gap-2 mt-3">
 					for _, tag := range hotel.Tags {
@@ -188,20 +176,16 @@ templ FilteredActivityCard(activity models.POIDetailedInfo, index int) {
 		<div class="absolute top-4 right-4 w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
 			{ fmt.Sprintf("%d", index) }
 		</div>
-
 		<div class="pr-12">
 			<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
 				{ activity.Name }
 			</h3>
-
 			<p class="text-sm text-purple-600 dark:text-purple-400 mb-2">
 				{ activity.Category }
 			</p>
-
 			<p class="text-sm text-gray-600 dark:text-gray-300 mb-3">
 				{ activity.Description }
 			</p>
-
 			<div class="flex flex-wrap items-center gap-3 text-sm">
 				if activity.Rating > 0 {
 					<div class="flex items-center gap-1">
@@ -211,7 +195,6 @@ templ FilteredActivityCard(activity models.POIDetailedInfo, index int) {
 						<span>{ fmt.Sprintf("%.1f", activity.Rating) }</span>
 					</div>
 				}
-
 				if activity.PriceRange != "" {
 					<div class="flex items-center gap-1">
 						<svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -221,7 +204,6 @@ templ FilteredActivityCard(activity models.POIDetailedInfo, index int) {
 					</div>
 				}
 			</div>
-
 			if len(activity.Tags) > 0 {
 				<div class="flex flex-wrap gap-2 mt-3">
 					for _, tag := range activity.Tags {
@@ -248,20 +230,16 @@ templ FilteredPOICard(poi models.POIDetailedInfo, index int) {
 		<div class="absolute top-4 right-4 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
 			{ fmt.Sprintf("%d", index) }
 		</div>
-
 		<div class="pr-12">
 			<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
 				{ poi.Name }
 			</h3>
-
 			<p class="text-sm text-blue-600 dark:text-blue-400 mb-2">
 				{ poi.Category }
 			</p>
-
 			<p class="text-sm text-gray-600 dark:text-gray-300 mb-3">
 				{ poi.Description }
 			</p>
-
 			<div class="flex flex-wrap items-center gap-3 text-sm">
 				if poi.Rating > 0 {
 					<div class="flex items-center gap-1">
@@ -271,7 +249,6 @@ templ FilteredPOICard(poi models.POIDetailedInfo, index int) {
 						<span>{ fmt.Sprintf("%.1f", poi.Rating) }</span>
 					</div>
 				}
-
 				if poi.PriceRange != "" {
 					<div class="flex items-center gap-1">
 						<svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -281,7 +258,6 @@ templ FilteredPOICard(poi models.POIDetailedInfo, index int) {
 					</div>
 				}
 			</div>
-
 			if len(poi.Tags) > 0 {
 				<div class="flex flex-wrap gap-2 mt-3">
 					for _, tag := range poi.Tags {

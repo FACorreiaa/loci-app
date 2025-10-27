@@ -188,6 +188,7 @@ func (h *ResultsHandlers) HandleHotelSearch(c *gin.Context) {
 		true,  // showToggle
 		4,     // initialLimit
 		favorites,
+		sessionID, // sessionID for chat panel
 	))
 }
 
@@ -219,6 +220,9 @@ func (h *ResultsHandlers) HandleItinerarySearch(c *gin.Context) {
 	// Get user favorites (if authenticated)
 	favorites := []string{}
 
+	// Generate session ID for chat continuity
+	sessionID := uuid.New().String()
+
 	// Render results using the new itinerary results component
 	// For legacy handlers, create empty city data and general POIs
 	emptyCityData := models.GeneralCityData{}
@@ -232,6 +236,7 @@ func (h *ResultsHandlers) HandleItinerarySearch(c *gin.Context) {
 		true,             // showToggle
 		5,                // initialLimit
 		favorites,        // favorites
+		sessionID,        // sessionID for chat panel
 	))
 }
 
@@ -347,7 +352,7 @@ func (h *ResultsHandlers) HandleItineraryStreamSearch(c *gin.Context) {
 	emptyGeneralPOIs := []models.POIDetailedInfo{}
 	emptyItinerary := models.AIItineraryResponse{}
 
-	c.HTML(http.StatusOK, "", results.ItineraryResults(emptyCityData, emptyGeneralPOIs, emptyItinerary, true, false, 5, []string{}))
+	c.HTML(http.StatusOK, "", results.ItineraryResults(emptyCityData, emptyGeneralPOIs, emptyItinerary, true, false, 5, []string{}, sessionID))
 }
 
 // SSE Response structures to match your backend

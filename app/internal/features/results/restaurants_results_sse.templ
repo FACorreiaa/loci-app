@@ -7,29 +7,31 @@ import (
 
 // RestaurantsResultsSSE renders the complete restaurants interface with SSE zones for dynamic content
 templ RestaurantsResultsSSE(sessionID string, cityData models.GeneralCityData, restaurants []models.RestaurantDetailedInfo, hasData bool) {
-	<div class="min-h-screen bg-gray-50 dark:bg-gray-900 restaurants-results" id="restaurants-container" 
-		 x-data="restaurantsPage()" 
-		 hx-ext="sse"
-		 if !hasData {
-		 	sse-connect={ fmt.Sprintf("/restaurants/sse?sessionId=%s", sessionID) }
-		 }
-		>
+	<div
+		class="min-h-screen bg-gray-50 dark:bg-gray-900 restaurants-results"
+		id="restaurants-container"
+		x-data="restaurantsPage()"
+		hx-ext="sse"
+		if !hasData {
+			sse-connect={ fmt.Sprintf("/restaurants/sse?sessionId=%s", sessionID) }
+		}
+	>
 		<!-- Mobile-First Enhanced Header -->
 		<div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
 			<div class="px-4 py-3 sm:px-6">
 				<!-- SSE Zone for Header Updates -->
-				<div id="restaurants-header" 
-					 if !hasData {
-					 	sse-swap="restaurants-header"
-					 }
-					>
+				<div
+					id="restaurants-header"
+					if !hasData {
+						sse-swap="restaurants-header"
+					}
+				>
 					if hasData {
 						@RestaurantsHeaderComplete(cityData, restaurants)
 					} else {
 						@RestaurantsHeaderLoading()
 					}
 				</div>
-				
 				<!-- View Mode Toggle - Always visible -->
 				<div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
 					<div class="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
@@ -73,28 +75,29 @@ templ RestaurantsResultsSSE(sessionID string, cityData models.GeneralCityData, r
 				</div>
 			</div>
 		</div>
-
 		<!-- Main Content Area -->
 		<div class="flex flex-1 overflow-hidden">
 			<!-- Content Area with SSE Zone -->
-			<div id="restaurants-content" 
-				 x-show="viewMode !== 'map'" 
-				 class="flex-1 overflow-auto"
-				 if !hasData {
-				 	sse-swap="restaurants-content"
-				 }
-				>
+			<div
+				id="restaurants-content"
+				x-show="viewMode !== 'map'"
+				class="flex-1 overflow-auto"
+				if !hasData {
+					sse-swap="restaurants-content"
+				}
+			>
 				if hasData {
-					@RestaurantsContentComplete(cityData, restaurants)
+					@RestaurantsContentComplete(cityData, restaurants, sessionID)
 				} else {
 					@RestaurantsContentLoading()
 				}
 			</div>
-
 			<!-- Map View (always available) -->
-			<div x-show="viewMode === 'map' || viewMode === 'split'" 
-				 :class="viewMode === 'split' ? 'w-1/2' : 'w-full'" 
-				 class="bg-gray-200 relative">
+			<div
+				x-show="viewMode === 'map' || viewMode === 'split'"
+				:class="viewMode === 'split' ? 'w-1/2' : 'w-full'"
+				class="bg-gray-200 relative"
+			>
 				<div class="absolute inset-0 flex items-center justify-center">
 					<div class="text-center">
 						<div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -108,16 +111,16 @@ templ RestaurantsResultsSSE(sessionID string, cityData models.GeneralCityData, r
 				</div>
 			</div>
 		</div>
-		
 		<!-- Loading Progress Indicator (SSE driven) -->
-		<div id="loading-progress" 
-			 if !hasData {
-			 	sse-swap="loading-progress"
-			 	class="fixed bottom-4 right-4 z-50"
-			 } else {
-			 	class="fixed bottom-4 right-4 z-50 hidden"
-			 }
-			>
+		<div
+			id="loading-progress"
+			if !hasData {
+				sse-swap="loading-progress"
+				class="fixed bottom-4 right-4 z-50"
+			} else {
+				class="fixed bottom-4 right-4 z-50 hidden"
+			}
+		>
 			if !hasData {
 				@LoadingProgressRestaurants()
 			}
@@ -209,10 +212,10 @@ templ RestaurantsHeaderLoading() {
 }
 
 // RestaurantsContentComplete renders the complete content area
-templ RestaurantsContentComplete(cityData models.GeneralCityData, restaurants []models.RestaurantDetailedInfo) {
+templ RestaurantsContentComplete(cityData models.GeneralCityData, restaurants []models.RestaurantDetailedInfo, sessionID string) {
 	<div class="p-4">
 		<!-- Use existing RestaurantsResults content components -->
-		@RestaurantsResults(cityData, restaurants, true, true, 15, []string{})
+		@RestaurantsResults(cityData, restaurants, true, true, 15, []string{}, sessionID)
 	</div>
 }
 

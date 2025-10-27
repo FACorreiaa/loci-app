@@ -1,7 +1,6 @@
 package results
 
 import (
-	"fmt"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"strconv"
 )
@@ -80,16 +79,14 @@ templ CityInformationSection(cityData models.GeneralCityData, generalPois []mode
 								{ strconv.Itoa(countUniqueCategories(generalPois)) }
 							</span>
 						</div>
-						if cityData.CenterLatitude != 0 && cityData.CenterLongitude != 0 {
-							<div class="pt-2 mt-2 border-t border-gray-200 dark:border-gray-600">
-								<div class="flex justify-between items-center text-xs">
-									<span class="text-gray-500">Coordinates</span>
-									<span class="text-gray-500 font-mono">
-										{ fmt.Sprintf("%.4f, %.4f", cityData.CenterLatitude, cityData.CenterLongitude) }
-									</span>
-								</div>
+						<div class="pt-2 mt-2 border-t border-gray-200 dark:border-gray-600">
+							<div class="flex justify-between items-center text-xs">
+								<span class="text-gray-500">Coordinates</span>
+								<span class={ "text-gray-500 font-mono", templ.KV("text-orange-500", !hasValidCoordinates(cityData.CenterLatitude, cityData.CenterLongitude)) }>
+									{ formatCoordinates(cityData.CenterLatitude, cityData.CenterLongitude) }
+								</span>
 							</div>
-						}
+						</div>
 					</div>
 				</div>
 			</div>
