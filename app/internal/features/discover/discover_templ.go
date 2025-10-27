@@ -588,7 +588,7 @@ func RecentDiscoveryCard(session models.ChatSession) templ.Component {
 			templ_7745c5c3_Var26 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<div class=\"bg-card rounded-xl shadow-sm border hover:shadow-md transition-shadow cursor-pointer\"><div class=\"p-6\"><div class=\"flex items-start justify-between mb-4\"><div class=\"flex items-center gap-3\"><span class=\"text-3xl\">🗺️</span><div class=\"flex flex-col gap-1\"><span class=\"inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300\">Itinerary</span></div></div></div><div class=\"space-y-3\"><h3 class=\"font-semibold text-card-foreground group-hover:text-blue-600 transition-colors\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<div class=\"bg-card rounded-xl shadow-sm border hover:shadow-md transition-shadow cursor-pointer\"><div class=\"p-6\"><div class=\"flex items-start justify-between mb-4\"><div class=\"flex items-center gap-3\"><span class=\"text-3xl\">🗺️</span><div class=\"flex flex-col gap-1\"><span class=\"inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300\">Discovery</span></div></div></div><div class=\"space-y-3\"><h3 class=\"font-semibold text-card-foreground group-hover:text-blue-600 transition-colors\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -1208,6 +1208,7 @@ After that we should make the logic to work on the travel planner. It should fol
 32. Im using pprof with Gin. Check main.go and create a setup to be able to use graphviz with pprof locally and in prod. Add the commands to makefile if necessary and documentation under docs if necessary as well.
 32. Review all my observability stack. Right now I use everything locally through my compose and want to test locally. In the future, I want to have my observability stack also working in prod hosted on fly.io or on hetzner. Make changes if needed (my services run through docker compose but my app runs locally through air, keep that in mind) and write docs if necessary to document how I will host my observability stack on Fly, DO or Hetzner. 
 33. Review my project structure and work done and check where Gorilla Websockets could be used in this project. Write a document under docs to have that documented before the implementation.
+33.1 Review all the inputs of this project and create an Validation and Sanitisation SDK to protect my app against DDOS atacks. Build tests for this. 
 34. Add recover system and retries on LLM calls in case something happens with the API call so the user has more uptime and security to avoid cases where the LLM makes the call but network problems or other issues make thing like:
 ```bash
 5,\n    \"longitude\": -9.1406,\n    \"category\": \"Pastry Shop\",\n    \"description\": \"Another excellent place to try Pastéis de Nata, with a focus on quality and freshness. Watch the pastries being made in the open kitchen.\",\n    \"address\": \"Rua do Loreto 2, 1200-242 Lisboa, Portugal\",\n    \"website\": \"https://www.manteigaria.com/\",\n    \"phone_number\": null,\n    \"opening_hours\": \"Mon-Sun 08:00-23:00\",\n    \"price_level\": \"$\",\n    \"cuisine_type\": \"Pastries\",\n    \"tags\": [\n      \"Pastries\",\n      \"Portuguese\",\n      \"Fresh\",\n      \"Open Kitchen\"\n    ],\n    \"images\": [],\n    \"rating\": 4.7,\n    \"llm_interaction_id\": \"00000000-0000-0000-0000-000000000000\"\n  }\n]"
@@ -1226,4 +1227,1376 @@ created by github.com/FACorreiaa/go-templui/app/pkg/domain/chat_prompt.(*Service
         /Users/fernando_idwell/Projects/Loci/go-templui/app/pkg/domain/chat_prompt/chat_service.go:2168 +0x1c74
 exit status 2
 ```
+
+Retry logic for context:
+```go
+package main
+
+import (
+    "context"
+    "log"
+    "math"
+    "strings"
+    "time"
+
+    "cloud.google.com/go/ai/generativelanguage/apiv1beta"
+    "cloud.google.com/go/ai/generativelanguage/apiv1beta/generativelanguagepb"
+    "github.com/google/uuid"
+    "github.com/jackc/pgx/v5/pgxpool"
+    "go.uber.org/zap"
+    // Your logger and DB setup
+)
+
+// LLMCallManager manages stop/resume for a streaming LLM call
+type LLMCallManager struct {
+    client      *generativelanguage.Client
+    originalReq *generativelanguagepb.GenerateContentRequest
+    db          *pgxpool.Pool
+    userID      uuid.UUID
+    intent      string
+    cityID      int
+    sessionID   uuid.UUID
+
+    mu          sync.Mutex
+    ctx         context.Context
+    cancel      context.CancelFunc
+    stream      generativelanguage.StreamGenerateContentClient
+    partial     strings.Builder // Accumulates response chunks
+    outputChan  chan string      // For consuming incremental output
+    done        chan struct{}    // Signals completion or stop
+    err         error            // Any error from the stream
+}
+
+// NewLLMCallManager creates a new manager; start with Start()
+func NewLLMCallManager(client *generativelanguage.Client, req *generativelanguagepb.GenerateContentRequest, db *pgxpool.Pool, userID uuid.UUID, intent string, cityID int, sessionID uuid.UUID) *LLMCallManager {
+    return &LLMCallManager{
+        client:      client,
+        originalReq: req,
+        db:          db,
+        userID:      userID,
+        intent:      intent,
+        cityID:      cityID,
+        sessionID:   sessionID,
+        outputChan:  make(chan string),
+        done:        make(chan struct{}),
+    }
+}
+
+// Start begins (or resumes) the streaming generation with retry logic
+func (m *LLMCallManager) Start(maxRetries int) error {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+
+    if m.ctx != nil && m.cancel != nil {
+        m.cancel() // Clean up any previous
+    }
+
+    var attempt int
+    for attempt = 0; attempt <= maxRetries; attempt++ {
+        m.ctx, m.cancel = context.WithCancel(context.Background())
+        stream, err := m.client.StreamGenerateContent(m.ctx, m.buildRequest())
+        if err == nil {
+            m.stream = stream
+            go m.consumeStream()
+            return nil
+        }
+
+        // Log error and retry with exponential backoff
+        logger.Log.Error("Failed to start stream", zap.Error(err), zap.Int("attempt", attempt))
+        if attempt == maxRetries {
+            m.err = err
+            return err
+        }
+
+        // Exponential backoff: 100ms * 2^attempt, max 10s
+        backoff := time.Duration(100*math.Pow(2, float64(attempt))) * time.Millisecond
+        if backoff > 10*time.Second {
+            backoff = 10 * time.Second
+        }
+        time.Sleep(backoff)
+    }
+    return nil // Unreachable, but for completeness
+}
+
+// Stop cancels the current stream and saves partial
+func (m *LLMCallManager) Stop() {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+    if m.cancel != nil {
+        m.cancel()
+    }
+    // Log partial here if needed, or wait for consumeStream to handle
+}
+
+// OutputChan returns the channel for incremental responses
+func (m *LLMCallManager) OutputChan() <-chan string {
+    return m.outputChan
+}
+
+// Done returns the done channel (closes on completion or stop)
+func (m *LLMCallManager) Done() <-chan struct{} {
+    return m.done
+}
+
+// Error returns any stream error after done
+func (m *LLMCallManager) Error() error {
+    return m.err
+}
+
+// buildRequest constructs req for start/resume
+func (m *LLMCallManager) buildRequest() *generativelanguagepb.GenerateContentRequest {
+    req := m.originalReq // Copy original
+
+    if partial := m.partial.String(); partial != "" {
+        // Append partial as model response for context
+        req.Contents = append(req.Contents, &generativelanguagepb.Content{
+            Role: "model",
+            Parts: []*generativelanguagepb.Part{
+                {Data: &generativelanguagepb.Part_Text{Text: partial}},
+            },
+        })
+        // Add user prompt to continue
+        req.Contents = append(req.Contents, &generativelanguagepb.Content{
+            Role: "user",
+            Parts: []*generativelanguagepb.Part{
+                {Data: &generativelanguagepb.Part_Text{Text: "Continue from where you left off."}},
+            },
+        })
+    }
+    return req
+}
+
+// consumeStream reads chunks, builds partial, sends to outputChan, and logs async
+func (m *LLMCallManager) consumeStream() {
+    defer close(m.done)
+    defer close(m.outputChan)
+
+    requestID := uuid.New()
+    start := time.Now()
+    var tokensInput, tokensOutput, tokensTotal int
+    var response strings.Builder // For full logging
+
+    for {
+        chunk, err := m.stream.Recv()
+        if err != nil {
+            m.mu.Lock()
+            m.err = err
+            m.mu.Unlock()
+            if err.Error() != "context canceled" { // Log non-stop errors
+                log.Printf("Stream error: %v", err)
+            }
+            break
+        }
+
+        // Process chunk (assume single candidate/part for simplicity)
+        if len(chunk.Candidates) > 0 && len(chunk.Candidates[0].Content.Parts) > 0 {
+            text := chunk.Candidates[0].Content.Parts[0].GetText()
+            m.partial.WriteString(text)
+            response.WriteString(text)
+            m.outputChan <- text // Send incremental to caller
+        }
+
+        // Accumulate tokens (if available per chunk; adjust if cumulative)
+        tokensInput += int(chunk.GetUsageMetadata().GetPromptTokenCount())
+        tokensOutput += int(chunk.GetUsageMetadata().GetCandidatesTokenCount())
+        tokensTotal += int(chunk.GetUsageMetadata().GetTotalTokenCount())
+    }
+
+    latency := time.Since(start).Milliseconds()
+
+    // Async log (adapted from your original)
+    go func() {
+        logEntry := LLMLog{
+            RequestID:    requestID,
+            UserID:       m.userID,
+            Intent:       m.intent,
+            CityID:       m.cityID,
+            Timestamp:    time.Now().UTC(),
+            Model:        m.originalReq.Model,
+            TokensInput:  tokensInput,
+            TokensOutput: tokensOutput,
+            TokensTotal:  tokensTotal,
+            LatencyMS:    latency,
+            StatusCode:   200,
+            ErrorMessage: "",
+            Prompt:       m.originalReq.Contents[0].Parts[0].GetText(), // Simplify
+            Response:     response.String(),                            // Full or partial
+            SessionID:    m.sessionID,
+        }
+        if m.err != nil {
+            logEntry.StatusCode = 500
+            logEntry.ErrorMessage = m.err.Error()
+        }
+        // Insert into DB as before
+        _, dbErr := m.db.Exec(context.Background(), `INSERT INTO llm_logs (...) VALUES (...)`, /* params */)
+        if dbErr != nil {
+            logger.Log.Error("Failed to log LLM call", zap.Error(dbErr))
+        }
+    }()
+}
+
+// Updated wrapper (replaces CallGeminiAndLog)
+func CallGeminiAndLog(ctx context.Context, client *generativelanguage.Client, req *generativelanguagepb.GenerateContentRequest, db *pgxpool.Pool, userID uuid.UUID, intent string, cityID int, sessionID uuid.UUID) *LLMCallManager {
+    mgr := NewLLMCallManager(client, req, db, userID, intent, cityID, sessionID)
+    if err := mgr.Start(3); err != nil { // Example: max 3 retries
+        // Handle error, e.g., log and return nil
+        logger.Log.Error("Failed to start LLM call after retries", zap.Error(err))
+        return nil
+    }
+    return mgr
+}
+```
+34.2 Rate Limit Handler example to adapt to my code:
+```go
+package main
+
+import (
+    "context"
+    "log"
+    "math"
+    "math/rand"
+    "strings"
+    "time"
+
+    "cloud.google.com/go/ai/generativelanguage/apiv1beta"
+    "cloud.google.com/go/ai/generativelanguage/apiv1beta/generativelanguagepb"
+    "github.com/google/uuid"
+    "github.com/jackc/pgx/v5/pgxpool"
+    "go.uber.org/zap"
+    "google.golang.org/grpc/codes"
+    "google.golang.org/grpc/status"
+    // Your logger and DB setup
+)
+
+// LLMCallManager manages stop/resume for a streaming LLM call
+type LLMCallManager struct {
+    client      *generativelanguage.Client
+    originalReq *generativelanguagepb.GenerateContentRequest
+    db          *pgxpool.Pool
+    userID      uuid.UUID
+    intent      string
+    cityID      int
+    sessionID   uuid.UUID
+
+    mu          sync.Mutex
+    ctx         context.Context
+    cancel      context.CancelFunc
+    stream      generativelanguage.StreamGenerateContentClient
+    partial     strings.Builder // Accumulates response chunks
+    outputChan  chan string      // For consuming incremental output
+    done        chan struct{}    // Signals completion or stop
+    err         error            // Any error from the stream
+}
+
+// NewLLMCallManager creates a new manager; start with Start()
+func NewLLMCallManager(client *generativelanguage.Client, req *generativelanguagepb.GenerateContentRequest, db *pgxpool.Pool, userID uuid.UUID, intent string, cityID int, sessionID uuid.UUID) *LLMCallManager {
+    return &LLMCallManager{
+        client:      client,
+        originalReq: req,
+        db:          db,
+        userID:      userID,
+        intent:      intent,
+        cityID:      cityID,
+        sessionID:   sessionID,
+        outputChan:  make(chan string),
+        done:        make(chan struct{}),
+    }
+}
+
+// Start begins (or resumes) the streaming generation with retry logic
+func (m *LLMCallManager) Start(maxRetries int) error {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+
+    if m.ctx != nil && m.cancel != nil {
+        m.cancel() // Clean up any previous
+    }
+
+    var attempt int
+    for attempt = 0; attempt <= maxRetries; attempt++ {
+        m.ctx, m.cancel = context.WithCancel(context.Background())
+        stream, err := m.client.StreamGenerateContent(m.ctx, m.buildRequest())
+        if err == nil {
+            m.stream = stream
+            go m.consumeStream()
+            return nil
+        }
+
+        // Check if rate limit error
+        st, ok := status.FromError(err)
+        isRateLimit := ok && st.Code() == codes.ResourceExhausted
+
+        // Log error
+        logFields := []zap.Field{zap.Error(err), zap.Int("attempt", attempt)}
+        if isRateLimit {
+            logFields = append(logFields, zap.Bool("rate_limit", true))
+        }
+        logger.Log.Error("Failed to start stream", logFields...)
+
+        if attempt == maxRetries {
+            m.err = err
+            return err
+        }
+
+        // Exponential backoff: base 100ms * 2^attempt, max 10s; longer for rate limits
+        base := 100.0
+        if isRateLimit {
+            base = 1000.0 // Start with 1s for rate limits
+        }
+        backoff := time.Duration(base * math.Pow(2, float64(attempt))) * time.Millisecond
+        if backoff > 10*time.Second {
+            backoff = 10 * time.Second
+        }
+        // Add jitter: up to 50% of backoff
+        jitter := time.Duration(rand.Float64() * float64(backoff) * 0.5)
+        time.Sleep(backoff + jitter)
+    }
+    return nil // Unreachable, but for completeness
+}
+
+// Stop cancels the current stream and saves partial
+func (m *LLMCallManager) Stop() {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+    if m.cancel != nil {
+        m.cancel()
+    }
+    // Log partial here if needed, or wait for consumeStream to handle
+}
+
+// OutputChan returns the channel for incremental responses
+func (m *LLMCallManager) OutputChan() <-chan string {
+    return m.outputChan
+}
+
+// Done returns the done channel (closes on completion or stop)
+func (m *LLMCallManager) Done() <-chan struct{} {
+    return m.done
+}
+
+// Error returns any stream error after done
+func (m *LLMCallManager) Error() error {
+    return m.err
+}
+
+// buildRequest constructs req for start/resume
+func (m *LLMCallManager) buildRequest() *generativelanguagepb.GenerateContentRequest {
+    req := m.originalReq // Copy original
+
+    if partial := m.partial.String(); partial != "" {
+        // Append partial as model response for context
+        req.Contents = append(req.Contents, &generativelanguagepb.Content{
+            Role: "model",
+            Parts: []*generativelanguagepb.Part{
+                {Data: &generativelanguagepb.Part_Text{Text: partial}},
+            },
+        })
+        // Add user prompt to continue
+        req.Contents = append(req.Contents, &generativelanguagepb.Content{
+            Role: "user",
+            Parts: []*generativelanguagepb.Part{
+                {Data: &generativelanguagepb.Part_Text{Text: "Continue from where you left off."}},
+            },
+        })
+    }
+    return req
+}
+
+// consumeStream reads chunks, builds partial, sends to outputChan, and logs async
+func (m *LLMCallManager) consumeStream() {
+    defer close(m.done)
+    defer close(m.outputChan)
+
+    requestID := uuid.New()
+    start := time.Now()
+    var tokensInput, tokensOutput, tokensTotal int
+    var response strings.Builder // For full logging
+
+    const maxRecvRetries = 3
+    for {
+        var recvAttempt int
+        var chunk *generativelanguagepb.GenerateContentResponse
+        var err error
+        for recvAttempt = 0; recvAttempt <= maxRecvRetries; recvAttempt++ {
+            chunk, err = m.stream.Recv()
+            if err == nil {
+                break
+            }
+
+            // Check if retryable (rate limit or unavailable)
+            st, ok := status.FromError(err)
+            isRetryable := ok && (st.Code() == codes.ResourceExhausted || st.Code() == codes.Unavailable || st.Code() == codes.Internal)
+            if !isRetryable {
+                break
+            }
+
+            // Log
+            logger.Log.Warn("Recv error, retrying", zap.Error(err), zap.Int("recv_attempt", recvAttempt))
+
+            // Exponential backoff for Recv: 500ms * 2^attempt, max 5s, with jitter
+            backoff := time.Duration(500 * math.Pow(2, float64(recvAttempt))) * time.Millisecond
+            if backoff > 5*time.Second {
+                backoff = 5 * time.Second
+            }
+            jitter := time.Duration(rand.Float64() * float64(backoff) * 0.5)
+            time.Sleep(backoff + jitter)
+        }
+
+        if recvAttempt > maxRecvRetries || err != nil {
+            m.mu.Lock()
+            m.err = err
+            m.mu.Unlock()
+            if err.Error() != "context canceled" {
+                logger.Log.Error("Stream Recv failed after retries", zap.Error(err))
+            }
+            break
+        }
+
+        // Process chunk (assume single candidate/part for simplicity)
+        if len(chunk.Candidates) > 0 && len(chunk.Candidates[0].Content.Parts) > 0 {
+            text := chunk.Candidates[0].Content.Parts[0].GetText()
+            m.partial.WriteString(text)
+            response.WriteString(text)
+            m.outputChan <- text // Send incremental to caller
+        }
+
+        // Accumulate tokens (if available per chunk; adjust if cumulative)
+        tokensInput += int(chunk.GetUsageMetadata().GetPromptTokenCount())
+        tokensOutput += int(chunk.GetUsageMetadata().GetCandidatesTokenCount())
+        tokensTotal += int(chunk.GetUsageMetadata().GetTotalTokenCount())
+    }
+
+    latency := time.Since(start).Milliseconds()
+
+    // Async log (adapted from your original)
+    go func() {
+        logEntry := LLMLog{
+            RequestID:    requestID,
+            UserID:       m.userID,
+            Intent:       m.intent,
+            CityID:       m.cityID,
+            Timestamp:    time.Now().UTC(),
+            Model:        m.originalReq.Model,
+            TokensInput:  tokensInput,
+            TokensOutput: tokensOutput,
+            TokensTotal:  tokensTotal,
+            LatencyMS:    latency,
+            StatusCode:   200,
+            ErrorMessage: "",
+            Prompt:       m.originalReq.Contents[0].Parts[0].GetText(), // Simplify
+            Response:     response.String(),                            // Full or partial
+            SessionID:    m.sessionID,
+        }
+        if m.err != nil {
+            logEntry.StatusCode = 500
+            logEntry.ErrorMessage = m.err.Error()
+        }
+        // Insert into DB as before
+        _, dbErr := m.db.Exec(context.Background(), `INSERT INTO llm_logs (...) VALUES (...)`, /* params */)
+        if dbErr != nil {
+            logger.Log.Error("Failed to log LLM call", zap.Error(dbErr))
+        }
+    }()
+}
+
+// Updated wrapper (replaces CallGeminiAndLog)
+func CallGeminiAndLog(ctx context.Context, client *generativelanguage.Client, req *generativelanguagepb.GenerateContentRequest, db *pgxpool.Pool, userID uuid.UUID, intent string, cityID int, sessionID uuid.UUID) *LLMCallManager {
+    mgr := NewLLMCallManager(client, req, db, userID, intent, cityID, sessionID)
+    if err := mgr.Start(3); err != nil { // Example: max 3 retries
+        // Handle error, e.g., log and return nil
+        logger.Log.Error("Failed to start LLM call after retries", zap.Error(err))
+        return nil
+    }
+    return mgr
+}
+```
+34.3 Rate Limit Token? Does it make sense to implement? Free users should have different rate limits from Paying Users and Premium users.
+```go
+package main
+
+import (
+    "context"
+    "log"
+    "math"
+    "math/rand"
+    "strings"
+    "time"
+
+    "cloud.google.com/go/ai/generativelanguage/apiv1beta"
+    "cloud.google.com/go/ai/generativelanguage/apiv1beta/generativelanguagepb"
+    "github.com/google/uuid"
+    "github.com/jackc/pgx/v5/pgxpool"
+    "go.uber.org/zap"
+    "google.golang.org/grpc/codes"
+    "google.golang.org/grpc/status"
+    // Your logger and DB setup
+)
+
+// LLMCallManager manages stop/resume for a streaming LLM call
+type LLMCallManager struct {
+    client      *generativelanguage.Client
+    originalReq *generativelanguagepb.GenerateContentRequest
+    db          *pgxpool.Pool
+    userID      uuid.UUID
+    intent      string
+    cityID      int
+    sessionID   uuid.UUID
+
+    mu          sync.Mutex
+    ctx         context.Context
+    cancel      context.CancelFunc
+    stream      generativelanguage.StreamGenerateContentClient
+    partial     strings.Builder // Accumulates response chunks
+    outputChan  chan string      // For consuming incremental output
+    done        chan struct{}    // Signals completion or stop
+    err         error            // Any error from the stream
+}
+
+// NewLLMCallManager creates a new manager; start with Start()
+func NewLLMCallManager(client *generativelanguage.Client, req *generativelanguagepb.GenerateContentRequest, db *pgxpool.Pool, userID uuid.UUID, intent string, cityID int, sessionID uuid.UUID) *LLMCallManager {
+    return &LLMCallManager{
+        client:      client,
+        originalReq: req,
+        db:          db,
+        userID:      userID,
+        intent:      intent,
+        cityID:      cityID,
+        sessionID:   sessionID,
+        outputChan:  make(chan string),
+        done:        make(chan struct{}),
+    }
+}
+
+// Start begins (or resumes) the streaming generation with retry logic
+func (m *LLMCallManager) Start(maxRetries int) error {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+
+    if m.ctx != nil && m.cancel != nil {
+        m.cancel() // Clean up any previous
+    }
+
+    var attempt int
+    for attempt = 0; attempt <= maxRetries; attempt++ {
+        m.ctx, m.cancel = context.WithCancel(context.Background())
+        stream, err := m.client.StreamGenerateContent(m.ctx, m.buildRequest())
+        if err == nil {
+            m.stream = stream
+            go m.consumeStream()
+            return nil
+        }
+
+        // Check if rate limit error
+        st, ok := status.FromError(err)
+        isRateLimit := ok && st.Code() == codes.ResourceExhausted
+
+        // Detect if likely TPM (parse message for "token" or "TPM")
+        message := st.Message()
+        isTPMLimit := isRateLimit && (strings.Contains(strings.ToLower(message), "token") || strings.Contains(strings.ToLower(message), "tpm"))
+
+        // Log error
+        logFields := []zap.Field{zap.Error(err), zap.Int("attempt", attempt)}
+        if isRateLimit {
+            logFields = append(logFields, zap.Bool("rate_limit", true))
+        }
+        if isTPMLimit {
+            logFields = append(logFields, zap.Bool("tpm_limit", true))
+        }
+        logger.Log.Error("Failed to start stream", logFields...)
+
+        if attempt == maxRetries {
+            m.err = err
+            return err
+        }
+
+        // Exponential backoff: base 100ms * 2^attempt, max 60s for TPM/rate limits
+        base := 100.0
+        if isRateLimit {
+            base = 1000.0 // Start with 1s for general rate limits
+        }
+        if isTPMLimit {
+            base = 15000.0 // Start with 15s for TPM-specific
+        }
+        backoff := time.Duration(base * math.Pow(2, float64(attempt))) * time.Millisecond
+        if backoff > 60*time.Second {
+            backoff = 60 * time.Second
+        }
+        // Add jitter: up to 50% of backoff
+        jitter := time.Duration(rand.Float64() * float64(backoff) * 0.5)
+        time.Sleep(backoff + jitter)
+    }
+    return nil // Unreachable, but for completeness
+}
+
+// Stop cancels the current stream and saves partial
+func (m *LLMCallManager) Stop() {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+    if m.cancel != nil {
+        m.cancel()
+    }
+    // Log partial here if needed, or wait for consumeStream to handle
+}
+
+// OutputChan returns the channel for incremental responses
+func (m *LLMCallManager) OutputChan() <-chan string {
+    return m.outputChan
+}
+
+// Done returns the done channel (closes on completion or stop)
+func (m *LLMCallManager) Done() <-chan struct{} {
+    return m.done
+}
+
+// Error returns any stream error after done
+func (m *LLMCallManager) Error() error {
+    return m.err
+}
+
+// buildRequest constructs req for start/resume
+func (m *LLMCallManager) buildRequest() *generativelanguagepb.GenerateContentRequest {
+    req := m.originalReq // Copy original
+
+    if partial := m.partial.String(); partial != "" {
+        // Append partial as model response for context
+        req.Contents = append(req.Contents, &generativelanguagepb.Content{
+            Role: "model",
+            Parts: []*generativelanguagepb.Part{
+                {Data: &generativelanguagepb.Part_Text{Text: partial}},
+            },
+        })
+        // Add user prompt to continue
+        req.Contents = append(req.Contents, &generativelanguagepb.Content{
+            Role: "user",
+            Parts: []*generativelanguagepb.Part{
+                {Data: &generativelanguagepb.Part_Text{Text: "Continue from where you left off."}},
+            },
+        })
+    }
+    return req
+}
+
+// consumeStream reads chunks, builds partial, sends to outputChan, and logs async
+func (m *LLMCallManager) consumeStream() {
+    defer close(m.done)
+    defer close(m.outputChan)
+
+    requestID := uuid.New()
+    start := time.Now()
+    var tokensInput, tokensOutput, tokensTotal int
+    var response strings.Builder // For full logging
+
+    const maxRecvRetries = 3
+    for {
+        var recvAttempt int
+        var chunk *generativelanguagepb.GenerateContentResponse
+        var err error
+        for recvAttempt = 0; recvAttempt <= maxRecvRetries; recvAttempt++ {
+            chunk, err = m.stream.Recv()
+            if err == nil {
+                break
+            }
+
+            // Check if retryable (rate limit or unavailable)
+            st, ok := status.FromError(err)
+            isRetryable := ok && (st.Code() == codes.ResourceExhausted || st.Code() == codes.Unavailable || st.Code() == codes.Internal)
+            if !isRetryable {
+                break
+            }
+
+            // Detect if likely TPM
+            message := st.Message()
+            isTPMLimit := st.Code() == codes.ResourceExhausted && (strings.Contains(strings.ToLower(message), "token") || strings.Contains(strings.ToLower(message), "tpm"))
+
+            // Log
+            logFields := []zap.Field{zap.Error(err), zap.Int("recv_attempt", recvAttempt)}
+            if st.Code() == codes.ResourceExhausted {
+                logFields = append(logFields, zap.Bool("rate_limit", true))
+            }
+            if isTPMLimit {
+                logFields = append(logFields, zap.Bool("tpm_limit", true))
+            }
+            logger.Log.Warn("Recv error, retrying", logFields...)
+
+            // Exponential backoff for Recv: 500ms * 2^attempt, max 60s for TPM/rate limits, with jitter
+            base := 500.0
+            if st.Code() == codes.ResourceExhausted {
+                base = 1000.0
+            }
+            if isTPMLimit {
+                base = 15000.0 // Longer for TPM
+            }
+            backoff := time.Duration(base * math.Pow(2, float64(recvAttempt))) * time.Millisecond
+            if backoff > 60*time.Second {
+                backoff = 60 * time.Second
+            }
+            jitter := time.Duration(rand.Float64() * float64(backoff) * 0.5)
+            time.Sleep(backoff + jitter)
+        }
+
+        if recvAttempt > maxRecvRetries || err != nil {
+            m.mu.Lock()
+            m.err = err
+            m.mu.Unlock()
+            if err.Error() != "context canceled" {
+                logger.Log.Error("Stream Recv failed after retries", zap.Error(err))
+            }
+            break
+        }
+
+        // Process chunk (assume single candidate/part for simplicity)
+        if len(chunk.Candidates) > 0 && len(chunk.Candidates[0].Content.Parts) > 0 {
+            text := chunk.Candidates[0].Content.Parts[0].GetText()
+            m.partial.WriteString(text)
+            response.WriteString(text)
+            m.outputChan <- text // Send incremental to caller
+        }
+
+        // Accumulate tokens (if available per chunk; adjust if cumulative)
+        tokensInput += int(chunk.GetUsageMetadata().GetPromptTokenCount())
+        tokensOutput += int(chunk.GetUsageMetadata().GetCandidatesTokenCount())
+        tokensTotal += int(chunk.GetUsageMetadata().GetTotalTokenCount())
+    }
+
+    latency := time.Since(start).Milliseconds()
+
+    // Async log (adapted from your original)
+    go func() {
+        logEntry := LLMLog{
+            RequestID:    requestID,
+            UserID:       m.userID,
+            Intent:       m.intent,
+            CityID:       m.cityID,
+            Timestamp:    time.Now().UTC(),
+            Model:        m.originalReq.Model,
+            TokensInput:  tokensInput,
+            TokensOutput: tokensOutput,
+            TokensTotal:  tokensTotal,
+            LatencyMS:    latency,
+            StatusCode:   200,
+            ErrorMessage: "",
+            Prompt:       m.originalReq.Contents[0].Parts[0].GetText(), // Simplify
+            Response:     response.String(),                            // Full or partial
+            SessionID:    m.sessionID,
+        }
+        if m.err != nil {
+            logEntry.StatusCode = 500
+            logEntry.ErrorMessage = m.err.Error()
+        }
+        // Insert into DB as before
+        _, dbErr := m.db.Exec(context.Background(), `INSERT INTO llm_logs (...) VALUES (...)`, /* params */)
+        if dbErr != nil {
+            logger.Log.Error("Failed to log LLM call", zap.Error(dbErr))
+        }
+    }()
+}
+
+// Updated wrapper (replaces CallGeminiAndLog)
+func CallGeminiAndLog(ctx context.Context, client *generativelanguage.Client, req *generativelanguagepb.GenerateContentRequest, db *pgxpool.Pool, userID uuid.UUID, intent string, cityID int, sessionID uuid.UUID) *LLMCallManager {
+    mgr := NewLLMCallManager(client, req, db, userID, intent, cityID, sessionID)
+    if err := mgr.Start(3); err != nil { // Example: max 3 retries
+        // Handle error, e.g., log and return nil
+        logger.Log.Error("Failed to start LLM call after retries", zap.Error(err))
+        return nil
+    }
+    return mgr
+}
+```
+
 35. My current Travel preferences under my settings seem to simplistic. Add more options based on what is already done on the database
+36. Add functionality to pause and resume between chat streams and llm searches:
+    To add "Stop" and "Resume" functionality to LLM calls using Go with the Gemini SDK (specifically `cloud.google.com/go/ai/generativelanguage/apiv1beta`), you'll need to switch from the synchronous `GenerateContent` method to the streaming `StreamGenerateContent` method. This allows for incremental response handling, which is key for interruption. The synchronous call doesn't provide partial results easily, making true stop/resume challenging without streaming.
+
+### Key Concepts
+- **Stop**: Use `context.WithCancel` to create a cancellable context. Pass this to `StreamGenerateContent`. Calling `cancel()` aborts the stream mid-generation (the server stops sending chunks, and any ongoing Recv() calls will error with `context.Canceled`).
+- **Resume**: LLMs like Gemini are stateless, so resuming isn't native—you must re-issue a new stream request. To make it feel like a resume:
+    - Collect partial responses (chunks) up to the stop point.
+    - Construct a new `GenerateContentRequest` that includes the original prompt/history plus the partial response (as a "model" role Content), followed by a user prompt like "Continue from where you left off."
+    - This leverages Gemini's multi-turn conversation support via `Contents` (a slice of `*generativelanguagepb.Content` with roles "user" or "model").
+- **Integration with Your Code**: Wrap this in a struct (e.g., `LLMCallManager`) for managing state. Update `CallGeminiAndLog` to return this manager instead of the full response. Logging can capture partial metrics on stop/resume.
+- **Limitations**: Resuming may not be perfectly seamless (e.g., the model might rephrase slightly), but it's close. Ensure your DB schema (e.g., `LLMLog`) can handle partials or multiple entries per session.
+
+### Implementation Steps
+1. **Switch to Streaming**: Use `client.StreamGenerateContent(ctx, req)` instead of `GenerateContent`. It returns a `StreamGenerateContentClient` interface with `Recv() *GenerateContentResponse, error` for chunks.
+2. **Manage State**: Create a manager struct to hold the context, stream, partial response, and channels for output.
+3. **Async Consumption**: Use a goroutine to read from the stream and build the response incrementally.
+4. **Logging**: Extend your async log goroutine to handle partials on stop, and log resumes as new calls linked by `SessionID` or `RequestID`.
+
+### Updated Code Example
+Here's how to modify your wrapper and add the manager. Assume you've imported necessary packages (e.g., `sync`, `strings` for partial building).
+
+```go
+package main
+
+import (
+    "context"
+    "log"
+    "strings"
+    "time"
+
+    "cloud.google.com/go/ai/generativelanguage/apiv1beta"
+    "cloud.google.com/go/ai/generativelanguage/apiv1beta/generativelanguagepb"
+    "github.com/google/uuid"
+    "github.com/jackc/pgx/v5/pgxpool"
+    "go.uber.org/zap"
+    // Your logger and DB setup
+)
+
+// LLMCallManager manages stop/resume for a streaming LLM call
+type LLMCallManager struct {
+    client      *generativelanguage.Client
+    originalReq *generativelanguagepb.GenerateContentRequest
+    db          *pgxpool.Pool
+    userID      uuid.UUID
+    intent      string
+    cityID      int
+    sessionID   uuid.UUID
+
+    mu          sync.Mutex
+    ctx         context.Context
+    cancel      context.CancelFunc
+    stream      generativelanguage.StreamGenerateContentClient
+    partial     strings.Builder // Accumulates response chunks
+    outputChan  chan string      // For consuming incremental output
+    done        chan struct{}    // Signals completion or stop
+    err         error            // Any error from the stream
+}
+
+// NewLLMCallManager creates a new manager; start with Start()
+func NewLLMCallManager(client *generativelanguage.Client, req *generativelanguagepb.GenerateContentRequest, db *pgxpool.Pool, userID uuid.UUID, intent string, cityID int, sessionID uuid.UUID) *LLMCallManager {
+    return &LLMCallManager{
+        client:      client,
+        originalReq: req,
+        db:          db,
+        userID:      userID,
+        intent:      intent,
+        cityID:      cityID,
+        sessionID:   sessionID,
+        outputChan:  make(chan string),
+        done:        make(chan struct{}),
+    }
+}
+
+// Start begins (or resumes) the streaming generation
+func (m *LLMCallManager) Start() error {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+
+    if m.ctx != nil && m.cancel != nil {
+        m.cancel() // Clean up any previous
+    }
+
+    m.ctx, m.cancel = context.WithCancel(context.Background())
+    stream, err := m.client.StreamGenerateContent(m.ctx, m.buildRequest())
+    if err != nil {
+        return err
+    }
+    m.stream = stream
+
+    go m.consumeStream()
+    return nil
+}
+
+// Stop cancels the current stream and saves partial
+func (m *LLMCallManager) Stop() {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+    if m.cancel != nil {
+        m.cancel()
+    }
+    // Log partial here if needed, or wait for consumeStream to handle
+}
+
+// OutputChan returns the channel for incremental responses
+func (m *LLMCallManager) OutputChan() <-chan string {
+    return m.outputChan
+}
+
+// Done returns the done channel (closes on completion or stop)
+func (m *LLMCallManager) Done() <-chan struct{} {
+    return m.done
+}
+
+// Error returns any stream error after done
+func (m *LLMCallManager) Error() error {
+    return m.err
+}
+
+// buildRequest constructs req for start/resume
+func (m *LLMCallManager) buildRequest() *generativelanguagepb.GenerateContentRequest {
+    req := m.originalReq // Copy original
+
+    if partial := m.partial.String(); partial != "" {
+        // Append partial as model response for context
+        req.Contents = append(req.Contents, &generativelanguagepb.Content{
+            Role: "model",
+            Parts: []*generativelanguagepb.Part{
+                {Data: &generativelanguagepb.Part_Text{Text: partial}},
+            },
+        })
+        // Add user prompt to continue
+        req.Contents = append(req.Contents, &generativelanguagepb.Content{
+            Role: "user",
+            Parts: []*generativelanguagepb.Part{
+                {Data: &generativelanguagepb.Part_Text{Text: "Continue from where you left off."}},
+            },
+        })
+    }
+    return req
+}
+
+// consumeStream reads chunks, builds partial, sends to outputChan, and logs async
+func (m *LLMCallManager) consumeStream() {
+    defer close(m.done)
+    defer close(m.outputChan)
+
+    requestID := uuid.New()
+    start := time.Now()
+    var tokensInput, tokensOutput, tokensTotal int
+    var response strings.Builder // For full logging
+
+    for {
+        chunk, err := m.stream.Recv()
+        if err != nil {
+            m.mu.Lock()
+            m.err = err
+            m.mu.Unlock()
+            if err.Error() != "context canceled" { // Log non-stop errors
+                log.Printf("Stream error: %v", err)
+            }
+            break
+        }
+
+        // Process chunk (assume single candidate/part for simplicity)
+        if len(chunk.Candidates) > 0 && len(chunk.Candidates[0].Content.Parts) > 0 {
+            text := chunk.Candidates[0].Content.Parts[0].GetText()
+            m.partial.WriteString(text)
+            response.WriteString(text)
+            m.outputChan <- text // Send incremental to caller
+        }
+
+        // Accumulate tokens (if available per chunk; adjust if cumulative)
+        tokensInput += int(chunk.GetUsageMetadata().GetPromptTokenCount())
+        tokensOutput += int(chunk.GetUsageMetadata().GetCandidatesTokenCount())
+        tokensTotal += int(chunk.GetUsageMetadata().GetTotalTokenCount())
+    }
+
+    latency := time.Since(start).Milliseconds()
+
+    // Async log (adapted from your original)
+    go func() {
+        logEntry := LLMLog{
+            RequestID:    requestID,
+            UserID:       m.userID,
+            Intent:       m.intent,
+            CityID:       m.cityID,
+            Timestamp:    time.Now().UTC(),
+            Model:        m.originalReq.Model,
+            TokensInput:  tokensInput,
+            TokensOutput: tokensOutput,
+            TokensTotal:  tokensTotal,
+            LatencyMS:    latency,
+            StatusCode:   200,
+            ErrorMessage: "",
+            Prompt:       m.originalReq.Contents[0].Parts[0].GetText(), // Simplify
+            Response:     response.String(),                            // Full or partial
+            SessionID:    m.sessionID,
+        }
+        if m.err != nil {
+            logEntry.StatusCode = 500
+            logEntry.ErrorMessage = m.err.Error()
+        }
+        // Insert into DB as before
+        _, dbErr := m.db.Exec(context.Background(), `INSERT INTO llm_logs (...) VALUES (...)`, /* params */)
+        if dbErr != nil {
+            logger.Log.Error("Failed to log LLM call", zap.Error(dbErr))
+        }
+    }()
+}
+
+// Updated wrapper (replaces CallGeminiAndLog)
+func CallGeminiAndLog(ctx context.Context, client *generativelanguage.Client, req *generativelanguagepb.GenerateContentRequest, db *pgxpool.Pool, userID uuid.UUID, intent string, cityID int, sessionID uuid.UUID) *LLMCallManager {
+    mgr := NewLLMCallManager(client, req, db, userID, intent, cityID, sessionID)
+    if err := mgr.Start(); err != nil {
+        // Handle error, e.g., log and return nil
+        logger.Log.Error("Failed to start LLM call", zap.Error(err))
+        return nil
+    }
+    return mgr
+}
+```
+
+### Usage in Your Handler
+```go
+func YourHandler(w http.ResponseWriter, r *http.Request) {
+    // ... Parse params
+    mgr := CallGeminiAndLog(ctx, client, req, db, userID, intent, cityID, sessionID)
+    if mgr == nil {
+        // Error response
+        return
+    }
+
+    // Consume incrementally (e.g., via HTMX/websockets for real-time)
+    go func() {
+        for chunk := range mgr.OutputChan() {
+            // Send to client via websocket or HTMX push
+        }
+        <-mgr.Done()
+        if err := mgr.Error(); err != nil {
+            // Handle
+        }
+    }()
+
+    // Example: Stop after 10s
+    time.AfterFunc(10*time.Second, mgr.Stop)
+
+    // Later: Resume (e.g., on user action)
+    if err := mgr.Start(); err != nil {
+        // Handle
+    }
+}
+```
+
+### Notes
+- **Token Counting**: UsageMetadata might be per-chunk or cumulative—test and adjust accumulation.
+- **Error Resilience**: Handle `Recv()` errors gracefully (e.g., retry on transient issues).
+- **Performance**: Streaming reduces latency for long responses. Use buffering if needed.
+- **Upgrading SDK**: Consider migrating to the newer `google.golang.org/genai` SDK (as the old one is deprecated), which has similar streaming with better examples.
+- **Testing**: Simulate long generations; test cancel/resume with partials.
+
+This approach fits your stack and provides flexible control.
+
+37. How does the stop/resume LLM calls make sense on my project?
+Context of my project.
+Users basically make LLM requests for itineraries, restaurants etc, discover near places and check things near by. AI can also be used to customise lists of items.
+    Stop/resume functionality for LLM calls (as implemented in the streaming-based code we've discussed) aligns well with your Loci project's goals, architecture, and user scenarios, particularly given the emphasis on real-time AI interactions for itineraries, restaurant suggestions, nearby discoveries, and list customizations. It enhances UX, optimizes costs, and leverages your stack's strengths (Go for backend concurrency/control, Templ/HTMX/Alpine for dynamic frontend updates). Below, I'll break down why it makes sense, how it fits your project, potential trade-offs, and integration tips.
+
+### Why It Makes Sense for Loci
+Your app revolves around AI-driven personalization via Gemini, where users trigger LLM requests for dynamic content like:
+- Generating itineraries (e.g., "Plan a 2-hour food tour near me").
+- Discovering nearby places (e.g., "Find art spots within 5km").
+- Customizing lists (e.g., "Refine this bookmark list for vegan options").
+- Restaurant/activity recommendations.
+
+These can involve long, multi-turn or detailed responses, especially with contextual data (user prefs, location, time filters). Stop/resume addresses real-world pain points:
+
+1. **Improved User Control and Engagement**:
+    - Users on mobile (your PWA focus) might interrupt a generation if it's off-track (e.g., "This itinerary is too long—stop and resume with shorter options"). Without it, they'd wait for completion or restart, leading to frustration and higher drop-off.
+    - Resume allows continuing from partial output (e.g., stop mid-itinerary due to a call, resume later). This fits "on-the-go" exploration—e.g., a user pauses while walking and resumes at a new spot.
+    - In chat-like interfaces (your "Chat" feature), it enables conversational flow: Stop if irrelevant, resume with refinements.
+
+2. **Cost and Resource Optimization**:
+    - Gemini charges per token. Stopping early avoids unnecessary output tokens for unwanted responses, saving money—crucial for a startup with freemium scaling.
+    - For free tier (20 searches/day), it helps users "stretch" quotas by pausing/resuming without counting as new searches. Premium users get unlimited, but efficient calls improve overall margins.
+    - Handles rate limits (as in our code): Auto-retries on TPM exhaustion, but stop/resume lets users pause during peaks.
+
+3. **Real-Time and Interactive Fit**:
+    - Your roadmap includes "24/7 agent more personalised agent" and real-time features (SSE/Websockets). Streaming with stop/resume turns static LLM calls into interactive sessions, aligning with "hyper-personalized" discovery.
+    - Complements features like interactive maps: Stop a long nearby search, adjust filters (e.g., 10km to 5km), resume.
+    - Enhances monetization: Premium could offer "seamless resume" (e.g., save partial states), encouraging upgrades from free tier's basic experience.
+
+4. **Error Resilience and Scalability**:
+    - Mobile networks are flaky—stop/resume handles interruptions (e.g., lost signal) by saving partials and resuming.
+    - With pgvector embeddings, resumes can incorporate vector searches for more accurate continuations (e.g., append partial as context for semantic refinement).
+
+### How It Integrates with Your Stack
+Your Go + Templ/HTMX/Alpine setup is ideal for this—no major changes needed. Go handles backend control efficiently, while the frontend enables seamless UI updates.
+
+- **Backend (Go + Gin + Gemini SDK)**:
+    - Use the `LLMCallManager` from our code: `Start()` for (re)starting streams, `Stop()` for cancellation. Integrate into handlers like `StreamRecommendations`:
+      ```go
+      func (h *Handler) StreamItinerary(c *gin.Context) {
+          // Parse user prefs, location, etc.
+          mgr := CallGeminiAndLog(c.Request.Context(), h.geminiClient, req, h.db, userID, "itinerary", cityID, sessionID)
+          if mgr == nil {
+              c.SSEvent("error", "Failed to start")
+              return
+          }
+  
+          // Stream via Gin
+          c.Stream(func(w io.Writer) bool {
+              select {
+              case chunk := <-mgr.OutputChan():
+                  c.SSEvent("data", chunk) // Incremental itinerary updates
+                  return true
+              case <-mgr.Done():
+                  c.SSEvent("end", "Complete")
+                  return false
+              case <-c.Request.Context().Done():
+                  mgr.Stop() // Auto-stop on disconnect
+                  return false
+              }
+          })
+      }
+      ```
+    - For resume: Store `mgr` in a session map (e.g., keyed by `sessionID` in Redis/Memcache for scalability). On user request, call `mgr.Start()` again.
+    - Logging: Your `LLMLog` already captures partials/tokens—add fields like `IsResumed` or `StoppedAt` for analytics (e.g., track free tier usage).
+
+- **Frontend (Templ + HTMX + Alpine)**:
+    - Use HTMX SSE for streaming, Alpine for state management (e.g., buttons to trigger stop/resume).
+      ```go
+      // itinerary.templ (example)
+      templ ItineraryPage(sessionID string) {
+          <div x-data="{ content: '', loading: false, paused: false }" 
+               hx-ext="sse" 
+               sse-connect="/api/itinerary/stream?session={sessionID}">
+              
+              <button @click="loading = true; paused = false" 
+                      hx-post="/api/itinerary/start?session={sessionID}" 
+                      x-show="!loading && paused">Resume</button>
+              
+              <button @click="paused = true" 
+                      hx-post="/api/itinerary/stop?session={sessionID}" 
+                      x-show="loading && !paused">Pause</button>
+              
+              <div sse-swap="data" 
+                   x-on:sse-data="content += $event.detail.data; loading = true"
+                   x-text="content"
+                   class="itinerary-stream"></div>
+              
+              <div sse-swap="end" x-on:sse-end="loading = false; if (!paused) { /* handle complete */ }"></div>
+          </div>
+      }
+      ```
+    - HTMX posts to stop/resume endpoints trigger `mgr.Stop()`/`Start()`, updating UI dynamically without reloads. Alpine tracks state (e.g., show "Resume" button post-stop).
+
+- **PWA Considerations**:
+    - Offline: Save partials in IndexedDB (via Alpine) for resume when online.
+    - Mobile: Gesture-based (e.g., swipe to pause) via Alpine event listeners.
+
+### Potential Trade-Offs
+- **Not Perfectly Stateful**: Gemini is stateless, so resumes simulate via partial context + "Continue..." prompt. For itineraries, this works ~80-90% seamlessly (model recalls prior output), but might rephrase slightly—test with your dataset.
+- **Complexity**: Adds session management (e.g., persist `mgr` across requests). Start simple: In-memory map for MVP, then Redis.
+- **When It Might Not Make Sense**: For short, quick queries (e.g., simple nearby lookups), synchronous calls suffice. Reserve stop/resume for longer generations like full itineraries.
+- **Alternatives**: If resumes feel inconsistent, use non-streaming with manual "Regenerate" buttons—but you'd lose real-time feel.
+
+Overall, this feature boosts Loci's interactivity, differentiating it from generic apps. Implement for high-value pages (itineraries, chat) first, then expand based on user feedback. If needed, we can refine the code further!
+
+38. Resume chat with pgvector
+    To integrate pgvector for resuming AI/LLM sessions (often called "resume integration" in this context), you're leveraging PostgreSQL's pgvector extension to store vector embeddings of conversation history, partial responses, or session states. This enables semantic retrieval of relevant context when resuming an interrupted LLM call, improving coherence and personalization beyond simple text appending (as in your current `LLMCallManager`). It's particularly useful for Loci's real-time AI features like itinerary generation or chat, where users might pause and resume, and it aligns with your Phase 2 roadmap for enhanced AI via embeddings.
+
+pgvector turns Postgres into a vector database for similarity searches (e.g., cosine, Euclidean), making it ideal for RAG (Retrieval-Augmented Generation) in LLMs. "Resume" here means continuing a session after interruption, using embeddings to reconstruct or enrich context without overloading the LLM's token limit.
+
+### Why This Integration Fits Loci
+- **Session Continuity**: For stop/resume in LLM calls (e.g., pausing a long itinerary), retrieve similar past partials or user prefs via vector search to augment the "Continue..." prompt.
+- **Personalization**: Embed user history (e.g., preferences, past itineraries) for semantic matching, enhancing recommendations.
+- **Efficiency**: Reduces token costs by injecting only relevant context; handles free-tier limits by reusing stored embeddings.
+- **Stack Compatibility**: Your Go backend (with pgx) can query pgvector directly; no new DB needed.
+
+### Step-by-Step Integration
+1. **Enable pgvector in PostgreSQL**:
+    - In your Supabase or self-hosted Postgres (as in Loci's stack), run:
+      ```sql
+      CREATE EXTENSION IF NOT EXISTS vector;
+      ```
+    - Create a table for embeddings (e.g., in your DB schema):
+      ```sql
+      CREATE TABLE llm_session_embeddings (
+          id SERIAL PRIMARY KEY,
+          session_id UUID NOT NULL,
+          user_id UUID NOT NULL,
+          content TEXT NOT NULL,  -- Original text (partial response/history)
+          embedding VECTOR(1536),  -- Dimension matches your embedding model (e.g., Gemini's 768-1536)
+          timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          metadata JSONB  -- e.g., {"intent": "itinerary", "city_id": 123}
+      );
+      CREATE INDEX ON llm_session_embeddings USING hnsw (embedding vector_cosine_ops);  -- For fast similarity search
+      ```
+
+2. **Generate Embeddings**:
+    - Use Gemini SDK's embedding API (or an open-source alternative like sentence-transformers via a Go wrapper if needed).
+    - In your `LLMCallManager`, after a stop (in `Stop()` or `consumeStream()`), embed the partial:
+      ```go
+      // Add to LLMCallManager struct: embedder (e.g., *genai.Client for Gemini)
+      func (m *LLMCallManager) embedAndStorePartial() error {
+          if partial := m.partial.String(); partial == "" {
+              return nil
+          }
+ 
+          // Generate embedding (using Gemini's EmbedContent)
+          embedReq := &generativelanguagepb.EmbedContentRequest{
+              Model: "models/embedding-001",  // Or your model
+              Content: &generativelanguagepb.Content{
+                  Parts: []*generativelanguagepb.Part{{Data: &generativelanguagepb.Part_Text{Text: partial}}},
+              },
+          }
+          embedResp, err := m.client.EmbedContent(context.Background(), embedReq)
+          if err != nil {
+              return err
+          }
+          embedding := embedResp.Embedding.Values  // Slice of float32
+ 
+          // Store in DB via pgx
+          _, err = m.db.Exec(context.Background(), `
+              INSERT INTO llm_session_embeddings (session_id, user_id, content, embedding, metadata)
+              VALUES ($1, $2, $3, $4, $5)`,
+              m.sessionID, m.userID, partial, embedding, fmt.Sprintf(`{"intent": "%s", "city_id": %d}`, m.intent, m.cityID),
+          )
+          return err
+      }
+      ```
+        - Call this in `Stop()`: `m.embedAndStorePartial()` (async if needed).
+
+3. **Retrieve Context on Resume**:
+    - In `buildRequest()`, before appending the basic partial, embed the current state and query pgvector for similar contexts:
+      ```go
+      func (m *LLMCallManager) buildRequest() *generativelanguagepb.GenerateContentRequest {
+          req := proto.Clone(m.originalReq).(*generativelanguagepb.GenerateContentRequest)  // Deep copy
+ 
+          partial := m.partial.String()
+          if partial == "" {
+              return req
+          }
+ 
+          // Embed partial for search
+          embedReq := &generativelanguagepb.EmbedContentRequest{ /* as above */ }
+          embedResp, _ := m.client.EmbedContent(context.Background(), embedReq)  // Handle err
+          queryEmbedding := embedResp.Embedding.Values
+ 
+          // Query pgvector for top-3 similar (cosine similarity)
+          rows, err := m.db.Query(context.Background(), `
+              SELECT content
+              FROM llm_session_embeddings
+              WHERE session_id = $1 OR user_id = $2  -- Scope to session/user
+              ORDER BY embedding <=> $3  -- Cosine distance
+              LIMIT 3`,
+              m.sessionID, m.userID, queryEmbedding,
+          )
+          if err != nil {
+              // Fallback to basic
+              logger.Log.Warn("pgvector query failed", zap.Error(err))
+          } else {
+              defer rows.Close()
+              var contexts []string
+              for rows.Next() {
+                  var content string
+                  rows.Scan(&content)
+                  contexts = append(contexts, content)
+              }
+              // Append retrieved contexts as model history
+              for _, ctx := range contexts {
+                  req.Contents = append(req.Contents, &generativelanguagepb.Content{
+                      Role: "model",
+                      Parts: []*generativelanguagepb.Part{{Data: &generativelanguagepb.Part_Text{Text: ctx}}},
+                  })
+              }
+          }
+ 
+          // Append current partial and continue prompt
+          req.Contents = append(req.Contents, &generativelanguagepb.Content{
+              Role: "model",
+              Parts: []*generativelanguagepb.Part{{Data: &generativelanguagepb.Part_Text{Text: partial}}},
+          })
+          req.Contents = append(req.Contents, &generativelanguagepb.Content{
+              Role: "user",
+              Parts: []*generativelanguagepb.Part{{Data: &generativelanguagepb.Part_Text{Text: "Continue from where you left off, incorporating relevant past context."}}},
+          })
+          return req
+      }
+      ```
+
+4. **Frontend/Handler Integration**:
+    - In Gin handlers (e.g., `StreamItinerary`), persist `mgr` by sessionID (e.g., in Redis or DB) for cross-request resumes.
+    - Use HTMX to trigger resume (as in prior examples); the enriched prompt ensures better outputs.
+
+### Benefits and Considerations
+- **Accuracy**: Semantic search retrieves truly relevant history (e.g., similar itineraries), reducing hallucinations.
+- **Scalability**: pgvector handles large datasets efficiently; index for speed.
+- **Costs**: Embedding calls add minor expense—cache or batch for free tier.
+- **Testing**: Use sample data; monitor query performance.
+- **Alternatives**: For simpler cases, stick to text appending; scale to full RAG for premium features.
+
+This setup makes resumptions "smarter" in Loci, e.g., resuming a food tour with embedded prefs pulling vegan options from history.
+
+39. RAG patterns with pgvector. use embedding with go genai
+### Introduction to RAG and pgvector
+Retrieval-Augmented Generation (RAG) is a design pattern in AI systems that combines a retrieval step (fetching relevant data from a knowledge base) with generation (using an LLM to produce responses). This enhances accuracy, reduces hallucinations, and grounds outputs in real data. pgvector is an open-source PostgreSQL extension for storing and querying high-dimensional vectors (embeddings), making it a lightweight, scalable vector database for RAG. It supports similarity searches via operators like `<->` (L2 distance), `<#>` (inner product), and `<=>` (cosine distance), with indexing options like HNSW or IVFFlat for efficiency.
+
+Common use cases include chatbots, question-answering over documents, and personalized recommendations (e.g., in your Loci app for itinerary suggestions based on embedded user prefs or city data).
+
+### Common RAG Patterns with pgvector
+Here are prevalent patterns, drawn from implementations in Python and Go. These build on pgvector's vector storage for semantic search, often integrated with LLMs like Llama 3.1, OpenAI, or Gemini.
+
+| Pattern | Description | When to Use | pgvector Role |
+|---------|-------------|-------------|--------------|
+| **Basic RAG** | Embed documents, store vectors, retrieve top-k similar chunks for a query embedding, and augment the LLM prompt with retrieved text. | Simple Q&A over static docs (e.g., internal knowledge base). | Stores embeddings in a `vector(N)` column; uses `<->` for nearest-neighbor search. |
+| **Hybrid Search** | Combine vector similarity with keyword/full-text search (e.g., BM25 via `tsvector`). Rank results by a fused score (e.g., vec_dist + bm25_score). | Queries with both semantic intent and exact terms (e.g., "vegan restaurants in Paris" – semantic for "vegan", keyword for "Paris"). | Adds `tsvector` column for text search; queries merge vector ops with `ts_rank_cd`. |
+| **Reranking** | Retrieve a broad set of candidates via vector search, then rerank with a cross-encoder model (e.g., ms-marco-MiniLM) for precision. | Noisy datasets where initial retrieval includes false positives. | Initial retrieval via indexed vector column; reranking happens post-query in app logic. |
+| **Metadata-Filtered RAG** | Filter retrieval by metadata (e.g., city_id, user_id) stored in JSONB, then apply vector search. | Personalized apps (e.g., Loci: filter by user prefs or location before semantic match). | Uses `WHERE metadata->>'key' = 'value'` before ordering by similarity. |
+| **Multi-Modal RAG** | Embed and store multi-modal data (text + images via CLIP embeddings). | Apps with images/PDFs (e.g., embedding Loci's maps or photos). | Handles mixed vector dims; hybrid with `tsvector` for text fallback. |
+| **Advanced: Deduplication & Normalization** | Normalize embeddings (e.g., L2 norm) for inner product search; dedupe overlapping chunks post-retrieval. | Large corpora with redundant text to reduce prompt noise. | Normalization in app before insert; dedupe in post-processing. |
+
+### Implementation Steps
+A typical pgvector-based RAG flow involves four phases: setup, ingestion, retrieval, and generation. Below is a Go-centric outline, leveraging libraries like pgx, Ent (for ORM), and Atlas (for migrations)—fitting your stack.
+
+1. **Vector Store Setup**:
+    - Enable pgvector: `CREATE EXTENSION IF NOT EXISTS vector;`
+    - Define schema (e.g., via Ent):
+      ```go
+      // ent/schema/document.go
+      package schema
+      import (
+          "entgo.io/ent"
+          "entgo.io/ent/schema/field"
+          "github.com/pgvector/pgvector-go"
+      )
+      type Document struct { ent.Schema }
+      func (Document) Fields() []ent.Field {
+          return []ent.Field{
+              field.Text("content"),
+              field.Other("embedding", pgvector.Vector{}).SchemaType(map[string]string{"postgres": "vector(1536)"}),
+              field.JSON("metadata", map[string]any{}),
+          }
+      }
+      ```
+    - Add index: `CREATE INDEX ON documents USING hnsw (embedding vector_cosine_ops) WITH (m=16, ef_construction=128);` (for high recall).
+    - Use Atlas for migrations: Define HCL files to apply extension and schema.
+
+2. **Ingestion Pipeline**:
+    - Chunk docs (e.g., by token count: 512-1024).
+    - Generate embeddings (e.g., via Ollama/Llama or OpenAI):
+      ```go
+      import "github.com/tmc/langchaingo/llms/ollama"
+      llm, _ := ollama.New(ollama.WithModel("llama3"))
+      emb, _ := llm.CreateEmbedding(context.Background(), []string{chunk})
+      vec := pgvector.NewVector(emb[0]) // Convert []float64 to pgvector
+      ```
+    - Store: Use pgx or Ent to insert:
+      ```go
+      client.Document.Create().SetContent(chunk).SetEmbedding(vec).SetMetadata(meta).SaveX(ctx)
+      ```
+
+3. **Retrieval**:
+    - Embed query.
+    - Query top-k:
+      ```sql
+      SELECT content, metadata, embedding <=> $1 AS distance FROM documents ORDER BY distance LIMIT 5;
+      ```
+    - In Go (Ent):
+      ```go
+      docs := client.Document.Query().Order(func(s *sql.Selector) {
+          s.OrderExpr(sql.ExprP("embedding <=> $1", queryVec))
+      }).Limit(5).AllX(ctx)
+      ```
+
+4. **Generation**:
+    - Build prompt: "Answer based on this context: {retrieved} Question: {query}"
+    - Call LLM (e.g., Gemini or Llama via SDK):
+      ```go
+      resp, _ := llm.Call(context.Background(), prompt)
+      ```
+
+### Best Practices
+- **Chunking**: Token-based (e.g., 1000 tokens) to preserve context; overlap chunks by 10-20% for continuity.
+- **Embedding Models**: Use consistent dims (e.g., 1536 for ada-002, 4096 for Llama); normalize for inner product speed.
+- **Indexing**: HNSW for production (fast, approximate); tune `m`/`ef_construction` for recall vs. speed.
+- **Scalability**: Batch inserts; use JSONB for metadata filtering; monitor with pgDash.
+- **Error Handling**: Retry on rate limits; dedupe retrieved chunks to avoid prompt bloat.
+- **Security**: Sanitize inputs; use read-only roles for queries.
+- **Testing**: Evaluate with metrics like recall@K; start with small datasets.
+
+to be used with the Gemini SDK
+
+____
+
+

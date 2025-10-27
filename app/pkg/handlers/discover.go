@@ -57,7 +57,8 @@ func NewDiscoverHandlers(poiRepo poi.Repository, chatRepo llmchat.Repository, ll
 
 func (h *DiscoverHandlers) Show(c *gin.Context) templ.Component {
 	var recentDiscoveries []models.ChatSession
-	userID, exists := c.Get("userID")
+
+	userID, exists := c.Get("user_id")
 	if exists && userID != "" && userID != "anonymous" {
 		userUUID, err := uuid.Parse(userID.(string))
 		if err == nil {

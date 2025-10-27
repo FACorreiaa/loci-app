@@ -13,7 +13,7 @@ import (
 func DebugCompleteItinerary(logger *zap.Logger, completeData interface{}, sessionID string) {
 	jsonData, err := json.MarshalIndent(completeData, "", "  ")
 	if err != nil {
-		logger.Error("Failed to marshal completeData to JSON", zap.Error(err))
+		logger.Error("Failedcontinue to marshal completeData to JSON", zap.Error(err))
 		return
 	}
 
