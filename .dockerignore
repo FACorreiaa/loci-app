@@ -3,7 +3,7 @@
 .gitignore
 .gitattributes
 .gitmodules
-
+go-templui
 # Documentation
 README.md
 CHANGELOG.md
@@ -98,6 +98,5 @@ config.yaml
 
 # CSS source files (we want the built output.css)
 /assets/css/input.css
-go-templui
 main
 docs

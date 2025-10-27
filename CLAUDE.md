@@ -949,7 +949,12 @@ This logic should be applied to all intents in order to save LLM calls, tokens a
 13.1.1 [x]On discover there is the "search" and when a search is undergoing a "searching" appears which is fine but the "search label is still showing"
 13.1.2 [x]Discover when clicking for results is returning something like:
 13.1.3 [x] After searching on /discover I see 6 Results for "5 star hotels" in Munich but I dont see the recents under. After refreshing /discover page, I see that Recent Discoveries
-
+13.1.4 On the /discover page there is a list of "quick categories". Clicking on them should fill the input context. So you click "Restaurants" and fills "Restaurants" on the input.
+13.1.5 Trending should show the most discoveries today instead of being hardcodded. 
+13.1.6 Featured should also be used but I dont know how. Think of a way of having dynamic data instead of hardcodded data.
+13.1.7 Each item under discoveries has a View Details button that is not opening a valid page. Build this page and redirect it properly. This page should have the metada detailed on a new page for the user to see.
+13.1.8 on my chat service can the textPartIterator be reused? or abstract more data into different methods, in a different file, using Golang streams and iterators to abstract and resuse some logic? Implement for performance.
+13.1.9 if you have documentation on Go 1.25, 
 is still hardcodded
 ```bash
   2025-10-25T10:39:22.102+0100    INFO    handlers/discover.go:57 Discovery search requested      {"port": "8090", "service": "loci-templui", "line": "42", "query": "5 star restaurant", "location": "Berlin", "user": "f04eaf02-e1fa-4bbe-b4f6-506767a4fa8d", "ip": "::1"}
@@ -1206,7 +1211,7 @@ After that we should make the logic to work on the travel planner. It should fol
    - Action required: Run migrations or manually execute `CREATE EXTENSION IF NOT EXISTS pg_trgm;` on existing database
 
 32. Im using pprof with Gin. Check main.go and create a setup to be able to use graphviz with pprof locally and in prod. Add the commands to makefile if necessary and documentation under docs if necessary as well.
-32. Review all my observability stack. Right now I use everything locally through my compose and want to test locally. In the future, I want to have my observability stack also working in prod hosted on fly.io or on hetzner. Make changes if needed (my services run through docker compose but my app runs locally through air, keep that in mind) and write docs if necessary to document how I will host my observability stack on Fly, DO or Hetzner. 
+32. Review all my observability stack. Right now I use everything locally through my compose and want to test locally. In the future, I want to have my observability stack also working in prod hosted on fly.io or on hetzner. Make changes if needed (my services run through docker compose but my app runs locally through air, keep that in mind) and write docs if necessary to document how I will host my observability stack on Fly, DO or Hetzner. I also need to setup alert manager.
 33. Review my project structure and work done and check where Gorilla Websockets could be used in this project. Write a document under docs to have that documented before the implementation.
 33.1 Review all the inputs of this project and create an Validation and Sanitisation SDK to protect my app against DDOS atacks. Build tests for this. 
 34. Add recover system and retries on LLM calls in case something happens with the API call so the user has more uptime and security to avoid cases where the LLM makes the call but network problems or other issues make thing like:

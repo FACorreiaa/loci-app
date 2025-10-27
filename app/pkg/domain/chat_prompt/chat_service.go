@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"iter"
 	"log"
 	"log/slog"
 	"net/url"
@@ -1743,6 +1744,189 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 	return nil
 }
 
+//// generatePOIDataStream queries the LLM for POI details and streams updates
+//func (l *ServiceImpl) generatePOIDataStream(
+//	ctx context.Context, poiName, cityName string,
+//	userLocation *models.UserLocation, userID, cityID uuid.UUID,
+//	eventCh chan<- models.StreamEvent,
+//) (models.POIDetailedInfo, error) {
+//	ctx, span := otel.Tracer("LlmInteractionService").Start(ctx, "generatePOIDataStream",
+//		trace.WithAttributes(attribute.String("p.name", poiName), attribute.String("city.name", cityName)))
+//	defer span.End()
+//
+//	prompt := generatedContinuedConversationPrompt(poiName, cityName)
+//	config := &genai.GenerateContentConfig{Temperature: genai.Ptr[float32](0.2)}
+//	startTime := time.Now()
+//
+//	var responseTextBuilder strings.Builder
+//	iter, err := l.aiClient.GenerateContentStream(ctx, prompt, config)
+//	if err != nil {
+//		l.sendEvent(ctx, eventCh, models.StreamEvent{
+//			Type:      models.EventTypeError,
+//			Error:     fmt.Sprintf("Failed to generate POI data for '%s': %v", poiName, err),
+//			Timestamp: time.Now(),
+//			EventID:   uuid.New().String(),
+//		}, 3)
+//		return models.POIDetailedInfo{}, fmt.Errorf("AI stream init failed for POI '%s': %w", poiName, err)
+//	}
+//
+//	l.sendEvent(ctx, eventCh, models.StreamEvent{
+//		Type:      models.EventTypeProgress,
+//		Data:      map[string]string{"status": fmt.Sprintf("Getting details for %s...", poiName)},
+//		Timestamp: time.Now(),
+//		EventID:   uuid.New().String(),
+//	}, 3)
+//
+//	for resp, err := range iter {
+//		if err != nil {
+//			l.sendEvent(ctx, eventCh, models.StreamEvent{
+//				Type:      models.EventTypeError,
+//				Error:     fmt.Sprintf("Streaming failed for POI '%s': %v", poiName, err),
+//				Timestamp: time.Now(),
+//				EventID:   uuid.New().String(),
+//			}, 3)
+//			return models.POIDetailedInfo{}, fmt.Errorf("streaming POI details for '%s' failed: %w", poiName, err)
+//		}
+//		for _, cand := range resp.Candidates {
+//			if cand.Content != nil {
+//				for _, part := range cand.Content.Parts {
+//					if part.Text != "" {
+//						responseTextBuilder.WriteString(string(part.Text))
+//						l.sendEvent(ctx, eventCh, models.StreamEvent{
+//							Type:      "poi_detail_chunk",
+//							Data:      map[string]string{"poi_name": poiName, "chunk": string(part.Text)},
+//							Timestamp: time.Now(),
+//							EventID:   uuid.New().String(),
+//						}, 3)
+//					}
+//				}
+//			}
+//		}
+//	}
+//
+//	if ctx.Err() != nil {
+//		l.sendEvent(ctx, eventCh, models.StreamEvent{
+//			Type:      models.EventTypeError,
+//			Error:     ctx.Err().Error(),
+//			Timestamp: time.Now(),
+//			EventID:   uuid.New().String(),
+//		}, 3)
+//		return models.POIDetailedInfo{}, fmt.Errorf("context cancelled during POI detail generation: %w", ctx.Err())
+//	}
+//
+//	fullText := responseTextBuilder.String()
+//	if fullText == "" {
+//		l.sendEvent(ctx, eventCh, models.StreamEvent{
+//			Type:      models.EventTypeError,
+//			Error:     fmt.Sprintf("Empty response for POI '%s'", poiName),
+//			Timestamp: time.Now(),
+//			EventID:   uuid.New().String(),
+//		}, 3)
+//		return models.POIDetailedInfo{Name: poiName, DescriptionPOI: "Details not found."}, fmt.Errorf("empty response for POI details '%s'", poiName)
+//	}
+//
+//	// Save LLM interaction
+//	interaction := models.LlmInteraction{
+//		UserID:       userID,
+//		Prompt:       prompt,
+//		ResponseText: fullText,
+//		Timestamp:    startTime,
+//		CityName:     cityName,
+//	}
+//	llmInteractionID, err := l.saveCityInteraction(ctx, interaction)
+//	if err != nil {
+//		l.sendEvent(ctx, eventCh, models.StreamEvent{
+//			Type:      models.EventTypeError,
+//			Error:     fmt.Sprintf("Failed to save LLM interaction for POI '%s': %v", poiName, err),
+//			Timestamp: time.Now(),
+//			EventID:   uuid.New().String(),
+//		}, 3)
+//		return models.POIDetailedInfo{}, fmt.Errorf("failed to save LLM interaction: %w", err)
+//	}
+//
+//	// Parse response
+//	cleanJSON := cleanJSONResponse(fullText)
+//	var poiData models.POIDetailedInfo
+//	if err := json.Unmarshal([]byte(cleanJSON), &poiData); err != nil || poiData.Name == "" {
+//		l.logger.WarnContext(ctx, "Invalid POI data from LLM", slog.String("response", fullText), slog.Any("error", err))
+//		poiData = models.POIDetailedInfo{
+//			ID:             uuid.New(),
+//			Name:           poiName,
+//			Category:       "Attraction",
+//			DescriptionPOI: fmt.Sprintf("Added %s based on user request, but detailed data not available.", poiName),
+//		}
+//	}
+//	if poiData.ID == uuid.Nil {
+//		poiData.ID = uuid.New()
+//	}
+//	poiData.LlmInteractionID = llmInteractionID
+//	poiData.City = cityName
+//
+//	// Save POI to database
+//	dbPoiID, err := l.llmInteractionRepo.SaveSinglePOI(ctx, poiData, userID, cityID, llmInteractionID)
+//	if err != nil {
+//		l.logger.WarnContext(ctx, "Failed to save POI to database", slog.Any("error", err))
+//		span.RecordError(err)
+//		l.sendEvent(ctx, eventCh, models.StreamEvent{
+//			Type:      models.EventTypeError,
+//			Error:     fmt.Sprintf("Failed to save POI '%s' to database: %v", poiName, err),
+//			Timestamp: time.Now(),
+//			EventID:   uuid.New().String(),
+//		}, 3)
+//		return models.POIDetailedInfo{}, fmt.Errorf("failed to save POI to database: %w", err)
+//	}
+//	poiData.ID = dbPoiID
+//
+//	// Calculate distance
+//	if userLocation != nil && userLocation.UserLat != 0 && userLocation.UserLon != 0 && poiData.Latitude != 0 && poiData.Longitude != 0 {
+//		distance, err := l.poiRepo.CalculateDistancePostGIS(ctx, userLocation.UserLat, userLocation.UserLon, poiData.Latitude, poiData.Longitude)
+//		if err != nil {
+//			l.logger.WarnContext(ctx, "Failed to calculate distance", slog.Any("error", err))
+//			span.RecordError(err)
+//		} else {
+//			poiData.Distance = distance
+//		}
+//	}
+//
+//	l.sendEvent(ctx, eventCh, models.StreamEvent{
+//		Type:      "poi_detail_complete",
+//		Data:      poiData,
+//		Timestamp: time.Now(),
+//		EventID:   uuid.New().String(),
+//	}, 3)
+//	return poiData, nil
+//}
+
+// textPartIterator yields text parts from the AI stream iterator, handling errors inline.
+// It uses Go's iter.Seq2 for clean iteration.
+func (l *ServiceImpl) textPartIterator(ctx context.Context, iter iter.Seq2[*genai.GenerateContentResponse, error], eventCh chan<- models.StreamEvent, poiName string) iter.Seq[string] {
+	return func(yield func(string) bool) {
+		for resp, err := range iter {
+			if err != nil {
+				l.sendEvent(ctx, eventCh, models.StreamEvent{
+					Type:      models.EventTypeError,
+					Error:     fmt.Sprintf("Streaming failed for POI '%s': %v", poiName, err),
+					Timestamp: time.Now(),
+					EventID:   uuid.New().String(),
+				}, 3)
+				return // Stop iteration on error
+			}
+			for _, cand := range resp.Candidates {
+				if cand.Content != nil {
+					for _, part := range cand.Content.Parts {
+						if part.Text != "" {
+							text := string(part.Text)
+							if !yield(text) {
+								return // Caller stopped
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 // generatePOIDataStream queries the LLM for POI details and streams updates
 func (l *ServiceImpl) generatePOIDataStream(
 	ctx context.Context, poiName, cityName string,
@@ -1757,7 +1941,6 @@ func (l *ServiceImpl) generatePOIDataStream(
 	config := &genai.GenerateContentConfig{Temperature: genai.Ptr[float32](0.2)}
 	startTime := time.Now()
 
-	var responseTextBuilder strings.Builder
 	iter, err := l.aiClient.GenerateContentStream(ctx, prompt, config)
 	if err != nil {
 		l.sendEvent(ctx, eventCh, models.StreamEvent{
@@ -1776,31 +1959,15 @@ func (l *ServiceImpl) generatePOIDataStream(
 		EventID:   uuid.New().String(),
 	}, 3)
 
-	for resp, err := range iter {
-		if err != nil {
-			l.sendEvent(ctx, eventCh, models.StreamEvent{
-				Type:      models.EventTypeError,
-				Error:     fmt.Sprintf("Streaming failed for POI '%s': %v", poiName, err),
-				Timestamp: time.Now(),
-				EventID:   uuid.New().String(),
-			}, 3)
-			return models.POIDetailedInfo{}, fmt.Errorf("streaming POI details for '%s' failed: %w", poiName, err)
-		}
-		for _, cand := range resp.Candidates {
-			if cand.Content != nil {
-				for _, part := range cand.Content.Parts {
-					if part.Text != "" {
-						responseTextBuilder.WriteString(string(part.Text))
-						l.sendEvent(ctx, eventCh, models.StreamEvent{
-							Type:      "poi_detail_chunk",
-							Data:      map[string]string{"poi_name": poiName, "chunk": string(part.Text)},
-							Timestamp: time.Now(),
-							EventID:   uuid.New().String(),
-						}, 3)
-					}
-				}
-			}
-		}
+	var responseTextBuilder strings.Builder
+	for chunk := range l.textPartIterator(ctx, iter, eventCh, poiName) {
+		responseTextBuilder.WriteString(chunk)
+		l.sendEvent(ctx, eventCh, models.StreamEvent{
+			Type:      "poi_detail_chunk",
+			Data:      map[string]string{"poi_name": poiName, "chunk": chunk},
+			Timestamp: time.Now(),
+			EventID:   uuid.New().String(),
+		}, 3)
 	}
 
 	if ctx.Err() != nil {
