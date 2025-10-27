@@ -347,7 +347,7 @@ func TestSSE_ConcurrentAccess(t *testing.T) {
 					w := httptest.NewRecorder()
 					c, _ := gin.CreateTestContext(w)
 					c.Request, _ = http.NewRequest("GET", "/activities?sessionId="+sid, nil)
-					
+
 					component := activitiesHandlers.HandleActivitiesPage(c)
 					assert.NotNil(t, component)
 				}(sessionID)
@@ -367,7 +367,7 @@ func extractSessionIDFromSSEResponse(t *testing.T, sseResponse string) string {
 	for _, line := range lines {
 		if strings.HasPrefix(line, "data: ") {
 			data := strings.TrimPrefix(line, "data: ")
-			
+
 			// Try to extract session ID from HTML content
 			if strings.Contains(data, "sessionId=") {
 				parts := strings.Split(data, "sessionId=")
@@ -379,7 +379,7 @@ func extractSessionIDFromSSEResponse(t *testing.T, sseResponse string) string {
 					}
 				}
 			}
-			
+
 			// Try to parse as JSON for session ID
 			if strings.HasPrefix(data, "{") {
 				var jsonData map[string]interface{}
@@ -397,12 +397,12 @@ func extractSessionIDFromSSEResponse(t *testing.T, sseResponse string) string {
 func parseSSEEvents(t *testing.T, sseResponse string) []SSEEvent {
 	var events []SSEEvent
 	scanner := bufio.NewScanner(strings.NewReader(sseResponse))
-	
+
 	var currentEvent SSEEvent
-	
+
 	for scanner.Scan() {
 		line := scanner.Text()
-		
+
 		if strings.HasPrefix(line, "event: ") {
 			currentEvent.Type = strings.TrimPrefix(line, "event: ")
 		} else if strings.HasPrefix(line, "data: ") {
@@ -412,12 +412,12 @@ func parseSSEEvents(t *testing.T, sseResponse string) []SSEEvent {
 			currentEvent = SSEEvent{}
 		}
 	}
-	
+
 	// Don't forget the last event if file doesn't end with empty line
 	if currentEvent.Type != "" {
 		events = append(events, currentEvent)
 	}
-	
+
 	return events
 }
 

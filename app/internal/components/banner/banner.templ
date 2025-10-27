@@ -1,8 +1,6 @@
 package banner
 
-import (
-	"fmt"
-)
+import "fmt"
 
 // BannerType defines the style of the banner
 type BannerType string
@@ -30,16 +28,14 @@ templ Banner(props BannerProps) {
 		id={ props.ID }
 		x-data={ fmt.Sprintf("{ show: true, autoDismiss: %d }", props.AutoDismiss) }
 		x-show="show"
-		x-init={
-			fmt.Sprintf(`
+		x-init={ fmt.Sprintf(`
 				if (autoDismiss > 0) {
 					setTimeout(() => {
 						show = false;
 						setTimeout(() => document.getElementById('%s')?.remove(), 300);
 					}, autoDismiss * 1000);
 				}
-			`, props.ID)
-		}
+			`, props.ID) }
 		x-transition:enter="transition ease-out duration-300"
 		x-transition:enter-start="opacity-0 transform -translate-y-4"
 		x-transition:enter-end="opacity-100 transform translate-y-0"
@@ -55,7 +51,6 @@ templ Banner(props BannerProps) {
 				<div class="flex-shrink-0 pt-0.5">
 					@getBannerIcon(props.Type)
 				</div>
-
 				<!-- Content -->
 				<div class="flex-1 min-w-0">
 					<p class="text-sm font-medium">
@@ -67,7 +62,6 @@ templ Banner(props BannerProps) {
 						</p>
 					}
 				</div>
-
 				<!-- Dismiss Button -->
 				if props.Dismissable {
 					<button
@@ -91,16 +85,14 @@ templ FixedBanner(props BannerProps) {
 		id={ props.ID }
 		x-data={ fmt.Sprintf("{ show: true, autoDismiss: %d }", props.AutoDismiss) }
 		x-show="show"
-		x-init={
-			fmt.Sprintf(`
+		x-init={ fmt.Sprintf(`
 				if (autoDismiss > 0) {
 					setTimeout(() => {
 						show = false;
 						setTimeout(() => document.getElementById('%s')?.remove(), 300);
 					}, autoDismiss * 1000);
 				}
-			`, props.ID)
-		}
+			`, props.ID) }
 		x-transition:enter="transition ease-out duration-300"
 		x-transition:enter-start="opacity-0 transform -translate-y-full"
 		x-transition:enter-end="opacity-100 transform translate-y-0"
@@ -116,7 +108,6 @@ templ FixedBanner(props BannerProps) {
 				<div class="flex-shrink-0 pt-0.5">
 					@getBannerIcon(props.Type)
 				</div>
-
 				<!-- Content -->
 				<div class="flex-1 min-w-0">
 					<p class="text-sm font-medium">
@@ -128,7 +119,6 @@ templ FixedBanner(props BannerProps) {
 						</p>
 					}
 				</div>
-
 				<!-- Dismiss Button -->
 				if props.Dismissable {
 					<button
@@ -152,16 +142,14 @@ templ ToastBanner(props BannerProps) {
 		id={ props.ID }
 		x-data={ fmt.Sprintf("{ show: true, autoDismiss: %d }", props.AutoDismiss) }
 		x-show="show"
-		x-init={
-			fmt.Sprintf(`
+		x-init={ fmt.Sprintf(`
 				if (autoDismiss > 0) {
 					setTimeout(() => {
 						show = false;
 						setTimeout(() => document.getElementById('%s')?.remove(), 300);
 					}, autoDismiss * 1000);
 				}
-			`, props.ID)
-		}
+			`, props.ID) }
 		x-transition:enter="transition ease-out duration-300"
 		x-transition:enter-start="opacity-0 transform translate-x-full"
 		x-transition:enter-end="opacity-100 transform translate-x-0"
@@ -178,7 +166,6 @@ templ ToastBanner(props BannerProps) {
 				<div class="flex-shrink-0 pt-0.5">
 					@getBannerIcon(props.Type)
 				</div>
-
 				<!-- Content -->
 				<div class="flex-1 min-w-0">
 					<p class="text-sm font-medium">
@@ -190,7 +177,6 @@ templ ToastBanner(props BannerProps) {
 						</p>
 					}
 				</div>
-
 				<!-- Dismiss Button -->
 				if props.Dismissable {
 					<button
@@ -212,7 +198,7 @@ templ ToastBanner(props BannerProps) {
 templ AuthPromoBanner() {
 	<div
 		x-data="{ show: true, text: '', typing: false }"
-		x-init={`
+		x-init={ `
 			// Check if user is authenticated
 			const isAuthenticated = document.cookie.includes('session_token');
 			if (isAuthenticated) {
@@ -254,7 +240,7 @@ templ AuthPromoBanner() {
 			}
 
 			typeMessage();
-		`}
+		` }
 		x-show="show"
 		x-transition:enter="transition ease-out duration-300"
 		x-transition:enter-start="opacity-0 transform -translate-y-4"
@@ -274,7 +260,6 @@ templ AuthPromoBanner() {
 					<p class="text-sm font-medium" x-text="text"></p>
 					<span x-show="typing" class="w-0.5 h-4 bg-white animate-pulse"></span>
 				</div>
-
 				<div class="flex items-center gap-2">
 					<a
 						href="/signin"

@@ -1301,8 +1301,8 @@ func (h *ChatHandlers) ContinueChatSession(c *gin.Context) {
 
 	// Parse request body
 	var req struct {
-		Message      string                 `json:"message" form:"message"`
-		UserLocation *models.UserLocation   `json:"user_location,omitempty" form:"user_location"`
+		Message      string               `json:"message" form:"message"`
+		UserLocation *models.UserLocation `json:"user_location,omitempty" form:"user_location"`
 	}
 
 	// Support both JSON and form-encoded requests (for HTMX)

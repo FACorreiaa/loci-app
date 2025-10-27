@@ -2114,7 +2114,7 @@ func uniqueStringSlice(slice []string) []string {
 	return result
 }
 
-//GetRecentChatSessions directly queries chat_sessions table for recent sessions
+// GetRecentChatSessions directly queries chat_sessions table for recent sessions
 func (r *RepositoryImpl) GetRecentChatSessions(ctx context.Context, userID uuid.UUID, limit int) ([]models.ChatSession, error) {
 	query := `
 		SELECT id, user_id, profile_id, city_name, conversation_history, created_at, updated_at, COALESCE(search_type, 'itinerary') as search_type

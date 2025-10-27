@@ -12,7 +12,7 @@ import (
 	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
 )
 
-type FavoritesHandlers struct{
+type FavoritesHandlers struct {
 	poiService poi.Service
 }
 

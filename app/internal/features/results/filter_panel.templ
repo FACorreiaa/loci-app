@@ -1,8 +1,6 @@
 package results
 
-import (
-	"fmt"
-)
+import "fmt"
 
 // FilterPanel creates a comprehensive filter panel for POI results
 // domain: "restaurants", "hotels", "activities", or "itinerary"
@@ -36,7 +34,6 @@ templ FilterPanel(domain string, cacheKey string, sessionID string) {
 					Clear all
 				</button>
 			</div>
-
 			<div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
 				<!-- Category Filters (Domain-specific) -->
 				<div class="space-y-3">
@@ -55,7 +52,6 @@ templ FilterPanel(domain string, cacheKey string, sessionID string) {
 						@CategoryFilters(domain)
 					</div>
 				</div>
-
 				<!-- Price Range Filters -->
 				<div class="space-y-3">
 					<label class="text-sm font-medium text-gray-700 dark:text-gray-300 block">Price Range</label>
@@ -63,7 +59,6 @@ templ FilterPanel(domain string, cacheKey string, sessionID string) {
 						@PriceRangeFilters(domain)
 					</div>
 				</div>
-
 				<!-- Rating Filter -->
 				<div class="space-y-3">
 					<label class="text-sm font-medium text-gray-700 dark:text-gray-300 block">Minimum Rating</label>
@@ -78,7 +73,6 @@ templ FilterPanel(domain string, cacheKey string, sessionID string) {
 						<option value="3.0">3.0+ stars</option>
 					</select>
 				</div>
-
 				<!-- Feature Filters (Domain-specific) -->
 				<div class="space-y-3">
 					<label class="text-sm font-medium text-gray-700 dark:text-gray-300 block">Features</label>
@@ -87,9 +81,7 @@ templ FilterPanel(domain string, cacheKey string, sessionID string) {
 					</div>
 				</div>
 			</div>
-
 		</form>
-
 		<!-- Active Filters Display - shown outside form -->
 		<div id="filter-badges-container" class="mt-4"></div>
 	</div>

@@ -17,13 +17,13 @@ import (
 
 // VectorCacheEntry stores a vector embedding with its associated data and metadata
 type VectorCacheEntry struct {
-	QueryText    string                     `json:"query_text"`
-	Embedding    []float32                  `json:"embedding"`
-	Results      []models.POIDetailedInfo   `json:"results"`
-	Expiration   int64                      `json:"expiration"`
-	CityID       string                     `json:"city_id,omitempty"`
-	SearchParams map[string]interface{}     `json:"search_params,omitempty"`
-	CreatedAt    time.Time                  `json:"created_at"`
+	QueryText    string                   `json:"query_text"`
+	Embedding    []float32                `json:"embedding"`
+	Results      []models.POIDetailedInfo `json:"results"`
+	Expiration   int64                    `json:"expiration"`
+	CityID       string                   `json:"city_id,omitempty"`
+	SearchParams map[string]interface{}   `json:"search_params,omitempty"`
+	CreatedAt    time.Time                `json:"created_at"`
 }
 
 // VectorCache provides semantic caching for vector embeddings and search results

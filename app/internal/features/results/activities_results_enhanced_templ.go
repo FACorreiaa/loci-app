@@ -184,7 +184,7 @@ func ActivitiesResults(cityData models.GeneralCityData, activities []models.POID
 			var templ_7745c5c3_Var9 string
 			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(cityData.City)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 165, Col: 95}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 174, Col: 95}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {
@@ -197,7 +197,7 @@ func ActivitiesResults(cityData models.GeneralCityData, activities []models.POID
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(cityData.Description)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 166, Col: 96}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 175, Col: 96}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -215,7 +215,7 @@ func ActivitiesResults(cityData models.GeneralCityData, activities []models.POID
 				var templ_7745c5c3_Var11 string
 				templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(cityData.Area)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 173, Col: 80}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 182, Col: 80}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 				if templ_7745c5c3_Err != nil {
@@ -234,7 +234,7 @@ func ActivitiesResults(cityData models.GeneralCityData, activities []models.POID
 				var templ_7745c5c3_Var12 string
 				templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(cityData.Timezone)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 181, Col: 78}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 190, Col: 78}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 				if templ_7745c5c3_Err != nil {
@@ -253,7 +253,7 @@ func ActivitiesResults(cityData models.GeneralCityData, activities []models.POID
 				var templ_7745c5c3_Var13 string
 				templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(cityData.Language)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 189, Col: 88}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 198, Col: 88}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 				if templ_7745c5c3_Err != nil {
@@ -272,7 +272,7 @@ func ActivitiesResults(cityData models.GeneralCityData, activities []models.POID
 				var templ_7745c5c3_Var14 string
 				templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(cityData.Population)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 197, Col: 92}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 206, Col: 92}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 				if templ_7745c5c3_Err != nil {
@@ -361,7 +361,7 @@ func ActivityListCard(activity models.POIDetailedInfo, index int) templ.Componen
 		var templ_7745c5c3_Var16 string
 		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", index))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 412, Col: 29}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 417, Col: 29}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 		if templ_7745c5c3_Err != nil {
@@ -374,7 +374,7 @@ func ActivityListCard(activity models.POIDetailedInfo, index int) templ.Componen
 		var templ_7745c5c3_Var17 string
 		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(activity.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 419, Col: 21}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 423, Col: 21}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 		if templ_7745c5c3_Err != nil {
@@ -392,7 +392,7 @@ func ActivityListCard(activity models.POIDetailedInfo, index int) templ.Componen
 			var templ_7745c5c3_Var18 string
 			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(activity.Category)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 422, Col: 67}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 426, Col: 67}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 			if templ_7745c5c3_Err != nil {
@@ -405,7 +405,7 @@ func ActivityListCard(activity models.POIDetailedInfo, index int) templ.Componen
 			var templ_7745c5c3_Var19 string
 			templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(getCategoryEmoji(activity.Category))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 423, Col: 44}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 427, Col: 44}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 			if templ_7745c5c3_Err != nil {
@@ -428,7 +428,7 @@ func ActivityListCard(activity models.POIDetailedInfo, index int) templ.Componen
 			var templ_7745c5c3_Var20 string
 			templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(activity.Category)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 429, Col: 25}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 433, Col: 25}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 			if templ_7745c5c3_Err != nil {
@@ -495,7 +495,7 @@ func ActivityListCard(activity models.POIDetailedInfo, index int) templ.Componen
 			var templ_7745c5c3_Var25 string
 			templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(formatActivityRating(activity.Rating))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 441, Col: 46}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 444, Col: 46}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 			if templ_7745c5c3_Err != nil {
@@ -532,7 +532,7 @@ func ActivityListCard(activity models.POIDetailedInfo, index int) templ.Componen
 			var templ_7745c5c3_Var28 string
 			templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(activity.PriceLevel)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 448, Col: 27}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 450, Col: 27}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 			if templ_7745c5c3_Err != nil {
@@ -550,7 +550,7 @@ func ActivityListCard(activity models.POIDetailedInfo, index int) templ.Componen
 		var templ_7745c5c3_Var29 string
 		templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(activity.Description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 454, Col: 94}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 455, Col: 94}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 		if templ_7745c5c3_Err != nil {
@@ -587,7 +587,7 @@ func ActivityListCard(activity models.POIDetailedInfo, index int) templ.Componen
 			var templ_7745c5c3_Var31 string
 			templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(activity.TimeToSpend)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 472, Col: 33}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 471, Col: 33}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 			if templ_7745c5c3_Err != nil {
@@ -606,7 +606,7 @@ func ActivityListCard(activity models.POIDetailedInfo, index int) templ.Componen
 			var templ_7745c5c3_Var32 string
 			templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(formatOpeningHours(activity.OpeningHours))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 481, Col: 71}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 479, Col: 71}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 			if templ_7745c5c3_Err != nil {
@@ -625,7 +625,7 @@ func ActivityListCard(activity models.POIDetailedInfo, index int) templ.Componen
 			var templ_7745c5c3_Var33 string
 			templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(activity.Address)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 486, Col: 45}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 483, Col: 45}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 			if templ_7745c5c3_Err != nil {
@@ -654,7 +654,7 @@ func ActivityListCard(activity models.POIDetailedInfo, index int) templ.Componen
 					var templ_7745c5c3_Var34 string
 					templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinStringErrs(tag)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 496, Col: 12}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 492, Col: 12}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var34))
 					if templ_7745c5c3_Err != nil {
@@ -674,7 +674,7 @@ func ActivityListCard(activity models.POIDetailedInfo, index int) templ.Componen
 				var templ_7745c5c3_Var35 string
 				templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", len(activity.Tags)-4))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 502, Col: 48}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 498, Col: 48}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 				if templ_7745c5c3_Err != nil {
@@ -702,7 +702,7 @@ func ActivityListCard(activity models.POIDetailedInfo, index int) templ.Componen
 			var templ_7745c5c3_Var36 templ.SafeURL
 			templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(activity.Website))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 513, Col: 40}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 508, Col: 40}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
 			if templ_7745c5c3_Err != nil {
@@ -721,7 +721,7 @@ func ActivityListCard(activity models.POIDetailedInfo, index int) templ.Componen
 			var templ_7745c5c3_Var37 templ.SafeURL
 			templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("tel:" + activity.PhoneNumber))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 526, Col: 53}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 521, Col: 53}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 			if templ_7745c5c3_Err != nil {
@@ -769,7 +769,7 @@ func ActivityGridCard(activity models.POIDetailedInfo, index int) templ.Componen
 		var templ_7745c5c3_Var39 string
 		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", index))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 553, Col: 29}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 548, Col: 29}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 		if templ_7745c5c3_Err != nil {
@@ -782,7 +782,7 @@ func ActivityGridCard(activity models.POIDetailedInfo, index int) templ.Componen
 		var templ_7745c5c3_Var40 string
 		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(activity.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 557, Col: 88}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 552, Col: 88}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 		if templ_7745c5c3_Err != nil {
@@ -800,7 +800,7 @@ func ActivityGridCard(activity models.POIDetailedInfo, index int) templ.Componen
 			var templ_7745c5c3_Var41 string
 			templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(formatActivityRating(activity.Rating))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 563, Col: 112}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 558, Col: 112}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 			if templ_7745c5c3_Err != nil {
@@ -823,7 +823,7 @@ func ActivityGridCard(activity models.POIDetailedInfo, index int) templ.Componen
 			var templ_7745c5c3_Var42 string
 			templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(activity.Category)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 569, Col: 24}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 564, Col: 24}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
 			if templ_7745c5c3_Err != nil {
@@ -841,7 +841,7 @@ func ActivityGridCard(activity models.POIDetailedInfo, index int) templ.Componen
 		var templ_7745c5c3_Var43 string
 		templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(activity.Description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 572, Col: 95}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 567, Col: 95}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
 		if templ_7745c5c3_Err != nil {
@@ -859,7 +859,7 @@ func ActivityGridCard(activity models.POIDetailedInfo, index int) templ.Componen
 			var templ_7745c5c3_Var44 string
 			templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(activity.PriceLevel)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 575, Col: 85}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/features/results/activities_results_enhanced.templ`, Line: 570, Col: 85}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 			if templ_7745c5c3_Err != nil {

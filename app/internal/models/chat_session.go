@@ -94,11 +94,11 @@ const (
 type SearchType string
 
 const (
-	SearchTypeDiscover    SearchType = "discover"
-	SearchTypeItinerary   SearchType = "itinerary"
-	SearchTypeRestaurant  SearchType = "restaurant"
-	SearchTypeHotel       SearchType = "hotel"
-	SearchTypeActivity    SearchType = "activity"
+	SearchTypeDiscover   SearchType = "discover"
+	SearchTypeItinerary  SearchType = "itinerary"
+	SearchTypeRestaurant SearchType = "restaurant"
+	SearchTypeHotel      SearchType = "hotel"
+	SearchTypeActivity   SearchType = "activity"
 )
 
 // Request/Response types for chat API
@@ -204,9 +204,9 @@ type StreamEvent struct {
 	IsFinal    bool            `json:"is_final,omitempty"`
 	Navigation *NavigationData `json:"navigation,omitempty"`
 	// New fields for dynamic item management
-	HTML     string `json:"html,omitempty"`      // Rendered HTML fragment for item_added/item_removed
-	Domain   string `json:"domain,omitempty"`    // restaurants, hotels, activities, itinerary
-	ItemID   string `json:"item_id,omitempty"`   // ID of the item being added/removed
+	HTML     string      `json:"html,omitempty"`      // Rendered HTML fragment for item_added/item_removed
+	Domain   string      `json:"domain,omitempty"`    // restaurants, hotels, activities, itinerary
+	ItemID   string      `json:"item_id,omitempty"`   // ID of the item being added/removed
 	ItemData interface{} `json:"item_data,omitempty"` // Full item data with coordinates
 }
 

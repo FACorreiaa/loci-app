@@ -10,7 +10,6 @@ templ DiscoverNearbySection() {
 			</svg>
 			Discover Nearby Places
 		</h3>
-
 		<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
 			<div class="md:col-span-2">
 				<label class="block text-sm font-medium text-muted-foreground mb-2">Distance Radius</label>
@@ -57,7 +56,6 @@ templ DiscoverNearbySection() {
 				/>
 			</div>
 		</div>
-
 		<div class="flex flex-wrap gap-3">
 			<button
 				hx-get="/discover/nearby"
@@ -77,7 +75,6 @@ templ DiscoverNearbySection() {
 					Find Nearby Places
 				</span>
 			</button>
-
 			<button
 				onclick="if (navigator.geolocation) { navigator.geolocation.getCurrentPosition((pos) => { document.querySelector('[name=lat]').value = pos.coords.latitude; document.querySelector('[name=lon]').value = pos.coords.longitude; }, (error) => { alert('Unable to get your location. Please enter coordinates manually.'); }); } else { alert('Geolocation is not supported by your browser'); }"
 				class="px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-all font-medium border border-gray-300 dark:border-gray-600"
@@ -87,7 +84,6 @@ templ DiscoverNearbySection() {
 				</span>
 			</button>
 		</div>
-
 		<p class="text-xs text-muted-foreground mt-3">
 			💡 Tip: Click "Use My Location" to automatically detect your coordinates, or enter them manually for any location worldwide.
 		</p>
