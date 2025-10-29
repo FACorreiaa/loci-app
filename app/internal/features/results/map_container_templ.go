@@ -5,13 +5,13 @@ package results
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import "github.com/a-h/templ"
-import templruntime "github.com/a-h/templ/runtime"
-
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/FACorreiaa/go-templui/app/internal/models"
+	"github.com/a-h/templ"
+	templruntime "github.com/a-h/templ/runtime"
 )
 
 // package results (no changes to imports or helpers like poisToJSON, cityDataToJSON)

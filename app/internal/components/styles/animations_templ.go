@@ -5,8 +5,10 @@ package styles
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import "github.com/a-h/templ"
-import templruntime "github.com/a-h/templ/runtime"
+import (
+	"github.com/a-h/templ"
+	templruntime "github.com/a-h/templ/runtime"
+)
 
 // AnimationsCSS provides custom CSS animations for UI elements
 func AnimationsCSS() templ.Component {

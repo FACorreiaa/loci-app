@@ -17,7 +17,6 @@ import (
 
 	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
-	"github.com/FACorreiaa/go-templui/app/pkg/services"
 )
 
 func TestUnifiedDataSource_Integration(t *testing.T) {

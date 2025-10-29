@@ -9,8 +9,9 @@ package stripe
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/stripe/stripe-go/v83/form"
 	"strconv"
+
+	"github.com/stripe/stripe-go/v83/form"
 )
 
 // The type of entity that holds the account. This can be either `individual` or `company`.

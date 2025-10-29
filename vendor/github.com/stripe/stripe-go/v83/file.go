@@ -9,11 +9,12 @@ package stripe
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/stripe/stripe-go/v83/form"
 	"io"
 	"mime/multipart"
 	"net/url"
 	"path/filepath"
+
+	"github.com/stripe/stripe-go/v83/form"
 )
 
 // The [purpose](https://stripe.com/docs/file-upload#uploading-a-file) of the uploaded file.

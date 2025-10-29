@@ -17,7 +17,6 @@
 package genai
 
 import (
-	"cloud.google.com/go/civil"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -25,6 +24,8 @@ import (
 	"reflect"
 	"strings"
 	"time"
+
+	"cloud.google.com/go/civil"
 )
 
 // Outcome of the code execution.

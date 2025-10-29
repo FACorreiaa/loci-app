@@ -17,15 +17,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/FACorreiaa/go-templui/app/internal/models"
 	llmchat "github.com/FACorreiaa/go-templui/app/pkg/domain/chat_prompt"
 	"github.com/FACorreiaa/go-templui/app/pkg/domain/profiles"
 	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
-	"github.com/FACorreiaa/go-templui/app/pkg/services"
 )
 
 var testDB *pgxpool.Pool

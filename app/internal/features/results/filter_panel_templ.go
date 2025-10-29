@@ -5,10 +5,12 @@ package results
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import "github.com/a-h/templ"
-import templruntime "github.com/a-h/templ/runtime"
+import (
+	"fmt"
 
-import "fmt"
+	"github.com/a-h/templ"
+	templruntime "github.com/a-h/templ/runtime"
+)
 
 // FilterPanel creates a comprehensive filter panel for POI results
 // domain: "restaurants", "hotels", "activities", or "itinerary"

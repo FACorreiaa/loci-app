@@ -5,15 +5,20 @@ package auth
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import "github.com/a-h/templ"
-import templruntime "github.com/a-h/templ/runtime"
-
 import (
+	"github.com/a-h/templ"
+	templruntime "github.com/a-h/templ/runtime"
+
 	button "github.com/FACorreiaa/go-templui/app/internal/components/button"
+
 	card "github.com/FACorreiaa/go-templui/app/internal/components/card"
+
 	checkbox "github.com/FACorreiaa/go-templui/app/internal/components/checkbox"
+
 	input "github.com/FACorreiaa/go-templui/app/internal/components/input"
+
 	label "github.com/FACorreiaa/go-templui/app/internal/components/label"
+
 	separator "github.com/FACorreiaa/go-templui/app/internal/components/separator"
 )
 
