@@ -29,6 +29,7 @@ templ ChatPanel(props ChatPanelProps) {
 		</button>
 		<!-- Chat Panel -->
 		<div
+			x-data="{ messages: [] }"
 			x-show="showChat"
 			x-transition:enter="transition ease-out duration-300"
 			x-transition:enter-start="opacity-0 transform translate-y-4"
@@ -100,8 +101,9 @@ templ ChatPanel(props ChatPanelProps) {
 				></div>
 			</div>
 			<!-- Input Area -->
-			<div class="p-4 border-t border-gray-200 dark:border-gray-700" x-data="{ message: '', isLoading: false, messages: [] }">
+			<div class="p-4 border-t border-gray-200 dark:border-gray-700">
 				<form
+					x-data="{ message: '', isLoading: false }"
 					hx-post={ fmt.Sprintf("/chat/continue/%s", props.SessionID) }
 					hx-ext="sse"
 					hx-target="#chat-messages"

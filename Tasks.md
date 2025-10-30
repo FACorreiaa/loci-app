@@ -943,7 +943,8 @@ This logic should be applied to all intents in order to save LLM calls, tokens a
 
 13.0 TODO
 - The chat bubble is not showing under /itinerary
-- The chat bubble shows on the other views but disappears when clicked and the chat window isn't showing. 
+- The chat bubble shows on the other views (/restaurants /activities /hotels) but disappears when clicked,
+and the chat window (that should show the continue chat window) isn't showing. 
 
 13.1 
 13.1.1 [x]On discover there is the "search" and when a search is undergoing a "searching" appears which is fine but the "search label is still showing"

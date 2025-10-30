@@ -55,14 +55,14 @@ func ChatPanel(props ChatPanelProps) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\"><svg class=\"w-6 h-6\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z\"></path></svg> <span class=\"sr-only\">Open chat</span></button><!-- Chat Panel --><div x-show=\"showChat\" x-transition:enter=\"transition ease-out duration-300\" x-transition:enter-start=\"opacity-0 transform translate-y-4\" x-transition:enter-end=\"opacity-1 transform translate-y-0\" x-transition:leave=\"transition ease-in duration-200\" x-transition:leave-start=\"opacity-1\" x-transition:leave-end=\"opacity-0\" class=\"fixed bottom-20 right-6 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 w-96 max-h-[600px] flex flex-col\" x-cloak><!-- Header --><div class=\"flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-t-lg\"><div class=\"flex items-center gap-2\"><div class=\"w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center\"><svg class=\"w-5 h-5 text-white\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z\"></path></svg></div><div><h3 class=\"font-semibold text-gray-900 dark:text-white text-sm\">Continue Planning</h3><p class=\"text-xs text-gray-600 dark:text-gray-300\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\"><svg class=\"w-6 h-6\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z\"></path></svg> <span class=\"sr-only\">Open chat</span></button><!-- Chat Panel --><div x-data=\"{ messages: [] }\" x-show=\"showChat\" x-transition:enter=\"transition ease-out duration-300\" x-transition:enter-start=\"opacity-0 transform translate-y-4\" x-transition:enter-end=\"opacity-1 transform translate-y-0\" x-transition:leave=\"transition ease-in duration-200\" x-transition:leave-start=\"opacity-1\" x-transition:leave-end=\"opacity-0\" class=\"fixed bottom-20 right-6 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 w-96 max-h-[600px] flex flex-col\" x-cloak><!-- Header --><div class=\"flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-t-lg\"><div class=\"flex items-center gap-2\"><div class=\"w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center\"><svg class=\"w-5 h-5 text-white\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z\"></path></svg></div><div><h3 class=\"font-semibold text-gray-900 dark:text-white text-sm\">Continue Planning</h3><p class=\"text-xs text-gray-600 dark:text-gray-300\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(props.CityName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/components/chat/chat_panel.templ`, Line: 52, Col: 74}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/components/chat/chat_panel.templ`, Line: 53, Col: 74}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -75,20 +75,20 @@ func ChatPanel(props ChatPanelProps) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("/chat/continue/%s", props.SessionID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/components/chat/chat_panel.templ`, Line: 96, Col: 68}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/components/chat/chat_panel.templ`, Line: 97, Col: 68}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\" sse-swap=\"message\" hx-target=\"#chat-messages\" hx-swap=\"beforeend\"></div></div><!-- Input Area --><div class=\"p-4 border-t border-gray-200 dark:border-gray-700\" x-data=\"{ message: '', isLoading: false, messages: [] }\"><form hx-post=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\" sse-swap=\"message\" hx-target=\"#chat-messages\" hx-swap=\"beforeend\"></div></div><!-- Input Area --><div class=\"p-4 border-t border-gray-200 dark:border-gray-700\"><form x-data=\"{ message: '', isLoading: false }\" hx-post=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("/chat/continue/%s", props.SessionID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/components/chat/chat_panel.templ`, Line: 105, Col: 64}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/components/chat/chat_panel.templ`, Line: 107, Col: 64}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -101,7 +101,7 @@ func ChatPanel(props ChatPanelProps) templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("props.Placeholder || 'Ask to add more %s...'", props.Domain))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/components/chat/chat_panel.templ`, Line: 134, Col: 94}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `app/internal/components/chat/chat_panel.templ`, Line: 136, Col: 94}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
