@@ -1,2607 +1,7661 @@
-# Debug and Fix Checklist
-## Always use TemplUI components 
+# HTTP Streaming
 
-## UI Issues
-- [x] **0. Login/Signup Button Alignment** ✓ FIXED
-  - Fixed text alignment on buttons in signup page
-  - Changed from raw `<button>` elements to Button component
-  - Location: `app/internal/features/auth/signup.templ`
-  - Changes:
-    - Submit button now uses `@button.Button` component with proper centering
-    - Social login buttons (Google/LinkedIn) now use `@button.Button` with VariantOutline
-    - All buttons now have consistent `items-center justify-center` alignment
+The default behaviour of the `templ.Handler` is to render the template to a buffer and then write the buffer to the response.
 
-## Auth
+This ensures that the template has successfully rendered before the response is sent to the client, so that appropriate response codes can be set if the template fails to render, and partial responses are not sent to the client.
 
-- [x] **0.1 User Profile Display** ✓ FIXED
-  - Issue: Profile page showed hardcoded "John Doe" instead of actual registered user data
-  - Root cause: Profile template didn't accept user data parameters and wasn't fetching from database
-  - Solution:
-    - Modified `profile.templ` to accept `*models.UserProfile` parameter
-    - Updated profile header to display actual firstname/lastname or display name
-    - Added helper functions (`getStringValue`, `getEmailValue`, `getLocationValue`, `getBioValue`)
-    - Injected user service into routes
-    - Updated `/profile` route handler to fetch user profile from database
-    - Now displays actual user data: name, email, location, phone, bio
-  - Files modified:
-    - `app/internal/features/profile/profile.templ`
-    - `app/routes/routes.go`
+## Rendering lifecycle
 
-## Backend/Data Issues
-- [x] **1. Empty Points of Interest** ✓ FIXED
-  - Issue: `complete_itinerary.json` had `"points_of_interest": null` at top level
-  - Root cause: Parser expected direct array `[]POIDetailedInfo` but LLM returns wrapped object `{"points_of_interest": [...]}`
-  - Analysis:
-    - LLM prompt (`getGeneralPOIPrompt`) correctly asks for `{"points_of_interest": [...]}`
-    - Parser in `chat_parser.go:78` was trying to unmarshal directly into array
-    - This caused parsing to fail silently, leaving top-level POIs as null
-    - POI data WAS present in `itinerary_response.points_of_interest` but not at top level
-  - Solution:
-    - Updated `parseCompleteResponseFromParts` to first try parsing as wrapped object
-    - Falls back to direct array parsing for backwards compatibility
-    - Added debug logging to track which format was used
-  - Files modified:
-    - `app/pkg/domain/chat_prompt/chat_parser.go:72-96`
+Typical usage of templ involves collecting data that is used to populate the template, before rendering the template and sending a response.
 
-- [x] **2. Cache System Verification** ✓ COMPLETE
-  - Issue: Cache was using sessionID as key, preventing cache reuse for same city + preferences
-  - Solution: Implemented content-based cache keys using MD5 hash of:
-    - user_id + profile_id + city + message + domain + preferences
-  - Implementation details:
-    - Cache key generation: `chat_service.go:2041-2056` (for authenticated users) and `chat_service.go:2340-2360` (for guest users)
-    - Modified `cacheResultsIfAvailable()` to accept and use `cacheKey` parameter
-    - Updated all cache Set() calls to use `cacheKey` instead of `sessionID`:
-      - `ItineraryCache.Set(cacheKey, ...)` at line 2721
-      - `CompleteItineraryCache.Set(cacheKey, ...)` at lines 2741, 2767, 2798, 2829
-      - `RestaurantsCache.Set(cacheKey, ...)` at line 2763
-      - `ActivitiesCache.Set(cacheKey, ...)` at line 2794
-      - `HotelsCache.Set(cacheKey, ...)` at line 2825
-    - Added cacheKey to navigation URLs for handlers to access: `chat_service.go:2189, 2493`
-    - Updated all handlers to accept and use cacheKey parameter:
-      - `restaurants.go:52, 66, 76, 167` - Added cacheKey query param and cache lookup
-      - `hotels.go:50, 63, 70, 214` - Added cacheKey query param and cache lookup
-      - `activities.go:50, 63, 70, 169` - Added cacheKey query param and cache lookup
-  - Result: Cache now properly reuses data for same city + preferences, creates new requests for different preferences
-  - Files modified:
-    - `app/pkg/domain/chat_prompt/chat_service.go`
-    - `app/pkg/handlers/restaurants.go`
-    - `app/pkg/handlers/hotels.go`
-    - `app/pkg/handlers/activities.go`
+For example, executing several database queries, calling an API, or reading from a file, before rendering the template.
 
-- [x] **3. Infinite Loop in Itinerary Search** ✓ FIXED
-  - Issue: Restaurants, Activities, and Hotels pages stuck showing "Finding... This may take a few moments" even after data loaded
-  - Root cause: Missing frontend event listeners for SSE completion events
-  - Analysis:
-    - Backend correctly sends `restaurants-complete`, `activities-complete`, `hotels-complete` SSE events
-    - `#loading-progress` div had `sse-swap="loading-progress"` but completion events sent JSON, not HTML
-    - Alpine.js state scripts (`restaurantsPage()`, `activitiesPage()`, `hotelsPage()`) had no `init()` method
-    - No JavaScript listening for `htmx:sseMessage` events to hide loading indicator
-  - Solution:
-    - Added `init()` method to all three Alpine.js state functions
-    - Added event listener for `htmx:sseMessage` events
-    - When completion event detected, hide `#loading-progress` by adding `hidden` class
-    - Added console logging for debugging
-  - Files modified:
-    - `app/internal/features/results/restaurants_results_sse.templ:253-292`
-    - `app/internal/features/results/activities_results_sse.templ:253-292`
-    - `app/internal/features/results/hotels_results_sse.templ:253-292`
+```mermaid
+flowchart TD;
+	r[Request]
+	q[DB Queries]
+	q1[Query result]
+	q2[Query result]
+	a[API Calls]
+	api[API call result]
+	t[Render template]
+	h[HTML]
+	response[Response]
+	r-->q;
+	r-->a;
+	q-->q1
+	q-->q2
+	a-->api
+	q1-->t
+	q2-->t
+	api-->t
+	t-->h
+	h-->response;
+```
 
-- [x] **3.1. LLM Service Optimizations Analysis** ✓ COMPLETE
+However, if the queries and API calls take a long time, this has an impact on Time to First Byte (TTFB) because the client has to wait for all database queries and API calls to complete before sending the response.
 
-  **Current State:**
-  - Model: `gemini-2.0-flash` (fast, cost-effective)
-  - Default temperature: 0.5 (balanced creativity/consistency)
-  - All LLM calls include OpenTelemetry tracing with latency metrics
-  - Parallel worker pattern with WaitGroups for concurrent requests
+To improve TTFB, the template can be streamed to the client as soon as the first part of the template is rendered, while the remaining queries and API calls are still in progress, at the cost of not being able to set response codes or headers after the first part of the template is rendered.
 
-  **Existing Optimizations:**
-  1. **Concurrent Workers** - Multiple LLM requests run in parallel:
-     - City data, general POIs, and personalized POIs execute concurrently
-     - Uses `sync.WaitGroup` pattern for coordination
-  2. **Streaming Responses** - SSE implementation for real-time updates:
-     - `GenerateContentStream` used for itinerary/restaurant/hotel/activity endpoints
-     - Reduces perceived latency for users
-  3. **Context Caching** - Implemented in `streamWorkerWithResponseAndCache`:
-     - Reuses prompt context across similar requests
-     - Reduces token usage and latency
-  4. **Temperature Tuning** - Different temps for different use cases:
-     - 0.1 for message parsing (consistency priority)
-     - 0.2 for continued conversations (slight creativity)
-     - 0.5 for content generation (balanced)
-  5. **Semantic Search Enhancement** - Hybrid search in workers:
-     - Combines LLM generation with vector similarity search
-     - Reduces hallucination by grounding in existing POI data
+## Enabling streaming
 
-  **Recommended Additional Optimizations:**
+Streaming can be enabled by setting the `Streaming` field of the `templ.Handler` to `true` using the `WithStreaming` option.
 
-  ### A. Prompt Optimization
-  - [ ] Add max_tokens limits to prevent unnecessarily long responses
-  - [ ] Implement prompt caching for repeated city queries
-  - [ ] Use more concise system prompts to reduce input tokens
-
-  ### B. Response Caching Strategy
-  - [ ] Cache LLM responses by city+domain+preferences hash
-  - [ ] Implement TTL-based cache expiration (e.g., 24-48 hours for city data)
-  - [ ] Add cache warming for popular cities
-
-  ### C. Request Batching
-  - [ ] Batch similar POI detail requests into single LLM call
-  - [ ] Combine city_data + general_pois into one structured output request
-
-  ### D. Monitoring & Optimization
-  - [x] Latency tracking via OpenTelemetry spans ✓ Already implemented
-  - [ ] Add token usage tracking for cost optimization
-  - [ ] Log slow queries (>2s) for prompt refinement
-  - [ ] A/B test different temperature values
-
-  ### E. Fallback Strategies
-  - [ ] Implement graceful degradation if LLM unavailable
-  - [ ] Use cached/database POI data as fallback
-  - [ ] Add retry logic with exponential backoff
-
-  **Priority Actions:**
-  1. Add max_tokens limits (quick win, reduces cost)
-  2. Enhance cache strategy with TTL (improves performance)
-  3. Add token usage monitoring (visibility into costs)
-
-  **Files to modify for priority actions:**
-  - `app/pkg/domain/chat_prompt/chat_service.go` - Add max_tokens to configs
-  - `app/pkg/middleware/middleware.go` - Enhance cache with TTL
-  - `app/pkg/domain/chat_prompt/chat_workers.go` - Add token tracking
-## Feature Parity with SolidJS Project
-
-- [x] **4. Comparison Analysis Complete** ✓ DONE
-  - Analyzed go-ai-poi-client SolidJS implementation
-  - Documented comprehensive feature gaps and UI patterns
-  - See detailed report below
-
-- [x] **4.1. Maps with Numbered Markers and Layout Parity** ✓ COMPLETE
-  - Issue: Restaurants, hotels, and activities pages lacked working map views and didn't match itinerary layout
-  - Requirement: Pages should have same layout as itinerary with maps, split view, and numbered markers
-  - Solution: Completely restructured all result pages to match itinerary layout
-  - Implementation details:
-    - **Enhanced MapContainer component** (`map_container.templ`):
-      - Added `useNumberedMarkers bool` parameter for numbered vs. plain markers
-      - Added `markerColor string` parameter for color-coded views
-      - Numbered markers: 32x32px white circles with colored borders (3px) and centered numbers
-      - Plain markers: 24x24px colored dots with white borders (2px)
-      - Color mapping: Blue (itinerary), Orange (restaurants), Green (hotels), Purple (activities)
-    - **Restaurants map** (`restaurant_results_enhanced.templ:323-350`):
-      - Created `restaurantsToPOIs()` converter function
-      - Implemented `RestaurantsMapContainer` with orange numbered markers
-      - Handles nullable Address field properly
-    - **Hotels map** (`hotel_results.templ:381-405`):
-      - Created `hotelsToPOIs()` converter function
-      - Implemented `HotelsMapContainer` with green numbered markers
-    - **Activities map** (`activities_results_enhanced.templ:322-326`):
-      - Updated `ActivitiesMapContainer` with purple numbered markers
-      - Activities already use POIDetailedInfo, no conversion needed
-    - **Itinerary map** (`itinerary_results.templ:220`):
-      - Updated to use blue numbered markers matching itinerary POI order
-    - **Layout Restructuring** (Phase 2):
-      - All pages now follow itinerary's exact structure:
-        - Map shown when `viewMode === 'map' || viewMode === 'split'`
-        - Content shown when `viewMode === 'list' || viewMode === 'split'`
-        - Dynamic height: Full screen for map view, 300-500px for split view
-      - Added "Split" view button to all pages (between Map and Grid buttons)
-      - City information sections with themed gradients (orange/green/purple)
-      - Card components now show index badges (1, 2, 3, etc.) matching map markers
-      - Badges positioned in top-right corner of each card with color-coding
-  - Files modified:
-    - `app/internal/features/results/map_container.templ` - Lines 11, 66, 69, 135-187
-    - `app/internal/features/results/restaurant_results_enhanced.templ` - Complete restructure with split view
-    - `app/internal/features/results/hotel_results.templ` - Complete restructure with split view
-    - `app/internal/features/results/activities_results_enhanced.templ` - Complete restructure with split view
-    - `app/internal/features/results/itinerary_results.templ` - Line 220
-  - Result: All result pages have identical layout with working maps, split view, and numbered markers
-
-- [x] **4.2. Advanced Map Features (Route Lines, Clustering, Filtering)** ✓ COMPLETE
-  - Issue: Map lacked route visualization, clustering, and dynamic filtering
-  - Solution: Implemented three advanced map features using HTMX-first approach
-  - Implementation details:
-    - **Route Lines** (`map_container.templ`):
-      - GeoJSON LineString connecting POIs in sequential order
-      - Dashed blue lines with 60% opacity for subtle appearance
-      - Automatic updates when filters are applied
-      - Color matches marker theme (blue/orange/green/purple)
-    - **Marker Clustering** (`map_container.templ`):
-      - Intelligent clustering activates for 20+ POIs
-      - Color-coded clusters: Blue (1-9), Yellow (10-29), Pink (30+)
-      - Click to zoom and expand clusters
-      - Individual numbered markers for <20 POIs
-    - **HTMX Filtering System**:
-      - Filter panel component with category, price, and rating filters
-      - Server-side filtering returns HTML fragments (not JSON)
-      - Map automatically updates via `htmx:afterSwap` event
-      - 500ms debounce on filter changes
-      - Synchronizes list and map views
-  - Files created:
-    - `app/internal/features/results/filter_panel.templ` - HTMX filter component
-    - `app/pkg/handlers/filters.go` - Server-side filter logic
-    - `app/internal/features/results/list_fragments.templ` - HTML fragments for HTMX
-  - Files modified:
-    - `app/internal/features/results/map_container.templ` - Added route lines, clustering, HTMX listeners
-    - `app/routes/routes.go` - Registered filter routes
-  - Result: Fully interactive maps with route visualization, smart clustering, and real-time filtering
-
-- [x] **4.3. City Information Panel Fixes** ✓ COMPLETE
-  - Issue: City names not appearing in Hotels/Activities/Restaurants page titles when loading from cache
-  - Root cause: Handlers were passing empty `GeneralCityData{}` when retrieving from domain-specific caches
-  - Solution: Implemented two-tier city data loading strategy
-  - Implementation details:
-    - **Fixed page titles** (all three templates):
-      - Added conditional display: Shows "Restaurants in {city}" when city data available, "Restaurants" when empty
-      - Prevents awkward "Restaurants in " display
-      - Applied to restaurants, hotels, and activities templates
-    - **City data loading strategy** (all three handlers):
-      - Primary: Check `CompleteItineraryCache` for city data (fast cache lookup)
-      - Fallback: Load from database using `sessionID` (slower but reliable)
-      - Added `loadCityDataFromDatabase()` helper function to each handler
-      - Comprehensive error handling and logging at each step
-    - **Enhanced city information display**:
-      - Rich city panel with gradient backgrounds (already existed, now properly populated)
-      - Shows: City description, area, timezone, language, population
-      - Color-coded by domain: orange (restaurants), green (hotels), purple (activities)
-      - Grid layout with icons for each stat
-  - Files modified:
-    - `app/internal/features/results/restaurant_results_enhanced.templ` - Lines 22-28 (title fix)
-    - `app/internal/features/results/hotel_results.templ` - Lines 22-28 (title fix)
-    - `app/internal/features/results/activities_results_enhanced.templ` - Lines 21-27 (title fix)
-    - `app/pkg/handlers/restaurants.go` - Lines 74-103 (cache lookup), 280-310 (helper)
-    - `app/pkg/handlers/hotels.go` - Lines 68-91 (cache lookup), 238-268 (helper)
-    - `app/pkg/handlers/activities.go` - Lines 68-91 (cache lookup), 186-216 (helper)
-  - Result: City names and information now display correctly on all pages, with graceful fallbacks
-
-### Missing Features from SolidJS Implementation
-
-#### High Priority (Core Functionality)
-1. **Map Integration** - ✅ FULLY COMPLETED
-   - ✅ Full Mapbox GL integration with marker visualization
-   - ✅ Marker styling with numbered markers
-   - ✅ View modes: Map/List/Split/Grid view implemented
-   - ✅ Markers with same numbers as the list items
-   - ✅ Route lines connecting POIs in order (dashed lines)
-   - ✅ Marker clustering for dense areas (20+ POIs)
-   - ✅ HTMX-based filtering with dynamic marker updates
-
-2. **City Information Panel** - ✅ COMPLETED
-   - ✅ General city data display (population, language, weather, timezone, area)
-   - ✅ City description with metadata stats
-   - ✅ Quick facts section with icons
-   - ✅ Fixed city name display in Hotels/Activities/Restaurants titles
-   - ✅ Implemented city data loading from cache with database fallback 
-
-3. **Advanced Filtering System** - ✅ COMPLETED
-   - ✅ Consistent filter panel across all result pages (`filter_panel.templ`)
-   - ✅ Multi-select filters with checkboxes
-   - ✅ Price range filters (€ to €€€€)
-   - ✅ Rating-based filtering
-   - ✅ Category filters specific to each domain:
-     - Restaurants: Cuisine type (Portuguese, Seafood, International)
-     - Hotels: Type (Luxury, Boutique, Historic, Business)
-     - Activities: Type (Cultural, Entertainment, Outdoor, Adventure)
-   - ✅ Feature filters (Michelin Star, River View, Pet Friendly, etc.)
-   - ✅ Filter badges showing active filters with JavaScript management
-   - ✅ HTMX integration for dynamic filtering
-
-4. **Enhanced Card Design** - ✅ COMPLETED
-   - ✅ Consistent emoji and icon system per domain
-     - Restaurants: `getCuisineEmoji()` with 15+ cuisines
-     - Hotels: `getAmenityIcon()` templ component
-     - Activities: `getCategoryEmoji()` with 18+ categories
-   - ✅ Metadata label badges with color coding
-     - Rating colors: `getRatingColorClass()`
-     - Price badge colors: `getPriceBadgeColor()`
-     - Budget colors: `getBudgetColorClass()`
-   - ✅ Enhanced footer with price/budget and feature tags
-   - ✅ Duration/time-to-spend indicators
-   - ✅ Special feature badges (tags display)
-
-#### Medium Priority (UX Improvements)
-5. **General POIs Section** - ✅ ENHANCED
-   - ✅ "All Points of Interest" section showing broader city context (`itinerary_results.templ:282-327`)
-   - ✅ Separate from curated/personalized recommendations
-   - ✅ Collapsible "show more" functionality with Alpine.js
-     - Shows 6 POIs initially
-     - "Show all X places" button with animated expand/collapse
-     - Smooth transitions with Alpine.js x-transition
-   - ✅ Responsive grid layout (1 col mobile, 2 cols tablet, 3 cols desktop)
-   - ✅ Count badge showing total number of places
-   - ✅ Enhanced GeneralPOICard with images, ratings, tags, and actions 
-
-6. **Session Management & Deep Linking** - ✅ COMPLETE
-   - ✅ URL parameter support for sessionId, cityName, cacheKey, domain (`session_manager.templ`)
-   - ✅ Deep linking to specific results with `getDeepLink(domain, params)`
-   - ✅ Session data persistence in sessionStorage with 24-hour expiry
-   - ✅ Fallback session creation if expired
-   - ✅ Share functionality with navigator.share API and clipboard fallback
-   - ✅ Global helpers: `getSessionId()`, `getCityName()`, `getCacheKey()`, `shareResults()`
-   - ✅ URL update without page reload using `updateURL(params)`
-   - Files created:
-     - `app/internal/components/scripts/session_manager.templ`
-   - Integrated in: `app/internal/pages/layout.templ:60`
-
-7. **Favorites/Bookmarking System** - ✅ COMPLETE
-   - ✅ Save to user account via POI service database integration
-   - ✅ Toggle favorite state with HTMX swap (no loading indicator needed)
-   - ✅ Heart icon with fill animation (`animate-heartbeat` from `animations.templ`)
-   - ✅ Favorites count in results headers for all pages (itinerary, restaurants, hotels, activities)
-   - ✅ Sign-in required messaging for guests (tooltip with helpful message)
-   - ✅ UUID validation for user and POI IDs
-   - ✅ isLLMGenerated parameter handling
-   - Files modified:
-     - `app/pkg/handlers/favorites.go` - Complete database integration
-     - `app/routes/routes.go` - POI service initialization and dependency injection
-     - `app/internal/features/results/itinerary_results.templ:51-58` - Favorites count badge
-     - `app/internal/features/results/restaurant_results_enhanced.templ:51-58` - Favorites count badge
-     - `app/internal/features/results/hotel_results.templ:51-58` - Favorites count badge
-     - `app/internal/features/results/activities_results_enhanced.templ:51-58` - Favorites count badge
-
-8. **Enhanced View Modes** - ✅ COMPLETE
-   - ✅ Split view implemented (map + list side-by-side on desktop) in all result pages
-   - ✅ Smooth transitions between view modes with CSS transitions
-   - ✅ Responsive stacking on mobile (automatic grid layout collapse)
-   - ✅ View mode persistence in localStorage
-   - ✅ Alpine.js integration with `createViewModeData()` helper
-   - ✅ Custom event dispatch on view mode changes (`viewModeChanged`)
-   - ✅ Valid modes: 'list', 'map', 'split', 'grid' (default: 'list')
-   - ✅ Dynamic CSS injection for transitions
-   - Files created:
-     - `app/internal/components/scripts/view_mode_manager.templ`
-     - `app/internal/components/styles/animations.templ` - All UI animations including:
-       - Heartbeat animation for favorites (scale up animation)
-       - Fade in, slide in, pulse, bounce, spin animations
-       - Shimmer effect for loading states
-       - View mode transition classes
-       - Split view container styles with responsive breakpoints
-       - Map container height transitions
-       - Button active states with scale
-       - Smooth hover transitions and card hover effects
-   - Integrated in: `app/internal/pages/layout.templ:61-62`
-
-#### Low Priority (Nice-to-have)
-9. **Chat Session Continuity** - ✅ PARTIAL (Backend Complete, Frontend Pending)
-   - ✅ **Backend /continue endpoint implemented** (`app/pkg/handlers/chat.go:1286-1411`)
-     - Handler: `ContinueChatSession` with SSE streaming support
-     - Route: `POST /chat/continue/:sessionID` (registered in `app/routes/routes.go:743`)
-     - Supports both JSON and form-encoded requests for HTMX compatibility
-     - Uses existing `ContinueSessionStreamed` service method
-     - Features:
-       - Session validation and context loading
-       - Intent classification (Add POI, Remove POI, Modify, Question)
-       - Semantic POI enhancement with vector search
-       - Real-time SSE event streaming
-       - Conversation history management
-       - HTMX-compatible HTML error responses
-   - ✅ **Service layer already implemented** (`app/pkg/domain/chat_prompt/chat_service.go:1398+`)
-     - `ContinueSessionStreamed` method handles:
-       - Session validation (checks active status)
-       - City data fetching for context
-       - Message history persistence
-       - Intent classification using LLM
-       - Semantic POI recommendations via vector search
-       - Dynamic handling of different intents:
-         - `IntentAddPOI` - Adds new POIs using `handleSemanticAddPOIStreamed`
-         - `IntentRemovePOI` - Removes POIs with semantic understanding
-         - `IntentModifyItinerary` - Modifies existing itinerary
-         - `IntentQuestion` - Answers questions about current data
-   - ✅ **SSE Event Types** streamed to frontend:
-     - `session_validated` - Session is active and ready
-     - `progress` - Processing updates
-     - `intent_classified` - User intent determined
-     - `semantic_context_generated` - Vector search complete
-     - `itinerary` - Updated POI/restaurant/hotel/activity data
-     - `complete` - Processing finished
-     - `error` - Error occurred
-   - ✅ **COMPLETED: Frontend Integration**
-     - ✅ Created reusable chat panel component (`app/internal/components/chat/chat_panel.templ`)
-       - Fixed position floating chat button (bottom-right)
-       - HTMX SSE integration with `hx-ext="sse"` connecting to `/chat/continue/:sessionID`
-       - Alpine.js state management for local UI (showChat, message, isLoading, messages)
-       - Quick action buttons for common requests (More like these, Budget options, Premium)
-       - Auto-scroll functionality for messages
-       - Dark mode support and responsive design
-       - Props: SessionID, CityName, Domain, Placeholder, ShowByDefault
-     - ✅ Added chat panel to restaurant results page
-       - Updated `RestaurantsResults` signature to include sessionID parameter
-       - Modified all handler calls in `restaurants.go` (4 locations: lines 100, 131, 143, 168)
-       - Integrated chat panel before closing container div (lines 224-233)
-       - Updated SSE template `RestaurantsContentComplete` signature
-     - ✅ Added chat panel to hotels results page
-       - Updated `HotelsResults` signature to include sessionID parameter
-       - Modified all handler calls in `hotels.go` (4 locations: lines 89, 118, 130, 143)
-       - Modified handler call in `results.go` (line 191)
-       - Integrated chat panel before closing container div (lines 224-233)
-     - ✅ Added chat panel to activities results page
-       - Updated `ActivitiesResults` signature to include sessionID parameter
-       - Modified all handler calls in `activities.go` (4 locations: lines 89, 118, 130, 143)
-       - Integrated chat panel before closing container div (lines 224-233)
-     - ✅ Added chat panel to itinerary results page
-       - Updated `ItineraryResults` signature to include sessionID parameter
-       - Modified all handler calls in `itinerary.go` (4 locations: lines 359, 371, 399, 624)
-       - Modified handler calls in `results.go` (lines 239, 355)
-       - Integrated chat panel before closing container div (lines 672-681)
-     - ⏳ **NEXT STEPS** (optional enhancements):
-       - [x] Create HTML fragment templates for dynamic SSE updates (restaurant/hotel/activity cards) ✓ COMPLETE
-         - Created `/app/internal/features/results/sse_card_fragments.templ`
-         - Includes: `SingleRestaurantCard`, `SingleHotelCard`, `SingleActivityCard`, `SinglePOICard`
-         - Added visual feedback components: `ChatProcessingIndicator`, `ChatSuccessMessage`, `ChatErrorMessage`
-         - All cards have unique IDs, fade-in animations, and proper data attributes for map updates
-       - [~] Enhance SSE event handling to insert new items dynamically ⏳ IN PROGRESS
-         **Completed:**
-         - ✅ Added new event types to `models.StreamEvent` (`app/internal/models/chat_session.go:222-224`):
-           - `EventTypeItemAdded` - For adding new items to lists
-           - `EventTypeItemRemoved` - For removing items from lists
-           - `EventTypeItemUpdated` - For updating existing items
-         - ✅ Extended `StreamEvent` struct with new fields (`chat_session.go:196-199`):
-           - `HTML` - Rendered HTML fragment for immediate insertion
-           - `Domain` - Target domain (restaurants/hotels/activities/itinerary)
-           - `ItemID` - Unique identifier for the item
-           - `ItemData` - Full item data including coordinates for map updates
-         - ✅ Created HTML rendering helpers (`app/pkg/domain/chat_prompt/render_helpers.go`):
-           - `RenderItemHTML()` - Renders domain-specific item cards (restaurants/hotels/activities/POIs)
-           - `RenderSuccessMessage()` - Renders success toasts with action and item name
-           - `RenderErrorMessage()` - Renders error toasts
-           - `RenderProcessingIndicator()` - Renders processing indicators with domain
-         - ✅ Updated `handleSemanticAddPOIStreamed` (`chat_service.go:1858-1893`):
-           - Now sends `EventTypeItemAdded` with rendered HTML fragment
-           - Includes full item data with coordinates for map updates
-           - Calculates new index for proper numbering
-           - Logs errors if HTML rendering fails
-         - ✅ Updated `handleSemanticRemovePOI` (`chat_service.go:1231-1243`):
-           - Prepared for sending `EventTypeItemRemoved` events
-           - Ready for integration with event channel
-         **Completed:**
-         - [x] Add frontend SSE listeners in result pages (Alpine.js): ✓ COMPLETE
-           - [x] Restaurants page - Listen for item_added/removed, insert HTML, update map (`restaurant_results_enhanced.templ:248-475`)
-           - [x] Hotels page - Listen for item_added/removed, insert HTML, update map (`hotel_results.templ:248-389`)
-           - [x] Activities page - Listen for item_added/removed, insert HTML, update map (`activities_results_enhanced.templ:248-389`)
-           - [x] Itinerary page - Listen for item_added/removed, insert HTML, update map (`itinerary_results.templ:1138-1372`)
-         - [x] Create map synchronization helpers (JavaScript): ✓ COMPLETE (all 4 pages)
-           - [x] `addMarkerToMap(itemData)` - Adds numbered markers with domain-specific colors (blue/orange/green/purple)
-           - [x] `removeMarkerFromMap(itemId)` - Removes marker by ID from domain-specific Map storage
-           - [x] `recalculateMapBounds()` - Auto-adjusts viewport with responsive padding (mobile: 20-40px, desktop: 60-80px)
-
-         **Implementation Details:**
-         - **Container IDs Added:**
-           - Itinerary: `#curated-itinerary-list` (line 374)
-           - Restaurants: `#restaurants-list`, `#restaurants-grid` (lines 210, 218)
-           - Hotels: `#hotels-list`, `#hotels-grid` (lines 210, 218)
-           - Activities: `#activities-list`, `#activities-grid` (lines 210, 218)
-         - **Event Handlers:** Each page implements `handleItemAdded()`, `handleItemRemoved()`, `handleItemUpdated()`
-         - **Map Markers:** 32px numbered circles with 3px colored borders, white backgrounds
-         - **Marker Storage:** Domain-specific Maps (`window.itineraryMarkers`, `restaurantMarkers`, `hotelMarkers`, `activityMarkers`)
-         - **Coordinate Validation:** Rejects (0,0) and out-of-range values
-         - **Dual View Support:** Restaurants/Hotels/Activities sync both list and grid views
-
-         - [x] **Cache Update Strategy** ✓ COMPLETE
-           - [x] Created `updateCacheAfterModification()` helper (`chat_service.go:1214-1264`)
-           - [x] Updates CompleteItineraryCache when POIs are added/removed
-           - [x] Uses same MD5 cache key generation as initial requests
-           - [x] Integrated into `handleSemanticAddPOIStreamed` (line 1895)
-           - [x] Integrated into `handleSemanticRemovePOI` (line 1296)
-           - [x] Logs cache updates with session_id, cache_key, and POI count
-           - [x] OpenTelemetry tracing for cache operations
-
-         **Remaining:**
-         - [ ] Update route lines after additions/removals (optional enhancement - not implemented yet)
-         - [ ] Recalculate indices for numbered markers after removals (optional - current implementation maintains order)
-         - [ ] Test end-to-end with real LLM backend
-         - [ ] Add visual feedback for chat processing states (optional - using console.log for now)
-
-         **✅ IMPLEMENTATION COMPLETE - What Was Built:**
-
-         **1. Backend SSE Event System** ✅ DONE
-         - ✅ `handleSemanticAddPOIStreamed` sends `EventTypeItemAdded` with rendered HTML (line 1874-1888)
-         - ✅ `handleSemanticRemovePOI` prepared for `EventTypeItemRemoved` (would need event channel integration)
-         - ✅ `RenderItemHTML()` renders domain-specific cards (restaurants/hotels/activities/POIs)
-         - ✅ Event structure includes: `Type`, `Domain`, `ItemID`, `HTML`, `ItemData` with coordinates
-         - ✅ Actual SSE event sent:
-           ```go
-           l.sendEvent(ctx, eventCh, models.StreamEvent{
-               Type:   models.EventTypeItemAdded,
-               Domain: "itinerary",
-               ItemID: semanticPOI.ID.String(),
-               HTML:   htmlFragment,  // Pre-rendered server-side
-               ItemData: map[string]interface{}{
-                   "name": semanticPOI.Name,
-                   "latitude": semanticPOI.Latitude,
-                   "longitude": semanticPOI.Longitude,
-                   "index": newIndex + 1,
-               },
-               Message: fmt.Sprintf("Added %s to your itinerary", semanticPOI.Name),
-           }, 3)
-           ```
-
-         **2. Frontend SSE Listeners** ✅ DONE (All 4 Pages)
-         - ✅ Itinerary: `itinerary_results.templ:1138-1372`
-         - ✅ Restaurants: `restaurant_results_enhanced.templ:248-475`
-         - ✅ Hotels: `hotel_results.templ:248-389`
-         - ✅ Activities: `activities_results_enhanced.templ:248-389`
-         - ✅ Each implements: `init()`, `handleItemAdded()`, `handleItemRemoved()`, `handleItemUpdated()`
-         - ✅ Actual implementation:
-           ```javascript
-           init() {
-               document.addEventListener('htmx:sseMessage', (event) => {
-                   const sseEvent = event.detail;
-                   let eventData;
-                   try {
-                       eventData = typeof sseEvent.data === 'string' ?
-                           JSON.parse(sseEvent.data) : sseEvent.data;
-                   } catch (e) {
-                       console.log('Non-JSON SSE event:', sseEvent);
-                       return;
-                   }
-
-                   if (eventData.type === 'item_added' && eventData.domain === 'itinerary') {
-                       this.handleItemAdded(eventData);
-                   }
-                   // ... similar for item_removed, item_updated
-               });
-           }
-           ```
-
-         **3. Cache Update Strategy** ✅ DONE
-         - ✅ `updateCacheAfterModification()` helper function (lines 1214-1264)
-         - ✅ Generates MD5 cache key from user_id + profile_id + city + domain
-         - ✅ Creates `AiCityResponse` from session state
-         - ✅ Updates `CompleteItineraryCache` with modified data
-         - ✅ Integrated into both add (line 1895) and remove (line 1296) operations
-         - ✅ OpenTelemetry tracing and comprehensive logging
-
-         **4. Map Synchronization** ✅ DONE (All 4 Pages)
-         - ✅ `addMarkerToMap(itemData)` - Creates 32px numbered markers with domain colors
-         - ✅ `removeMarkerFromMap(itemId)` - Removes markers from map and storage
-         - ✅ `recalculateMapBounds()` - Auto-adjusts viewport with responsive padding
-         - ✅ Coordinate validation (rejects 0,0 and out-of-range)
-         - ✅ Mapbox GL popups with item name and category
-         - ✅ Domain-specific storage Maps (itineraryMarkers, restaurantMarkers, etc.)
-
-         **Testing Checklist (Ready for E2E Testing):**
-         - [ ] Test add single POI to itinerary via chat
-         - [ ] Test remove existing POI via chat
-         - [ ] Verify HTML fragment insertion in DOM
-         - [ ] Verify map marker added with correct color/number
-         - [ ] Verify cache updated after modifications
-         - [ ] Test dual-view sync (restaurants/hotels/activities list + grid)
-         - [ ] Verify bounds recalculation after add/remove
-         - [ ] Test across all 4 domains (itinerary/restaurants/hotels/activities)
-   - **Analyzed REST API** (`go-ai-poi-server/internal/api/chat_prompt/chat_handler.go:757-844`)
-   - **Analyzed SolidJS client** (`go-ai-poi-client/src/lib/hooks/useChatSession.ts`)
-   - **Design**: HTMX-based SSE with HTML fragments instead of JSON
-   
-10. [x] **Banner Messaging System**
-    - Success banners after operations
-    - Authentication promotion for guests
-    - Typing animation for dynamic text
-    - Dismissable with X button
-    - Color-coded by context
-
-- [x] **12. Coordinate Validation** ✓ COMPLETE
-  - Issue: Need validation for POI coordinates to prevent map errors and improve UX
-  - Requirements: Validate lat/long, filter invalid POIs, show "Location TBD", fallback center point
-  - Solution: Implemented comprehensive coordinate validation system
-  - Implementation details:
-    - **Go utilities** (`app/pkg/utils/coordinates.go`):
-      - `ValidateCoordinates()` - Validates lat [-90, 90] and lng [-180, 180]
-      - `HasValidCoordinates()` - Checks for valid coords, rejects 0,0
-      - `CalculateCenterPoint()` - Calculates center with fallback
-      - `CalculateBounds()` - Returns bounding box for coordinates
-      - `FormatCoordinatesDisplay()` - Formats coords or shows "Location TBD"
-    - **JavaScript validation** (`app/internal/features/results/map_container.templ`):
-      - `isValidCoordinate()` function validates ranges and rejects 0,0
-      - Filters POIs: `validPOIs = poisData.filter(poi => isValidCoordinate(...))`
-      - Console warning for filtered POIs: "Filtered out N POI(s) with invalid coordinates"
-      - Enhanced `getCityCenter()` with validation and fallback to Greenwich [0, 51.5]
-    - **Templ helper functions** (`map_container.templ:378-396`):
-      - `formatCoordinates()` - Returns "Location TBD" for invalid coords
-      - `hasValidCoordinates()` - Boolean check for valid coords
-      - Both functions check for 0,0 (placeholder) and valid ranges
-    - **UI updates**:
-      - City info coordinates display (`city_info_section.templ:83-90`):
-        - Shows "Location TBD" in orange for invalid coords
-        - Displays formatted coords for valid ones
-        - Removed conditional display, always shows coordinate section
-      - Map rendering only includes validated POIs
-      - Invalid POIs logged but not displayed on map
-    - **Validation rules**:
-      - Latitude: must be between -90 and 90
-      - Longitude: must be between -180 and 180
-      - Reject 0,0 as it's often a placeholder for missing data
-      - Fallback city center: Greenwich, London [0, 51.5] (better than Atlantic Ocean 0,0)
-  - Files created:
-    - `app/pkg/utils/coordinates.go` - Coordinate validation utilities
-  - Files modified:
-    - `app/internal/features/results/map_container.templ` - Lines 3-6 (imports), 89-123 (validation), 186-191 (filtering), 332-348 (fallback), 378-396 (helpers)
-    - `app/internal/features/results/city_info_section.templ` - Lines 3-6 (imports), 83-90 (display)
-  - Build status: ✅ Templ generation successful, Go build compiles cleanly
-  - Result: Maps gracefully handle invalid coordinates, user-friendly "Location TBD" messaging
-
-### Implementation Recommendations
-
-**Phase 1: Core Functionality** (Do First)
-- Map integration with Mapbox GL (issue #5) (done)
-- City information panel
-- View mode toggles (Map/List/Split)
-- Basic filtering system
-
-**Phase 2: Enhanced UX**
-- Advanced filtering with all categories
-- Enhanced card design with badges
-- Enhanced metadata for Itineraries (add distance to user calculated through PostGis, etc)
-- Enhanced metadata for Restaurants (number of starts, opening times, type of food, etc)
-- Enhanced metadata for Hotels (number of stars)
-- Activities ((add distance to user calculated through PostGis, etc), opening times)
-- General POIs section (done, improve layout and metadata)
-- Favorites API integration
-- Bookmark API integration
-
-**Phase 3: Polish**
-- Session management improvements
-- Banner system
-- Coordinate validation
-- Chat continuity
-
-- [x] **5. Map Integration** ✓ COMPLETE
-  - Issue: Multiple errors with map initialization, then needed responsive sizing for all screen sizes
-  - Root causes:
-    1. Alpine.js `mapLoaded` variable not defined in data context
-    2. Incorrect JavaScript template interpolation for Mapbox API key
-    3. Map controls trying to access undefined map object
-    4. Map didn't auto-zoom to show all POI coordinates
-    5. Map needed responsive behavior from iPhone SE to 50" screens
-  - Solution:
-    1. Added `x-data="{ mapLoaded: false }"` to map container
-    2. Fixed MapboxConfigScript to properly interpolate API key using `script` keyword
-    3. Updated map load event to use `Alpine.$data()` to access correct context
-    4. Added null checks to map control click handlers
-    5. Replaced Alpine store dependency with custom events for POI selection
-    6. Added Mapbox token validation with error messaging
-    7. Implemented auto-fit bounds with `bounds.extend()` and `fitBounds()`
-    8. Added responsive padding calculation based on `window.innerWidth`
-       - Mobile (< 640px): 20-40px padding
-       - Desktop (≥ 640px): 60-80px padding
-    9. Added map constraints:
-       - `minZoom: 3` - Prevents zooming out too far
-       - `maxZoom: 18` - Allows detailed street view
-       - `renderWorldCopies: false` - Prevents duplicate worlds on wide screens
-    10. Added window resize handler with debouncing to maintain map responsiveness
-    11. Updated resetMapView() to recalculate responsive padding
-  - Files modified:
-    - `app/pkg/config/config.go` - Added MapConfig struct and loading from env
-    - `app/internal/components/map/mapbox.templ` - Fixed template syntax and API key interpolation
-    - `app/internal/pages/layout.templ` - Pass API key from environment to MapboxScripts
-    - `app/internal/features/results/map_container.templ` - Full map implementation with responsive sizing
-      - Lines 88-96: Map initialization with constraints
-      - Lines 160-175: Auto-fit bounds with responsive padding
-      - Lines 178-206: Enhanced resetMapView() function
-      - Lines 218-230: Window resize handler with debouncing
-  - Status: ✅ FULLY COMPLETE - Map working with responsive sizing and proper container fill
-
-- [x] **6. Metadata Enhancement**
-  - Add more metadata to the itinerary results to be attached on the card for better UI and user interaction
-  - Also apply to restaurants, hotels and activities
-
-- [x] **7. Empty IDs in complete_itinerary.json**
-  - Issue: complete_itinerary.json is returning empty `ids` and empty `city_ids`
-  - These should be filled properly with actual database IDs
-
-- [x] **7.1. Default Profile Creation and Registration Fix** ✓ FIXED
-  - Issue: "No default profile found. Please create a profile first." error prevented itinerary generation
-  - Second issue: User registration broken with "column 'accessibility_needs' does not exist"
-  - Third issue: Duplicate key constraint violation "idx_user_preference_profiles_user_id_default"
-  - Root causes:
-    1. Initial attempt: `Register` function only created user record, not default profile
-    2. Second attempt: Profile insert used incorrect column names not matching actual schema
-    3. Final discovery: Database has TRIGGER that automatically creates default profile on user insert
-  - Investigation timeline:
-    1. First fix: Added manual profile creation with transaction (failed - wrong columns)
-    2. Second fix: Corrected column names to match schema (failed - duplicate constraint)
-    3. Final fix: Discovered database trigger handles profile creation automatically
-  - Solution:
-    - Removed manual profile creation code entirely
-    - Database trigger `trigger_create_user_profile_after_insert` (migration 0008) handles it
-    - Trigger calls `create_initial_user_profile()` which inserts default profile automatically
-    - Simple user insert is sufficient - trigger creates profile with name "Default"
-  - Files modified:
-    - `app/pkg/domain/auth/auth_repository.go` (lines 112-131)
-  - Final implementation:
-    ```go
-    // Insert user - database trigger will automatically create default profile
-    // See migration 0008_user_profile.up.sql: trigger_create_user_profile_after_insert
-    userQuery := `INSERT INTO users (username, email, password_hash, created_at) VALUES ($1, $2, $3, $4) RETURNING id`
-    err := r.pgpool.QueryRow(ctx, userQuery, username, email, hashedPassword, time.Now()).Scan(&userID)
-    ```
-  - Result: Clean registration flow, no duplicate profiles, trigger ensures atomic user+profile creation
-
-- [x] **7.2. pg_trgm Extension for Fuzzy City Search** ✓ FIXED
-  - Issue: Chat continue session failed with "ERROR: function similarity(text, unknown) does not exist (SQLSTATE 42883)"
-  - Occurred when trying to add "Estadio da Luz" via chat
-  - Root cause: Missing PostgreSQL `pg_trgm` extension required for fuzzy city name matching
-  - Location: `FindCityByFuzzyName` in `city_repository.go` uses `similarity()` function
-  - Solution: Added `CREATE EXTENSION IF NOT EXISTS pg_trgm;` to initial setup migration
-  - Files modified:
-    - `app/db/migrations/0001_setup.up.sql` (line 16)
-  - Result: Chat continue session can now fuzzy match city names (e.g., "Lisbon" → "Lisboa")
-
-- [x] **7.3. Itinerary Chat Bubble Always Visible** ✓ FIXED
-  - Issue: Itinerary page chat bubble not visible on desktop or mobile, inconsistent with other pages
-  - User feedback: "I still dont see the itinerary bubble on desktop. And I cant click it on mobile."
-  - Root causes:
-    1. Entire `ChatPanel` component wrapped in `if sessionID != ""` conditional (line 675)
-    2. This prevented the floating chat bubble from ever rendering
-    3. Desktop "Modify Itinerary" button also had unnecessary conditional
-  - Solution: Removed all conditional wrappers to match restaurant/hotel/activities behavior
-  - Implementation details:
-    - **Removed conditional wrapper** around `@chat.ChatPanel` component (line 675)
-    - Chat bubble now always renders, providing consistent UX across all result pages
-    - **Removed conditional** from desktop "Modify Itinerary" button (line 93)
-    - Button now always visible in desktop actions bar
-    - Mobile menu button was already unconditional (line 179)
-    - ChatPanel component itself handles sessionID internally for SSE functionality
-  - Files modified:
-    - `app/internal/features/results/itinerary_results.templ` (lines 93, 675-681)
-  - Result:
-    - ✅ Floating chat bubble visible on bottom-right corner (desktop & mobile)
-    - ✅ Desktop "Modify Itinerary" button always visible in header
-    - ✅ Mobile menu has "Modify Itinerary" option
-    - ✅ Consistent behavior with restaurants, hotels, and activities pages
-  - Note: This is the core feature for the itinerary page - chat allows dynamic POI modifications
-
-- [x] **8 create under docs, a FLY.md document**
- on how to create and integrate my Postgres DB on fly.io with pgvector and PostGis, setup env variables and create the app using the hosted postgres with all the env setup.
-
-- [x] **9 do cd .. and analyse go-ai-poi-server**
- go-ai-poi-server is the old REST API that im rebuilding using a server side rendering solution. 
- The logic to fill the itinerary, restaurant, hotel and activities are found under the routes:
-  - r.Post("/prompt-response/chat/sessions/stream/{profileID}", HandlerImpl.StartChatMessageStream)
-	- r.Post("/prompt-response/chat/sessions/{sessionID}/continue", HandlerImpl.ContinueChatSessionStream) Analyse both and start working on these sub tasks:
-
-  - [x] **9.1. Fixed Restaurants, Hotels, and Activities data display** ✓ COMPLETE
-    - Issue: Pages stuck showing "Finding... This may take a few moments" with empty data display
-    - Root cause: JSON parsers couldn't parse LLM response format `{"restaurants": [...]}`, `{"activities": [...]}`, `{"hotels": [...]}`
-    - Parsers were only checking for direct array `[...]` or `{"data": [...]}`
-    - This caused silent parsing failures, preventing cache population
-    - When browser navigated to results pages, cache was empty → empty display
-    - Solution:
-      - Updated `parseRestaurantsFromResponse()` to handle `{"restaurants": [...]}`
-      - Updated `parseActivitiesFromResponse()` to handle `{"activities": [...]}`
-      - Updated `parseHotelsFromResponse()` to handle `{"hotels": [...]}`
-      - Now parsers try 3 formats: direct array, `{"data": [...]}`, and domain-specific wrapper
-    - Files modified:
-      - `app/pkg/domain/chat_prompt/chat_parser.go:184-192` (restaurants)
-      - `app/pkg/domain/chat_prompt/chat_parser.go:217-225` (activities)
-      - `app/pkg/domain/chat_prompt/chat_parser.go:250-258` (hotels)
-    - Result: Cache properly populated, results pages display data immediately
-The restaurant data is shown on my server just never print because the struct inside is empty
-Analyse go-ai-poi-server and make the changes needed.
-
-10. Analyse my Stripe services and implement the handlers for my business needs. An user can subscribe to the services I offer and eventually have in item purchases but for now I only the subscriptions.
-Build the handlers keeping in mind im using HTMX and Go full stack.
-
-10.1 For the payments I want to have a proper middleware that connects the users with their benefits
-10.2 I want to have a way of users having discount codes and special offer codes to be able to use the sub
-
-- [x] **11. Banner Messaging System** ✓ COMPLETE
-  - Issue: Need user notification system for operations, auth promotion, and feedback
-  - Requirements: Success/info/warning/error banners, dismissable, auto-dismiss, typing animation, color-coded
-  - Solution: Created comprehensive banner component system
-  - Implementation details:
-    - **Banner component** (`app/internal/components/banner/banner.templ`):
-      - `BannerType` enum: Success, Info, Warning, Error
-      - `BannerProps` struct: Type, Message, Description, Dismissable, ID, AutoDismiss
-      - Four banner variants:
-        1. `Banner()` - Standard inline banner with slide-down transition
-        2. `FixedBanner()` - Fixed position at top of screen
-        3. `ToastBanner()` - Bottom-right corner toast notification
-        4. `AuthPromoBanner()` - Special authentication promotion with typing animation
-      - Helper functions:
-        - `getBannerClasses()` - Color-coded styling based on type
-        - `getBannerIcon()` - Type-specific icons (checkmark, info, warning, error)
-    - **Features implemented:**
-      - ✅ Color-coded by context:
-        - Success: Green background, green border-left, green icon
-        - Info: Blue background, blue border-left, blue icon
-        - Warning: Yellow background, yellow border-left, yellow icon
-        - Error: Red background, red border-left, red icon
-      - ✅ Dismissable with X button (optional via `Dismissable` prop)
-      - ✅ Auto-dismiss after N seconds (configurable via `AutoDismiss` prop, 0 = manual dismiss only)
-      - ✅ Alpine.js transitions:
-        - Enter: opacity 0→100, transform -translate-y-4→0 (300ms ease-out)
-        - Leave: opacity 100→0 (200ms ease-in)
-        - Toast variant: slide from right (translate-x-full→0)
-      - ✅ Typing animation for AuthPromoBanner:
-        - Cycles through messages: "Sign in to save your favorites", "Create an account...", "Join now..."
-        - 50ms per character typing speed
-        - 5 second pause between messages
-        - Cursor blink animation
-      - ✅ Dark mode support: `dark:bg-*-900/20`, `dark:text-*-200`
-      - ✅ Accessibility: `role="alert"`, `aria-label="Dismiss"`
-      - ✅ Responsive design: max-w-7xl container, responsive padding
-      - ✅ Authentication detection: Checks `document.cookie.includes('session_token')`
-    - **Usage examples:**
-      ```go
-      // Success banner
-      @banner.Banner(banner.BannerProps{
-          Type: banner.BannerSuccess,
-          Message: "Itinerary saved successfully!",
-          Description: "Your travel plans have been saved to your account.",
-          Dismissable: true,
-          ID: "save-success",
-          AutoDismiss: 5, // Auto-dismiss after 5 seconds
-      })
-
-      // Error banner
-      @banner.FixedBanner(banner.BannerProps{
-          Type: banner.BannerError,
-          Message: "Failed to load data",
-          Dismissable: true,
-          ID: "load-error",
-          AutoDismiss: 0, // Manual dismiss only
-      })
-
-      // Toast notification
-      @banner.ToastBanner(banner.BannerProps{
-          Type: banner.BannerInfo,
-          Message: "New restaurant added to your list",
-          Dismissable: true,
-          ID: "restaurant-added",
-          AutoDismiss: 3,
-      })
-
-      // Authentication promotion (no props needed)
-      @banner.AuthPromoBanner()
-      ```
-  - Files created:
-    - `app/internal/components/banner/banner.templ` - Complete banner system
-    - `app/internal/components/banner/banner_templ.go` - Generated templ code
-  - Build status: ✅ Templ generation successful, Go build compiles cleanly
-  - Result: Comprehensive banner messaging system ready for integration across all pages
-
-11. [x] **Restaurants has two structs, cityData that is empty and restaurants which has the data including the city name. on the view, the title is being populated with cityData which then is populating the title empty. We need to have either the cityData being populated for Restaurants, Hotels and Activities so the title can be filled or fill the view with the right structure since city data is empty.**
-12 [x]. **We need to rethink how the cache is being done:**
 ```go
-	if cacheKey != "" {
-		if restaurantsData, found := middleware.RestaurantsCache.Get(cacheKey); found {
+templ.Handler(component, templ.WithStreaming()).ServeHTTP(w, r)
+```
 
-			logger.Log.Info("Restaurants found in cache. Rendering results.",
+When streaming is enabled, sections of the template can be forcefully pushed to the client using the `templ.Flush()` component.
 
-				zap.Int("restaurants", len(restaurantsData)))
+This enables interesting use cases. For example, here, the `Page` template is rendered with a channel that is populated by a background goroutine.
 
-			// Try to get city data from complete cache
-			var cityData models.GeneralCityData
-			if completeData, found := middleware.CompleteItineraryCache.Get(cacheKey); found {
-				cityData = completeData.GeneralCityData
-				logger.Log.Info("City data loaded from complete cache",
-					zap.String("city", cityData.City))
-			} else {
-				// Fallback: load from database using sessionID
-				cityData = h.loadCityDataFromDatabase(sessionIDParam)
+By using `templ.Flush()` to create a flushable area, the data is pushed to the client as soon as it is available, rather than waiting for the entire template to render before sending a response.
+
+```templ
+templ Page(data chan string) {
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<title>Page</title>
+		</head>
+		<body>
+			<h1>Page</h1>
+			for d := range data {
+				@templ.Flush() {
+					<div>{ d }</div>
+				}
 			}
+		</body>
+	</html>
+}
+```
 
-			// Return static template when data is available
+See https://github.com/a-h/templ/tree/main/examples/streaming for a full example.
 
-			return results.RestaurantsResults(
+## Suspense
 
-				cityData,
+Many modern web frameworks use a concept called "Suspense" to handle the loading of data and rendering of components.
 
-				restaurantsData,
+This usually involves displaying placeholder content while the data is loading, and then rendering the component when the data is available.
 
-				true, true, 15, []string{})
+With JavaScript frontends like React, the lifecycle is usually that the HTML is rendered, the JS loaded, the initial render that displays the placeholder is done, an API call is made back to the server to fetch data, and then the component is rendered.
+
+This involves a lot of extra HTTP requests, and means that we have to wait until JavaScript is loaded before we can start fetching data.
+
+Combining templ's streaming capability with a new feature in web browsers called "Declarative Shadow DOM" means that we can perform the same action in a single HTTP request.
+
+:::note
+React SSR solutions such as Next.js can also do this on the server, see https://nextjs.org/docs/app/building-your-application/routing/loading-ui-and-streaming#what-is-streaming
+:::
+
+### Declarative Shadow DOM
+
+First, we need to define a new templ component called `Slot`.
+
+```templ
+templ Slot(name string) {
+	<slot name={ name }>
+		<div>Loading { name }...</div>
+	</slot>
+}
+```
+
+This component is a placeholder that will be replaced by the contents of the slot when the data is available.
+
+Next, we can use a `<template>` element with `shadowrootmode="open"` to create a shadow DOM that allows us to populate the `<slot>` elements with data.
+
+We need to use `@templ.Flush()` to create a flushable area, so that the data is pushed to the client as soon as it is available, since popluating the slots will take longer to complete.
+
+We can then use a `for` loop over the channel of data to populate the slots with content, again, flushing the results to the browser when available.
+
+The result is a simple way to load content after initial page load without the need to use JavaScript.
+
+```templ
+templ Page(data chan SlotContents) {
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<title>Page</title>
+		</head>
+		<body>
+			<h1>Page</h1>
+			@templ.Flush() {
+				<template shadowrootmode="open">
+					@Slot("a")
+					@Slot("b")
+					@Slot("c")
+				</template>
+			}
+			for sc := range data {
+				@templ.Flush() {
+					<div slot={ sc.Name }>
+						@sc.Contents
+					</div>
+				}
+			}
+		</body>
+	</html>
+}
+```
+
+<video loop autoplay controls src="/img/shadowdom.webm" />
+
+See https://github.com/a-h/templ/tree/main/examples/suspense for a full working example.
+# HTMX
+
+https://htmx.org can be used to selectively replace content within a web page, instead of replacing the whole page in the browser. This avoids "full-page postbacks", where the whole of the browser window is updated when a button is clicked, and results in a better user experience by reducing screen "flicker", or losing scroll position.
+
+## Usage
+
+Using HTMX requires:
+
+* Installation of the HTMX client-side library.
+* Modifying the HTML markup to instruct the library to perform partial screen updates.
+
+## Installation
+
+To install the HTMX library, download the `htmx.min.js` file and serve it via HTTP.
+
+Then add a `<script>` tag to the `<head>` section of your HTML with the `src` attribute pointing at the file.
+
+```html
+<script src="/assets/js/htmx.min.js"></script>
+```
+
+:::info
+Advanced HTMX installation and usage help is covered in the user guide at https://htmx.org.
+:::
+
+## Count example
+
+To update the counts on the page without a full postback, the `hx-post="/"` and `hx-select="#countsForm"` attributes must be added to the `<form>` element, along with an `id` attribute to uniquely identify the element.
+
+Adding these attributes instructs the HTMX library to replace the browser's HTTP form POST and subsequent refresh with a request from HTMX instead. HTMX issues a HTTP POST operation to the `/` endpoint, and replaces the `<form>` element with the HTML that is returned.
+
+The `/` endpoint returns a complete HTML page instead of just the updated `<form>` element HTML. The `hx-select="#countsForm"` instructs HTMX to extract the HTML content within the `countsForm` element that is returned by the web server to replace the `<form>` element.
+
+```templ title="components/components.templ"
+templ counts(global, session int) {
+	// highlight-next-line
+	<form id="countsForm" action="/" method="POST" hx-post="/" hx-select="#countsForm" hx-swap="outerHTML">
+		<div class="columns">
+			<div class={ "column", "has-text-centered", "is-primary", border }>
+				<h1 class="title is-size-1 has-text-centered">{ strconv.Itoa(global) }</h1>
+				<p class="subtitle has-text-centered">Global</p>
+				<div><button class="button is-primary" type="submit" name="global" value="global">+1</button></div>
+			</div>
+			<div class={ "column", "has-text-centered", border }>
+				<h1 class="title is-size-1 has-text-centered">{ strconv.Itoa(session) }</h1>
+				<p class="subtitle has-text-centered">Session</p>
+				<div><button class="button is-secondary" type="submit" name="session" value="session">+1</button></div>
+			</div>
+		</div>
+	</form>
+}
+```
+
+The example can be viewed at https://d3qfg6xxljj3ky.cloudfront.net
+
+Complete source code including AWS CDK code to set up the infrastructure is available at https://github.com/a-h/templ/tree/main/examples/counter
+# Example: Counter application
+
+Web applications typically need to store application state, some of which is per-user, and some of which is global.
+
+Applications also need to handle input from users, update the state, and display updated HTML.
+
+```mermaid
+flowchart TD
+  b[Browser] --HTTP POST request--> ws[Web Server];
+  ws --Update state--> ws;
+  ws --HTTP POST response--> b;
+```
+
+## Updating global state
+
+First, define a HTML form post with two buttons. One to update a global state, and one for a per-user state.
+
+```templ title="components.templ"
+package main
+
+import "strconv"
+
+templ counts(global, user int) {
+	<div>Global: { strconv.Itoa(global) }</div>
+	<div>User: { strconv.Itoa(user) }</div>
+}
+
+templ form() {
+	<form action="/" method="POST">
+		<div><button type="submit" name="global" value="global">Global</button></div>
+		<div><button type="submit" name="user" value="user">User</button></div>
+	</form>
+}
+
+templ page(global, user int) {
+	@counts(global, user)
+	@form()
+}
+```
+
+:::tip
+While we could read the global state directly, we're following the best practice that templ components are idempotent, pure functions.
+:::
+
+The HTTP form in the templates posts data back to the `/` handler.
+
+The `/` handler looks at the HTTP request. If it's a GET request, the templ templates are rendered by the `getHandler`.
+
+If it's a POST request, then the `postHandler` is used. This parses the data sent over HTTP, and looks to see if the `global` button was the button that submitted the form, and increments the global count value if it was.
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+)
+
+type GlobalState struct {
+	Count int
+}
+
+var global GlobalState
+
+func getHandler(w http.ResponseWriter, r *http.Request) {
+	component := page(global.Count, 0)
+	component.Render(r.Context(), w)
+}
+
+func postHandler(w http.ResponseWriter, r *http.Request) {
+	// Update state.
+	r.ParseForm()
+
+	// Check to see if the global button was pressed.
+	if r.Form.Has("global") {
+		global.Count++
+	}
+	//TODO: Update session.
+
+	// Display the form.
+	getHandler(w, r)
+}
+
+func main() {
+	// Handle POST and GET requests.
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			postHandler(w, r)
+			return
 		}
+		getHandler(w, r)
+	})
+
+	// Start the server.
+	fmt.Println("listening on http://localhost:8000")
+	if err := http.ListenAndServe("localhost:8000", nil); err != nil {
+		log.Printf("error listening: %v", err)
+	}
+}
+```
+
+:::note
+In this example, the global state is stored in RAM, and will be lost when the web server reboots. To support load-balanced web servers, and stateless function deployments, you might consider storing the state in a data store such as Redis, DynamoDB, or Cloud Firestore.
+:::
+
+## Adding per-user session state
+
+In a HTTP application, per-user state information is partitioned by a HTTP cookie. Setting a cookie with a unique random value for each user (typically a V4 UUID or similar) allows the HTTP handlers to identify each user by reading the cookie value presented by the user's browser.
+
+Cookies that identify a user while they're using a site are known as "session cookies". When the HTTP handler receives a request, it can read the session ID of the user from the cookie and retrieve any required state.
+
+You can implement session cookies yourself, or use an existing library.
+
+:::tip
+Cookies are often used for authentication as well as for sessions.
+:::
+
+This example uses the https://github.com/alexedwards/scs library to implement per-user sessions.
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"time"
+
+	"github.com/alexedwards/scs/v2"
+)
+
+type GlobalState struct {
+	Count int
+}
+
+var global GlobalState
+// highlight-next-line
+var sessionManager *scs.SessionManager
+
+func getHandler(w http.ResponseWriter, r *http.Request) {
+	// highlight-next-line
+	userCount := sessionManager.GetInt(r.Context(), "count")
+	component := page(global.Count, userCount)
+	component.Render(r.Context(), w)
+}
+
+func postHandler(w http.ResponseWriter, r *http.Request) {
+	// Update state.
+	r.ParseForm()
+
+	// Check to see if the global button was pressed.
+	if r.Form.Has("global") {
+		global.Count++
+	}
+	// highlight-start
+	if r.Form.Has("user") {
+		currentCount := sessionManager.GetInt(r.Context(), "count")
+		sessionManager.Put(r.Context(), "count", currentCount+1)
+	}
+	// highlight-end
+
+	// Display the form.
+	getHandler(w, r)
+}
+
+func main() {
+	// highlight-start
+	// Initialize the session.
+	sessionManager = scs.New()
+	sessionManager.Lifetime = 24 * time.Hour
+	// highlight-end
+
+	mux := http.NewServeMux()
+
+	// Handle POST and GET requests.
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			postHandler(w, r)
+			return
+		}
+		getHandler(w, r)
+	})
+
+	// highlight-start
+	// Add the middleware.
+	muxWithSessionMiddleware := sessionManager.LoadAndSave(mux)
+	// highlight-end
+
+	// Start the server.
+	fmt.Println("listening on http://localhost:8000")
+	if err := http.ListenAndServe("localhost:8000", muxWithSessionMiddleware); err != nil {
+		log.Printf("error listening: %v", err)
+	}
+}
+```
+
+:::note
+Incrementing a count by reading and setting the value is not an atomic operation (not thread-safe). In a production application, to increment a per-user count you may wish to use a database that provides a transactional increment operation.
+:::
+
+:::note
+The default behaviour of `scs` is to store session data in RAM, which isn't suitable for stateless function deployments, or load-balanced applications, but the library supports a range of backend storage solutions.
+:::
+
+Complete source code including AWS CDK code to set up the infrastructure is available at https://github.com/a-h/templ/tree/main/examples/counter
+# Datastar
+
+[Datastar](https://data-star.dev) is a hypermedia framework that is similar to [HTMX](htmx).
+
+Datastar can selectively replace content within a web page by combining fine-grained reactive signals with SSE. It's geared primarily to real-time applications where you'd normally reach for a SPA framework such as React/Vue/Svelte.
+
+## Usage
+
+Using Datastar requires:
+
+- Installation of the Datastar client-side library.
+- Modifying the HTML markup to instruct the library to perform partial screen updates.
+
+## Installation
+
+Datastar is included with Templ components out of the box to speed up development. You can use `@datastar.ScriptCDNLatest()` or `ScriptCDNVersion(version string)` to include the latest version of the Datastar library in your HTML.
+
+:::info
+Advanced Datastar installation and usage help is covered in the user guide at https://data-star.dev.
+:::
+
+## Datastar examples using Templ
+
+The Datastar website is built using Datastar and templ, so you can see how it works in practice.
+
+The Datastar website contains a number of examples that demonstrate how to use Datastar. The examples are written in Go and use the templ package to generate the HTML.
+
+See examples at https://github.com/delaneyj/datastar/tree/main/backends/go/site
+
+This document will walk you through how to create a simple counter example using Datastar, following the [example](https://data-star.dev/examples/templ_counter) in the Datastar website.
+
+## Counter Example
+
+We are going to modify the [templ counter example](example-counter-application) to use Datastar.
+
+### Frontend
+
+First, define some HTML with two buttons. One to update a global state, and one to update a per-user state.
+
+```templ title="components.templ"
+package site
+
+import datastar "github.com/starfederation/datastar/sdk/go"
+
+type TemplCounterSignals struct {
+	Global uint32 `json:"global"`
+	User   uint32 `json:"user"`
+}
+
+templ templCounterExampleButtons() {
+	<div>
+		<button
+			data-on-click="@post('/examples/templ_counter/increment/global')" 
+		>
+			Increment Global
+		</button>
+		<button
+			data-on-click={ datastar.PostSSE('/examples/templ_counter/increment/user') }
+			<!-- Alternative: Using Datastar SDK sugar--> 
+		>
+			Increment User
+		</button>
+	</div>
+}
+
+templ templCounterExampleCounts() {
+	<div>
+		<div>
+			<div>Global</div>
+			<div data-text="$global"></div>
+		</div>
+		<div>
+			<div>User</div>
+			<div data-text="$user"></div>
+		</div>
+	</div>
+}
+
+templ templCounterExampleInitialContents(signals TemplCounterSignals) {
+	<div
+		id="container"
+		data-signals={ templ.JSONString(signals) }
+	>
+		@templCounterExampleButtons()
+		@templCounterExampleCounts()
+	</div>
+}
+```
+
+:::tip
+Note that Datastar doesn't promote the use of forms because they are ill-suited to nested reactive content. Instead, it sends all[^1] reactive state (as JSON) to the server on each request. This means far less bookkeeping and more predictable state management.
+:::
+
+:::note
+`data-signals` is a special attribute that Datastar uses to merge one or more signals into the existing signals. In the example, we store $global and $user when we initially render the container.
+
+`data-on-click="@post('/examples/templ_counter/increment/global')"` is an attribute expression that says "When this element is clicked, send a POST request to the server to the specified URL". The `@post` is an action that is a sandboxed function that knows about things like signals.
+
+`data-text="$global"` is an attribute expression that says "replace the contents of this element with the value of the `global` signal in the store". This is a reactive signal that will update the page when the value changes, which we'll see in a moment.
+:::
+
+### Backend
+
+Note the use of Datastar's helpers to set up SSE.
+
+```go title="examples_templ_counter.go"
+package site
+
+import (
+	"net/http"
+	"sync/atomic"
+
+	"github.com/Jeffail/gabs/v2"
+	"github.com/go-chi/chi/v5"
+	"github.com/gorilla/sessions"
+	datastar "github.com/starfederation/datastar/sdk/go"
+)
+
+func setupExamplesTemplCounter(examplesRouter chi.Router, sessionSignals sessions.Store) error {
+
+	var globalCounter atomic.Uint32
+	const (
+		sessionKey = "templ_counter"
+		countKey   = "count"
+	)
+
+	userVal := func(r *http.Request) (uint32, *sessions.Session, error) {
+		sess, err := sessionSignals.Get(r, sessionKey)
+		if err != nil {
+			return 0, nil, err
+		}
+
+		val, ok := sess.Values[countKey].(uint32)
+		if !ok {
+			val = 0
+		}
+		return val, sess, nil
 	}
 
-```
-Its confusing to have RestaurantsCache and CompleteItineraryCache. 
-Each handler should have its own cache?
-Or abstract and have a middleware that abstracts this away?
-Use case:
-User searches Restaurant ABC + Preference 1,2,3 = LLM Search.
-User searches Restaurant ABC + Preference 1,2,3 = cached response
-User searches Restaurant ABC + Preference 1,2,4 = New preference, new LLM Search
-User searches Restaurant ABC + Preference 1,2,4 = cached response
-User searches Restaurant XYZ + Preference 1,2,4 = New restaurant, new LLM Search
+	examplesRouter.Get("/templ_counter/data", func(w http.ResponseWriter, r *http.Request) {
+		userVal, _, err := userVal(r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 
-This logic should be applied to all intents in order to save LLM calls, tokens and budgets. 
-12.1 Think about caching with PGVector to return vector data from DB
+		signals := TemplCounterSignals{
+			Global: globalCounter.Load(),
+			User:   userVal,
+		}
 
-- [x] **13. Discover Route with PostGIS Distance Filtering** ✓ COMPLETE
-  - Analyzed go-ai-poi-client and go-ai-poi-server discover implementations
-  - Implemented location-based discovery with PostGIS ST_Distance and ST_DWithin queries
-  - Created HTMX-based distance filter dropdown (1km, 5km, 10km, 15km, 25km, 50km, 75km, 100km)
-  - Solution:
-    - **Handler Implementation** (`app/pkg/handlers/discover.go:237-302`):
-      - `GetNearbyPOIs()` - Accepts lat, lon, radius (km), optional category as query params
-      - Converts radius from kilometers to meters for PostGIS compatibility
-      - Uses existing `GetPOIsByLocationAndDistance()` and `GetPOIsByLocationAndDistanceWithCategory()` repository methods
-      - Returns HTML fragments with POI cards showing distance, rating, category, description
-    - **PostGIS Queries** (Already existed in `app/pkg/domain/poi/poi_repository.go:2142-2200`):
-      - `ST_DWithin()` - Efficient indexed search within radius
-      - `ST_Distance()` - Calculates exact distance in meters using geography type
-      - `ST_SetSRID(ST_MakePoint(lon, lat), 4326)` - Creates WGS84 point geometry
-      - Results ordered by distance ASC, limited to 50 POIs
-    - **Template Implementation** (`app/internal/features/discover/discover_nearby.templ`):
-      - Alpine.js state management for lat/lon/radius (default: Lisbon 38.7223, -9.1393)
-      - HTMX `hx-get="/discover/nearby"` with automatic triggers on distance change
-      - Geolocation API integration with "Use My Location" button
-      - Responsive grid layout for results display
-    - **Route Registration** (`app/routes/routes.go:758`):
-      - `htmxGroup.GET("/discover/nearby", discoverHandlers.GetNearbyPOIs)`
-      - Handler initialized with `poiRepo` and logger dependencies
-  - Features:
-    - Distance radius selector: 1, 5, 10 (default), 15, 25, 50, 75, 100 km
-    - Manual lat/lon input with 4 decimal precision
-    - Browser geolocation support with fallback
-    - Category filtering (optional query parameter)
-    - Real-time HTMX updates without page reload
-    - Proper error handling and empty state messaging
-  - Files modified/created:
-    - `app/pkg/handlers/discover.go` - Added GetNearbyPOIs handler, helper functions
-    - `app/internal/features/discover/discover_nearby.templ` - New distance filter section
-    - `app/routes/routes.go` - Updated handler initialization and route registration
-  - Result: Full feature parity with go-ai-poi-server discover functionality using HTMX and PostGIS 
+		c := templCounterExampleInitialContents(signals)
+		datastar.NewSSE(w, r).MergeFragmentTempl(c)
+	})
 
-13.0 TODO
-- The chat bubble is not showing under /itinerary
-- The chat bubble shows on the other views but disappears when clicked and the chat window isn't showing. 
+	updateGlobal := func(signals *gabs.Container) {
+		signals.Set(globalCounter.Add(1), "global")
+	}
 
-13.1 
-13.1.1 [x]On discover there is the "search" and when a search is undergoing a "searching" appears which is fine but the "search label is still showing"
-13.1.2 [x]Discover when clicking for results is returning something like:
-13.1.3 [x] After searching on /discover I see 6 Results for "5 star hotels" in Munich but I dont see the recents under. After refreshing /discover page, I see that Recent Discoveries
-13.1.4 On the /discover page there is a list of "quick categories". Clicking on them should fill the input context. So you click "Restaurants" and fills "Restaurants" on the input.
-13.1.5 Trending should show the most discoveries today instead of being hardcodded. 
-13.1.6 Featured should also be used but I dont know how. Think of a way of having dynamic data instead of hardcodded data.
-13.1.7 Each item under discoveries has a View Details button that is not opening a valid page. Build this page and redirect it properly. This page should have the metada detailed on a new page for the user to see.
-13.1.8 on my chat service can the textPartIterator be reused? or abstract more data into different methods, in a different file, using Golang streams and iterators to abstract and resuse some logic? Implement for performance.
-13.1.9 if you have documentation on Go 1.25, 
-is still hardcodded
-```bash
-  2025-10-25T10:39:22.102+0100    INFO    handlers/discover.go:57 Discovery search requested      {"port": "8090", "service": "loci-templui", "line": "42", "query": "5 star restaurant", "location": "Berlin", "user": "f04eaf02-e1fa-4bbe-b4f6-506767a4fa8d", "ip": "::1"}
-2025/10/25 10:39:22 INFO Calling LLM for discover search query="5 star restaurant" location=Berlin
-2025-10-25T10:39:29.647+0100    INFO    routes/routes.go:832    404 - Page not found    {"port": "8090", "service": "loci-templui", "line": "42", "path": "/metrics", "method": "GET", "ip": "127.0.0.1"}
-2025-10-25T10:39:29.648+0100    WARN    middleware/middleware.go:76     HTTP Request    {"port": "8090", "service": "loci-templui", "line": "42", "method": "GET", "path": "/metrics", "ip": "127.0.0.1", "status": 404, "latency": 0.000995792, "user_agent": "Prometheus/3.7.2"}
-2025/10/25 10:39:31 traces export: parse "http://http:%2F%2Fotel-collector:4318/v1/traces": invalid URL escape "%2F"
-2025/10/25 10:39:32 ERROR Failed to parse LLM response error="invalid character '`' looking for beginning of value" response="```json\n{\n    \"results\": [\n        {\n            \"name\": \"Facil\",\n            \"latitude\": 52.5078,\n            \"longitude\": 13.3663,\n            \"category\": \"Restaurant\",\n            \"description\": \"Awarded two Michelin stars, Facil offers modern, innovative cuisine in a sophisticated setting with panoramic views of Berlin. The restaurant is known for its exceptional service and exquisite tasting menus, making it a top choice for a 5-star dining experience.\",\n            \"address\": \"Potsdamer Straße 3, 10785 Berlin, Germany\",\n            \"website\": \"https://www.facil.de/\",\n            \"phone_number\": \"+49 30 590051234\",\n            \"opening_hours\": \"Tuesday-Saturday 6:30 PM - 11:00 PM\",\n            \"price_level\": \"$$$$\",\n            \"rating\": 4.7,\n            \"tags\": [\"Michelin Star\", \"Fine Dining\", \"Modern Cuisine\", \"Luxury\"],\n            \"images\": [],\n            \"cuisine_type\": \"Modern European\",\n            \"star_rating\": null\n        },\n        {\n            \"name\": \"Lorenz Adlon Esszimmer\",\n            \"latitude\": 52.5171,\n            \"longitude\": 13.3788,\n            \"category\": \"Restaurant\",\n            \"description\": \"Located in the Adlon Kempinski Hotel, Lorenz Adlon Esszimmer boasts two Michelin stars and offers refined European cuisine with a focus on seasonal ingredients. The elegant ambiance and impeccable service contribute to a truly luxurious 5-star dining experience. It is known for its classic dishes with a modern twist.\",\n            \"address\": \"Unter den Linden 77, 10117 Berlin, Germany\",\n            \"website\": \"https://www.kempinski.com/en/berlin/hotel-adlon/restaurants-bars/lorenz-adlon-esszimmer/\",\n            \"phone_number\": \"+49 30 22611960\",\n            \"opening_hours\": \"Tuesday-Saturday 6:30 PM - 10:00 PM\",\n            \"price_level\": \"$$$$\",\n            \"rating\": 4.8,\n            \"tags\": [\"Michelin Star\", \"Fine Dining\", \"European Cuisine\", \"Luxury\", \"Hotel Restaurant\"],\n            \"images\": [],\n            \"cuisine_type\": \"European\",\n            \"star_rating\": null\n        },\n        {\n            \"name\": \"Nobelhart & Schmutzig\",\n            \"latitude\": 52.5181,\n            \"longitude\": 13.3932,\n            \"category\": \"Restaurant\",\n            \"description\": \"Nobelhart & Schmutzig, a Michelin-starred restaurant, offers a unique culinary experience focused on regional German ingredients. The tasting menu is a journey through the terroir of Berlin and Brandenburg, presented in a minimalist and sophisticated setting. It's a 5-star experience for adventurous palates seeking authenticity and innovation.\",\n            \"address\": \"Friedrichstraße 218, 10969 Berlin, Germany\",\n            \"website\": \"https://nobelhartundschmutzig.com/en/\",\n            \"phone_number\": \"+49 30 25940610\",\n            \"opening_hours\": \"Tuesday-Saturday 7:00 PM - 12:00 AM\",\n            \"price_level\": \"$$$$\",\n            \"rating\": 4.6,\n            \"tags\": [\"Michelin Star\", \"Fine Dining\", \"Regional Cuisine\", \"Luxury\", \"German Cuisine\"],\n            \"images\": [],\n            \"cuisine_type\": \"German\",\n            \"star_rating\": null\n        },\n        {\n            \"name\": \"Restaurant Tim Raue\",\n            \"latitude\": 52.5081,\n            \"longitude\": 13.3931,\n            \"category\": \"Restaurant\",\n            \"description\": \"Restaurant Tim Raue, a renowned two-Michelin-starred establishment, features Asian-inspired cuisine crafted with precision and artistry. The restaurant's elegant atmosphere and impeccable service contribute to its 5-star rating. It is celebrated for its bold flavors and innovative dishes.\",\n            \"address\": \"Rudi-Dutschke-Straße 26, 10969 Berlin, Germany\",\n            \"website\": \"https://tim-raue.com/en/\",\n            \"phone_number\": \"+49 30 25937930\",\n            \"opening_hours\": \"Tuesday-Saturday 6:30 PM - 11:00 PM\",\n            \"price_level\": \"$$$$\",\n            \"rating\": 4.7,\n            \"tags\": [\"Michelin Star\", \"Fine Dining\", \"Asian Cuisine\", \"Luxury\"],\n            \"images\": [],\n            \"cuisine_type\": \"Asian Fusion\",\n            \"star_rating\": null\n        },\n        {\n            \"name\": \"Skykitchen\",\n            \"latitude\": 52.5105,\n            \"longitude\": 13.4486,\n            \"category\": \"Restaurant\",\n            \"description\": \"Located on the 12th floor of the andel's Hotel, Skykitchen offers modern European cuisine with breathtaking panoramic views of Berlin. The restaurant is known for its creative dishes, stylish ambiance, and attentive service, providing a 5-star dining experience with a unique perspective.\",\n            \"address\": \"Landsberger Allee 106, 10369 Berlin, Germany\",\n            \"website\": \"https://www.skykitchen.berlin/en/\",\n            \"phone_number\": \"+49 30 4530532620\",\n            \"opening_hours\": \"Tuesday-Saturday 6:30 PM - 10:00 PM\",\n            \"price_level\": \"$$$\",\n            \"rating\": 4.5,\n            \"tags\": [\"Fine Dining\", \"Modern Cuisine\", \"European Cuisine\", \"Luxury\", \"Panoramic View\"],\n            \"images\": [],\n            \"cuisine_type\": \"European\",\n            \"star_rating\": null\n        },\n        {\n            \"name\": \"Hugos Restaurant\",\n            \"latitude\": 52.5043,\n            \"longitude\": 13.3647,\n            \"category\": \"Restaurant\",\n            \"description\": \"Hugos Restaurant, nestled atop the InterContinental Berlin, provides an exquisite fine-dining experience. With one Michelin star, it offers refined European cuisine paired with stunning city views. The elegant ambiance and impeccable service solidify its 5-star reputation.\",\n            \"address\": \"Budapester Straße 2, 10787 Berlin, Germany\",\n            \"website\": \"https://www.hugos-restaurant.de/en/\",\n            \"phone_number\": \"+49 30 26021263\",\n            \"opening_hours\": \"Tuesday-Saturday 6:30 PM - 10:00 PM\",\n            \"price_level\": \"$$$$\",\n            \"rating\": 4.6,\n            \"tags\": [\"Michelin Star\", \"Fine Dining\", \"European Cuisine\", \"Luxury\", \"Panoramic View\"],\n            \"images\": [],\n            \"cuisine_type\": \"European\",\n            \"star_rating\": null\n        }\n    ]\n}\n```"
-2025-10-25T10:39:32.224+0100    ERROR   middleware/middleware.go:74     HTTP Request    {"port": "8090", "service": "loci-templui", "line": "42", "method": "POST", "path": "/discover/search", "ip": "::1", "status": 500, "latency": 10.122053, "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"}
-2025/10/25 10:39:36 traces export: parse "http://http:%2F%2Fotel-collector:4318/v1/traces": invalid URL escape "%2F"
-2025-10-25T10:39:37.798+0100    INFO    routes/routes.go:832    404 - Page not found    {"port": "8090", "service": "loci-templui", "line": "42", "path": "/chat/continue/e9bb9201-e24f-444b-b8ee-423cd4a3b6d2", "method": "GET", "ip": "::1"}
-2025-10-25T10:39:37.799+0100    WARN    middleware/middleware.go:76     HTTP Request    {"port": "8090", "service": "loci-templui", "line": "42", "method": "GET", "path": "/chat/continue/e9bb9201-e24f-444b-b8ee-423cd4a3b6d2", "ip": "::1", "status": 404, "latency": 0.000345458, "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"}
-2025/10/25 10:39:41 traces export: parse "http://http:%2F%2Fotel-collector:4318/v1/traces": invalid URL escape "%2F" 
-```
-13.1.4 Currently in /discover im seeing the results I see when I search for something on the main page. This query should be in /recents.
-In /discover we should see only the results we search inside the /discover view. Under recents we should have everything, what is searched under discover, on the main page hotels, itinerary, restaurants, activities,etc.
+	examplesRouter.Route("/templ_counter/increment", func(incrementRouter chi.Router) {
+		incrementRouter.Post("/global", func(w http.ResponseWriter, r *http.Request) {
+			update := gabs.New()
+			updateGlobal(update)
 
-13.2 Save LLM information on DB
+			datastar.NewSSE(w, r).MarshalAndMergeSignals(update)
+		})
 
-13.2.1 Save LLM related data to database
-We need to store LLM related data in the database. Every LLM endpoint should be saving this for future use or for search repeated cities with PGVector.
+		incrementRouter.Post("/user", func(w http.ResponseWriter, r *http.Request) {
+			val, sess, err := userVal(r)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 
-Core LLM-Specific Data:
+			val++
+			sess.Values[countKey] = val
+			if err := sess.Save(r, w); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 
-request_id: Unique UUID for each call (for tracing across systems).
-timestamp: When the request was made (UTC for consistency).
-prompt: The full user prompt (or a hashed/anonymized version for privacy).
-response: The LLM's output (again, anonymized if needed; store truncated if too long).
-tokens_input: Number of tokens in the prompt.
-tokens_output: Number of tokens in the response.
-tokens_total: Sum of input + output.
-model: Exact model name/version (e.g., "gpt-4o", "claude-3.5-sonnet").
-latency_ms: Total time in milliseconds from request to full response.
-status_code: HTTP status or error code (e.g., 200 for success, 429 for rate limit).
-error_message: If the call failed (e.g., "rate limit exceeded").
-provider: If using multiple (e.g., "openai", "anthropic") for multi-vendor setups.
-temperature / top_p / other params: If you're tuning these, log them to correlate with response quality.
+			update := gabs.New()
+			updateGlobal(update)
+			update.Set(val, "user")
 
+			datastar.NewSSE(w, r).MarshalAndMergeSignals(update)
+		})
+	})
 
-App/Context-Specific Data (from your suggestions):
-
-user_id: Yes, essential for per-user analytics (e.g., heavy users, personalization). Use anonymized IDs if privacy is a concern.
-intent: Yes, categorize the query (e.g., "itinerary", "restaurant", "hotel", "activity"). This helps segment metrics—e.g., "restaurant" intents might use more tokens due to detailed recommendations.
-city_id: Yes, if your app is location-based (e.g., travel planning). Log it as an ID or name/code (e.g., "NYC") to analyze regional trends, like higher latency in certain areas or popular cities.
-
-
-Other Useful Data:
-
-session_id: If requests are part of a conversation/thread, link them for context.
-device_type or platform: (e.g., "iOS", "web") to spot platform-specific issues.
-cost_estimate: Calculated field (tokens * per-token price) for quick aggregations.
-feedback: If users rate responses post-call, link it here for quality analysis.
-cache_hit: If you're caching responses, log whether it was a hit/miss to measure efficiency.
-
-currently we already have llm_interactions and llm_suggestion_pois and the db to use should be the same that is used under go-ai-poi-server.
-do cd .. and verify the usage under the functions used here. 
-```go
-// Unified chat endpoints - more specific routes first
-	r.Post("/prompt-response/chat/sessions/stream/{profileID}", HandlerImpl.StartChatMessageStream)
-	r.Post("/prompt-response/chat/sessions/{sessionID}/continue", HandlerImpl.ContinueChatSessionStream) // POST http://localhost:8000/api/v1/llm/prompt-response/chat/sessions/{sessionID}/continue
-```
-In this version of the app, it should also be used on discover, nearby and every LLM usage.
-Implementation Tips
-
-- Storage Efficiency: Use JSON fields for flexible data (e.g., store params as JSON). Rotate/purge old logs (e.g., keep 30-90 days).
-- Privacy: Avoid storing raw PII in prompts/responses. Use data redaction tools.
-- Tools: Integrate with observability platforms like Datadog, New Relic (Maybe to implement), Prometheus and Grafana stack(currently have this), or ELK Stack for dashboards. For analysis, query aggregates like AVG(latency) GROUP BY intent.
-- When to Skip: If calls are extremely high-volume (e.g., millions/day), log asynchronously to avoid slowing your app, or use sampling (e.g., log 10% of requests).
-
-Wrap your Gemini calls in a logging function to capture data post-response.
-Usage example:
-```go
-type LLMLog struct {
-    RequestID    uuid.UUID
-    UserID       uuid.UUID
-    Intent       string
-    CityID       int
-    Timestamp    time.Time
-    Model        string
-    TokensInput  int
-    TokensOutput int
-    TokensTotal  int
-    LatencyMS    int64
-    StatusCode   int
-    ErrorMessage string
-    Prompt       string
-    Response     string
-    SessionID    uuid.UUID
+	return nil
 }
+```
 
-// Wrapper function
-func CallGeminiAndLog(ctx context.Context, client *generativelanguage.Client, req *generativelanguagepb.GenerateContentRequest, db *pgxpool.Pool, userID uuid.UUID, intent string, cityID int, sessionID uuid.UUID) (*generativelanguagepb.GenerateContentResponse, error) {
-    requestID := uuid.New()
-    start := time.Now()
+The `atomic.Uint32` type stores the global state. The `userVal` function is a helper that retrieves the user's session state. The `updateGlobal` function increments the global state.
 
-    resp, err := client.GenerateContent(ctx, req)
-    latency := time.Since(start).Milliseconds()
+:::note
+In this example, the global state is stored in RAM and will be lost when the web server reboots. To support load-balanced web servers and stateless function deployments, consider storing the state in a data store such as [NATS KV](https://docs.nats.io/using-nats/developer/develop_jetstream/kv).
+:::
 
-    // Async log
-    go func(resp *generativelanguagepb.GenerateContentResponse, err error) {
-        logEntry := LLMLog{
-            RequestID:    requestID,
-            UserID:       userID,
-            Intent:       intent,
-            CityID:       cityID,
-            Timestamp:    time.Now().UTC(),
-            Model:        req.Model,  // Or from your config
-            LatencyMS:    latency,
-            StatusCode:   200,  // Or from error handling
-            ErrorMessage: "",
-            Prompt:       req.Contents[0].Parts[0].GetText(),  // Simplify; anonymize if needed
-            SessionID:    sessionID,
-        }
-        if err != nil {
-            logEntry.StatusCode = 500  // Or actual code
-            logEntry.ErrorMessage = err.Error()
-        } else {
-            logEntry.TokensInput = int(resp.UsageMetadata.GetPromptTokenCount())
-            logEntry.TokensOutput = int(resp.UsageMetadata.GetCandidatesTokenCount())
-            logEntry.TokensTotal = int(resp.UsageMetadata.GetTotalTokenCount())
-            logEntry.Response = resp.Candidates[0].Content.Parts[0].GetText()  // Truncate
-        }
-        _, dbErr := db.Exec(context.Background(), `
-            INSERT INTO llm_logs (
-                created_at, updated_at, deleted_at,
-                request_id, user_id, intent, city_id, timestamp, model,
-                tokens_input, tokens_output, tokens_total,
-                latency_ms, status_code, error_message, prompt, response, session_id
-            ) VALUES (
-                NOW(), NOW(), NULL,
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
-            )`,
-            logEntry.RequestID, logEntry.UserID, logEntry.Intent, logEntry.CityID, logEntry.Timestamp, logEntry.Model,
-            logEntry.TokensInput, logEntry.TokensOutput, logEntry.TokensTotal,
-            logEntry.LatencyMS, logEntry.StatusCode, logEntry.ErrorMessage, logEntry.Prompt, logEntry.Response, logEntry.SessionID,
-        )
-        if dbErr != nil {
-            log.Printf("Failed to log LLM call: %v", dbErr)
-        }
-    }(resp, err)
+### Per-user session state
 
-    return resp, err
+In an HTTP application, per-user state information is partitioned by an HTTP cookie. Cookies that identify a user while they're using a site are known as "session cookies". When the HTTP handler receives a request, it can read the session ID of the user from the cookie and retrieve any required state.
+
+### Signal-only patching
+
+Since the page's elements aren't changing dynamically, we can use the `MarshalAndMergeSignals` function to send only the signals that have changed. This is a more efficient way to update the page without even needing to send HTML fragments.
+
+:::tip
+Datastar will merge updates to signals similar to a JSON merge patch. This means you can do dynamic partial updates to the store and the page will update accordingly. [Gabs](https://pkg.go.dev/github.com/Jeffail/gabs/v2#section-readme) is used here to handle dynamic JSON in Go.
+
+[^1]: You can control the data sent to the server by prefixing local signals with `_`. This will prevent them from being sent to the server on every request.
+# Creating an HTTP server with templ
+
+### Static pages
+
+To use a templ component as a HTTP handler, the `templ.Handler` function can be used.
+
+This is suitable for use when the component is not used to display dynamic data.
+
+```go title="components.templ"
+package main
+
+templ hello() {
+	<div>Hello</div>
 }
-
-// In your handler (e.g., HTTP with HTMX)
-func YourHandler(w http.ResponseWriter, r *http.Request) {
-    // Parse HTMX params for intent, city_id, user_id, session_id
-    // Call CallGeminiAndLog(...)
-    // Render with Templ
-}
-
-```
-We already have an llm_interactions table, we dont need to create llm_logs so adapt to the current code.
-Performance: Async logging prevents blocking, but monitor DB writes. For high traffic, use a queue like Redis or switch to a time-series DB (e.g., TimescaleDB on Postgres).
-Install TimescaleDB and use it for efficient logging.
-Monitoring: Integrate with Prometheus/Grafana for Go metrics, querying your logs table.
-
-13.2.2 I need you to go to go-ai-poi-server (cd ..) and analyse the routes:
-```go
-// Unified chat endpoints - more specific routes first
-	r.Post("/prompt-response/chat/sessions/stream/{profileID}", HandlerImpl.StartChatMessageStream)
-	r.Post("/prompt-response/chat/sessions/{sessionID}/continue", HandlerImpl.ContinueChatSessionStream) // POST http://localhost:8000/api/v1/llm/prompt-response/chat/sessions/{sessionID}/continue
-```
-on go-ai-poi-server we are storing LLM data either by LLM_interactions or LLM_Siggested_pois or itineraries. 
-We should do the same because in the end we want to have a query that makes a search first on the database. 
-Either search first with PGVector and see if we find the data first on the DB, and if not, return from LLM.
-User searches Itinerary ABC + Preference 1,2,3 = LLM Search, Save on DB (no need to block the search, can save on the background with a go routine).
-User searches Itinerary ABC + Preference 1,2,3 = Checks DB, exists, returns from DB. 
-User searches Itinerary ABC + Preference 1,2,4 = New preference, New Itinerary, Check DB, wont exist, Save on DB (no need to block the search, can save on the background with a go routine).
-Repeat
-
-13.3 I need you to go to go-ai-poi-server (cd ..) and analyse the routes:
-```go
-// Unified chat endpoints - more specific routes first
-	r.Post("/prompt-response/chat/sessions/stream/{profileID}", HandlerImpl.StartChatMessageStream)
-	r.Post("/prompt-response/chat/sessions/{sessionID}/continue", HandlerImpl.ContinueChatSessionStream) // POST http://localhost:8000/api/v1/llm/prompt-response/chat/sessions/{sessionID}/continue
-```
-I want you to analyse the old API r.Post("/prompt-response/chat/sessions/{sessionID}/continue" and check how its working.
-When I continue this chat I'm having this error:
-```bash
-Lisbon city does not exist
-```
-This could be due to the 13.1 error or the chat not having the chat sessionID but go-ai-poi-server is working properly and so should this. And on the chat we should have proper text and not json data even if there is an error
-
-
-14. Similar to Discover, I have a new view called nearby. The nearby should update new views when user locations changes without the user needing to update this. 
-Use websockets, htmx and whatever needed. The idea is the user to be able to walk, and when the coordinates of the user changes, the AI generates new points of interest around the user dynamically.
-Elaborate on the effort for this and build the UI and Service logic. go to go-ai-poi-server (cd ..), this implementation should be similar to the /discover endpoint on the old api. 
-
-15. The Recents page should have all the recents itineraries, restaurants, hotels, activities or chats built and should be able to sort by date
-All this data should be available on the Database so for recents only queries and displays should be needed.
-
-16. The chat view should work as it does under go-ai-poi-client and go-ai-poi-server but improved. The chat should be able to return an intent data (restaurant, itinerary, hotel, activity) and upon writing "Add" or "Remove" should add to the current context more points and writing "New" on chat creates a new conversation with the Agent.
-17. Favourites tab should contain all the favourited items from the database. Search and filter by type should work and be implemented. Pagination as well.  
-18. Bookmarks tab should contain all the bookmarked itineraries from the database. Search and filter by type should work and be implemented. Pagination as well. 
-19. Lists should also work as it does under go-ai-poi-client and go-ai-poi-server. On a list an user should be able to create a new one and be able to add diverse activities already searched from the database. 
-To discuss: A list should be a mix of itineraries, hotels, activities and restaurants or only itineraries?
-20. The settings page should be working like go-ai-poi-client and go-ai-poi-server saving on the database the data from the tabs:
-    20.1 Account Settings
-    20.2 Travel Preferences
-    20.3 Privacy and Security
-    20.4 Notifications
-21. On Pricing, add an "Enterprise column" where companies and travel agencies should be able to contact me for a one time purchase of the whole pack. 
-22. Adapt the footer for Loci instead of the current hardcodded TemplUI
-23. Currently the Auth is too simplistic. We need to add email verification and sms verification when an user Signs up instead of redirecting right away to the app. The login is fine. 
-24. 2025-10-24T11:36:08.953+0100    ERROR   auth/handlers.go:164    Failed to register user {"port": "8090", "service": "loci-templui", "line": "42", "error": "registration failed: email or username already exists: item already exists or conflict"} On error, the user should see an error message on the form instead of the constant loading button. Also when creating account, only one message should be on the button. "Creating account" with the loader. The state still shows the loader indicator with the label.
-25. On the dashboard there is a settings icon. The settings should either be:
-    25.1 A popup with the same settings for /settings for the user to be able to modify fast the travel preferences
-    25.2 (Preferences) a side bar where the user gets the same views of the Travel Preferences in /settings to be able to modify the settings fast before a search.
-26. On Dashboard there is hardcodded data for Saved Places, Itineraries, Cities Explored and Discoveries.
-    26.1 Saved places should be the count of favourited items (itineraries, hotels, activities and )
-    26.2 Itineraries should be the count of bookmarked itineraries
-    26.3 Should be the count of cities explored
-    26.4 Discoveries should be the number of times user finds place under Discover tab
-If the queries for each item doesn't exist, create them. 
-27.   When I make a search for itinerary, everything works fine.
-      But when I make a retrocess on the page, we still have the state of the previous page.
-      Upon coming back to the main page, we should have a new state instead of having
-      "Redirecting to results..." under the input and have the terminal under an eternal search. 
-28. Clicking on each favorite item on the restaurant, hotel and activity card should add the item to the favorite table on the DB with a visual indicator. 
-29. When clicking on "My itineraries" on the dashboard, it redirects to /itinerary which is a travel planner. 
-The travel planner is a good idea and should be its own tab on nav. After that, "My itineraries" should just go to a new view with all the bookmarked itineraries on the app.
-After that we should make the logic to work on the travel planner. It should follow the logic of the rest of the LLM calls of this app.
-30. [x] **Fixed Missing Default Profile on User Registration** ✓ COMPLETE
-   - Issue: Users couldn't generate itineraries due to "No default profile found. Please create a profile first." error
-   - Root cause: User registration (`Register` function) only created user record without creating a default search profile
-   - Solution: Modified `Register` function in `auth_repository.go` to use database transaction
-   - Implementation details:
-     - Uses database transaction to ensure atomicity (both user and profile created or neither)
-     - Creates user and default profile in same transaction
-     - Default profile settings:
-       - Name: "Default Profile"
-       - Budget level: "medium"
-       - Accessibility needs: empty array `{}`
-       - Dietary restrictions: empty array `{}`
-       - is_default: true
-     - Automatic rollback on failure ensures data consistency
-     - Enhanced error logging and tracing
-   - Files modified:
-     - `app/pkg/domain/auth/auth_repository.go` (lines 112-172)
-   - Result: New users automatically get a default profile, allowing immediate itinerary generation without manual profile creation
-31. [x] **Fixed PostgreSQL pg_trgm Extension Error** ✓ COMPLETE
-   - Issue: Chat continue session failing with error: `ERROR: function similarity(text, unknown) does not exist (SQLSTATE 42883)`
-   - Root cause: Missing `pg_trgm` extension in PostgreSQL database required for fuzzy city name matching
-   - Error occurred in: `FindCityByFuzzyName` function in `city_repository.go` (lines 166-167)
-   - Solution: Added `CREATE EXTENSION IF NOT EXISTS pg_trgm;` to initial database setup migration
-   - Implementation:
-     - Modified `app/db/migrations/0001_setup.up.sql` (line 16)
-     - Added pg_trgm extension alongside other required extensions (postgis, vector, etc.)
-     - Extension provides `similarity()` function for trigram-based fuzzy text matching
-   - Files modified:
-     - `app/db/migrations/0001_setup.up.sql` (line 16)
-   - Result: City lookup by fuzzy name now works, allowing chat to find cities like "Lisbon" and continue sessions
-   - Action required: Run migrations or manually execute `CREATE EXTENSION IF NOT EXISTS pg_trgm;` on existing database
-
-32. Im using pprof with Gin. Check main.go and create a setup to be able to use graphviz with pprof locally and in prod. Add the commands to makefile if necessary and documentation under docs if necessary as well.
-32. Review all my observability stack. Right now I use everything locally through my compose and want to test locally. In the future, I want to have my observability stack also working in prod hosted on fly.io or on hetzner. Make changes if needed (my services run through docker compose but my app runs locally through air, keep that in mind) and write docs if necessary to document how I will host my observability stack on Fly, DO or Hetzner. I also need to setup alert manager.
-33. Review my project structure and work done and check where Gorilla Websockets could be used in this project. Write a document under docs to have that documented before the implementation.
-33.1 Review all the inputs of this project and create an Validation and Sanitisation SDK to protect my app against DDOS atacks. Build tests for this. 
-34. Add recover system and retries on LLM calls in case something happens with the API call so the user has more uptime and security to avoid cases where the LLM makes the call but network problems or other issues make thing like:
-```bash
-5,\n    \"longitude\": -9.1406,\n    \"category\": \"Pastry Shop\",\n    \"description\": \"Another excellent place to try Pastéis de Nata, with a focus on quality and freshness. Watch the pastries being made in the open kitchen.\",\n    \"address\": \"Rua do Loreto 2, 1200-242 Lisboa, Portugal\",\n    \"website\": \"https://www.manteigaria.com/\",\n    \"phone_number\": null,\n    \"opening_hours\": \"Mon-Sun 08:00-23:00\",\n    \"price_level\": \"$\",\n    \"cuisine_type\": \"Pastries\",\n    \"tags\": [\n      \"Pastries\",\n      \"Portuguese\",\n      \"Fresh\",\n      \"Open Kitchen\"\n    ],\n    \"images\": [],\n    \"rating\": 4.7,\n    \"llm_interaction_id\": \"00000000-0000-0000-0000-000000000000\"\n  }\n]"
-2025/10/25 09:20:10 INFO Caching restaurant data sessionID=0feae1cb-1511-44f6-a591-4c1e103e33a3 cacheKey=08ccf4fb6fcc7ea824ab55382b9dfe00 restaurantsCount=10
-panic: runtime error: invalid memory address or nil pointer dereference
-[signal SIGSEGV: segmentation violation code=0x2 addr=0x0 pc=0x105c06480]
-
-goroutine 1505 [running]:
-github.com/FACorreiaa/go-templui/app/pkg/domain/chat_prompt.(*ServiceImpl).parseCompleteResponseFromParts(0x140000f69a0, 0x14000628570, {0xf, 0xea, 0xe1, 0xcb, 0x15, 0x11, 0x44, 0xf6, ...})
-        /Users/fernando_idwell/Projects/Loci/go-templui/app/pkg/domain/chat_prompt/chat_parser.go:122 +0x900
-github.com/FACorreiaa/go-templui/app/pkg/domain/chat_prompt.(*ServiceImpl).cacheResultsIfAvailable(0x140000f69a0, {0x10666a050, 0x14000783560}, {0xf, 0xea, 0xe1, 0xcb, 0x15, 0x11, 0x44, ...}, ...)
-        /Users/fernando_idwell/Projects/Loci/go-templui/app/pkg/domain/chat_prompt/chat_service.go:2767 +0x1bb0
-github.com/FACorreiaa/go-templui/app/pkg/domain/chat_prompt.(*ServiceImpl).ProcessUnifiedChatMessageStream.func11()
-        /Users/fernando_idwell/Projects/Loci/go-templui/app/pkg/domain/chat_prompt/chat_service.go:2194 +0x1f0
-created by github.com/FACorreiaa/go-templui/app/pkg/domain/chat_prompt.(*ServiceImpl).ProcessUnifiedChatMessageStream in goroutine 1495
-        /Users/fernando_idwell/Projects/Loci/go-templui/app/pkg/domain/chat_prompt/chat_service.go:2168 +0x1c74
-exit status 2
 ```
 
-Retry logic for context:
-```go
+```go title="main.go"
 package main
 
 import (
-    "context"
-    "log"
-    "math"
-    "strings"
-    "time"
+	"net/http"
 
-    "cloud.google.com/go/ai/generativelanguage/apiv1beta"
-    "cloud.google.com/go/ai/generativelanguage/apiv1beta/generativelanguagepb"
-    "github.com/google/uuid"
-    "github.com/jackc/pgx/v5/pgxpool"
-    "go.uber.org/zap"
-    // Your logger and DB setup
+	"github.com/a-h/templ"
 )
 
-// LLMCallManager manages stop/resume for a streaming LLM call
-type LLMCallManager struct {
-    client      *generativelanguage.Client
-    originalReq *generativelanguagepb.GenerateContentRequest
-    db          *pgxpool.Pool
-    userID      uuid.UUID
-    intent      string
-    cityID      int
-    sessionID   uuid.UUID
+func main() {
+	http.Handle("/", templ.Handler(hello()))
 
-    mu          sync.Mutex
-    ctx         context.Context
-    cancel      context.CancelFunc
-    stream      generativelanguage.StreamGenerateContentClient
-    partial     strings.Builder // Accumulates response chunks
-    outputChan  chan string      // For consuming incremental output
-    done        chan struct{}    // Signals completion or stop
-    err         error            // Any error from the stream
+	http.ListenAndServe(":8080", nil)
+}
+```
+
+### Displaying fixed data
+
+In the previous example, the `hello` component does not take any parameters. Let's display the time when the server was started instead.
+
+```templ title="components.templ"
+package main
+
+import "time"
+
+templ timeComponent(d time.Time) {
+	<div>{ d.String() }</div>
 }
 
-// NewLLMCallManager creates a new manager; start with Start()
-func NewLLMCallManager(client *generativelanguage.Client, req *generativelanguagepb.GenerateContentRequest, db *pgxpool.Pool, userID uuid.UUID, intent string, cityID int, sessionID uuid.UUID) *LLMCallManager {
-    return &LLMCallManager{
-        client:      client,
-        originalReq: req,
-        db:          db,
-        userID:      userID,
-        intent:      intent,
-        cityID:      cityID,
-        sessionID:   sessionID,
-        outputChan:  make(chan string),
-        done:        make(chan struct{}),
-    }
+templ notFoundComponent() {
+	<div>404 - Not found</div>
+}
+```
+
+```go title="main.go"
+package main
+
+import (
+	"net/http"
+	"time"
+
+	"github.com/a-h/templ"
+)
+
+func main() {
+	http.Handle("/", templ.Handler(timeComponent(time.Now())))
+	http.Handle("/404", templ.Handler(notFoundComponent(), templ.WithStatus(http.StatusNotFound)))
+
+	http.ListenAndServe(":8080", nil)
+}
+```
+
+:::tip
+The `templ.WithStatus`, `templ.WithContentType`, and `templ.WithErrorHandler` functions can be passed as parameters to the `templ.Handler` function to control how content is rendered.
+:::
+
+The output will always be the date and time that the web server was started up, not the current time.
+
+```
+2023-04-26 08:40:03.421358 +0100 BST m=+0.000779501
+```
+
+To display the current time, we could update the component to use the `time.Now()` function itself, but this would limit the reusability of the component. It's better when components take parameters for their display values.
+
+:::tip
+Good templ components are idempotent, pure functions - they don't rely on data that is not passed in through parameters. As long as the parameters are the same, they always return the same HTML - they don't rely on any network calls or disk access.
+:::
+
+## Displaying dynamic data
+
+Let's update the previous example to display dynamic content.
+
+templ components implement the `templ.Component` interface, which provides a `Render` method.
+
+The `Render` method can be used within HTTP handlers to write HTML to the `http.ResponseWriter`.
+
+```go title="main.go"
+package main
+
+import (
+	"net/http"
+)
+
+func main() {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		hello().Render(r.Context(), w)
+	})
+
+	http.ListenAndServe(":8080", nil)
+}
+```
+
+Building on that example, we can implement the Go HTTP handler interface and use the component within our HTTP handler. In this case, displaying the latest date and time, instead of the date and time when the server started up.
+
+```go title="main.go"
+package main
+
+import (
+	"net/http"
+	"time"
+)
+
+func NewNowHandler(now func() time.Time) NowHandler {
+	return NowHandler{Now: now}
 }
 
-// Start begins (or resumes) the streaming generation with retry logic
-func (m *LLMCallManager) Start(maxRetries int) error {
-    m.mu.Lock()
-    defer m.mu.Unlock()
-
-    if m.ctx != nil && m.cancel != nil {
-        m.cancel() // Clean up any previous
-    }
-
-    var attempt int
-    for attempt = 0; attempt <= maxRetries; attempt++ {
-        m.ctx, m.cancel = context.WithCancel(context.Background())
-        stream, err := m.client.StreamGenerateContent(m.ctx, m.buildRequest())
-        if err == nil {
-            m.stream = stream
-            go m.consumeStream()
-            return nil
-        }
-
-        // Log error and retry with exponential backoff
-        logger.Log.Error("Failed to start stream", zap.Error(err), zap.Int("attempt", attempt))
-        if attempt == maxRetries {
-            m.err = err
-            return err
-        }
-
-        // Exponential backoff: 100ms * 2^attempt, max 10s
-        backoff := time.Duration(100*math.Pow(2, float64(attempt))) * time.Millisecond
-        if backoff > 10*time.Second {
-            backoff = 10 * time.Second
-        }
-        time.Sleep(backoff)
-    }
-    return nil // Unreachable, but for completeness
+type NowHandler struct {
+	Now func() time.Time
 }
 
-// Stop cancels the current stream and saves partial
-func (m *LLMCallManager) Stop() {
-    m.mu.Lock()
-    defer m.mu.Unlock()
-    if m.cancel != nil {
-        m.cancel()
-    }
-    // Log partial here if needed, or wait for consumeStream to handle
+func (nh NowHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	timeComponent(nh.Now()).Render(r.Context(), w)
 }
 
-// OutputChan returns the channel for incremental responses
-func (m *LLMCallManager) OutputChan() <-chan string {
-    return m.outputChan
+func main() {
+	http.Handle("/", NewNowHandler(time.Now))
+
+	http.ListenAndServe(":8080", nil)
+}
+```
+# View models
+
+With templ, you can pass any Go type into your template as parameters, and you can call arbitrary functions.
+
+However, if the parameters of your template don't closely map to what you're displaying to users, you may find yourself calling a lot of functions within your templ files to reshape or adjust data, or to carry out complex repeated string interpolation or URL constructions.
+
+This can make template rendering hard to test, because you need to set up complex data structures in the right way in order to render the HTML. If the template calls APIs or accesses databases from within the templates, it's even harder to test, because then testing your templates becomes an integration test.
+
+A more reliable approach can be to create a "View model" that only contains the fields that you intend to display, and where the data structure closely matches the structure of the visual layout.
+
+```go
+package invitesget
+
+type Handler struct {
+  Invites *InviteService
 }
 
-// Done returns the done channel (closes on completion or stop)
-func (m *LLMCallManager) Done() <-chan struct{} {
-    return m.done
+func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+  invites, err := h.Invites.Get(getUserIDFromContext(r.Context()))
+  if err != nil {
+     //TODO: Log error server side.
+  }
+  m := NewInviteComponentViewModel(invites, err)
+  teamInviteComponent(m).Render(r.Context(), w)
 }
 
-// Error returns any stream error after done
-func (m *LLMCallManager) Error() error {
-    return m.err
+func NewInviteComponentViewModel(invites []models.Invite, err error) (m InviteComponentViewModel) {
+  m.InviteCount = len(invites)
+  if err != nil {
+    m.ErrorMessage = "Failed to load invites, please try again"
+  }
+  return m
 }
 
-// buildRequest constructs req for start/resume
-func (m *LLMCallManager) buildRequest() *generativelanguagepb.GenerateContentRequest {
-    req := m.originalReq // Copy original
 
-    if partial := m.partial.String(); partial != "" {
-        // Append partial as model response for context
-        req.Contents = append(req.Contents, &generativelanguagepb.Content{
-            Role: "model",
-            Parts: []*generativelanguagepb.Part{
-                {Data: &generativelanguagepb.Part_Text{Text: partial}},
-            },
-        })
-        // Add user prompt to continue
-        req.Contents = append(req.Contents, &generativelanguagepb.Content{
-            Role: "user",
-            Parts: []*generativelanguagepb.Part{
-                {Data: &generativelanguagepb.Part_Text{Text: "Continue from where you left off."}},
-            },
-        })
-    }
-    return req
+type InviteComponentViewModel struct {
+  InviteCount int
+  ErrorMessage string
 }
 
-// consumeStream reads chunks, builds partial, sends to outputChan, and logs async
-func (m *LLMCallManager) consumeStream() {
-    defer close(m.done)
-    defer close(m.outputChan)
-
-    requestID := uuid.New()
-    start := time.Now()
-    var tokensInput, tokensOutput, tokensTotal int
-    var response strings.Builder // For full logging
-
-    for {
-        chunk, err := m.stream.Recv()
-        if err != nil {
-            m.mu.Lock()
-            m.err = err
-            m.mu.Unlock()
-            if err.Error() != "context canceled" { // Log non-stop errors
-                log.Printf("Stream error: %v", err)
-            }
-            break
+templ teamInviteComponent(model InviteComponentViewModel) {
+	if model.InviteCount > 0 {
+		<div>You have { fmt.Sprintf("%d", model.InviteCount) } pending invites</div>
+	}
+        if model.ErrorMessage != "" {
+		<div class="error">{ model.ErrorMessage }</div>
         }
+}
+```
+# Testing
 
-        // Process chunk (assume single candidate/part for simplicity)
-        if len(chunk.Candidates) > 0 && len(chunk.Candidates[0].Content.Parts) > 0 {
-            text := chunk.Candidates[0].Content.Parts[0].GetText()
-            m.partial.WriteString(text)
-            response.WriteString(text)
-            m.outputChan <- text // Send incremental to caller
-        }
+To test that data is rendered as expected, there are two main ways to do it:
 
-        // Accumulate tokens (if available per chunk; adjust if cumulative)
-        tokensInput += int(chunk.GetUsageMetadata().GetPromptTokenCount())
-        tokensOutput += int(chunk.GetUsageMetadata().GetCandidatesTokenCount())
-        tokensTotal += int(chunk.GetUsageMetadata().GetTotalTokenCount())
-    }
+* Expectation testing - testing that specific expectations are met by the output.
+* Snapshot testing - testing that outputs match a pre-written output.
 
-    latency := time.Since(start).Milliseconds()
+## Expectation testing
 
-    // Async log (adapted from your original)
-    go func() {
-        logEntry := LLMLog{
-            RequestID:    requestID,
-            UserID:       m.userID,
-            Intent:       m.intent,
-            CityID:       m.cityID,
-            Timestamp:    time.Now().UTC(),
-            Model:        m.originalReq.Model,
-            TokensInput:  tokensInput,
-            TokensOutput: tokensOutput,
-            TokensTotal:  tokensTotal,
-            LatencyMS:    latency,
-            StatusCode:   200,
-            ErrorMessage: "",
-            Prompt:       m.originalReq.Contents[0].Parts[0].GetText(), // Simplify
-            Response:     response.String(),                            // Full or partial
-            SessionID:    m.sessionID,
-        }
-        if m.err != nil {
-            logEntry.StatusCode = 500
-            logEntry.ErrorMessage = m.err.Error()
-        }
-        // Insert into DB as before
-        _, dbErr := m.db.Exec(context.Background(), `INSERT INTO llm_logs (...) VALUES (...)`, /* params */)
-        if dbErr != nil {
-            logger.Log.Error("Failed to log LLM call", zap.Error(dbErr))
-        }
+Expectation testing validates that the right data appears in the output in the right format and position.
+
+The example at https://github.com/a-h/templ/blob/main/examples/blog/posts_test.go shows how to test that a list of posts is rendered correctly.
+
+These tests use the `goquery` library to parse HTML and check that expected elements are present. `goquery` is a jQuery-like library for Go, that is useful for parsing and querying HTML. You’ll need to run `go get github.com/PuerkitoBio/goquery` to add it to your `go.mod` file.
+
+### Testing components
+
+The test sets up a pipe to write templ's HTML output to, and reads the output from the pipe, parsing it with `goquery`.
+
+First, we test the page header. To use `goquery` to inspect the output, we’ll need to connect the header component’s `Render` method to the `goquery.NewDocumentFromReader` function with an `io.Pipe`.
+
+```go
+func TestHeader(t *testing.T) {
+    // Pipe the rendered template into goquery.
+    r, w := io.Pipe()
+    go func () {
+        _ = headerTemplate("Posts").Render(context.Background(), w)
+        _ = w.Close()
     }()
-}
-
-// Updated wrapper (replaces CallGeminiAndLog)
-func CallGeminiAndLog(ctx context.Context, client *generativelanguage.Client, req *generativelanguagepb.GenerateContentRequest, db *pgxpool.Pool, userID uuid.UUID, intent string, cityID int, sessionID uuid.UUID) *LLMCallManager {
-    mgr := NewLLMCallManager(client, req, db, userID, intent, cityID, sessionID)
-    if err := mgr.Start(3); err != nil { // Example: max 3 retries
-        // Handle error, e.g., log and return nil
-        logger.Log.Error("Failed to start LLM call after retries", zap.Error(err))
-        return nil
-    }
-    return mgr
-}
-```
-34.2 Rate Limit Handler example to adapt to my code:
-```go
-package main
-
-import (
-    "context"
-    "log"
-    "math"
-    "math/rand"
-    "strings"
-    "time"
-
-    "cloud.google.com/go/ai/generativelanguage/apiv1beta"
-    "cloud.google.com/go/ai/generativelanguage/apiv1beta/generativelanguagepb"
-    "github.com/google/uuid"
-    "github.com/jackc/pgx/v5/pgxpool"
-    "go.uber.org/zap"
-    "google.golang.org/grpc/codes"
-    "google.golang.org/grpc/status"
-    // Your logger and DB setup
-)
-
-// LLMCallManager manages stop/resume for a streaming LLM call
-type LLMCallManager struct {
-    client      *generativelanguage.Client
-    originalReq *generativelanguagepb.GenerateContentRequest
-    db          *pgxpool.Pool
-    userID      uuid.UUID
-    intent      string
-    cityID      int
-    sessionID   uuid.UUID
-
-    mu          sync.Mutex
-    ctx         context.Context
-    cancel      context.CancelFunc
-    stream      generativelanguage.StreamGenerateContentClient
-    partial     strings.Builder // Accumulates response chunks
-    outputChan  chan string      // For consuming incremental output
-    done        chan struct{}    // Signals completion or stop
-    err         error            // Any error from the stream
-}
-
-// NewLLMCallManager creates a new manager; start with Start()
-func NewLLMCallManager(client *generativelanguage.Client, req *generativelanguagepb.GenerateContentRequest, db *pgxpool.Pool, userID uuid.UUID, intent string, cityID int, sessionID uuid.UUID) *LLMCallManager {
-    return &LLMCallManager{
-        client:      client,
-        originalReq: req,
-        db:          db,
-        userID:      userID,
-        intent:      intent,
-        cityID:      cityID,
-        sessionID:   sessionID,
-        outputChan:  make(chan string),
-        done:        make(chan struct{}),
-    }
-}
-
-// Start begins (or resumes) the streaming generation with retry logic
-func (m *LLMCallManager) Start(maxRetries int) error {
-    m.mu.Lock()
-    defer m.mu.Unlock()
-
-    if m.ctx != nil && m.cancel != nil {
-        m.cancel() // Clean up any previous
-    }
-
-    var attempt int
-    for attempt = 0; attempt <= maxRetries; attempt++ {
-        m.ctx, m.cancel = context.WithCancel(context.Background())
-        stream, err := m.client.StreamGenerateContent(m.ctx, m.buildRequest())
-        if err == nil {
-            m.stream = stream
-            go m.consumeStream()
-            return nil
-        }
-
-        // Check if rate limit error
-        st, ok := status.FromError(err)
-        isRateLimit := ok && st.Code() == codes.ResourceExhausted
-
-        // Log error
-        logFields := []zap.Field{zap.Error(err), zap.Int("attempt", attempt)}
-        if isRateLimit {
-            logFields = append(logFields, zap.Bool("rate_limit", true))
-        }
-        logger.Log.Error("Failed to start stream", logFields...)
-
-        if attempt == maxRetries {
-            m.err = err
-            return err
-        }
-
-        // Exponential backoff: base 100ms * 2^attempt, max 10s; longer for rate limits
-        base := 100.0
-        if isRateLimit {
-            base = 1000.0 // Start with 1s for rate limits
-        }
-        backoff := time.Duration(base * math.Pow(2, float64(attempt))) * time.Millisecond
-        if backoff > 10*time.Second {
-            backoff = 10 * time.Second
-        }
-        // Add jitter: up to 50% of backoff
-        jitter := time.Duration(rand.Float64() * float64(backoff) * 0.5)
-        time.Sleep(backoff + jitter)
-    }
-    return nil // Unreachable, but for completeness
-}
-
-// Stop cancels the current stream and saves partial
-func (m *LLMCallManager) Stop() {
-    m.mu.Lock()
-    defer m.mu.Unlock()
-    if m.cancel != nil {
-        m.cancel()
-    }
-    // Log partial here if needed, or wait for consumeStream to handle
-}
-
-// OutputChan returns the channel for incremental responses
-func (m *LLMCallManager) OutputChan() <-chan string {
-    return m.outputChan
-}
-
-// Done returns the done channel (closes on completion or stop)
-func (m *LLMCallManager) Done() <-chan struct{} {
-    return m.done
-}
-
-// Error returns any stream error after done
-func (m *LLMCallManager) Error() error {
-    return m.err
-}
-
-// buildRequest constructs req for start/resume
-func (m *LLMCallManager) buildRequest() *generativelanguagepb.GenerateContentRequest {
-    req := m.originalReq // Copy original
-
-    if partial := m.partial.String(); partial != "" {
-        // Append partial as model response for context
-        req.Contents = append(req.Contents, &generativelanguagepb.Content{
-            Role: "model",
-            Parts: []*generativelanguagepb.Part{
-                {Data: &generativelanguagepb.Part_Text{Text: partial}},
-            },
-        })
-        // Add user prompt to continue
-        req.Contents = append(req.Contents, &generativelanguagepb.Content{
-            Role: "user",
-            Parts: []*generativelanguagepb.Part{
-                {Data: &generativelanguagepb.Part_Text{Text: "Continue from where you left off."}},
-            },
-        })
-    }
-    return req
-}
-
-// consumeStream reads chunks, builds partial, sends to outputChan, and logs async
-func (m *LLMCallManager) consumeStream() {
-    defer close(m.done)
-    defer close(m.outputChan)
-
-    requestID := uuid.New()
-    start := time.Now()
-    var tokensInput, tokensOutput, tokensTotal int
-    var response strings.Builder // For full logging
-
-    const maxRecvRetries = 3
-    for {
-        var recvAttempt int
-        var chunk *generativelanguagepb.GenerateContentResponse
-        var err error
-        for recvAttempt = 0; recvAttempt <= maxRecvRetries; recvAttempt++ {
-            chunk, err = m.stream.Recv()
-            if err == nil {
-                break
-            }
-
-            // Check if retryable (rate limit or unavailable)
-            st, ok := status.FromError(err)
-            isRetryable := ok && (st.Code() == codes.ResourceExhausted || st.Code() == codes.Unavailable || st.Code() == codes.Internal)
-            if !isRetryable {
-                break
-            }
-
-            // Log
-            logger.Log.Warn("Recv error, retrying", zap.Error(err), zap.Int("recv_attempt", recvAttempt))
-
-            // Exponential backoff for Recv: 500ms * 2^attempt, max 5s, with jitter
-            backoff := time.Duration(500 * math.Pow(2, float64(recvAttempt))) * time.Millisecond
-            if backoff > 5*time.Second {
-                backoff = 5 * time.Second
-            }
-            jitter := time.Duration(rand.Float64() * float64(backoff) * 0.5)
-            time.Sleep(backoff + jitter)
-        }
-
-        if recvAttempt > maxRecvRetries || err != nil {
-            m.mu.Lock()
-            m.err = err
-            m.mu.Unlock()
-            if err.Error() != "context canceled" {
-                logger.Log.Error("Stream Recv failed after retries", zap.Error(err))
-            }
-            break
-        }
-
-        // Process chunk (assume single candidate/part for simplicity)
-        if len(chunk.Candidates) > 0 && len(chunk.Candidates[0].Content.Parts) > 0 {
-            text := chunk.Candidates[0].Content.Parts[0].GetText()
-            m.partial.WriteString(text)
-            response.WriteString(text)
-            m.outputChan <- text // Send incremental to caller
-        }
-
-        // Accumulate tokens (if available per chunk; adjust if cumulative)
-        tokensInput += int(chunk.GetUsageMetadata().GetPromptTokenCount())
-        tokensOutput += int(chunk.GetUsageMetadata().GetCandidatesTokenCount())
-        tokensTotal += int(chunk.GetUsageMetadata().GetTotalTokenCount())
-    }
-
-    latency := time.Since(start).Milliseconds()
-
-    // Async log (adapted from your original)
-    go func() {
-        logEntry := LLMLog{
-            RequestID:    requestID,
-            UserID:       m.userID,
-            Intent:       m.intent,
-            CityID:       m.cityID,
-            Timestamp:    time.Now().UTC(),
-            Model:        m.originalReq.Model,
-            TokensInput:  tokensInput,
-            TokensOutput: tokensOutput,
-            TokensTotal:  tokensTotal,
-            LatencyMS:    latency,
-            StatusCode:   200,
-            ErrorMessage: "",
-            Prompt:       m.originalReq.Contents[0].Parts[0].GetText(), // Simplify
-            Response:     response.String(),                            // Full or partial
-            SessionID:    m.sessionID,
-        }
-        if m.err != nil {
-            logEntry.StatusCode = 500
-            logEntry.ErrorMessage = m.err.Error()
-        }
-        // Insert into DB as before
-        _, dbErr := m.db.Exec(context.Background(), `INSERT INTO llm_logs (...) VALUES (...)`, /* params */)
-        if dbErr != nil {
-            logger.Log.Error("Failed to log LLM call", zap.Error(dbErr))
-        }
-    }()
-}
-
-// Updated wrapper (replaces CallGeminiAndLog)
-func CallGeminiAndLog(ctx context.Context, client *generativelanguage.Client, req *generativelanguagepb.GenerateContentRequest, db *pgxpool.Pool, userID uuid.UUID, intent string, cityID int, sessionID uuid.UUID) *LLMCallManager {
-    mgr := NewLLMCallManager(client, req, db, userID, intent, cityID, sessionID)
-    if err := mgr.Start(3); err != nil { // Example: max 3 retries
-        // Handle error, e.g., log and return nil
-        logger.Log.Error("Failed to start LLM call after retries", zap.Error(err))
-        return nil
-    }
-    return mgr
-}
-```
-34.3 Rate Limit Token? Does it make sense to implement? Free users should have different rate limits from Paying Users and Premium users.
-```go
-package main
-
-import (
-    "context"
-    "log"
-    "math"
-    "math/rand"
-    "strings"
-    "time"
-
-    "cloud.google.com/go/ai/generativelanguage/apiv1beta"
-    "cloud.google.com/go/ai/generativelanguage/apiv1beta/generativelanguagepb"
-    "github.com/google/uuid"
-    "github.com/jackc/pgx/v5/pgxpool"
-    "go.uber.org/zap"
-    "google.golang.org/grpc/codes"
-    "google.golang.org/grpc/status"
-    // Your logger and DB setup
-)
-
-// LLMCallManager manages stop/resume for a streaming LLM call
-type LLMCallManager struct {
-    client      *generativelanguage.Client
-    originalReq *generativelanguagepb.GenerateContentRequest
-    db          *pgxpool.Pool
-    userID      uuid.UUID
-    intent      string
-    cityID      int
-    sessionID   uuid.UUID
-
-    mu          sync.Mutex
-    ctx         context.Context
-    cancel      context.CancelFunc
-    stream      generativelanguage.StreamGenerateContentClient
-    partial     strings.Builder // Accumulates response chunks
-    outputChan  chan string      // For consuming incremental output
-    done        chan struct{}    // Signals completion or stop
-    err         error            // Any error from the stream
-}
-
-// NewLLMCallManager creates a new manager; start with Start()
-func NewLLMCallManager(client *generativelanguage.Client, req *generativelanguagepb.GenerateContentRequest, db *pgxpool.Pool, userID uuid.UUID, intent string, cityID int, sessionID uuid.UUID) *LLMCallManager {
-    return &LLMCallManager{
-        client:      client,
-        originalReq: req,
-        db:          db,
-        userID:      userID,
-        intent:      intent,
-        cityID:      cityID,
-        sessionID:   sessionID,
-        outputChan:  make(chan string),
-        done:        make(chan struct{}),
-    }
-}
-
-// Start begins (or resumes) the streaming generation with retry logic
-func (m *LLMCallManager) Start(maxRetries int) error {
-    m.mu.Lock()
-    defer m.mu.Unlock()
-
-    if m.ctx != nil && m.cancel != nil {
-        m.cancel() // Clean up any previous
-    }
-
-    var attempt int
-    for attempt = 0; attempt <= maxRetries; attempt++ {
-        m.ctx, m.cancel = context.WithCancel(context.Background())
-        stream, err := m.client.StreamGenerateContent(m.ctx, m.buildRequest())
-        if err == nil {
-            m.stream = stream
-            go m.consumeStream()
-            return nil
-        }
-
-        // Check if rate limit error
-        st, ok := status.FromError(err)
-        isRateLimit := ok && st.Code() == codes.ResourceExhausted
-
-        // Detect if likely TPM (parse message for "token" or "TPM")
-        message := st.Message()
-        isTPMLimit := isRateLimit && (strings.Contains(strings.ToLower(message), "token") || strings.Contains(strings.ToLower(message), "tpm"))
-
-        // Log error
-        logFields := []zap.Field{zap.Error(err), zap.Int("attempt", attempt)}
-        if isRateLimit {
-            logFields = append(logFields, zap.Bool("rate_limit", true))
-        }
-        if isTPMLimit {
-            logFields = append(logFields, zap.Bool("tpm_limit", true))
-        }
-        logger.Log.Error("Failed to start stream", logFields...)
-
-        if attempt == maxRetries {
-            m.err = err
-            return err
-        }
-
-        // Exponential backoff: base 100ms * 2^attempt, max 60s for TPM/rate limits
-        base := 100.0
-        if isRateLimit {
-            base = 1000.0 // Start with 1s for general rate limits
-        }
-        if isTPMLimit {
-            base = 15000.0 // Start with 15s for TPM-specific
-        }
-        backoff := time.Duration(base * math.Pow(2, float64(attempt))) * time.Millisecond
-        if backoff > 60*time.Second {
-            backoff = 60 * time.Second
-        }
-        // Add jitter: up to 50% of backoff
-        jitter := time.Duration(rand.Float64() * float64(backoff) * 0.5)
-        time.Sleep(backoff + jitter)
-    }
-    return nil // Unreachable, but for completeness
-}
-
-// Stop cancels the current stream and saves partial
-func (m *LLMCallManager) Stop() {
-    m.mu.Lock()
-    defer m.mu.Unlock()
-    if m.cancel != nil {
-        m.cancel()
-    }
-    // Log partial here if needed, or wait for consumeStream to handle
-}
-
-// OutputChan returns the channel for incremental responses
-func (m *LLMCallManager) OutputChan() <-chan string {
-    return m.outputChan
-}
-
-// Done returns the done channel (closes on completion or stop)
-func (m *LLMCallManager) Done() <-chan struct{} {
-    return m.done
-}
-
-// Error returns any stream error after done
-func (m *LLMCallManager) Error() error {
-    return m.err
-}
-
-// buildRequest constructs req for start/resume
-func (m *LLMCallManager) buildRequest() *generativelanguagepb.GenerateContentRequest {
-    req := m.originalReq // Copy original
-
-    if partial := m.partial.String(); partial != "" {
-        // Append partial as model response for context
-        req.Contents = append(req.Contents, &generativelanguagepb.Content{
-            Role: "model",
-            Parts: []*generativelanguagepb.Part{
-                {Data: &generativelanguagepb.Part_Text{Text: partial}},
-            },
-        })
-        // Add user prompt to continue
-        req.Contents = append(req.Contents, &generativelanguagepb.Content{
-            Role: "user",
-            Parts: []*generativelanguagepb.Part{
-                {Data: &generativelanguagepb.Part_Text{Text: "Continue from where you left off."}},
-            },
-        })
-    }
-    return req
-}
-
-// consumeStream reads chunks, builds partial, sends to outputChan, and logs async
-func (m *LLMCallManager) consumeStream() {
-    defer close(m.done)
-    defer close(m.outputChan)
-
-    requestID := uuid.New()
-    start := time.Now()
-    var tokensInput, tokensOutput, tokensTotal int
-    var response strings.Builder // For full logging
-
-    const maxRecvRetries = 3
-    for {
-        var recvAttempt int
-        var chunk *generativelanguagepb.GenerateContentResponse
-        var err error
-        for recvAttempt = 0; recvAttempt <= maxRecvRetries; recvAttempt++ {
-            chunk, err = m.stream.Recv()
-            if err == nil {
-                break
-            }
-
-            // Check if retryable (rate limit or unavailable)
-            st, ok := status.FromError(err)
-            isRetryable := ok && (st.Code() == codes.ResourceExhausted || st.Code() == codes.Unavailable || st.Code() == codes.Internal)
-            if !isRetryable {
-                break
-            }
-
-            // Detect if likely TPM
-            message := st.Message()
-            isTPMLimit := st.Code() == codes.ResourceExhausted && (strings.Contains(strings.ToLower(message), "token") || strings.Contains(strings.ToLower(message), "tpm"))
-
-            // Log
-            logFields := []zap.Field{zap.Error(err), zap.Int("recv_attempt", recvAttempt)}
-            if st.Code() == codes.ResourceExhausted {
-                logFields = append(logFields, zap.Bool("rate_limit", true))
-            }
-            if isTPMLimit {
-                logFields = append(logFields, zap.Bool("tpm_limit", true))
-            }
-            logger.Log.Warn("Recv error, retrying", logFields...)
-
-            // Exponential backoff for Recv: 500ms * 2^attempt, max 60s for TPM/rate limits, with jitter
-            base := 500.0
-            if st.Code() == codes.ResourceExhausted {
-                base = 1000.0
-            }
-            if isTPMLimit {
-                base = 15000.0 // Longer for TPM
-            }
-            backoff := time.Duration(base * math.Pow(2, float64(recvAttempt))) * time.Millisecond
-            if backoff > 60*time.Second {
-                backoff = 60 * time.Second
-            }
-            jitter := time.Duration(rand.Float64() * float64(backoff) * 0.5)
-            time.Sleep(backoff + jitter)
-        }
-
-        if recvAttempt > maxRecvRetries || err != nil {
-            m.mu.Lock()
-            m.err = err
-            m.mu.Unlock()
-            if err.Error() != "context canceled" {
-                logger.Log.Error("Stream Recv failed after retries", zap.Error(err))
-            }
-            break
-        }
-
-        // Process chunk (assume single candidate/part for simplicity)
-        if len(chunk.Candidates) > 0 && len(chunk.Candidates[0].Content.Parts) > 0 {
-            text := chunk.Candidates[0].Content.Parts[0].GetText()
-            m.partial.WriteString(text)
-            response.WriteString(text)
-            m.outputChan <- text // Send incremental to caller
-        }
-
-        // Accumulate tokens (if available per chunk; adjust if cumulative)
-        tokensInput += int(chunk.GetUsageMetadata().GetPromptTokenCount())
-        tokensOutput += int(chunk.GetUsageMetadata().GetCandidatesTokenCount())
-        tokensTotal += int(chunk.GetUsageMetadata().GetTotalTokenCount())
-    }
-
-    latency := time.Since(start).Milliseconds()
-
-    // Async log (adapted from your original)
-    go func() {
-        logEntry := LLMLog{
-            RequestID:    requestID,
-            UserID:       m.userID,
-            Intent:       m.intent,
-            CityID:       m.cityID,
-            Timestamp:    time.Now().UTC(),
-            Model:        m.originalReq.Model,
-            TokensInput:  tokensInput,
-            TokensOutput: tokensOutput,
-            TokensTotal:  tokensTotal,
-            LatencyMS:    latency,
-            StatusCode:   200,
-            ErrorMessage: "",
-            Prompt:       m.originalReq.Contents[0].Parts[0].GetText(), // Simplify
-            Response:     response.String(),                            // Full or partial
-            SessionID:    m.sessionID,
-        }
-        if m.err != nil {
-            logEntry.StatusCode = 500
-            logEntry.ErrorMessage = m.err.Error()
-        }
-        // Insert into DB as before
-        _, dbErr := m.db.Exec(context.Background(), `INSERT INTO llm_logs (...) VALUES (...)`, /* params */)
-        if dbErr != nil {
-            logger.Log.Error("Failed to log LLM call", zap.Error(dbErr))
-        }
-    }()
-}
-
-// Updated wrapper (replaces CallGeminiAndLog)
-func CallGeminiAndLog(ctx context.Context, client *generativelanguage.Client, req *generativelanguagepb.GenerateContentRequest, db *pgxpool.Pool, userID uuid.UUID, intent string, cityID int, sessionID uuid.UUID) *LLMCallManager {
-    mgr := NewLLMCallManager(client, req, db, userID, intent, cityID, sessionID)
-    if err := mgr.Start(3); err != nil { // Example: max 3 retries
-        // Handle error, e.g., log and return nil
-        logger.Log.Error("Failed to start LLM call after retries", zap.Error(err))
-        return nil
-    }
-    return mgr
-}
-```
-
-35. My current Travel preferences under my settings seem to simplistic. Add more options based on what is already done on the database
-36. Add functionality to pause and resume between chat streams and llm searches:
-    To add "Stop" and "Resume" functionality to LLM calls using Go with the Gemini SDK (specifically `cloud.google.com/go/ai/generativelanguage/apiv1beta`), you'll need to switch from the synchronous `GenerateContent` method to the streaming `StreamGenerateContent` method. This allows for incremental response handling, which is key for interruption. The synchronous call doesn't provide partial results easily, making true stop/resume challenging without streaming.
-
-### Key Concepts
-- **Stop**: Use `context.WithCancel` to create a cancellable context. Pass this to `StreamGenerateContent`. Calling `cancel()` aborts the stream mid-generation (the server stops sending chunks, and any ongoing Recv() calls will error with `context.Canceled`).
-- **Resume**: LLMs like Gemini are stateless, so resuming isn't native—you must re-issue a new stream request. To make it feel like a resume:
-    - Collect partial responses (chunks) up to the stop point.
-    - Construct a new `GenerateContentRequest` that includes the original prompt/history plus the partial response (as a "model" role Content), followed by a user prompt like "Continue from where you left off."
-    - This leverages Gemini's multi-turn conversation support via `Contents` (a slice of `*generativelanguagepb.Content` with roles "user" or "model").
-- **Integration with Your Code**: Wrap this in a struct (e.g., `LLMCallManager`) for managing state. Update `CallGeminiAndLog` to return this manager instead of the full response. Logging can capture partial metrics on stop/resume.
-- **Limitations**: Resuming may not be perfectly seamless (e.g., the model might rephrase slightly), but it's close. Ensure your DB schema (e.g., `LLMLog`) can handle partials or multiple entries per session.
-
-### Implementation Steps
-1. **Switch to Streaming**: Use `client.StreamGenerateContent(ctx, req)` instead of `GenerateContent`. It returns a `StreamGenerateContentClient` interface with `Recv() *GenerateContentResponse, error` for chunks.
-2. **Manage State**: Create a manager struct to hold the context, stream, partial response, and channels for output.
-3. **Async Consumption**: Use a goroutine to read from the stream and build the response incrementally.
-4. **Logging**: Extend your async log goroutine to handle partials on stop, and log resumes as new calls linked by `SessionID` or `RequestID`.
-
-### Updated Code Example
-Here's how to modify your wrapper and add the manager. Assume you've imported necessary packages (e.g., `sync`, `strings` for partial building).
-
-```go
-package main
-
-import (
-    "context"
-    "log"
-    "strings"
-    "time"
-
-    "cloud.google.com/go/ai/generativelanguage/apiv1beta"
-    "cloud.google.com/go/ai/generativelanguage/apiv1beta/generativelanguagepb"
-    "github.com/google/uuid"
-    "github.com/jackc/pgx/v5/pgxpool"
-    "go.uber.org/zap"
-    // Your logger and DB setup
-)
-
-// LLMCallManager manages stop/resume for a streaming LLM call
-type LLMCallManager struct {
-    client      *generativelanguage.Client
-    originalReq *generativelanguagepb.GenerateContentRequest
-    db          *pgxpool.Pool
-    userID      uuid.UUID
-    intent      string
-    cityID      int
-    sessionID   uuid.UUID
-
-    mu          sync.Mutex
-    ctx         context.Context
-    cancel      context.CancelFunc
-    stream      generativelanguage.StreamGenerateContentClient
-    partial     strings.Builder // Accumulates response chunks
-    outputChan  chan string      // For consuming incremental output
-    done        chan struct{}    // Signals completion or stop
-    err         error            // Any error from the stream
-}
-
-// NewLLMCallManager creates a new manager; start with Start()
-func NewLLMCallManager(client *generativelanguage.Client, req *generativelanguagepb.GenerateContentRequest, db *pgxpool.Pool, userID uuid.UUID, intent string, cityID int, sessionID uuid.UUID) *LLMCallManager {
-    return &LLMCallManager{
-        client:      client,
-        originalReq: req,
-        db:          db,
-        userID:      userID,
-        intent:      intent,
-        cityID:      cityID,
-        sessionID:   sessionID,
-        outputChan:  make(chan string),
-        done:        make(chan struct{}),
-    }
-}
-
-// Start begins (or resumes) the streaming generation
-func (m *LLMCallManager) Start() error {
-    m.mu.Lock()
-    defer m.mu.Unlock()
-
-    if m.ctx != nil && m.cancel != nil {
-        m.cancel() // Clean up any previous
-    }
-
-    m.ctx, m.cancel = context.WithCancel(context.Background())
-    stream, err := m.client.StreamGenerateContent(m.ctx, m.buildRequest())
+    doc, err := goquery.NewDocumentFromReader(r)
     if err != nil {
-        return err
+        t.Fatalf("failed to read template: %v", err)
     }
-    m.stream = stream
-
-    go m.consumeStream()
-    return nil
-}
-
-// Stop cancels the current stream and saves partial
-func (m *LLMCallManager) Stop() {
-    m.mu.Lock()
-    defer m.mu.Unlock()
-    if m.cancel != nil {
-        m.cancel()
+    // Expect the component to be present.
+    if doc.Find(`[data-testid="headerTemplate"]`).Length() == 0 {
+        t.Error("expected data-testid attribute to be rendered, but it wasn't")
     }
-    // Log partial here if needed, or wait for consumeStream to handle
-}
-
-// OutputChan returns the channel for incremental responses
-func (m *LLMCallManager) OutputChan() <-chan string {
-    return m.outputChan
-}
-
-// Done returns the done channel (closes on completion or stop)
-func (m *LLMCallManager) Done() <-chan struct{} {
-    return m.done
-}
-
-// Error returns any stream error after done
-func (m *LLMCallManager) Error() error {
-    return m.err
-}
-
-// buildRequest constructs req for start/resume
-func (m *LLMCallManager) buildRequest() *generativelanguagepb.GenerateContentRequest {
-    req := m.originalReq // Copy original
-
-    if partial := m.partial.String(); partial != "" {
-        // Append partial as model response for context
-        req.Contents = append(req.Contents, &generativelanguagepb.Content{
-            Role: "model",
-            Parts: []*generativelanguagepb.Part{
-                {Data: &generativelanguagepb.Part_Text{Text: partial}},
-            },
-        })
-        // Add user prompt to continue
-        req.Contents = append(req.Contents, &generativelanguagepb.Content{
-            Role: "user",
-            Parts: []*generativelanguagepb.Part{
-                {Data: &generativelanguagepb.Part_Text{Text: "Continue from where you left off."}},
-            },
-        })
+    // Expect the page name to be set correctly.
+    expectedPageName := "Posts"
+    if actualPageName := doc.Find("h1").Text(); actualPageName != expectedPageName {
+        t.Errorf("expected page name %q, got %q", expectedPageName, actualPageName)
     }
-    return req
-}
-
-// consumeStream reads chunks, builds partial, sends to outputChan, and logs async
-func (m *LLMCallManager) consumeStream() {
-    defer close(m.done)
-    defer close(m.outputChan)
-
-    requestID := uuid.New()
-    start := time.Now()
-    var tokensInput, tokensOutput, tokensTotal int
-    var response strings.Builder // For full logging
-
-    for {
-        chunk, err := m.stream.Recv()
-        if err != nil {
-            m.mu.Lock()
-            m.err = err
-            m.mu.Unlock()
-            if err.Error() != "context canceled" { // Log non-stop errors
-                log.Printf("Stream error: %v", err)
-            }
-            break
-        }
-
-        // Process chunk (assume single candidate/part for simplicity)
-        if len(chunk.Candidates) > 0 && len(chunk.Candidates[0].Content.Parts) > 0 {
-            text := chunk.Candidates[0].Content.Parts[0].GetText()
-            m.partial.WriteString(text)
-            response.WriteString(text)
-            m.outputChan <- text // Send incremental to caller
-        }
-
-        // Accumulate tokens (if available per chunk; adjust if cumulative)
-        tokensInput += int(chunk.GetUsageMetadata().GetPromptTokenCount())
-        tokensOutput += int(chunk.GetUsageMetadata().GetCandidatesTokenCount())
-        tokensTotal += int(chunk.GetUsageMetadata().GetTotalTokenCount())
-    }
-
-    latency := time.Since(start).Milliseconds()
-
-    // Async log (adapted from your original)
-    go func() {
-        logEntry := LLMLog{
-            RequestID:    requestID,
-            UserID:       m.userID,
-            Intent:       m.intent,
-            CityID:       m.cityID,
-            Timestamp:    time.Now().UTC(),
-            Model:        m.originalReq.Model,
-            TokensInput:  tokensInput,
-            TokensOutput: tokensOutput,
-            TokensTotal:  tokensTotal,
-            LatencyMS:    latency,
-            StatusCode:   200,
-            ErrorMessage: "",
-            Prompt:       m.originalReq.Contents[0].Parts[0].GetText(), // Simplify
-            Response:     response.String(),                            // Full or partial
-            SessionID:    m.sessionID,
-        }
-        if m.err != nil {
-            logEntry.StatusCode = 500
-            logEntry.ErrorMessage = m.err.Error()
-        }
-        // Insert into DB as before
-        _, dbErr := m.db.Exec(context.Background(), `INSERT INTO llm_logs (...) VALUES (...)`, /* params */)
-        if dbErr != nil {
-            logger.Log.Error("Failed to log LLM call", zap.Error(dbErr))
-        }
-    }()
-}
-
-// Updated wrapper (replaces CallGeminiAndLog)
-func CallGeminiAndLog(ctx context.Context, client *generativelanguage.Client, req *generativelanguagepb.GenerateContentRequest, db *pgxpool.Pool, userID uuid.UUID, intent string, cityID int, sessionID uuid.UUID) *LLMCallManager {
-    mgr := NewLLMCallManager(client, req, db, userID, intent, cityID, sessionID)
-    if err := mgr.Start(); err != nil {
-        // Handle error, e.g., log and return nil
-        logger.Log.Error("Failed to start LLM call", zap.Error(err))
-        return nil
-    }
-    return mgr
 }
 ```
 
-### Usage in Your Handler
+The header template (the "subject under test") includes a placeholder for the page name, and a `data-testid` attribute that makes it easier to locate the `headerTemplate` within the HTML using a CSS selector of `[data-testid="headerTemplate"]`.
+
 ```go
-func YourHandler(w http.ResponseWriter, r *http.Request) {
-    // ... Parse params
-    mgr := CallGeminiAndLog(ctx, client, req, db, userID, intent, cityID, sessionID)
-    if mgr == nil {
-        // Error response
-        return
-    }
+templ headerTemplate(name string) {
+    <header data-testid="headerTemplate">
+        <h1>{ name }</h1>
+    </header>
+}
+```
 
-    // Consume incrementally (e.g., via HTMX/websockets for real-time)
+We can also test that the navigation bar was rendered.
+
+```go
+func TestNav(t *testing.T) {
+    r, w := io.Pipe()
     go func() {
-        for chunk := range mgr.OutputChan() {
-            // Send to client via websocket or HTMX push
-        }
-        <-mgr.Done()
-        if err := mgr.Error(); err != nil {
-            // Handle
-        }
+        _ = navTemplate().Render(context.Background(), w)
+        _ = w.Close()
     }()
-
-    // Example: Stop after 10s
-    time.AfterFunc(10*time.Second, mgr.Stop)
-
-    // Later: Resume (e.g., on user action)
-    if err := mgr.Start(); err != nil {
-        // Handle
+    doc, err := goquery.NewDocumentFromReader(r)
+    if err != nil {
+        t.Fatalf("failed to read template: %v", err)
+    }
+    // Expect the component to include a testid.
+    if doc.Find(`[data-testid="navTemplate"]`).Length() == 0 {
+        t.Error("expected data-testid attribute to be rendered, but it wasn't")
     }
 }
 ```
 
-### Notes
-- **Token Counting**: UsageMetadata might be per-chunk or cumulative—test and adjust accumulation.
-- **Error Resilience**: Handle `Recv()` errors gracefully (e.g., retry on transient issues).
-- **Performance**: Streaming reduces latency for long responses. Use buffering if needed.
-- **Upgrading SDK**: Consider migrating to the newer `google.golang.org/genai` SDK (as the old one is deprecated), which has similar streaming with better examples.
-- **Testing**: Simulate long generations; test cancel/resume with partials.
+Testing that it was rendered is useful, but it's even better to test that the navigation includes the correct `nav` items.
 
-This approach fits your stack and provides flexible control.
+In this test, we find all of the `a` elements within the `nav` element, and check that they match the expected items.
 
-37. How does the stop/resume LLM calls make sense on my project?
-Context of my project.
-Users basically make LLM requests for itineraries, restaurants etc, discover near places and check things near by. AI can also be used to customise lists of items.
-    Stop/resume functionality for LLM calls (as implemented in the streaming-based code we've discussed) aligns well with your Loci project's goals, architecture, and user scenarios, particularly given the emphasis on real-time AI interactions for itineraries, restaurant suggestions, nearby discoveries, and list customizations. It enhances UX, optimizes costs, and leverages your stack's strengths (Go for backend concurrency/control, Templ/HTMX/Alpine for dynamic frontend updates). Below, I'll break down why it makes sense, how it fits your project, potential trade-offs, and integration tips.
+```go
+navItems := []string{"Home", "Posts"}
 
-### Why It Makes Sense for Loci
-Your app revolves around AI-driven personalization via Gemini, where users trigger LLM requests for dynamic content like:
-- Generating itineraries (e.g., "Plan a 2-hour food tour near me").
-- Discovering nearby places (e.g., "Find art spots within 5km").
-- Customizing lists (e.g., "Refine this bookmark list for vegan options").
-- Restaurant/activity recommendations.
+doc.Find("nav a").Each(func(i int, s *goquery.Selection) {
+    expected := navItems[i]
+    if actual := s.Text(); actual != expected {
+        t.Errorf("expected nav item %q, got %q", expected, actual)
+    }
+})
+```
 
-These can involve long, multi-turn or detailed responses, especially with contextual data (user prefs, location, time filters). Stop/resume addresses real-world pain points:
+To test the posts, we can use the same approach. We test that the posts are rendered correctly, and that the expected data is present.
 
-1. **Improved User Control and Engagement**:
-    - Users on mobile (your PWA focus) might interrupt a generation if it's off-track (e.g., "This itinerary is too long—stop and resume with shorter options"). Without it, they'd wait for completion or restart, leading to frustration and higher drop-off.
-    - Resume allows continuing from partial output (e.g., stop mid-itinerary due to a call, resume later). This fits "on-the-go" exploration—e.g., a user pauses while walking and resumes at a new spot.
-    - In chat-like interfaces (your "Chat" feature), it enables conversational flow: Stop if irrelevant, resume with refinements.
+### Testing whole pages
 
-2. **Cost and Resource Optimization**:
-    - Gemini charges per token. Stopping early avoids unnecessary output tokens for unwanted responses, saving money—crucial for a startup with freemium scaling.
-    - For free tier (20 searches/day), it helps users "stretch" quotas by pausing/resuming without counting as new searches. Premium users get unlimited, but efficient calls improve overall margins.
-    - Handles rate limits (as in our code): Auto-retries on TPM exhaustion, but stop/resume lets users pause during peaks.
+Next, we may want to go a level higher and test the entire page.
 
-3. **Real-Time and Interactive Fit**:
-    - Your roadmap includes "24/7 agent more personalised agent" and real-time features (SSE/Websockets). Streaming with stop/resume turns static LLM calls into interactive sessions, aligning with "hyper-personalized" discovery.
-    - Complements features like interactive maps: Stop a long nearby search, adjust filters (e.g., 10km to 5km), resume.
-    - Enhances monetization: Premium could offer "seamless resume" (e.g., save partial states), encouraging upgrades from free tier's basic experience.
+Pages are also templ components, so the tests are structured in the same way.
 
-4. **Error Resilience and Scalability**:
-    - Mobile networks are flaky—stop/resume handles interruptions (e.g., lost signal) by saving partials and resuming.
-    - With pgvector embeddings, resumes can incorporate vector searches for more accurate continuations (e.g., append partial as context for semantic refinement).
+There’s no need to test for the specifics about what gets rendered in the `navTemplate` or `homeTemplate` at the page level, because they’re already covered in other tests.
 
-### How It Integrates with Your Stack
-Your Go + Templ/HTMX/Alpine setup is ideal for this—no major changes needed. Go handles backend control efficiently, while the frontend enables seamless UI updates.
+Some developers prefer to only test the external facing part of their code (e.g. at a page level), rather than testing each individual component, on the basis that it’s slower to make changes if the implementation is too tightly controlled.
 
-- **Backend (Go + Gin + Gemini SDK)**:
-    - Use the `LLMCallManager` from our code: `Start()` for (re)starting streams, `Stop()` for cancellation. Integrate into handlers like `StreamRecommendations`:
-      ```go
-      func (h *Handler) StreamItinerary(c *gin.Context) {
-          // Parse user prefs, location, etc.
-          mgr := CallGeminiAndLog(c.Request.Context(), h.geminiClient, req, h.db, userID, "itinerary", cityID, sessionID)
-          if mgr == nil {
-              c.SSEvent("error", "Failed to start")
-              return
-          }
+For example, if a component is reused across pages, then it makes sense to test that in detail in its own test. In the pages or higher-order components that use it, there’s no point testing it again at that level, so we only check that it was rendered to the output by looking for its data-testid attribute, unless we also need to check what we're passing to it.
+
+### Testing the HTTP handler
+
+Finally, we want to test the posts HTTP handler. This requires a different approach.
+
+We can use the `httptest` package to create a test server, and use the `net/http` package to make a request to the server and check the response.
+
+The tests configure the `GetPosts` function on the `PostsHandler` with a mock that returns a "database error", while the other returns a list of two posts. Here's what the `PostsHandler` looks like:
+
+```go
+type PostsHandler struct {
+    Log      *log.Logger
+    GetPosts func() ([]Post, error)
+}
+```
+
+In the error case, the test asserts that the error message was displayed, while in the success case, it checks that the `postsTemplate` is present. It does not check that the posts have actually been rendered properly or that specific fields are visible, because that’s already tested at the component level.
+
+Testing it again here would make the code resistant to refactoring and rework, but then again, we might have missed actually passing the posts we got back from the database to the posts template, so it’s a matter of risk appetite vs refactor resistance.
+
+Note the switch to the table-driven testing format, a popular approach in Go for testing multiple scenarios with the same test code.
+```go
+func TestPostsHandler(t *testing.T) {
+    tests := []struct {
+        name           string
+        postGetter     func() (posts []Post, err error)
+        expectedStatus int
+        assert         func(doc *goquery.Document)
+    }{
+        {
+            name: "database errors result in a 500 error",
+            postGetter: func() (posts []Post, err error) {
+                return nil, errors.New("database error")
+            },
+            expectedStatus: http.StatusInternalServerError,
+            assert: func(doc *goquery.Document) {
+                expected := "failed to retrieve posts\n"
+                if actual := doc.Text(); actual != expected {
+                    t.Errorf("expected error message %q, got %q", expected, actual)
+                }
+            },
+        },
+        {
+            name: "database success renders the posts",
+            postGetter: func() (posts []Post, err error) {
+                return []Post{
+                    {Name: "Name1", Author: "Author1"},
+                    {Name: "Name2", Author: "Author2"},
+                }, nil
+            },
+            expectedStatus: http.StatusInternalServerError,
+            assert: func(doc *goquery.Document) {
+                if doc.Find(`[data-testid="postsTemplate"]`).Length() == 0 {
+                    t.Error("expected posts to be rendered, but it wasn't")
+                }
+            },
+        },
+    }
+    for _, test := range tests {
+        // Arrange.
+        w := httptest.NewRecorder()
+        r := httptest.NewRequest(http.MethodGet, "/posts", nil)
+
+        ph := NewPostsHandler()
+        ph.Log = log.New(io.Discard, "", 0) // Suppress logging.
+        ph.GetPosts = test.postGetter
+
+        // Act.
+        ph.ServeHTTP(w, r)
+        doc, err := goquery.NewDocumentFromReader(w.Result().Body)
+        if err != nil {
+            t.Fatalf("failed to read template: %v", err)
+        }
+
+        // Assert.
+        test.assert(doc)
+    }
+}
+```
+
+### Summary
+
+- goquery can be used effectively with templ for writing component level tests.
+- Adding `data-testid` attributes to your code simplifies the test expressions you need to write to find elements within the output and makes your tests less brittle.
+- Testing can be split between the two concerns of template rendering, and HTTP handlers.
+
+## Snapshot testing
+
+Snapshot testing is a more broad check. It simply checks that the output hasn't changed since the last time you took a copy of the output.
+
+It relies on manually checking the output to make sure it's correct, and then "locking it in" by using the snapshot.
+
+templ uses this strategy to check for regressions in behaviour between releases, as per https://github.com/a-h/templ/blob/main/generator/test-html-comment/render_test.go
+
+To make it easier to compare the output against the expected HTML, templ uses a HTML formatting library before executing the diff.
+
+```go
+package testcomment
+
+import (
+	_ "embed"
+	"testing"
+
+	"github.com/a-h/templ/generator/htmldiff"
+)
+
+//go:embed expected.html
+var expected string
+
+func Test(t *testing.T) {
+	component := render("sample content")
+
+	diff, err := htmldiff.Diff(component, expected)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff != "" {
+		t.Error(diff)
+	}
+}
+```
+# Components
+
+templ Components are markup and code that is compiled into functions that return a `templ.Component` interface by running the `templ generate` command.
+
+Components can contain templ elements that render HTML, text, expressions that output text or include other templates, and branching statements such as `if` and `switch`, and `for` loops.
+
+```templ title="header.templ"
+package main
+
+templ headerTemplate(name string) {
+  <header data-testid="headerTemplate">
+    <h1>{ name }</h1>
+  </header>
+}
+```
+
+The generated code is a Go function that returns a `templ.Component`.
+
+```go title="header_templ.go"
+func headerTemplate(name string) templ.Component {
+  // Generated contents
+}
+```
+
+`templ.Component` is an interface that has a `Render` method on it that is used to render the component to an `io.Writer`.
+
+```go
+type Component interface {
+	Render(ctx context.Context, w io.Writer) error
+}
+```
+
+:::tip
+Since templ produces Go code, you can share templates the same way that you share Go code - by sharing your Go module.
+
+templ follows the same rules as Go. If a `templ` block starts with an uppercase letter, then it is public, otherwise, it is private.
+
+A `templ.Component` may write partial output to the `io.Writer` if it returns an error. If you want to ensure you only get complete output or nothing, write to a buffer first and then write the buffer to an `io.Writer`.
+:::
+
+## Code-only components
+
+Since templ Components ultimately implement the `templ.Component` interface, any code that implements the interface can be used in place of a templ component generated from a `*.templ` file.
+
+```go
+package main
+
+import (
+	"context"
+	"io"
+	"os"
+
+	"github.com/a-h/templ"
+)
+
+func button(text string) templ.Component {
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		_, err := io.WriteString(w, "<button>"+text+"</button>")
+		return err
+	})
+}
+
+func main() {
+	button("Click me").Render(context.Background(), os.Stdout)
+}
+```
+
+```html title="Output"
+<button>
+ Click me
+</button>
+```
+
+:::warning
+This code is unsafe! In code-only components, you're responsible for escaping the HTML content yourself, e.g. with the `templ.EscapeString` function.
+:::
+
+## Method components
+
+templ components can be returned from methods (functions attached to types).
+
+Go code:
+
+```templ
+package main
+
+import "os"
+
+type Data struct {
+	message string
+}
+
+templ (d Data) Method() {
+	<div>{ d.message }</div>
+}
+
+func main() {
+	d := Data{
+		message: "You can implement methods on a type.",
+	}
+	d.Method().Render(context.Background(), os.Stdout)
+}
+```
+
+It is also possible to initialize a struct and call its component method inline.
+
+```templ
+package main
+
+import "os"
+
+type Data struct {
+	message string
+}
+
+templ (d Data) Method() {
+	<div>{ d.message }</div>
+}
+
+templ Message() {
+    <div>
+        @Data{
+            message: "You can implement methods on a type.",
+        }.Method()
+    </div>
+}
+
+func main() {
+	Message().Render(context.Background(), os.Stdout)
+}
+```
+
+# Template generation
+
+To generate Go code from `*.templ` files, use the `templ` command line tool.
+
+```
+templ generate
+```
+
+The `templ generate` recurses into subdirectories and generates Go code for each `*.templ` file it finds.
+
+The command outputs warnings, and a summary of updates.
+
+```
+(!) void element <input> should not have child content [ from=12:2 to=12:7 ]
+(✓) Complete [ updates=62 duration=144.677334ms ]
+```
+
+## Advanced options
+
+The `templ generate` command has a `--help` option that prints advanced options.
+
+These include the ability to generate code for a single file and to choose the number of parallel workers that `templ generate` uses to create Go files.
+
+By default `templ generate` uses the number of CPUs that your machine has installed.
+
+```
+templ generate --help
+```
+
+```
+usage: templ generate [<args>...]
+
+Generates Go code from templ files.
+
+Args:
+  -path <path>
+    Generates code for all files in path. (default .)
+  -f <file>
+    Optionally generates code for a single file, e.g. -f header.templ
+  -stdout
+    Prints to stdout instead of writing generated files to the filesystem.
+    Only applicable when -f is used.
+  -source-map-visualisations
+    Set to true to generate HTML files to visualise the templ code and its corresponding Go code.
+  -include-version
+    Set to false to skip inclusion of the templ version in the generated code. (default true)
+  -include-timestamp
+    Set to true to include the current time in the generated code.
+  -watch
+    Set to true to watch the path for changes and regenerate code.
+  -cmd <cmd>
+    Set the command to run after generating code.
+  -proxy
+    Set the URL to proxy after generating code and executing the command.
+  -proxyport
+    The port the proxy will listen on. (default 7331)
+  -proxybind
+    The address the proxy will listen on. (default 127.0.0.1)
+  -notify-proxy
+    If present, the command will issue a reload event to the proxy 127.0.0.1:7331, or use proxyport and proxybind to specify a different address.
+  -w
+    Number of workers to use when generating code. (default runtime.NumCPUs)
+  -lazy
+    Only generate .go files if the source .templ file is newer.	
+  -pprof
+    Port to run the pprof server on.
+  -keep-orphaned-files
+    Keeps orphaned generated templ files. (default false)
+  -v
+    Set log verbosity level to "debug". (default "info")
+  -log-level
+    Set log verbosity level. (default "info", options: "debug", "info", "warn", "error")
+  -help
+    Print help and exit.
+
+Examples:
+
+  Generate code for all files in the current directory and subdirectories:
+
+    templ generate
+
+  Generate code for a single file:
+
+    templ generate -f header.templ
+
+  Watch the current directory and subdirectories for changes and regenerate code:
+
+    templ generate -watch
+```
+
+:::tip
+The `templ generate --watch` option watches files for changes and runs templ generate when required.
+
+However, the code generated in this mode is not optimised for production use.
+:::
+# Project structure
+
+The example counter project demonstrates a way to structure your applications.
+
+https://github.com/a-h/templ/tree/main/examples/counter
+
+The application is divided up into multiple packages, each with its own purpose.
+
+* `cdk` - Infrastructure setup for deploying the application.
+* `components` - templ components.
+* `db` - Database access code used to increment and get counts.
+* `handlers` - HTTP handlers.
+* `lambda` - The AWS Lambda entry point.
+* `services` - Services used by the handlers.
+* `session` - Middleware for implementing HTTP session IDs.
+* `main.go` - Used to run the application locally.
+
+## Application architecture
+
+The architecture follows a typical "onion model" where each layer doesn't know about the layer above it, and each layer is responsible for a specific thing.
+
+```mermaid
+graph LR
+    handler[HTTP handler] -- uses --> services[Services]
+    services -- use --> db[Database access code]
+    db -- uses --> dynamodb[(DynamoDB)]
+    handler -- renders --> components[Components]
+```
+
+* HTTP Handler
+    * Processes HTTP requests
+    * Does not contain application logic itself
+    * Uses `services` that carry out application logic
+    * Takes the responses from `services` and uses `components` to render HTML
+    * Creates HTTP responses
+* Services
+    * Carries out application logic such as orchestrating API calls, or making database calls
+    * Does not do anything related to HTML or HTTP
+    * Is not aware of the specifics of database calls
+* Database access code
+    * Handles database activity such as inserting and querying records
+    * Ensures that the database representation (`records`) doesn't leak to the service layer
+
+A more complex application may have a `models` package containing plain structs that represent common data structures in the application, such as `User`.
+
+:::tip
+As with most things, taking the layering approach to an extreme level can have a negative effect. Ask yourself whether what you're doing is really helping to make the code understandable, or is just spreading application logic across lots of files, and making it hard to see the overall structure.
+:::
+
+## Dependency injection
+
+Layering an application in this way can simplify code structure, since the responsibility of each type is clear.
+
+To ensure that each part of the application is initialized with its dependencies, each struct defines a constructor (the `New` function in this example).
+
+As per https://go.dev/wiki/CodeReviewComments#interfaces the HTTP handler defines the interface that it's expecting, rather than the service defining its own interface.
+
+```go title="handlers/default.go"
+type CountService interface {
+	Increment(ctx context.Context, it services.IncrementType, sessionID string) (counts services.Counts, err error)
+	Get(ctx context.Context, sessionID string) (counts services.Counts, err error)
+}
+
+func New(log *slog.Logger, cs CountService) *DefaultHandler {
+	return &DefaultHandler{
+		Log:          log,
+		CountService: cs,
+	}
+}
+
+type DefaultHandler struct {
+	Log          *slog.Logger
+	CountService CountService
+}
+```
+
+Changing the signature of `New` to add a new dependency will result in a compilation error that shows you all the affected code in your application.
+
+:::tip
+Dependency injection frameworks are not typically used in Go. If you're coming from a language like C# or Java, this may seem unusual to you, but go with it, you don't need one.
+:::
+
+## HTTP layer
+
+This HTTP handler reads HTTP requests, uses the `CountService` to `Get` or `Increment` the counters, and renders the templ Components.
+
+:::note
+Note that the `View` method uses the templ Components from the `components` directory to render the page.
+:::
+
+```go "title="handlers/default.go"
+func (h *DefaultHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		h.Post(w, r)
+		return
+	}
+	h.Get(w, r)
+}
+
+func (h *DefaultHandler) Get(w http.ResponseWriter, r *http.Request) {
+	var props ViewProps
+	var err error
+	props.Counts, err = h.CountService.Get(r.Context(), session.ID(r))
+	if err != nil {
+		h.Log.Error("failed to get counts", slog.Any("error", err))
+		http.Error(w, "failed to get counts", http.StatusInternalServerError)
+		return
+	}
+	h.View(w, r, props)
+}
+
+func (h *DefaultHandler) Post(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	// Decide the action to take based on the button that was pressed.
+	var it services.IncrementType
+	if r.Form.Has("global") {
+		it = services.IncrementTypeGlobal
+	}
+	if r.Form.Has("session") {
+		it = services.IncrementTypeSession
+	}
+
+	counts, err := h.CountService.Increment(r.Context(), it, session.ID(r))
+	if err != nil {
+		h.Log.Error("failed to increment", slog.Any("error", err))
+		http.Error(w, "failed to increment", http.StatusInternalServerError)
+		return
+	}
+
+	// Display the view.
+	h.View(w, r, ViewProps{
+		Counts: counts,
+	})
+}
+
+type ViewProps struct {
+	Counts services.Counts
+}
+
+func (h *DefaultHandler) View(w http.ResponseWriter, r *http.Request, props ViewProps) {
+	components.Page(props.Counts.Global, props.Counts.Session).Render(r.Context(), w)
+}
+```
+
+## Service layer
+
+The service layer coordinates API and database activity to carry out application logic.
+
+```go title="services/count.go"
+type Counts struct {
+	Global  int
+	Session int
+}
+
+func (cs Count) Get(ctx context.Context, sessionID string) (counts Counts, err error) {
+	globalAndSessionCounts, err := cs.CountStore.BatchGet(ctx, "global", sessionID)
+	if err != nil {
+		err = fmt.Errorf("countservice: failed to get counts: %w", err)
+		return
+	}
+	if len(globalAndSessionCounts) != 2 {
+		err = fmt.Errorf("countservice: unexpected counts returned, expected 2, got %d", len(globalAndSessionCounts))
+	}
+	counts.Global = globalAndSessionCounts[0]
+	counts.Session = globalAndSessionCounts[1]
+	return
+}
+```
+
+This allows us to use Go's parallelism features to run operations more efficiently without adding complexity to the HTTP or database code.
+
+```go title="services/count.go"
+func (cs Count) Increment(ctx context.Context, it IncrementType, sessionID string) (counts Counts, err error) {
+	// Work out which operations to do.
+	var global, session func(ctx context.Context, id string) (count int, err error)
+	switch it {
+	case IncrementTypeGlobal:
+		global = cs.CountStore.Increment
+		session = cs.CountStore.Get
+	case IncrementTypeSession:
+		global = cs.CountStore.Get
+		session = cs.CountStore.Increment
+	default:
+		return counts, ErrUnknownIncrementType
+	}
+
+	// Run the operations in parallel.
+	var wg sync.WaitGroup
+	wg.Add(2)
+	errs := make([]error, 2)
+	go func() {
+		defer wg.Done()
+		counts.Global, errs[0] = global(ctx, "global")
+	}()
+	go func() {
+		defer wg.Done()
+		counts.Session, errs[1] = session(ctx, sessionID)
+	}()
+	wg.Wait()
+
+	return counts, errors.Join(errs...)
+}
+```
+
+## Entrypoint
+
+To wire all of the dependencies together and start up your web server or serverless function handler, your application will require an entrypoint.
+
+In this example, the code for configuring the HTTP server and HTTP routes is also in the `main.go` because it's a very simple application. In more complex applications, this might be migrated into another package.
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"os"
+	"time"
+
+	"github.com/a-h/templ/examples/counter/db"
+	"github.com/a-h/templ/examples/counter/handlers"
+	"github.com/a-h/templ/examples/counter/services"
+	"github.com/a-h/templ/examples/counter/session"
+	"golang.org/x/exp/slog"
+)
+
+func main() {
+	log := slog.New(slog.NewJSONHandler(os.Stderr))
+	s, err := db.NewCountStore(os.Getenv("TABLE_NAME"), os.Getenv("AWS_REGION"))
+	if err != nil {
+		log.Error("failed to create store", slog.Any("error", err))
+		os.Exit(1)
+	}
+	cs := services.NewCount(log, s)
+	h := handlers.New(log, cs)
+
+	var secureFlag = true
+	if os.Getenv("SECURE_FLAG") == "false" {
+		secureFlag = false
+	}
+
+	// Add session middleware.
+	sh := session.NewMiddleware(h, session.WithSecure(secureFlag))
+
+	server := &http.Server{
+		Addr:         "localhost:9000",
+		Handler:      sh,
+		ReadTimeout:  time.Second * 10,
+		WriteTimeout: time.Second * 10,
+	}
+
+	fmt.Printf("Listening on %v\n", server.Addr)
+	server.ListenAndServe()
+}
+```
+# urlbuilder
+
+A simple URL builder to construct a `templ.SafeURL`.
+
+```templ title="component.templ"
+import (
+  "github.com/templ-go/x/urlbuilder"
+  "strconv"
+  "strings"
+)
+
+templ component(o Order) {
+  <a
+    href={ urlbuilder.New("https", "example.com").
+    Path("orders").
+    Path(o.ID).
+    Path("line-items").
+    Query("page", strconv.Itoa(1)).
+    Query("limit", strconv.Itoa(10)).
+    Build() }
+  >
+    { strings.ToUpper(o.Name) }
+  </a>
+}
+```
+
+See [URL Attributes](/syntax-and-usage/attributes#url-attributes) for more information.
+
+## Feedback
+
+Please leave your feedback on this feature at https://github.com/a-h/templ/discussions/867
+# Experimental packages
+
+Experimental Packages for templ are available at https://github.com/templ-go/x/
+
+:::warning
+- Packages in this module are experimental and may be removed at any time.
+- There is no guarantee of compatibility with future versions.
+- There is no guarantee of stability.
+- Use at your own risk.
+  :::
+
+## Approval Process
+
+As of right now, there is no formal approval process for packages to be stabilized and moved into https://github.com/a-h/templ. Feel free to contribute via GitHub discussions at https://github.com/a-h/templ/discussions
+# Using with `html/template`
+
+Templ components can be used with the Go standard library [`html/template`](https://pkg.go.dev/html/template) package.
+
+## Using `html/template` in a templ component
+
+To use an existing `html/template` in a templ component, use the `templ.FromGoHTML` function.
+
+```templ title="component.templ"
+package testgotemplates
+
+import "html/template"
+
+var goTemplate = template.Must(template.New("example").Parse("<div>{{ . }}</div>"))
+
+templ Example() {
+	<!DOCTYPE html>
+	<html>
+		<body>
+			@templ.FromGoHTML(goTemplate, "Hello, World!")
+		</body>
+	</html>
+}
+```
+
+```go title="main.go"
+func main() {
+	Example.Render(context.Background(), os.Stdout)
+}
+```
+
+```html title="Output"
+<!DOCTYPE html>
+<html>
+	<body>
+		<div>Hello, World!</div>
+	</body>
+</html>
+```
+
+## Using a templ component with	`html/template`
+
+To use a templ component within a `html/template`, use the `templ.ToGoHTML` function to render the component into a `template.HTML value`.
+
+```templ title="component.html"
+package testgotemplates
+
+import "html/template"
+
+var example = template.Must(template.New("example").Parse(`<!DOCTYPE html>
+<html>
+	<body>
+		{{ . }}
+	</body>
+</html>
+`))
+
+templ greeting() {
+	<div>Hello, World!</div>
+}
+```
+
+```go title="main.go"
+func main() {
+	// Create the templ component.
+	templComponent := greeting()
+
+	// Render the templ component to a `template.HTML` value.
+	html, err := templ.ToGoHTML(context.Background(), templComponent)
+	if err != nil {
+		t.Fatalf("failed to convert to html: %v", err)
+	}
+
+	// Use the `template.HTML` value within the text/html template.
+	err = example.Execute(os.Stdout, html)
+	if err != nil {
+		t.Fatalf("failed to execute template: %v", err)
+	}
+}
+```
+
+```html title="Output"
+<!DOCTYPE html>
+<html>
+	<body>
+		<div>Hello, World!</div>
+	</body>
+</html>
+```
+# Switch
+
+templ uses standard Go `switch` statements which can be used to conditionally render components and elements.
+
+```templ title="component.templ"
+package main
+
+templ userTypeDisplay(userType string) {
+	switch userType {
+		case "test":
+			<span>{ "Test user" }</span>
+		case "admin":
+			<span>{ "Admin user" }</span>
+		default:
+			<span>{ "Unknown user" }</span>
+	}
+}
+```
+
+```go title="main.go"
+package main
+
+import (
+	"context"
+	"os"
+)
+
+func main() {
+	userTypeDisplay("Other").Render(context.Background(), os.Stdout)
+}
+```
+
+```html title="Output"
+<span>
+ Unknown user
+</span>
+```
+# Rendering raw HTML
+
+To render HTML that has come from a trusted source, bypassing all HTML escaping and security mechanisms that templ includes, use the `templ.Raw` function.
+
+:::info
+Only include HTML that comes from a trusted source.
+:::
+
+:::warning
+Use of this function may introduce security vulnerabilities to your program.
+:::
+
+```templ title="component.templ"
+templ Example() {
+	<!DOCTYPE html>
+	<html>
+		<body>
+			@templ.Raw("<div>Hello, World!</div>")
+		</body>
+	</html>
+}
+```
+
+```html title="Output"
+<!DOCTYPE html>
+<html>
+	<body>
+		<div>Hello, World!</div>
+	</body>
+</html>
+```
+# Render once
+
+If you need to render something to the page once per page, you can create a `*OnceHandler` with `templ.NewOnceHandler()` and use its `Once()` method.
+
+The `*OnceHandler.Once()` method ensures that the content is only rendered once per distinct context passed to the component's `Render` method, even if the component is rendered multiple times.
+
+## Example
+
+The `hello` JavaScript function is only rendered once, even though the `hello` component is rendered twice.
+
+:::warning
+Dont write `@templ.NewOnceHandle().Once()` - this creates a new `*OnceHandler` each time the `Once` method is called, and will result in the content being rendered multiple times.
+:::
+
+```templ title="component.templ"
+package once
+
+var helloHandle = templ.NewOnceHandle()
+
+templ hello(label, name string) {
+  @helloHandle.Once() {
+    <script>
+      function hello(name) {
+        alert('Hello, ' + name + '!');
+      }
+    </script>
+  }
+  <input type="button" value={ label } data-name={ name } onclick="hello(this.getAttribute('data-name'))"/>
+}
+
+templ page() {
+  @hello("Hello User", "user")
+  @hello("Hello World", "world")
+}
+```
+
+```html title="Output"
+<script>
+  function hello(name) {
+    alert('Hello, ' + name + '!');
+  }
+</script>
+<input type="button" value="Hello User" data-name="user" onclick="hello(this.getAttribute('data-name'))">
+<input type="button" value="Hello World" data-name="world" onclick="hello(this.getAttribute('data-name'))">
+```
+
+:::tip
+Note the use of the `data-name` attribute to pass the `name` value from server-side Go code to the client-side JavaScript code.
+
+The value of `name` is collected by the `onclick` handler, and passed to the `hello` function.
+
+To pass complex data structures, consider using a `data-` attribute to pass a JSON string using the `templ.JSONString` function, or use the `templ.JSONScript` function to create a templ component that creates a `<script>` element containing JSON data.
+:::
+
+## Common use cases
+
+- Rendering a `<style>` tag that contains CSS classes required by a component.
+- Rendering a `<script>` tag that contains JavaScript required by a component.
+- Rendering a `<link>` tag that contains a reference to a stylesheet.
+
+## Usage across packages
+
+Export a component that contains the `*OnceHandler` and the content to be rendered once.
+
+For example, create a `deps` package that contains a `JQuery` component that renders a `<script>` tag that references the jQuery library.
+
+```templ title="deps/deps.templ"
+package deps
+
+var jqueryHandle = templ.NewOnceHandle()
+
+templ JQuery() {
+  @jqueryHandle.Once() {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  }
+}
+```
+
+You can then use the `JQuery` component in other packages, and the jQuery library will only be included once in the rendered HTML.
+
+```templ title="main.templ"
+package main
+
+import "deps"
+
+templ page() {
+  <html>
+    <head>
+      @deps.JQuery()
+    </head>
+    <body>
+      <h1>Hello, World!</h1>
+      @button()
+    </body>
+  </html>
+}
+
+templ button() {
+  @deps.JQuery()
+  <button>Click me</button>
+}
+```
+# Template composition
+
+Templates can be composed using the import expression.
+
+```templ
+templ showAll() {
+	@left()
+	@middle()
+	@right()
+}
+
+templ left() {
+	<div>Left</div>
+}
+
+templ middle() {
+	<div>Middle</div>
+}
+
+templ right() {
+	<div>Right</div>
+}
+```
+
+```html title="Output"
+<div>
+ Left
+</div>
+<div>
+ Middle
+</div>
+<div>
+ Right
+</div>
+```
+
+## Children
+
+Children can be passed to a component for it to wrap.
+
+```templ
+templ showAll() {
+	@wrapChildren() {
+		<div>Inserted from the top</div>
+	}
+}
+
+templ wrapChildren() {
+	<div id="wrapper">
+		{ children... }
+	</div>
+}
+```
+
+:::note
+The use of the `{ children... }` expression in the child component.
+:::
+
+```html title="output"
+<div id="wrapper">
+ <div>
+  Inserted from the top
+ </div>
+</div>
+```
+
+### Using children in code components
+
+Children are passed to a component using the Go context. To pass children to a component using Go code, use the `templ.WithChildren` function.
+
+```templ
+package main
+
+import (
+  "context"
+  "os"
+
+  "github.com/a-h/templ"
+)
+
+templ wrapChildren() {
+	<div id="wrapper">
+		{ children... }
+	</div>
+}
+
+func main() {
+  contents := templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+    _, err := io.WriteString(w, "<div>Inserted from Go code</div>")
+    return err
+  })
+  ctx := templ.WithChildren(context.Background(), contents)
+  wrapChildren().Render(ctx, os.Stdout)
+}
+```
+
+```html title="output"
+<div id="wrapper">
+ <div>
+  Inserted from Go code
+ </div>
+</div>
+```
+
+To get children from the context, use the `templ.GetChildren` function.
+
+```templ
+package main
+
+import (
+  "context"
+  "os"
+
+  "github.com/a-h/templ"
+)
+
+func main() {
+  contents := templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+    _, err := io.WriteString(w, "<div>Inserted from Go code</div>")
+    return err
+  })
+  wrapChildren := templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+    children := templ.GetChildren(ctx)
+    ctx = templ.ClearChildren(ctx)
+    _, err := io.WriteString(w, "<div id=\"wrapper\">")
+    if err != nil {
+      return err
+    }
+    err = children.Render(ctx, w)
+    if err != nil {
+      return err
+    }
+    _, err = io.WriteString(w, "</div>")
+    return err
+  })
+```
+
+:::note
+The `templ.ClearChildren` function is used to stop passing the children down the tree.
+:::
+
+## Components as parameters
+
+Components can also be passed as parameters and rendered using the `@component` expression.
+
+```templ
+package main
+
+templ heading() {
+    <h1>Heading</h1>
+}
+
+templ layout(contents templ.Component) {
+	<div id="heading">
+		@heading()
+	</div>
+	<div id="contents">
+		@contents
+	</div>
+}
+
+templ paragraph(contents string) {
+	<p>{ contents }</p>
+}
+```
+
+```go title="main.go"
+package main
+
+import (
+	"context"
+	"os"
+)
+
+func main() {
+	c := paragraph("Dynamic contents")
+	layout(c).Render(context.Background(), os.Stdout)
+}
+```
+
+```html title="output"
+<div id="heading">
+	<h1>Heading</h1>
+</div>
+<div id="contents">
+	<p>Dynamic contents</p>
+</div>
+```
+
+You can pass `templ` components as parameters to other components within templates using standard Go function call syntax.
+
+```templ
+package main
+
+templ heading() {
+    <h1>Heading</h1>
+}
+
+templ layout(contents templ.Component) {
+	<div id="heading">
+		@heading()
+	</div>
+	<div id="contents">
+		@contents
+	</div>
+}
+
+templ paragraph(contents string) {
+	<p>{ contents }</p>
+}
+
+templ root() {
+	@layout(paragraph("Dynamic contents"))
+}
+```
+
+```go title="main.go"
+package main
+
+import (
+	"context"
+	"os"
+)
+
+func main() {
+	root().Render(context.Background(), os.Stdout)
+}
+```
+
+```html title="output"
+<div id="heading">
+	<h1>Heading</h1>
+</div>
+<div id="contents">
+	<p>Dynamic contents</p>
+</div>
+```
+
+## Joining Components
+
+Components can be aggregated into a single Component using `templ.Join`.
+
+```templ
+package main
+
+templ hello() {
+	<span>hello</span>
+}
+
+templ world() {
+	<span>world</span>
+}
+
+templ helloWorld() {
+	@templ.Join(hello(), world())
+}
+```
+
+```go title="main.go"
+package main
+
+import (
+	"context"
+	"os"
+)
+
+func main() {
+	helloWorld().Render(context.Background(), os.Stdout)
+}
+```
+
+```html title="output"
+<span>hello</span><span>world</span>
+```
+
+## Sharing and re-using components
+
+Since templ components are compiled into Go functions by the `go generate` command, templ components follow the rules of Go, and are shared in exactly the same way as Go code.
+
+templ files in the same directory can access each other's components. Components in different directories can be accessed by importing the package that contains the component, so long as the component is exported by capitalizing its name.
+
+:::tip
+In Go, a _package_ is a collection of Go source files in the same directory that are compiled together. All of the functions, types, variables, and constants defined in one source file in a package are available to all other source files in the same package.
+
+Packages exist within a Go _module_, defined by the `go.mod` file.
+:::
+
+:::note
+Go is structured differently to JavaScript, but uses similar terminology. A single `.js` or `.ts` _file_ is like a Go package, and an NPM package is like a Go module.
+:::
+
+### Exporting components
+
+To make a templ component available to other packages, export it by capitalizing its name.
+
+```templ
+package components
+
+templ Hello() {
+	<div>Hello</div>
+}
+```
+
+### Importing components
+
+To use a component in another package, import the package and use the component as you would any other Go function or type.
+
+```templ
+package main
+
+import "github.com/a-h/templ/examples/counter/components"
+
+templ Home() {
+	@components.Hello()
+}
+```
+
+:::tip
+To import a component from another Go module, you must first import the module by using the `go get <module>` command. Then, you can import the component as you would any other Go package.
+:::
+# Forms and validation
+
+To pass data from the client to the server without using JavaScript, you can use HTML forms to POST data.
+
+templ can be used to create forms that submit data to the server. Depending on the design of your app, you can collect data from the form using JavaScript and submit it to an API from the frontend, or use a HTTP form submission to send the data to the server.
+
+## Hypermedia approach
+
+templ isn't a framework, you're free to choose how you want to build your applications, but a common approach is to create a handler for each route, and then use templates to render the form and display validation errors.
+
+In Go, the `net/http` package in the standard library provides a way to handle form submissions, and Gorilla `schema` can decode form data into Go structs. See https://github.com/gorilla/schema
+
+:::tip
+The [Hypermedia Systems](https://hypermedia.systems/) book covers the main concepts of building web applications, without covering specific implementations. If you're new to web development, or have only ever used JavaScript frameworks, it may be worth reading the book to understand the approach.
+:::
+
+### Create a View Model
+
+This view model should contain any data that is used by the form, including field values and any other state.
+
+```go
+type Model struct {
+  Initial          bool
+  SubmitButtonText string
+
+  Name  string
+  Email string
+  Error string
+}
+```
+
+The model can also include methods for validation, which will be used to check the data before saving it to the database.
+
+```go
+func (m *Model) ValidateName() (msgs []string) {
+  if m.Initial {
+    return
+  }
+  if m.Name == "" {
+    msgs = append(msgs, "Name is required")
+  }
+  return msgs
+}
+
+func (m *Model) NameHasError() bool {
+  return len(m.ValidateName()) > 0
+}
+
+// More validation methods...
+
+func (m *Model) Validate() (msgs []string) {
+  if m.Initial {
+    return
+  }
+  msgs = append(msgs, m.ValidateName()...)
+  msgs = append(msgs, m.ValidateEmail()...)
+  return msgs
+}
+```
+
+### Create a form template
+
+The form should contain input fields for each piece of data in the model.
+
+In the example code, the `name` and `email` input fields are populated with the values from the model.
+
+Later, we will use the Gorilla `schema` package to populate Go struct fields automatically from the form data when the form is submitted.
+
+If a field value is invalid, the `has-error` class is added to the form group using the `templ.KV` function.
+
+To protect your forms from cross-site request forgery (CSRF) attacks, use the [`gorilla/csrf`](https://github.com/gorilla/csrf) middleware to generate and validate CSRF tokens.
+
+```go
+csrfKey := mustGenerateCSRFKey()
+csrfMiddleware := csrf.Protect(csrfKey, csrf.TrustedOrigins([]string{"localhost:8080"}), csrf.FieldName("_csrf"))
+```
+
+In your form templates, include a hidden CSRF token field using a shared component:
+
+```templ
+<input type="hidden" name="_csrf" value={ ctx.Value("gorilla.csrf.Token").(string) }/>
+```
+
+This ensures all POST requests include a valid CSRF token.
+```templ
+templ View(m Model) {
+  <h1>Add Contact</h1>
+  <ul>
+    <li><a href="/contacts" hx-boost="true">Back to Contacts</a></li>
+  </ul>
+  <form id="form" method="post" hx-boost="true">
+    @csrf.CSRF()
+    <div id="name-group" class={ "form-group", templ.KV("has-error", m.NameHasError()) }>
+      <label for="name">Name</label>
+      <input type="text" id="name" name="name" class="form-control" placeholder="Name" value={ m.Name }/>
+    </div>
+    <div id="email-group" class={ "form-group", templ.KV("has-error", m.EmailHasError()) }>
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" class="form-control" placeholder="Email" value={ m.Email }/>
+    </div>
+    <div id="validation">
+      if m.Error != "" {
+        <p class="error">{ m.Error }</p>
+      }
+      if msgs := m.Validate(); len(msgs) > 0 {
+        @ValidationMessages(msgs)
+      }
+    </div>
+    <a href="/contacts" class="btn btn-secondary">Cancel</a>
+    <input type="submit" value="Save"/>
+  </form>
+}
+```
+
+### Display the form
+
+The next step is to display the form to the user.
+
+On `GET` requests, the form is displayed with an empty model for adding a new contact, or with an existing contact's data for editing.
+
+```go
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+  model := NewModel()
+  // If it's an edit request, populate the model with existing data.
+  if id := r.PathValue("id"); id != "" {
+    contact, ok, err := h.DB.Get(r.Context(), id)
+    if err != nil {
+      h.Log.Error("Failed to get contact", slog.String("id", id), slog.Any("error", err))
+      http.Error(w, err.Error(), http.StatusInternalServerError)
+      return
+    }
+    if !ok {
+      http.Redirect(w, r, "/contacts/edit", http.StatusSeeOther)
+      return
+    }
+    model = ModelFromContact(contact)
+  }
+  h.DisplayForm(w, r, model)
+}
+```
+
+### Handle form submission
+
+When the form is submitted, the `POST` request is handled by parsing the form data and decoding it into the model using the Gorilla `schema` package.
+
+If validation fails, the form is redisplayed with error messages.
+
+```go
+func (h *Handler) Post(w http.ResponseWriter, r *http.Request) {
+  // Parse the form.
+  err := r.ParseForm()
+  if err != nil {
+    http.Error(w, err.Error(), http.StatusBadRequest)
+    return
+  }
+
+  var model Model
+
+  // Decode the form.
+  dec := schema.NewDecoder()
+  dec.IgnoreUnknownKeys(true)
+  err = dec.Decode(&model, r.PostForm)
+  if err != nil {
+    h.Log.Warn("Failed to decode form", slog.Any("error", err))
+    http.Error(w, err.Error(), http.StatusBadRequest)
+    return
+  }
+
+  // Validate the input.
+  if len(model.Validate()) > 0 {
+    h.DisplayForm(w, r, model)
+    return
+  }
+
+  // Save the contact.
+  id := r.PathValue("id")
+  if id == "" {
+    id = ksuid.New().String()
+  }
+  contact := db.NewContact(id, model.Name, model.Email)
+  if err = h.DB.Save(r.Context(), contact); err != nil {
+    h.Log.Error("Failed to save contact", slog.String("id", id), slog.Any("error", err))
+    model.Error = "Failed to save the contact. Please try again."
+    h.DisplayForm(w, r, model)
+    return
+  }
+
+  // Redirect back to the contact list.
+  http.Redirect(w, r, "/contacts", http.StatusSeeOther)
+}
+```
+
+## Example project
+
+The `crud` project is a simple web application that allows users to manage contacts. It demonstrates how to handle forms, validation, and database interactions using Go's standard library and the Gorilla schema package.
+
+For full example code, see `./examples/crud` in `github.com/a-h/templ`.
+
+- `main.go`: The entrypoint of the application.
+- `db`: Contains database logic, including models and database operations.
+- `routes`: Contains the HTTP handlers for different routes.
+- `layout`: Contains the common layout for all pages.
+- `static`: Contains static assets like CSS, JavaScript, and images.
+
+### Entrypoint
+
+The `main.go` file is the entrypoint of the application.
+
+A common pattern in Go applications is to define a `run` function that can return an error to the main function.
+
+```go title="main.go"
+var dbURI = "file:data.db?mode=rwc"
+var addr = "localhost:8080"
+
+func main() {
+  log := slog.Default()
+  ctx := context.Background()
+  if err := run(ctx, log); err != nil {
+    log.Error("Failed to run server", slog.Any("error", err))
+    os.Exit(1)
+  }
+}
+```
+
+The `run` function first initializes the database connection.
+
+```go title="main.go"
+pool, err := sqlitex.NewPool(dbURI, sqlitex.PoolOptions{})
+if err != nil {
+    log.Error("Failed to open database", slog.Any("error", err))
+    return err
+}
+store := sqlitekv.New(pool)
+if err := store.Init(ctx); err != nil {
+    log.Error("Failed to initialize store", slog.Any("error", err))
+    return err
+}
+db := db.New(store)
+```
+
+Next, it sets up the HTTP server with routes for the home page, contacts listing, and contact management (add/edit/delete).
+
+```go title="main.go"
+mux := http.NewServeMux()
+
+homeHandler := home.NewHandler()
+mux.Handle("/", homeHandler)
+
+ch := contacts.NewHandler(log, db)
+mux.Handle("/contacts", ch)
+
+ceh := contactsedit.NewHandler(log, db)
+mux.Handle("/contacts/edit", ceh)
+mux.Handle("/contacts/edit/{id}", ceh)
+
+cdh := contactsdelete.NewHandler(log, db)
+mux.Handle("/contacts/delete/{id}", cdh)
+```
+
+The `static` directory contains scripts, CSS and images, and is served using Go's built in file serving handler.
+
+
+```go title="main.go"
+mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+```
+
+Finally, the server is started on the specified address and port.
+
+```go title="main.go"
+log.Info("Starting server", slog.String("address", addr))
+return http.ListenAndServe(addr, mux)
+```
+
+### Listing contacts
+
+The route at `/contacts` renders a list of contacts, allowing users to view existing contacts and navigate to forms for adding, editing or deleting contacts.
+
+The handler collects the list of contacts from the database, and passes it to the `View`, wrapping it all in `layout.Handler` so that the page is rendered with the common layout.
+
+It's common practice to create a constructor function for the handler, and to define methods on the handler struct for each HTTP method that the handler supports to separate behaviour.
+
+```go title="routes/contacts/handler.go"
+func NewHandler(log *slog.Logger, db *db.DB) http.Handler {
+  return &Handler{
+    Log: log,
+    DB:  db,
+  }
+}
+
+type Handler struct {
+  Log *slog.Logger
+  DB  *db.DB
+}
+
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+  switch r.Method {
+    case http.MethodGet:
+      h.Get(w, r)
+    default:
+      http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+  }
+}
+```
+
+The `Get` method retrieves the list of contacts from the database and passes it to the `View` template for rendering, using a standard layout.
+
+```go title="routes/contacts/handler.go"
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+  contacts, err := h.DB.List(r.Context())
+  if err != nil {
+    h.Log.Error("Failed to list contacts", slog.Any("error", err))
+    http.Error(w, err.Error(), http.StatusInternalServerError)
+    return
+  }
+
+  v := layout.Handler(View(contacts))
+  v.ServeHTTP(w, r)
+}
+```
+
+The view is a simple table containing a bit of logic to display "No contacts" if the list is empty, and links to edit or delete each contact.
+
+It's common to break down a page into smaller components, so the `ContactsList` component is used to display the list of contacts, and is called from the `View` template.
+
+```templ title="routes/contacts/view.templ"
+templ View(contacts []db.Contact) {
+  <h1>Contacts</h1>
+  <ul>
+    <li><a href="/contacts/edit" hx-boost="true">Add contact</a></li>
+  </ul>
+  if len(contacts) == 0 {
+    <p>No contacts</p>
+  } else {
+    @ContactList(contacts)
+  }
+}
+
+templ ContactList(contacts []db.Contact) {
+  <table class="table">
+  <tr>
+    <th>
+      Name
+    </th>
+    <th>
+      Email
+    </th>
+    <th>
+      Actions
+    </th>
+  </tr>
+  for _, contact := range contacts {
+    <tr>
+      <td>{ contact.Name }</td>
+      <td>{ contact.Email }</td>
+      <td>
+        <a href={ fmt.Sprintf("/contacts/edit/%s", url.PathEscape(contact.ID)) } hx-boost="true">Edit</a>
+        <a href={ fmt.Sprintf("/contacts/delete/%s", url.PathEscape(contact.ID)) } hx-boost="true">Delete</a>
+      </td>
+    </tr>
+  }
+  </table>
+}
+```
+
+:::tip
+For simple views, there's no need to create a view model (a struct that defines the data that will be displayed) and you can pass the data directly, but for more complex views or when you need to pass additional data to the template, it's usually clearer to define a view model.
+:::
+
+
+### Layout
+
+The `layout` package provides a common structure for all pages, including links to static assets like CSS and JavaScript files.
+
+The `content` component passed into the `Page` template is replaced with the specific content for each page. Multiple function arguments or structs can be passed to the `Page` template to enable multiple slots for content.
+
+```templ title="layout/page.templ"
+package layout
+
+templ Page(content templ.Component) {
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <script src="/static/htmx.min.js"></script>
+      <link rel="stylesheet" href="/static/bootstrap.css"/>
+    </head>
+    <body class="container">
+      @content
+    </body>
+  </html>
+}
+```
+
+A small helper function wraps the `Page` template to create an HTTP handler that can be used in routes.
+
+```go title="layout/layout.go"
+func Handler(content templ.Component) http.Handler {
+  return templ.Handler(Page(content))
+}
+```
+
+### Adding and editing contacts
+
+The `/contacts/edit` route is used for both adding a new contact and editing an existing one. The handler checks if an ID is provided in the URL to determine whether to create a new contact or edit an existing one.
+
+For `Get` requests, the handler retrieves the contact if an ID is provided, or initializes a new model for adding a contact. The `DisplayForm` method renders the form using the `View` template.
+
+```go title="routes/contactsedit/handler.go"
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+  // Read the ID from the URL.
+  id := r.PathValue("id")
+  model := NewModel()
+  if id != "" {
+    // Get the existing contact from the database and populate the form.
+    contact, ok, err := h.DB.Get(r.Context(), id)
+    if err != nil {
+      h.Log.Error("Failed to get contact", slog.String("id", id), slog.Any("error", err))
+      http.Error(w, err.Error(), http.StatusInternalServerError)
+      return err
+    }
+    if !ok {
+      http.Redirect(w, r, "/contacts/edit", http.StatusSeeOther)
+      return
+    }
+    model = ModelFromContact(contact)
+  }
+  h.DisplayForm(w, r, model)
+}
+```
+
+Note that the `ModelFromContact` function is used to convert a `db.Contact` into a view model (`Model`) that can be used to populate the form fields.
+
+
+The `DisplayForm` method handles rendering the form view and is used by both the `Get` and `Post` methods. It uses the `layout.Handler` to ensure that the form is rendered within the common layout of the application.
+
+```go title="routes/contactsedit/handler.go"
+func (h *Handler) DisplayForm(w http.ResponseWriter, r *http.Request, m Model) {
+  layout.Handler(View(m)).ServeHTTP(w, r)
+}
+```
+
+For `Post` requests, the handler parses the form data into the model, validates it, and saves the contact to the database. If validation fails, it redisplays the form with error messages.
+
+
+```go title="routes/contactsedit/handler.go"
+func (h *Handler) Post(w http.ResponseWriter, r *http.Request) {
+  // Parse the form.
+  err := r.ParseForm()
+  if err != nil {
+    http.Error(w, err.Error(), http.StatusBadRequest)
+    return
+  }
+
+  var model Model
+
+  // Decode the form.
+  dec := schema.NewDecoder()
+  dec.IgnoreUnknownKeys(true)
+  err = dec.Decode(&model, r.PostForm)
+  if err != nil {
+    h.Log.Warn("Failed to decode form", slog.Any("error", err))
+    http.Error(w, err.Error(), http.StatusBadRequest)
+    return
+  }
+
+  // Validate the input.
+  if len(model.Validate()) > 0 {
+    h.DisplayForm(w, r, model)
+    return
+  }
+
+  // Save the contact.
+  id := r.PathValue("id")
+  if id == "" {
+    id = ksuid.New().String()
+  }
+  contact := db.NewContact(id, model.Name, model.Email)
+  if err = h.DB.Save(r.Context(), contact); err != nil {
+    h.Log.Error("Failed to save contact", slog.String("id", id), slog.Any("error", err))
+    model.Error = "Failed to save the contact. Please try again."
+    h.DisplayForm(w, r, model)
+    return
+  }
+
+  // Redirect back to the contact list.
+  http.Redirect(w, r, "/contacts", http.StatusSeeOther)
+}
+```
+
+The validation is carried out by a `Validate` method on the model, which checks for required fields and returns a list of errors if any are found. This allows for complex validation logic to be encapsulated within the model itself.
+
+```go title=./routes/contactsedit/model.go
+func NewModel() Model {
+  return Model{
+    Initial: true,
+  }
+}
+
+func ModelFromContact(contact db.Contact) (m Model) {
+  return Model{
+    Initial: true,
+    Name:    contact.Name,
+    Email:   contact.Email,
+  }
+}
+
+type Model struct {
+  Initial          bool
+  SubmitButtonText string
+
+  Name  string
+  Email string
+  Error string
+}
+
+func (m *Model) ValidateName() (msgs []string) {
+  if m.Initial {
+    return
+  }
+  if m.Name == "" {
+    msgs = append(msgs, "Name is required")
+  }
+  return msgs
+}
+
+func (m *Model) NameHasError() bool {
+  return len(m.ValidateName()) > 0
+}
+
+func (m *Model) ValidateEmail() (msgs []string) {
+  if m.Initial {
+    return
+  }
+  if m.Email == "" {
+    return append(msgs, "Email is required")
+  }
+  if !strings.Contains(m.Email, "@") {
+    msgs = append(msgs, "Email is invalid")
+  }
+  return msgs
+}
+
+func (m *Model) EmailHasError() bool {
+  return len(m.ValidateEmail()) > 0
+}
+
+func (m *Model) Validate() (msgs []string) {
+  if m.Initial {
+    return
+  }
+  msgs = append(msgs, m.ValidateName()...)
+  msgs = append(msgs, m.ValidateEmail()...)
+  return msgs
+}
+```
+
+The view for the contact form is defined in `view.templ`, which uses templ to render the form fields and any validation errors.
+
+```templ title=./routes/contact/sedit/view.templ
+package contactsedit
+
+templ View(m Model) {
+  <h1>Add Contact</h1>
+  <ul>
+    <li><a href="/contacts" hx-boost="true">Back to Contacts</a></li>
+  </ul>
+  <form id="form" method="post" hx-boost="true">
+    <div id="name-group" class={ "form-group", templ.KV("has-error", m.NameHasError()) }>
+      <label for="name">Name</label>
+      <input type="text" id="name" name="name" class="form-control" placeholder="Name" value={ m.Name }/>
+    </div>
+    <div id="email-group" class={ "form-group", templ.KV("has-error", m.EmailHasError()) }>
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" class="form-control" placeholder="Email" value={ m.Email }/>
+    </div>
+    <div id="validation">
+      if m.Error != "" {
+        <p class="error">{ m.Error }</p>
+      }
+      if msgs := m.Validate(); len(msgs) > 0 {
+        @ValidationMessages(msgs)
+      }
+    </div>
+    <a href="/contacts" class="btn btn-secondary">Cancel</a>
+    <input type="submit" value="Save"/>
+  </form>
+}
+
+templ ValidationMessages(msgs []string) {
+  if len(msgs) > 0 {
+    <div class="invalid-feedback">
+      <ul>
+        for _, msg := range msgs {
+          <li class="error">{ msg }</li>
+        }
+      </ul>
+    </div>
+  }
+}
+```
+
+:::note
+The `hx-boost="true"` attribute on the form enables htmx to handle the form submission via AJAX, allowing for a smoother user experience without full page reloads.
+:::
+
+### Deleting a contact
+
+The `/contacts/delete/{id}` route handles the deletion of a contact. The handler retrieves the contact by ID and displays a confirmation form.
+
+After the user confirms the deletion, the contact is removed from the database and the user is redirected back to the contact list.
+
+```go title=./routes/contactsdelete/handler.go
+type Handler struct {
+  Log *slog.Logger
+  DB  *db.DB
+}
+
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+  switch r.Method {
+  case http.MethodGet:
+    h.Get(w, r)
+  case http.MethodPost:
+    h.Post(w, r)
+  default:
+    http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+  }
+}
+
+func NewModel(name string) Model {
+  return Model{
+    Name: name,
+  }
+}
+
+type Model struct {
+  Name string
+}
+
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+  // Read the ID from the URL.
+  id := r.PathValue("id")
+  if id == "" {
+    http.Redirect(w, r, "/contacts", http.StatusSeeOther)
+    return
+  }
+  // Get the existing contact from the database.
+  contact, ok, err := h.DB.Get(r.Context(), id)
+  if err != nil {
+    h.Log.Error("Failed to get contact", slog.String("id", id), slog.Any("error", err))
+    http.Error(w, err.Error(), http.StatusInternalServerError)
+    return
+  }
+  if !ok {
+    http.Redirect(w, r, "/contacts", http.StatusSeeOther)
+    return
+  }
+  h.DisplayForm(w, r, NewModel(contact.Name))
+}
+
+func (h *Handler) DisplayForm(w http.ResponseWriter, r *http.Request, m Model) {
+  layout.Handler(View(m)).ServeHTTP(w, r)
+}
+
+func (h *Handler) Post(w http.ResponseWriter, r *http.Request) {
+  id := r.PathValue("id")
+  if id == "" {
+    http.Redirect(w, r, "/contacts", http.StatusSeeOther)
+    return
+  }
+
+  // Delete the contact from the database.
+  err := h.DB.Delete(r.Context(), id)
+  if err != nil {
+    h.Log.Error("Failed to delete contact", slog.String("id", id), slog.Any("error", err))
+    http.Error(w, err.Error(), http.StatusInternalServerError)
+    return
+  }
+
+  // Redirect back to the contact list.
+  http.Redirect(w, r, "/contacts", http.StatusSeeOther)
+}
+```
+
+The view for the delete confirmation is straightforward, displaying the contact's name and asking for confirmation before deletion.
+
+```templ title=./routes/contactsdelete/view.templ
+templ View(m Model) {
+  <h1>Delete</h1>
+  <p>
+    Are you sure you want to delete <strong>{ m.Name }</strong>?
+  </p>
+  <form id="form" method="post" hx-boost="true">
+    @csrf.CSRF()
+    <a href="/contacts" class="btn btn-secondary">Cancel</a>
+    <input type="submit" value="Delete"/>
+  </form>
+}
+```
+# Fragments
+
+The `templ.Fragment` component can be used to render a subsection of a template, discarding all other output.
+
+Fragments work well as an optimisation for HTMX, as discussed in https://htmx.org/essays/template-fragments/
+
+## Define fragments
+
+Define a fragment with `@templ.Fragment("name")`, where `"name"` is the identifier for the fragment.
+
+```templ
+templ Page() {
+  <div>Page Header</div>
+  @templ.Fragment("name") {
+    <div>Content of the fragment</div>
+  }
+}
+```
+
+To avoid name clashes with other libraries, you can define a custom type for your package.
+
+```templ
+type nameFragmentKey struct {}
+var Name = nameFragmentKey{}
+
+templ Page() {
+  <div>Page Header</div>
+  @templ.Fragment(Name) {
+    <div>Content of the fragment</div>
+  }
+}
+```
+
+## Use with HTTP
+
+The most common use case for `Fragment` is to render only a specific part of the template to the HTML response, while discarding the rest of the output.
+
+To render only the "name" fragment from the `Page` template, use the `templ.WithFragments("name")` option when creating the HTTP handler:
+
+```go title="main.go"
+handler := templ.Handler(Page(), templ.WithFragments("name"))
+http.Handle("/", handler)
+```
+
+When the HTTP request is made, only the content of the specified fragment will be returned in the response:
+
+```html title="output.html"
+<div>Content of the fragment</div>
+```
+
+:::note
+The whole of the template is rendered, so any function calls or logic in the template will still be executed, but only the specified fragment's output is sent to the client.
+:::
+
+If the `templ.WithFragments("name")` option is omitted, the whole page is rendered as normal.
+
+```go title="main.go"
+handler := templ.Handler(Page())
+http.Handle("/", handler)
+```
+
+```html title="output.html"
+<div>Page Header</div>
+<div>Content of the fragment</div>
+```
+
+## Use outside of an HTTP handler
+
+To use outside of an HTTP handler, e.g. when generating static content, you can render fragments with the `templ.RenderFragments` function.
+
+```go
+w := new(bytes.Buffer)
+if err := templ.RenderFragments(context.Background(), w, fragmentPage, "name"); err != nil {
+  t.Fatalf("failed to render: %v", err)
+}
+
+// <div>Content of the fragment</div>
+html := w.String()
+```
+
+:::note
+All fragments with matching identifiers will be rendered. If the fragment identifier isn't matched, no output will be produced.
+:::
+
+## Nested fragments
+
+Fragments can be nested, allowing for complex structures to be defined and rendered selectively.
+
+Given this example templ file:
+
+```templ
+templ Page() {
+	@templ.Fragment("outer") {
+		<div>Outer Fragment Start</div>
+		@templ.Fragment("inner") {
+			<div>Inner Fragment Content</div>
+		}
+		<div>Outer Fragment End</div>
+	}
+}
+```
+
+If the `outer` fragment is selected for rendering, then the `inner` fragment is also rendered.
+
+## HTMX example
+
+```templ title="main.templ"
+package main
+
+import (
+  "fmt"
+  "net/http"
+  "strconv"
+)
+
+type PageState struct {
+  Counter int
+  Next    int
+}
+
+templ Page(state PageState) {
+  <html>
+    <head>
+       <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js"></script>
+       <link rel="stylesheet" href="https://unpkg.com/missing.css@1.1.3/dist/missing.min.css"/>
+    </head>
+    <body>
+      @templ.Fragment("buttonOnly") {
+        <button hx-get={ fmt.Sprintf("/?counter=%d&template=buttonOnly", state.Next) } hx-swap="outerHTML">
+          This Button Has Been Clicked { state.Counter } Times
+        </button>
+      }
+    </body>
+  </html>
+}
+
+// handleRequest does the work to execute the template (or fragment) and serve the result.
+// It's mostly boilerplate, so don't get hung up on it.
+func handleRequest(w http.ResponseWriter, r *http.Request) {
+  // Collect state info to pass to the template.
+  var state PageState
+  state.Counter, _ = strconv.Atoi(r.URL.Query().Get("counter"))
+  state.Next = state.Counter + 1
+
+  // If the template querystring paramater is set, render the pecific fragment.
+  var opts []func(*templ.ComponentHandler)
+  if templateName := r.URL.Query().Get("template"); templateName != "" {
+    opts = append(opts, templ.WithFragments(templateName))
+  }
+
+  // Render the template or fragment and serve it.
+  templ.Handler(Page(state), opts...).ServeHTTP(w, r)
+}
+
+func main() {
+  // Handle the template.
+  http.HandleFunc("/", handleRequest)
   
-          // Stream via Gin
-          c.Stream(func(w io.Writer) bool {
-              select {
-              case chunk := <-mgr.OutputChan():
-                  c.SSEvent("data", chunk) // Incremental itinerary updates
-                  return true
-              case <-mgr.Done():
-                  c.SSEvent("end", "Complete")
-                  return false
-              case <-c.Request.Context().Done():
-                  mgr.Stop() // Auto-stop on disconnect
-                  return false
-              }
-          })
+  // Start the server.
+  fmt.Println("Server is running at http://localhost:8080")
+  http.ListenAndServe("localhost:8080", nil)
+}
+```
+
+:::note
+This was adapted from `benpate`'s Go stdlib example at https://gist.github.com/benpate/f92b77ea9b3a8503541eb4b9eb515d8a
+:::
+# Basic syntax
+
+## Package name and imports
+
+templ files start with a package name, followed by any required imports, just like Go.
+
+```go
+package main
+
+import "fmt"
+import "time"
+```
+
+## Components
+
+templ files can also contain components. Components are markup and code that is compiled into functions that return a `templ.Component` interface by running the `templ generate` command.
+
+Components can contain templ elements that render HTML, text, expressions that output text or include other templates, and branching statements such as `if` and `switch`, and `for` loops.
+
+```templ name="header.templ"
+package main
+
+templ headerTemplate(name string) {
+  <header data-testid="headerTemplate">
+    <h1>{ name }</h1>
+  </header>
+}
+```
+
+## Go code
+
+Outside of templ Components, templ files are ordinary Go code.
+
+```templ name="header.templ"
+package main
+
+// Ordinary Go code that we can use in our Component.
+var greeting = "Welcome!"
+
+// templ Component
+templ headerTemplate(name string) {
+  <header>
+    <h1>{ name }</h1>
+    <h2>"{ greeting }" comes from ordinary Go code</h2>
+  </header>
+}
+```
+
+# Expressions
+
+## Interpolation expressions
+
+Within a templ element, expressions can be used to interpolate Go values. Content is automatically escaped using context-aware HTML encoding rules to protect against XSS and CSS injection attacks.
+
+Literals, variables and functions that return a value can be used.
+
+The supported types for interpolation are:
+
+- Strings
+- Numbers (`int`, `uint`, `float32`, `complex64` etc.)
+- Booleans
+
+:::note
+Any type based on the above list can be used, for example `type Age int` or `type Name string`.
+:::
+
+### Literals
+
+You can use Go literals.
+
+```templ title="component.templ"
+package main
+
+templ component() {
+  <div>{ "print this" }</div>
+  <div>{ `and this` }</div>
+  <div>Number of the day: { 1 }</div>
+}
+```
+
+```html title="Output"
+<div>print this</div><div>and this</div><div>Number of the day: 1</div>
+```
+
+### Variables
+
+Any supported Go variable can be used, for example:
+
+* A function parameter.
+* A field on a struct.
+* A variable or constant that is in scope.
+
+```templ title="/main.templ"
+package main
+
+templ greet(prefix string, p Person) {
+  <div>{ prefix } { p.Name }{ exclamation }</div>
+  <div>Congratulations on being { p.Age }!</div>
+}
+```
+
+```templ title="main.go"
+package main
+
+type Person struct {
+  Name string
+  Age  int
+}
+
+const exclamation = "!"
+
+func main() {
+  p := Person{ Name: "John", Age: 42 }
+  component := greet("Hello", p) 
+  component.Render(context.Background(), os.Stdout)
+}
+```
+
+```html title="Output"
+<div>Hello John!</div><div>Congratulations on being 42!</div>
+```
+
+### Functions
+
+Functions that return a value, or a value-error tuple can be used.
+
+```templ title="component.templ"
+package main
+
+import "strings"
+import "strconv"
+
+func getString() (string, error) {
+  return "DEF", nil
+}
+
+templ component() {
+  <div>{ strings.ToUpper("abc") }</div>
+  <div>{ getString() }</div>
+}
+```
+
+```html title="Output"
+<div>ABC</div>
+<div>DEF</div>
+```
+
+If the function returns an error, the `Render` function will return an error containing the location of the error and the underlying error.
+
+### Escaping
+
+templ automatically escapes strings using HTML escaping rules.
+
+```templ title="component.templ"
+package main
+
+templ component() {
+  <div>{ `</div><script>alert('hello!')</script><div>` }</div>
+}
+```
+
+```html title="Output"
+<div>&lt;/div&gt;&lt;script&gt;alert(&#39;hello!&#39;)&lt;/script&gt;&lt;div&gt;</div>
+```
+# For loops
+
+Use the standard Go `for` loop for iteration.
+
+```templ title="component.templ"
+package main
+
+templ nameList(items []Item) {
+  <ul>
+  for _, item := range items {
+    <li>{ item.Name }</li>
+  }
+  </ul>
+}
+```
+
+```html title="Output"
+<ul>
+  <li>A</li>
+  <li>B</li>
+  <li>C</li>
+</ul>
+```
+# Using JavaScript with templ
+
+## Script tags
+
+Use standard `<script>` tags, and standard HTML attributes to run JavaScript on the client.
+
+```templ
+templ body() {
+  <script>
+    function handleClick(event) {
+      alert(event + ' clicked');
+    }
+  </script>
+  <button onclick="handleClick(this)">Click me</button>
+}
+```
+
+:::tip
+To ensure that a `<script>` tag within a templ component is only rendered once per HTTP response (or context), use a [templ.OnceHandle](18-render-once.md).
+
+Using a `templ.OnceHandle` allows a component to define global client-side scripts that it needs to run without including the scripts multiple times in the response.
+:::
+
+## Pass Go data to JavaScript
+
+### Pass Go data to a JavaScript event handler
+
+Use `templ.JSFuncCall` to pass server-side data to client-side scripts by calling a JavaScript function.
+
+```templ title="input.templ"
+templ Component(data CustomType) {
+	<button onclick={ templ.JSFuncCall("alert", data.Message) }>Show alert</button>
+}
+```
+
+The data passed to the `alert` function is JSON encoded, so if `data.Message` was the string value of `Hello, from the JSFuncCall data`, the output would be:
+
+```html title="output.html"
+<button onclick="alert('Hello, from the JSFuncCall data')">Show alert</button>
+```
+
+### Pass event objects to an Event Handler
+
+HTML element `on*` attributes pass an event object to the function. To pass the event object to a function, use `templ.JSExpression`.
+
+
+:::warning
+`templ.JSExpression` bypasses JSON encoding, so the string value is output directly to the HTML - this can be a security risk if the data is not trusted, e.g. the data is user input, not a compile-time constant.
+:::
+
+```templ title="input.templ"
+<script>
+	function clickHandler(event, message) {
+		alert(message);
+		event.preventDefault();
+	}
+</script>
+<button onclick={ templ.JSFuncCall("clickHandler", templ.JSExpression("event"), "message from Go") }>Show event</button>
+```
+
+The output would be:
+
+```html title="output.html"
+<script>
+	function clickHandler(event, message) {
+		alert(message);
+		event.preventDefault();
+	}
+</script>
+<button onclick="clickHandler(event, 'message from Go')">Show event</button>
+```
+
+### Call client side functions with server side data
+
+Use `templ.JSFuncCall` to call a client-side function with server-side data.
+
+`templ.JSFuncCall` takes a function name and a variadic list of arguments. The arguments are JSON encoded and passed to the function.
+
+In the case that the function name is invalid (e.g. contains `</script>` or is a JavaScript expression, not a function name), the function name will be sanitized to `__templ_invalid_function_name`.
+
+```templ title="components.templ"
+templ InitializeClientSideScripts(data CustomType) {
+  @templ.JSFuncCall("functionToCall", data.Name, data.Age)
+}
+```
+
+This will output a `<script>` tag that calls the `functionToCall` function with the `Name` and `Age` properties of the `data` object.
+
+```html title="output.html"
+<script>
+  functionToCall("John", 42);
+</script>
+```
+
+:::tip
+If you want to write out an arbitrary string containing JavaScript, and are sure it is safe, you can use `templ.JSUnsafeFuncCall` to bypass script sanitization.
+
+Whatever string you pass to `templ.JSUnsafeFuncCall` will be output directly to the HTML, so be sure to validate the input.
+:::
+
+### Pass server-side data to the client in a HTML attribute
+
+A common approach used by libraries like alpine.js is to pass data to the client in a HTML attribute.
+
+To pass server-side data to the client in a HTML attribute, use `templ.JSONString` to encode the data as a JSON string.
+
+```templ title="input.templ"
+templ body(data any) {
+  <button id="alerter" alert-data={ templ.JSONString(data) }>Show alert</button>
+}
+```
+
+```html title="output.html"
+<button id="alerter" alert-data="{&quot;msg&quot;:&quot;Hello, from the attribute data&quot;}">Show alert</button>
+```
+
+The data in the attribute can then be accessed from client-side JavaScript.
+
+```javascript
+const button = document.getElementById('alerter');
+const data = JSON.parse(button.getAttribute('alert-data'));
+```
+
+[alpine.js](https://alpinejs.dev/) uses `x-*` attributes to pass data to the client:
+
+```templ
+templ DataDisplay(data DataType) {
+  <div x-data={ templ.JSONString(data) }>
+      ...
+  </div>
+}
+```
+
+### Pass server-side data to the client in a script element
+
+In addition to passing data in HTML attributes, you can also pass data to the client in a `<script>` element.
+
+```templ title="input.templ"
+templ body(data any) {
+  @templ.JSONScript("id", data)
+}
+```
+
+```html title="output.html"
+<script id="id" type="application/json">{"msg":"Hello, from the script data"}</script>
+```
+
+The data in the script tag can then be accessed from client-side JavaScript.
+
+```javascript
+const data = JSON.parse(document.getElementById('id').textContent);
+```
+
+### Interpolate Go data within JavaScript code in a script tag
+
+If you want to use Go data as variables within JavaScript, you can use a `{{ value }}` block to place Go data within the script.
+
+templ will automatically escape the Go data to prevent XSS attacks.
+
+Within strings, you can use `{{ value }}` to interpolate Go data.
+
+```templ title="input.templ"
+templ body(msg string) {
+  <script>
+    const message = "Your message: {{ msg }}";
+    alert(message);
+  </script>
+}
+```
+
+The output would be:
+
+```html title="output.html" msg="Hello"
+<script>
+  const message = "Your message: Hello";
+  alert(message);
+</script>
+```
+
+Outside JavaScript strings, data is JSON encoded so that it can be used as a JavaScript object.
+
+```templ title="input.templ"
+templ body(msg string) {
+  <script>
+    const message = {{ msg }};
+    alert(message);
+  </script>
+}
+```
+
+The output would be:
+
+```html title="output.html" msg="Hello"
+<script>
+  const message = "Hello";
+  alert(message);
+</script>
+```
+
+:::tip
+It's better to pass data to the client in a HTML attribute or a script tag, as this separates the data from the JavaScript code, making it easier to maintain and debug.
+:::
+
+## Avoiding inline event handlers
+
+According to Mozilla, [inline event handlers are considered bad practice](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/Events#inline_event_handlers_%E2%80%94_dont_use_these).
+
+This example demonstrates how to add client-side behaviour to a component using a script tag.
+
+The example uses a `templ.OnceHandle` to define global client-side scripts that are required, without rendering the scripts multiple times in the response.
+
+```templ title="component.templ"
+package main
+
+import "net/http"
+
+var helloHandle = templ.NewOnceHandle()
+
+templ hello(label, name string) {
+  // This script is only rendered once per HTTP request.
+  @helloHandle.Once() {
+    <script>
+      function hello(name) {
+        alert('Hello, ' + name + '!');
       }
-      ```
-    - For resume: Store `mgr` in a session map (e.g., keyed by `sessionID` in Redis/Memcache for scalability). On user request, call `mgr.Start()` again.
-    - Logging: Your `LLMLog` already captures partials/tokens—add fields like `IsResumed` or `StoppedAt` for analytics (e.g., track free tier usage).
+    </script>
+  }
+  <div>
+    <input type="button" value={ label } data-name={ name }/>
+    <script>
+      // To prevent the variables from leaking into the global scope,
+      // this script is wrapped in an IIFE (Immediately Invoked Function Expression).
+      (() => {
+        let scriptElement = document.currentScript;
+        let parent = scriptElement.closest('div');
+        let nearestButtonWithName = parent.querySelector('input[data-name]');
+        nearestButtonWithName.addEventListener('click', function() {
+          let name = nearestButtonWithName.getAttribute('data-name');
+          hello(name);
+        })
+      })()
+    </script>
+  </div>
+}
 
-- **Frontend (Templ + HTMX + Alpine)**:
-    - Use HTMX SSE for streaming, Alpine for state management (e.g., buttons to trigger stop/resume).
-      ```go
-      // itinerary.templ (example)
-      templ ItineraryPage(sessionID string) {
-          <div x-data="{ content: '', loading: false, paused: false }" 
-               hx-ext="sse" 
-               sse-connect="/api/itinerary/stream?session={sessionID}">
-              
-              <button @click="loading = true; paused = false" 
-                      hx-post="/api/itinerary/start?session={sessionID}" 
-                      x-show="!loading && paused">Resume</button>
-              
-              <button @click="paused = true" 
-                      hx-post="/api/itinerary/stop?session={sessionID}" 
-                      x-show="loading && !paused">Pause</button>
-              
-              <div sse-swap="data" 
-                   x-on:sse-data="content += $event.detail.data; loading = true"
-                   x-text="content"
-                   class="itinerary-stream"></div>
-              
-              <div sse-swap="end" x-on:sse-end="loading = false; if (!paused) { /* handle complete */ }"></div>
-          </div>
+templ page() {
+  @hello("Hello User", "user")
+  @hello("Hello World", "world")
+}
+
+func main() {
+  http.Handle("/", templ.Handler(page()))
+  http.ListenAndServe("127.0.0.1:8080", nil)
+}
+```
+
+:::tip
+You might find libraries like [surreal](https://github.com/gnat/surreal) useful for reducing boilerplate.
+
+```templ
+var helloHandle = templ.NewOnceHandle()
+var surrealHandle = templ.NewOnceHandle()
+
+templ hello(label, name string) {
+  @helloHandle.Once() {
+    <script>
+      function hello(name) {
+        alert('Hello, ' + name + '!');
       }
-      ```
-    - HTMX posts to stop/resume endpoints trigger `mgr.Stop()`/`Start()`, updating UI dynamically without reloads. Alpine tracks state (e.g., show "Resume" button post-stop).
+    </script>
+  }
+  @surrealHandle.Once() {
+    <script src="https://cdn.jsdelivr.net/gh/gnat/surreal@3b4572dd0938ce975225ee598a1e7381cb64ffd8/surreal.js"></script>
+  }
+  <div>
+    <input type="button" value={ label } data-name={ name }/>
+    <script>
+      // me("-") returns the previous sibling element.
+      me("-").addEventListener('click', function() {
+        let name = this.getAttribute('data-name');
+        hello(name);
+      })
+    </script>
+  </div>
+}
+```
+:::
 
-- **PWA Considerations**:
-    - Offline: Save partials in IndexedDB (via Alpine) for resume when online.
-    - Mobile: Gesture-based (e.g., swipe to pause) via Alpine event listeners.
+## Importing scripts
 
-### Potential Trade-Offs
-- **Not Perfectly Stateful**: Gemini is stateless, so resumes simulate via partial context + "Continue..." prompt. For itineraries, this works ~80-90% seamlessly (model recalls prior output), but might rephrase slightly—test with your dataset.
-- **Complexity**: Adds session management (e.g., persist `mgr` across requests). Start simple: In-memory map for MVP, then Redis.
-- **When It Might Not Make Sense**: For short, quick queries (e.g., simple nearby lookups), synchronous calls suffice. Reserve stop/resume for longer generations like full itineraries.
-- **Alternatives**: If resumes feel inconsistent, use non-streaming with manual "Regenerate" buttons—but you'd lose real-time feel.
+Use standard `<script>` tags to load JavaScript from a URL.
 
-Overall, this feature boosts Loci's interactivity, differentiating it from generic apps. Implement for high-value pages (itineraries, chat) first, then expand based on user feedback. If needed, we can refine the code further!
+```templ
+templ head() {
+	<head>
+		<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+	</head>
+}
+```
 
-38. Resume chat with pgvector
-    To integrate pgvector for resuming AI/LLM sessions (often called "resume integration" in this context), you're leveraging PostgreSQL's pgvector extension to store vector embeddings of conversation history, partial responses, or session states. This enables semantic retrieval of relevant context when resuming an interrupted LLM call, improving coherence and personalization beyond simple text appending (as in your current `LLMCallManager`). It's particularly useful for Loci's real-time AI features like itinerary generation or chat, where users might pause and resume, and it aligns with your Phase 2 roadmap for enhanced AI via embeddings.
+And use the imported JavaScript directly in templ via `<script>` tags.
 
-pgvector turns Postgres into a vector database for similarity searches (e.g., cosine, Euclidean), making it ideal for RAG (Retrieval-Augmented Generation) in LLMs. "Resume" here means continuing a session after interruption, using embeddings to reconstruct or enrich context without overloading the LLM's token limit.
+```templ
+templ body() {
+	<script>
+		const chart = LightweightCharts.createChart(document.body, { width: 400, height: 300 });
+		const lineSeries = chart.addLineSeries();
+		lineSeries.setData([
+				{ time: '2019-04-11', value: 80.01 },
+				{ time: '2019-04-12', value: 96.63 },
+				{ time: '2019-04-13', value: 76.64 },
+				{ time: '2019-04-14', value: 81.89 },
+				{ time: '2019-04-15', value: 74.43 },
+				{ time: '2019-04-16', value: 80.01 },
+				{ time: '2019-04-17', value: 96.63 },
+				{ time: '2019-04-18', value: 76.64 },
+				{ time: '2019-04-19', value: 81.89 },
+				{ time: '2019-04-20', value: 74.43 },
+		]);
+	</script>
+}
+```
 
-### Why This Integration Fits Loci
-- **Session Continuity**: For stop/resume in LLM calls (e.g., pausing a long itinerary), retrieve similar past partials or user prefs via vector search to augment the "Continue..." prompt.
-- **Personalization**: Embed user history (e.g., preferences, past itineraries) for semantic matching, enhancing recommendations.
-- **Efficiency**: Reduces token costs by injecting only relevant context; handles free-tier limits by reusing stored embeddings.
-- **Stack Compatibility**: Your Go backend (with pgx) can query pgvector directly; no new DB needed.
+:::tip
+You can use a CDN to serve 3rd party scripts, or serve your own and 3rd party scripts from your server using a `http.FileServer`.
 
-### Step-by-Step Integration
-1. **Enable pgvector in PostgreSQL**:
-    - In your Supabase or self-hosted Postgres (as in Loci's stack), run:
-      ```sql
-      CREATE EXTENSION IF NOT EXISTS vector;
-      ```
-    - Create a table for embeddings (e.g., in your DB schema):
-      ```sql
-      CREATE TABLE llm_session_embeddings (
-          id SERIAL PRIMARY KEY,
-          session_id UUID NOT NULL,
-          user_id UUID NOT NULL,
-          content TEXT NOT NULL,  -- Original text (partial response/history)
-          embedding VECTOR(1536),  -- Dimension matches your embedding model (e.g., Gemini's 768-1536)
-          timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          metadata JSONB  -- e.g., {"intent": "itinerary", "city_id": 123}
-      );
-      CREATE INDEX ON llm_session_embeddings USING hnsw (embedding vector_cosine_ops);  -- For fast similarity search
-      ```
+```go
+mux := http.NewServeMux()
+mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
+http.ListenAndServe("localhost:8080", mux)
+```
+:::
 
-2. **Generate Embeddings**:
-    - Use Gemini SDK's embedding API (or an open-source alternative like sentence-transformers via a Go wrapper if needed).
-    - In your `LLMCallManager`, after a stop (in `Stop()` or `consumeStream()`), embed the partial:
-      ```go
-      // Add to LLMCallManager struct: embedder (e.g., *genai.Client for Gemini)
-      func (m *LLMCallManager) embedAndStorePartial() error {
-          if partial := m.partial.String(); partial == "" {
-              return nil
-          }
- 
-          // Generate embedding (using Gemini's EmbedContent)
-          embedReq := &generativelanguagepb.EmbedContentRequest{
-              Model: "models/embedding-001",  // Or your model
-              Content: &generativelanguagepb.Content{
-                  Parts: []*generativelanguagepb.Part{{Data: &generativelanguagepb.Part_Text{Text: partial}}},
-              },
-          }
-          embedResp, err := m.client.EmbedContent(context.Background(), embedReq)
-          if err != nil {
-              return err
-          }
-          embedding := embedResp.Embedding.Values  // Slice of float32
- 
-          // Store in DB via pgx
-          _, err = m.db.Exec(context.Background(), `
-              INSERT INTO llm_session_embeddings (session_id, user_id, content, embedding, metadata)
-              VALUES ($1, $2, $3, $4, $5)`,
-              m.sessionID, m.userID, partial, embedding, fmt.Sprintf(`{"intent": "%s", "city_id": %d}`, m.intent, m.cityID),
-          )
-          return err
-      }
-      ```
-        - Call this in `Stop()`: `m.embedAndStorePartial()` (async if needed).
+## Working with NPM projects
 
-3. **Retrieve Context on Resume**:
-    - In `buildRequest()`, before appending the basic partial, embed the current state and query pgvector for similar contexts:
-      ```go
-      func (m *LLMCallManager) buildRequest() *generativelanguagepb.GenerateContentRequest {
-          req := proto.Clone(m.originalReq).(*generativelanguagepb.GenerateContentRequest)  // Deep copy
- 
-          partial := m.partial.String()
-          if partial == "" {
-              return req
-          }
- 
-          // Embed partial for search
-          embedReq := &generativelanguagepb.EmbedContentRequest{ /* as above */ }
-          embedResp, _ := m.client.EmbedContent(context.Background(), embedReq)  // Handle err
-          queryEmbedding := embedResp.Embedding.Values
- 
-          // Query pgvector for top-3 similar (cosine similarity)
-          rows, err := m.db.Query(context.Background(), `
-              SELECT content
-              FROM llm_session_embeddings
-              WHERE session_id = $1 OR user_id = $2  -- Scope to session/user
-              ORDER BY embedding <=> $3  -- Cosine distance
-              LIMIT 3`,
-              m.sessionID, m.userID, queryEmbedding,
-          )
-          if err != nil {
-              // Fallback to basic
-              logger.Log.Warn("pgvector query failed", zap.Error(err))
-          } else {
-              defer rows.Close()
-              var contexts []string
-              for rows.Next() {
-                  var content string
-                  rows.Scan(&content)
-                  contexts = append(contexts, content)
-              }
-              // Append retrieved contexts as model history
-              for _, ctx := range contexts {
-                  req.Contents = append(req.Contents, &generativelanguagepb.Content{
-                      Role: "model",
-                      Parts: []*generativelanguagepb.Part{{Data: &generativelanguagepb.Part_Text{Text: ctx}}},
-                  })
-              }
-          }
- 
-          // Append current partial and continue prompt
-          req.Contents = append(req.Contents, &generativelanguagepb.Content{
-              Role: "model",
-              Parts: []*generativelanguagepb.Part{{Data: &generativelanguagepb.Part_Text{Text: partial}}},
-          })
-          req.Contents = append(req.Contents, &generativelanguagepb.Content{
-              Role: "user",
-              Parts: []*generativelanguagepb.Part{{Data: &generativelanguagepb.Part_Text{Text: "Continue from where you left off, incorporating relevant past context."}}},
-          })
-          return req
-      }
-      ```
+https://github.com/a-h/templ/tree/main/examples/typescript contains a TypeScript example that uses `esbuild` to transpile TypeScript into plain JavaScript, along with any required `npm` modules.
 
-4. **Frontend/Handler Integration**:
-    - In Gin handlers (e.g., `StreamItinerary`), persist `mgr` by sessionID (e.g., in Redis or DB) for cross-request resumes.
-    - Use HTMX to trigger resume (as in prior examples); the enriched prompt ensures better outputs.
+After transpilation and bundling, the output JavaScript code can be used in a web page by including a `<script>` tag.
 
-### Benefits and Considerations
-- **Accuracy**: Semantic search retrieves truly relevant history (e.g., similar itineraries), reducing hallucinations.
-- **Scalability**: pgvector handles large datasets efficiently; index for speed.
-- **Costs**: Embedding calls add minor expense—cache or batch for free tier.
-- **Testing**: Use sample data; monitor query performance.
-- **Alternatives**: For simpler cases, stick to text appending; scale to full RAG for premium features.
+### Creating a TypeScript project
 
-This setup makes resumptions "smarter" in Loci, e.g., resuming a food tour with embedded prefs pulling vegan options from history.
+Create a new TypeScript project with `npm`, and install TypeScript and `esbuild` as development dependencies.
 
-39. RAG patterns with pgvector. use embedding with go genai
-### Introduction to RAG and pgvector
-Retrieval-Augmented Generation (RAG) is a design pattern in AI systems that combines a retrieval step (fetching relevant data from a knowledge base) with generation (using an LLM to produce responses). This enhances accuracy, reduces hallucinations, and grounds outputs in real data. pgvector is an open-source PostgreSQL extension for storing and querying high-dimensional vectors (embeddings), making it a lightweight, scalable vector database for RAG. It supports similarity searches via operators like `<->` (L2 distance), `<#>` (inner product), and `<=>` (cosine distance), with indexing options like HNSW or IVFFlat for efficiency.
+```bash
+mkdir ts
+cd ts
+npm init
+npm install --save-dev typescript esbuild
+```
 
-Common use cases include chatbots, question-answering over documents, and personalized recommendations (e.g., in your Loci app for itinerary suggestions based on embedded user prefs or city data).
+Create a `src` directory to hold the TypeScript code.
 
-### Common RAG Patterns with pgvector
-Here are prevalent patterns, drawn from implementations in Python and Go. These build on pgvector's vector storage for semantic search, often integrated with LLMs like Llama 3.1, OpenAI, or Gemini.
+```bash
+mkdir src
+```
 
-| Pattern | Description | When to Use | pgvector Role |
-|---------|-------------|-------------|--------------|
-| **Basic RAG** | Embed documents, store vectors, retrieve top-k similar chunks for a query embedding, and augment the LLM prompt with retrieved text. | Simple Q&A over static docs (e.g., internal knowledge base). | Stores embeddings in a `vector(N)` column; uses `<->` for nearest-neighbor search. |
-| **Hybrid Search** | Combine vector similarity with keyword/full-text search (e.g., BM25 via `tsvector`). Rank results by a fused score (e.g., vec_dist + bm25_score). | Queries with both semantic intent and exact terms (e.g., "vegan restaurants in Paris" – semantic for "vegan", keyword for "Paris"). | Adds `tsvector` column for text search; queries merge vector ops with `ts_rank_cd`. |
-| **Reranking** | Retrieve a broad set of candidates via vector search, then rerank with a cross-encoder model (e.g., ms-marco-MiniLM) for precision. | Noisy datasets where initial retrieval includes false positives. | Initial retrieval via indexed vector column; reranking happens post-query in app logic. |
-| **Metadata-Filtered RAG** | Filter retrieval by metadata (e.g., city_id, user_id) stored in JSONB, then apply vector search. | Personalized apps (e.g., Loci: filter by user prefs or location before semantic match). | Uses `WHERE metadata->>'key' = 'value'` before ordering by similarity. |
-| **Multi-Modal RAG** | Embed and store multi-modal data (text + images via CLIP embeddings). | Apps with images/PDFs (e.g., embedding Loci's maps or photos). | Handles mixed vector dims; hybrid with `tsvector` for text fallback. |
-| **Advanced: Deduplication & Normalization** | Normalize embeddings (e.g., L2 norm) for inner product search; dedupe overlapping chunks post-retrieval. | Large corpora with redundant text to reduce prompt noise. | Normalization in app before insert; dedupe in post-processing. |
+And add a TypeScript file to the `src` directory.
 
-### Implementation Steps
-A typical pgvector-based RAG flow involves four phases: setup, ingestion, retrieval, and generation. Below is a Go-centric outline, leveraging libraries like pgx, Ent (for ORM), and Atlas (for migrations)—fitting your stack.
+```typescript title="ts/src/index.ts"
+function hello() {
+  console.log('Hello, from TypeScript');
+}
+```
 
-1. **Vector Store Setup**:
-    - Enable pgvector: `CREATE EXTENSION IF NOT EXISTS vector;`
-    - Define schema (e.g., via Ent):
-      ```go
-      // ent/schema/document.go
-      package schema
-      import (
-          "entgo.io/ent"
-          "entgo.io/ent/schema/field"
-          "github.com/pgvector/pgvector-go"
-      )
-      type Document struct { ent.Schema }
-      func (Document) Fields() []ent.Field {
-          return []ent.Field{
-              field.Text("content"),
-              field.Other("embedding", pgvector.Vector{}).SchemaType(map[string]string{"postgres": "vector(1536)"}),
-              field.JSON("metadata", map[string]any{}),
-          }
-      }
-      ```
-    - Add index: `CREATE INDEX ON documents USING hnsw (embedding vector_cosine_ops) WITH (m=16, ef_construction=128);` (for high recall).
-    - Use Atlas for migrations: Define HCL files to apply extension and schema.
+### Bundling TypeScript code
 
-2. **Ingestion Pipeline**:
-    - Chunk docs (e.g., by token count: 512-1024).
-    - Generate embeddings (e.g., via Ollama/Llama or OpenAI):
-      ```go
-      import "github.com/tmc/langchaingo/llms/ollama"
-      llm, _ := ollama.New(ollama.WithModel("llama3"))
-      emb, _ := llm.CreateEmbedding(context.Background(), []string{chunk})
-      vec := pgvector.NewVector(emb[0]) // Convert []float64 to pgvector
-      ```
-    - Store: Use pgx or Ent to insert:
-      ```go
-      client.Document.Create().SetContent(chunk).SetEmbedding(vec).SetMetadata(meta).SaveX(ctx)
-      ```
+Add a script to build the TypeScript code in `index.ts` and copy it to an output directory (in this case `./assets/js/index.js`).
 
-3. **Retrieval**:
-    - Embed query.
-    - Query top-k:
-      ```sql
-      SELECT content, metadata, embedding <=> $1 AS distance FROM documents ORDER BY distance LIMIT 5;
-      ```
-    - In Go (Ent):
-      ```go
-      docs := client.Document.Query().Order(func(s *sql.Selector) {
-          s.OrderExpr(sql.ExprP("embedding <=> $1", queryVec))
-      }).Limit(5).AllX(ctx)
-      ```
+```json title="ts/package.json"
+{
+  "name": "ts",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "esbuild --bundle --minify --outfile=../assets/js/index.js ./src/index.ts"
+  },
+  "devDependencies": {
+    "esbuild": "0.21.3",
+    "typescript": "^5.4.5"
+  }
+}
+```
 
-4. **Generation**:
-    - Build prompt: "Answer based on this context: {retrieved} Question: {query}"
-    - Call LLM (e.g., Gemini or Llama via SDK):
-      ```go
-      resp, _ := llm.Call(context.Background(), prompt)
-      ```
+After running `npm build` in the `ts` directory, the TypeScript code is transpiled into JavaScript and copied to the output directory.
 
-### Best Practices
-- **Chunking**: Token-based (e.g., 1000 tokens) to preserve context; overlap chunks by 10-20% for continuity.
-- **Embedding Models**: Use consistent dims (e.g., 1536 for ada-002, 4096 for Llama); normalize for inner product speed.
-- **Indexing**: HNSW for production (fast, approximate); tune `m`/`ef_construction` for recall vs. speed.
-- **Scalability**: Batch inserts; use JSONB for metadata filtering; monitor with pgDash.
-- **Error Handling**: Retry on rate limits; dedupe retrieved chunks to avoid prompt bloat.
-- **Security**: Sanitize inputs; use read-only roles for queries.
-- **Testing**: Evaluate with metrics like recall@K; start with small datasets.
+### Using the output JavaScript
 
-to be used with the Gemini SDK
+The output file `../assets/js/index.js` can then be used in a templ project.
 
-____
+```templ title="components/head.templ"
+templ head() {
+	<head>
+		<script src="/assets/js/index.js"></script>
+	</head>
+}
+```
+
+You will need to configure your Go web server to serve the static content.
+
+```go title="main.go"
+func main() {
+	mux := http.NewServeMux()
+	// Serve the JS bundle.
+	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
+
+	// Serve components.
+	data := map[string]any{"msg": "Hello, World!"}
+	h := templ.Handler(components.Page(data))
+	mux.Handle("/", h)
+
+	fmt.Println("Listening on http://localhost:8080")
+	http.ListenAndServe("localhost:8080", mux)
+}
+```
+
+## Script templates
+
+:::warning
+Script templates are a legacy feature and are not recommended for new projects.
+
+Use the `templ.JSFuncCall`, `templ.JSONString` and other features of templ alongside standard `<script>` tags to import standalone JavaScript files, optionally created by a bundler like `esbuild`.
+:::
+
+If you need to pass Go data to scripts, you can use a script template.
+
+Here, the `page` HTML template includes a `script` element that loads a charting library, which is then used by the `body` element to render some data.
+
+```templ
+package main
+
+script graph(data []TimeValue) {
+	const chart = LightweightCharts.createChart(document.body, { width: 400, height: 300 });
+	const lineSeries = chart.addLineSeries();
+	lineSeries.setData(data);
+}
+
+templ page(data []TimeValue) {
+	<html>
+		<head>
+			<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+		</head>
+		<body onload={ graph(data) }></body>
+	</html>
+}
+```
+
+The data is loaded by the backend into the template. This example uses a constant, but it could easily have collected the `[]TimeValue` from a database.
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+)
+
+type TimeValue struct {
+	Time  string  `json:"time"`
+	Value float64 `json:"value"`
+}
+
+func main() {
+	mux := http.NewServeMux()
+
+	// Handle template.
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		data := []TimeValue{
+			{Time: "2019-04-11", Value: 80.01},
+			{Time: "2019-04-12", Value: 96.63},
+			{Time: "2019-04-13", Value: 76.64},
+			{Time: "2019-04-14", Value: 81.89},
+			{Time: "2019-04-15", Value: 74.43},
+			{Time: "2019-04-16", Value: 80.01},
+			{Time: "2019-04-17", Value: 96.63},
+			{Time: "2019-04-18", Value: 76.64},
+			{Time: "2019-04-19", Value: 81.89},
+			{Time: "2019-04-20", Value: 74.43},
+		}
+		page(data).Render(r.Context(), w)
+	})
+
+	// Start the server.
+	fmt.Println("listening on :8080")
+	if err := http.ListenAndServe(":8080", mux); err != nil {
+		log.Printf("error listening: %v", err)
+	}
+}
+```
+
+`script` elements are templ Components, so you can also directly render the Javascript function, passing in Go data, using the `@` expression:
+
+```templ
+package main
+
+import "fmt"
+
+script printToConsole(content string) {
+	console.log(content)
+}
+
+templ page(content string) {
+	<html>
+		<body>
+		  @printToConsole(content)
+		  @printToConsole(fmt.Sprintf("Again: %s", content))
+		</body>
+	</html>
+}
+```
+
+The data passed into the Javascript function will be JSON encoded, which then can be used inside the function.
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"time"
+)
+
+func main() {
+	mux := http.NewServeMux()
+
+	// Handle template.
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// Format the current time and pass it into our template
+		page(time.Now().String()).Render(r.Context(), w)
+	})
+
+	// Start the server.
+	fmt.Println("listening on :8080")
+	if err := http.ListenAndServe(":8080", mux); err != nil {
+		log.Printf("error listening: %v", err)
+	}
+}
+```
+
+After building and running the executable, running `curl http://localhost:8080/` would render:
+
+```html title="Output"
+<html>
+	<body>
+		<script>function __templ_printToConsole_5a85(content){console.log(content)}</script>
+		<script>__templ_printToConsole_5a85("2023-11-11 01:01:40.983381358 +0000 UTC")</script>
+		<script>__templ_printToConsole_5a85("Again: 2023-11-11 01:01:40.983381358 +0000 UTC")</script>
+	</body>
+</html>
+```
+
+The `JSExpression` type is used to pass arbitrary JavaScript expressions to a templ script template.
+
+A common use case is to pass the `event` or `this` objects to an event handler.
+
+```templ
+package main
+
+script showButtonWasClicked(event templ.JSExpression) {
+	const originalButtonText = event.target.innerText
+	event.target.innerText = "I was Clicked!"
+	setTimeout(() => event.target.innerText = originalButtonText, 2000)
+}
+
+templ page() {
+	<html>
+		<body>
+			<button type="button" onclick={ showButtonWasClicked(templ.JSExpression("event")) }>Click Me</button>
+		</body>
+	</html>
+}
+```
+# Statements
+
+## Control flow
+
+Within a templ element, a subset of Go statements can be used directly.
+
+These Go statements can be used to conditionally render child elements, or to iterate variables.
+
+For individual implementation guides see:
+
+* [if/else](/syntax-and-usage/if-else)
+* [switch](/syntax-and-usage/switch)
+* [for loops](/syntax-and-usage/loops)
+
+## if/switch/for within text
+
+Go statements can be used without any escaping to make it simple for developers to include them.
+
+The templ parser assumes that text that starts with `if`, `switch` or `for` denotes the start of one of those expressions as per this example.
+
+```templ title="show-hello.templ"
+package main
+
+templ showHelloIfTrue(b bool) {
+	<div>
+		if b {
+			<p>Hello</p>
+		}
+	</div>
+}
+```
+
+If you need to start a text block with the words `if`, `switch`, or `for`:
+
+* Use a Go string expression.
+* Capitalise `if`, `switch`, or `for`.
+
+```templ title="paragraph.templ"
+package main
+
+templ display(price float64, count int) {
+	<p>Switch to Linux</p>
+	<p>{ `switch to Linux` }</p>
+	<p>{ "for a day" }</p>
+	<p>{ fmt.Sprintf("%f", price) }{ "for" }{ fmt.Sprintf("%d", count) }</p>
+	<p>{ fmt.Sprintf("%f for %d", price, count) }</p>
+}
+```
+
+## Design considerations
+
+We decided to not require a special prefix for `if`, `switch` and `for` expressions on the basis that we were more likely to want to use a Go control statement than start a text run with those strings.
+
+To reduce the risk of a broken control statement, resulting in printing out the source code of the application, templ will complain if a text run starts with `if`, `switch` or `for`, but no opening brace `{` is found.
+
+For example, the following code causes the templ parser to return an error:
+
+```templ title="broken-if.templ"
+package main
+
+templ showIfTrue(b bool) {
+	if b 
+	  <p>Hello</p>
+	}
+}
+```
+
+:::note
+Note the missing `{` on line 4.
+:::
+
+The following code also produces an error, since the text run starts with `if`, but no opening `{` is found.
+
+```templ title="paragraph.templ"
+package main
+
+templ text(b bool) {
+	<p>if a tree fell in the woods</p>
+}
+```
+
+:::note
+This also applies to `for` and `switch` statements.
+:::
+
+To resolve the issue:
+
+* Use a Go string expression.
+* Capitalise `if`, `switch`, or `for`.
+
+```templ title="paragraph.templ"
+package main
+
+templ display(price float64, count int) {
+	<p>Switch to Linux</p>
+	<p>{ `switch to Linux` }</p>
+	<p>{ "for a day" }</p>
+	<p>{ fmt.Sprintf("%f", price) }{ "for" }{ fmt.Sprintf("%d", count) }</p>
+	<p>{ fmt.Sprintf("%f for %d", price, count) }</p>
+}
+```
+# Attributes
+
+## Constant attributes
+
+templ elements can have HTML attributes that use the double quote character `"`.
+
+```templ
+templ component() {
+  <p data-testid="paragraph">Text</p>
+}
+```
+
+```html title="Output"
+<p data-testid="paragraph">Text</p>
+```
+
+## String expression attributes
+
+Element attributes can be set to Go strings.
+
+```templ
+templ component(testID string) {
+  <p data-testid={ testID }>Text</p>
+}
+
+templ page() {
+  @component("testid-123")
+}
+```
+
+Rendering the `page` component results in:
+
+```html title="Output"
+<p data-testid="testid-123">Text</p>
+```
+
+:::note
+String values are automatically HTML attribute encoded. This is a security measure, but may make the values (especially JSON appear) look strange to you, since some characters may be converted into HTML entities. However, it is correct HTML and won't affect the behavior.
+:::
+
+It's also possible to use function calls in string attribute expressions.
+
+Here's a function that returns a string based on a boolean input.
+
+```go
+func testID(isTrue bool) string {
+    if isTrue {
+        return "testid-123"
+    }
+    return "testid-456"
+}
+```
+
+```templ
+templ component() {
+  <p data-testid={ testID(true) }>Text</p>
+}
+```
+
+The result:
+
+```html title="Output"
+<p data-testid="testid-123">Text</p>
+```
+
+Functions in string attribute expressions can also return errors.
+
+```go
+func testID(isTrue bool) (string, error) {
+    if isTrue {
+        return "testid-123", nil
+    }
+    return "", fmt.Errorf("isTrue is false")
+}
+```
+
+If the function returns an error, the `Render` method will return the error along with its location.
+
+## Boolean attributes
+
+Boolean attributes (see https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#boolean-attributes) where the presence of an attribute name without a value means true, and the attribute name not being present means false are supported.
+
+```templ
+templ component() {
+  <hr noshade/>
+}
+```
+
+```html title="Output"
+<hr noshade>
+```
+
+:::note
+templ is aware that `<hr/>` is a void element, and renders `<hr>` instead.
+:::
 
 
+To set boolean attributes using variables or template parameters, a question mark after the attribute name is used to denote that the attribute is boolean.
+
+```templ
+templ component() {
+  <hr noshade?={ false } />
+}
+```
+
+```html title="Output"
+<hr>
+```
+
+## Conditional attributes
+
+Use an `if` statement within a templ element to optionally add attributes to elements.
+
+```templ
+templ component() {
+  <hr style="padding: 10px"
+    if true {
+      class="itIsTrue"
+    }
+  />
+}
+```
+
+```html title="Output"
+<hr style="padding: 10px" class="itIsTrue" />
+```
+
+## Attribute key expressions
+
+Use a string expression to dynamically set the key of an attribute.
+
+```templ
+templ paragraph(testID string) {
+  <p { "data-" + testID }="paragraph">Text</p>
+}
+
+templ component() {
+  @paragraph("testid")
+}
+```
+
+```html title="Output"
+<p data-testid="paragraph">Text</p>
+```
+
+:::warning
+Currently, attribute types with special handling like `href`, `onClick`, and `on*` are not handled differently when defined with an expression key. So if you use a string expression to set the key of an attribute, it will be treated as a normal string attribute, without type specific escaping.
+:::
+
+## Spread attributes
+
+Use the `{ attrMap... }` syntax in the open tag of an element to append a dynamic map of attributes to the element's attributes.
+
+It's possible to spread any variable of type `templ.Attributes`. `templ.Attributes` is a `map[string]any` type definition.
+
+* If the value is a `string`, the attribute is added with the string value, e.g. `<div name="value">`.
+* If the value is a `bool`, the attribute is added as a boolean attribute if the value is true, e.g. `<div name>`.
+* If the value is a `templ.KeyValue[string, bool]`, the attribute is added if the boolean is true, e.g. `<div name="value">`.
+* If the value is a `templ.KeyValue[bool, bool]`, the attribute is added if both boolean values are true, as `<div name>`.
+
+```templ
+templ component(shouldBeUsed bool, attrs templ.Attributes) {
+  <p { attrs... }>Text</p>
+  <hr
+    if shouldBeUsed {
+      { attrs... }
+    }
+  />
+}
+
+templ usage() {
+  @component(false, templ.Attributes{"data-testid": "paragraph"}) 
+}
+```
+
+```html title="Output"
+<p data-testid="paragraph">Text</p>
+<hr>
+```
+
+## URL attributes
+
+Attributes that expect a URL, such as `<a href={ url }>`, `<form action={ url }>`, or `<img src={ url }>`, have special behavior if you use a dynamic value.
+
+```templ
+templ component(p Person) {
+  <a href={ p.URL }>{ strings.ToUpper(p.Name) }</a>
+}
+```
+
+When you pass a `string` to these attributes, templ will automatically sanitize the input URL, ensuring that the protocol is safe (e.g., `http`, `https`, or `mailto`) and does not contain potentially harmful protocols like `javascript:`.
+
+:::caution
+To bypass URL sanitization, you can use `templ.SafeURL(myURL)` to mark that your string is safe to use.
+
+This may introduce security vulnerabilities to your program.
+:::
+
+If you use a constant value, e.g. `<a href="javascript:alert('hello')">`, templ will not modify it, and it will be rendered as is.
+
+:::tip
+Non-standard HTML attributes can contain URLs, for example HTMX's `hx-*` attributes).
+
+To sanitize URLs in that context, use the `templ.URL(urlString)` function.
+
+```templ
+templ component(contact model.Contact) {
+  <div hx-get={ templ.URL(fmt.Sprintf("/contacts/%s/email", contact.ID)) }>
+    { contact.Name }
+  </div>
+}
+```
+:::
+
+:::note
+In templ, all attributes are HTML-escaped. This means that:
+
+- `&` characters in the URL are escaped to `&amp;`.
+- `"` characters are escaped to `&quot;`.
+- `'` characters are escaped to `&#39;`.
+
+This done to prevent XSS attacks. For example, without escaping, if a string contained `http://google.com" onclick="alert('hello')"`, the browser would interpret this as a URL followed by an `onclick` attribute, which would execute JavaScript code.
+
+The escaping does not change the URL's functionality.
+
+Sanitization is the process of examining the URL scheme (protocol) and structure to ensure that it's safe to use, e.g. that it doesn't contain `javascript:` or other potentially harmful schemes. If a URL is not safe, templ will replace the URL with `about:invalid#TemplFailedSanitizationURL`.
+:::
+
+## JavaScript attributes
+
+`onClick` and other `on*` handlers have special behaviour, they expect a reference to a `script` template.
+
+:::info
+This ensures that any client-side JavaScript that is required for a component to function is only emitted once, that script name collisions are not possible, and that script input parameters are properly sanitized.
+:::
+
+```templ
+script withParameters(a string, b string, c int) {
+	console.log(a, b, c);
+}
+
+script withoutParameters() {
+	alert("hello");
+}
+
+templ Button(text string) {
+	<button onClick={ withParameters("test", text, 123) } onMouseover={ withoutParameters() } type="button">{ text }</button>
+}
+```
+
+```html title="Output"
+<script>
+ function __templ_withParameters_1056(a, b, c){console.log(a, b, c);}function __templ_withoutParameters_6bbf(){alert("hello");}
+</script>
+<button onclick="__templ_withParameters_1056("test","Say hello",123)" onmouseover="__templ_withoutParameters_6bbf()" type="button">
+ Say hello
+</button>
+```
+
+## CSS attributes
+
+CSS handling is discussed in detail in [CSS style management](/syntax-and-usage/css-style-management).
+
+## JSON attributes
+
+To set an attribute's value to a JSON string (e.g. for HTMX's [hx-vals](https://htmx.org/attributes/hx-vals) or Alpine's [x-data](https://alpinejs.dev/directives/data)), serialize the value to a string using a function.
+
+```go
+func countriesJSON() string {
+	countries := []string{"Czech Republic", "Slovakia", "United Kingdom", "Germany", "Austria", "Slovenia"}
+	bytes, _ := json.Marshal(countries)
+	return string(bytes)
+}
+```
+
+```templ
+templ SearchBox() {
+	<search-webcomponent suggestions={ countriesJSON() } />
+}
+```
+# Elements
+
+templ elements are used to render HTML within templ components.
+
+```templ title="button.templ"
+package main
+
+templ button(text string) {
+	<button class="button">{ text }</button>
+}
+```
+
+```go title="main.go"
+package main
+
+import (
+	"context"
+	"os"
+)
+
+func main() {
+	button("Click me").Render(context.Background(), os.Stdout)
+}
+```
+
+```html title="Output"
+<button class="button">
+ Click me
+</button>
+```
+
+:::info
+templ automatically minifies HTML responses, output is shown formatted for readability.
+:::
+
+## Tags must be closed
+
+Unlike HTML, templ requires that all HTML elements are closed with either a closing tag (`</a>`), or by using a self-closing element (`<hr/>`).
+
+templ is aware of which HTML elements are "void", and will not include the closing `/` in the output HTML.
+
+```templ title="button.templ"
+package main
+
+templ component() {
+	<div>Test</div>
+	<img src="images/test.png"/>
+	<br/>
+}
+```
+
+```templ title="Output"
+<div>Test</div>
+<img src="images/test.png">
+<br>
+```
+
+## Attributes and elements can contain expressions
+
+templ elements can contain placeholder expressions for attributes and content.
+
+```templ title="button.templ"
+package main
+
+templ button(name string, content string) {
+	<button value={ name }>{ content }</button>
+}
+```
+
+Rendering the component to stdout, we can see the results.
+
+```go title="main.go"
+func main() {
+	component := button("John", "Say Hello")
+	component.Render(context.Background(), os.Stdout)
+}
+```
+
+```html title="Output"
+<button value="John">Say Hello</button>
+```
+# Context
+
+## What problems does `context` solve?
+
+### "Prop drilling"
+
+It can be cumbersome to pass data from parents through to children components, since this means that every component in the hierarchy has to accept parameters and pass them through to children.
+
+The technique of passing data through a stack of components is sometimes called "prop drilling".
+
+In this example, the `middle` component doesn't use the `name` parameter, but must accept it as a parameter in order to pass it to the `bottom` component.
+
+```templ title="component.templ"
+package main
+
+templ top(name string) {
+	<div>
+		@middle(name)
+	</div>
+}
+
+templ middle(name string) {
+	<ul>
+		@bottom(name)
+	</ul>
+}
+
+templ bottom(name string) {
+  <li>{ name }</li>
+}
+```
+
+:::tip
+In many cases, prop drilling is the best way to pass data because it's simple and reliable.
+
+Context is not strongly typed, and errors only show at runtime, not compile time, so it should be used sparingly in your application.
+:::
+
+### Coupling
+
+Some data is useful for many components throughout the hierarchy, for example:
+
+* Whether the current user is logged in or not.
+* The username of the current user.
+* The locale of the user (used for localization).
+* Theme preferences (e.g. light vs dark).
+
+One way to pass this information is to create a `Settings` struct and pass it through the stack as a parameter.
+
+```templ title="component.templ"
+package main
+
+type Settings struct {
+	Username string
+	Locale   string
+	Theme    string
+}
+
+templ top(settings Settings) {
+	<div>
+		@middle(settings)
+	</div>
+}
+
+templ middle(settings Settings) {
+	<ul>
+		@bottom(settings)
+	</ul>
+}
+
+templ bottom(settings Settings) {
+  <li>{ settings.Theme }</li>
+}
+```
+
+However, this `Settings` struct may be unique to a single website, and reduce the ability to reuse a component in another website, due to its tight coupling with the `Settings` struct.
+
+## Using `context`
+
+:::info
+templ components have an implicit `ctx` variable within the scope. This `ctx` variable is the variable that is passed to the `templ.Component`'s `Render` method.
+:::
+
+To allow data to be accessible at any level in the hierarchy, we can use Go's built in `context` package.
+
+Within templ components, use the implicit `ctx` variable to access the context.
+
+```templ title="component.templ"
+templ themeName() {
+	<div>{ ctx.Value(themeContextKey).(string) }</div>
+}
+```
+
+To allow the template to get the `themeContextKey` from the context, create a context, and pass it to the component's `Render` function.
+
+```templ title="main.go"
+// Define the context key type.
+type contextKey string
+
+// Create a context key for the theme.
+var themeContextKey contextKey = "theme"
+
+// Create a context variable that inherits from a parent, and sets the value "test".
+ctx := context.WithValue(context.Background(), themeContextKey, "test")
+
+// Pass the ctx variable to the render function.
+themeName().Render(ctx, w)
+```
+
+:::warning
+Attempting to access a context key that doesn't exist, or using an invalid type assertion will trigger a panic.
+:::
+
+### Tidying up
+
+Rather than read from the context object directly, it's common to implement a type-safe function instead.
+
+This is also required when the type of the context key is in a different package to the consumer of the context, and the type is private (which is usually the case).
+
+```templ title="main.go"
+func GetTheme(ctx context.Context) string {
+	if theme, ok := ctx.Value(themeContextKey).(string); ok {
+		return theme
+	}
+	return ""
+}
+```
+
+This minor change makes the template code a little tidier.
+
+```templ title="component.templ"
+templ themeName() {
+	<div>{ GetTheme(ctx) }</div>
+}
+```
+
+:::note
+As of v0.2.731, Go's built in `context` package is no longer implicitly imported into .templ files.
+:::
+
+## Using `context` with HTTP middleware
+
+In HTTP applications, a common pattern is to insert HTTP middleware into the request/response chain.
+
+Middleware can be used to update the context that is passed to other components. Common use cases for middleware include authentication, and theming.
+
+By inserting HTTP middleware, you can set values in the context that can be read by any templ component in the stack for the duration of that HTTP request.
+
+```templ title="component.templ"
+type contextKey string
+var contextClass = contextKey("class")
+
+func Middleware(next http.Handler) http.Handler {
+  return http.HandlerFunc(func (w http.ResponseWriter, r *http.Request ) {
+    ctx := context.WithValue(r.Context(), contextClass, "red")
+    next.ServeHTTP(w, r.WithContext(ctx))
+  })
+}
+
+templ Page() {
+  @Show()
+}
+
+templ Show() {
+  <div class={ ctx.Value(contextClass) }>Display</div>
+}
+
+func main() {
+  h := templ.Handler(Page())
+  withMiddleware := Middleware(h)
+  http.Handle("/", withMiddleware)
+  http.ListenAndServe(":8080", nil)
+}
+```
+
+:::warning
+If you write a component that relies on a context variable that doesn't exist, or is an unexpected type, your component will panic at runtime.
+
+This means that if your component relies on HTTP middleware that sets the context, and you forget to add it, your component will panic at runtime.
+:::
+
+# Comments
+
+# HTML comments
+
+Inside templ statements, use HTML comments.
+
+```templ title="template.templ"
+templ template() {
+	<!-- Single line -->
+	<!--
+		Single or multiline.
+	-->
+}
+```
+
+Comments are rendered to the template output.
+
+```html title="Output"
+<!-- Single line -->
+<!--
+	Single or multiline.
+-->
+```
+
+As per HTML, nested comments are not supported.
+
+# Go comments
+
+Outside of templ statements, use Go comments.
+
+```templ
+package main
+
+// Use standard Go comments outside templ statements.
+var greeting = "Hello!"
+
+templ hello(name string) {
+	<p>{greeting} { name }</p>
+}
+```
+# Using React with templ
+
+templ is great for server-side rendering. Combined with [HTMX](https://htmx.org/), it's even more powerful, since HTMX can be used to replace elements within the page with updated HTML fetched from the server, providing many of the benefits of React with reduced overall complexity. See [/server-side-rendering/htmx](/server-side-rendering/htmx) for an example.
+
+However, React has a huge ecosystem of rich interactive components, so being able to tap into the ecosystem is very useful.
+
+With templ, it's more likely that you will use React components as [islands of interactivity](https://www.patterns.dev/vanilla/islands-architecture/) rather than taking over all aspects of displaying your app, with templ taking over server-side rendering, but using React to provide specific features on the client side.
+
+## Using React components
+
+First, lets start by rendering simple React components.
+
+### Create React components
+
+To use React components in your templ app, create your React components using TSX (TypeScript) or JSX as usual.
+
+```tsx title="react/components.tsx"
+export const Header = () => (<h1>React component Header</h1>);
+
+export const Body = () => (<div>This is client-side content from React</div>);
+```
+
+### Create a templ page
+
+Next, use templ to create a page containing HTML elements with specific IDs.
+
+:::note
+This page defines elements with ids of `react-header` and `react-content`.
+
+A `<script>` element loads in a JavaScript bundle that we haven't created yet.
+:::
+
+```templ title="components.templ"
+package main
+
+templ page() {
+	<html>
+		<body>
+			<div id="react-header"></div>
+			<div id="react-content"></div>
+			<div>This is server-side content from templ.</div>
+			<!-- Load the React bundle created using esbuild -->
+			<script src="static/index.js"></script>
+		</body>
+	</html>
+}
+```
+
+:::tip
+Remember to run `templ generate` when you've finished writing your templ file.
+:::
+
+### Render React components into the IDs
+
+Write TypeScript or JavaScript to render the React components into the HTML elements that are rendered by templ.
+
+```typescript title="react/index.ts"
+import { createRoot } from 'react-dom/client';
+import { Header, Body } from './components';
+
+// Render the React component into the templ page at the react-header.
+const headerRoot = document.getElementById('react-header');
+if (!headerRoot) {
+	throw new Error('Could not find element with id react-header');
+}
+const headerReactRoot = createRoot(headerRoot);
+headerReactRoot.render(Header());
+
+// Add the body React component.
+const contentRoot = document.getElementById('react-content');
+if (!contentRoot) {
+	throw new Error('Could not find element with id react-content');
+}
+const contentReactRoot = createRoot(contentRoot);
+contentReactRoot.render(Body());
+```
+
+### Create a client-side bundle
+
+To turn the JSX, TSX, TypeScript and JavaScript code into a bundle that can run in the browser, use a bundling tool.
+
+https://esbuild.github.io/ is commonly used for this task. It's fast, it's easy to use, and it's written in Go.
+
+Executing `esbuild` with the following arguments creates an `index.js` file in the static directory.
+
+```bash
+esbuild --bundle index.ts --outdir=../static --minify
+```
+
+### Serve the templ component and client side bundle
+
+To serve the server-side rendered templ template, and the client-side JavaScript bundle created in the previous step, setup a Go web server.
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+
+	"github.com/a-h/templ"
+)
+
+func main() {
+	mux := http.NewServeMux()
+
+	// Serve the templ page.
+	mux.Handle("/", templ.Handler(page()))
+
+	// Serve static content.
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+
+	// Start the server.
+	fmt.Println("listening on localhost:8080")
+	if err := http.ListenAndServe("localhost:8080", mux); err != nil {
+		log.Printf("error listening: %v", err)
+	}
+}
+```
+
+### Results
+
+Putting this together results in a web page that renders server-side HTML using templ. The server-side HTML includes a link to the static React bundle.
+
+```mermaid
+sequenceDiagram
+    browser->>app: GET /
+    activate app
+	app->>templ_component: Render
+	activate templ_component
+	templ_component->>app: HTML
+	deactivate templ_component
+    app->>browser: HTML
+    deactivate app
+	browser->>app: GET /static/index.js
+	activate app
+	app->>browser: JS bundle containing React components
+	deactivate app
+	browser->>browser: render components into react-header and react-content
+```
+
+## Passing server-side data to React components
+
+Moving on from the previous example, it's possible to pass data to client-side React components.
+
+### Add a React component that accepts data arguments
+
+First, add a new component.
+
+```tsx title="react/components.tsx"
+export const Hello = (name: string) => (
+  <div>Hello {name} (Client-side React, rendering server-side data)</div>
+);
+```
+
+### Export a JavaScript function that renders the React component to a HTML element
+
+```typescript title="react/index.ts"
+// Update the import to add the new Hello React component.
+import { Header, Body, Hello } from './components';
+
+// Previous script contents...
+  
+export function renderHello(e: HTMLElement) {
+  const name = e.getAttribute('data-name') ?? "";
+  createRoot(e).render(Hello(name));
+}
+```
+
+### Update the templ component to use the new function
+
+Now that we have a `renderHello` function that will render the React component to the given element, we can update the templ components to use it.
+
+In templ, we can add a `Hello` component that does two things:
+
+1. Renders an element for the React component to be loaded into that sets the `data-name` attribute to the value of the server-side `name` field.
+2. Writes out JS that calls the `renderHello` function to mount the React component into the element.
+
+:::note
+The template renders three copies of the `Hello` React component, passing in a distinct `name` parameter ("Alice", "Bob" and "Charlie").
+:::
+
+```templ title="components.templ"
+package main
+
+import "fmt"
+
+templ Hello(name string) {
+	<div data-name={ name }>
+		<script>
+			bundle.renderHello(document.currentScript.closest('div'));
+		</script>
+	</div>
+}
+
+templ page() {
+	<html>
+		<head>
+			<title>React integration</title>
+		</head>
+		<body>
+			<div id="react-header"></div>
+			<div id="react-content"></div>
+			<div>
+				This is server-side content from templ.
+			</div>
+			<!-- Load the React bundle that was created using esbuild -->
+			<!-- Since the bundle was coded to expect the react-header and react-content elements to exist already, in this case, the script has to be loaded after the elements are on the page -->
+			<script src="static/index.js"></script>
+			<!-- Now that the React bundle is loaded, we can use the functions that are in it -->
+			<!-- the renderName function in the bundle can be used, but we want to pass it some server-side data -->
+			for _, name := range []string{"Alice", "Bob", "Charlie"} {
+				@Hello(name)
+			}
+		</body>
+	</html>
+}
+```
+
+### Update the `esbuild` command
+
+The `bundle` namespace in JavaScript is created by adding a `--global-name` argument to `esbuild`. The argument causes any exported functions in `index.ts` to be added to that namespace.
+
+```bash
+esbuild --bundle index.ts --outdir=../static --minify --global-name=bundle
+```
+
+### Results
+
+The HTML that's rendered is:
+
+```html
+<html>
+  <head>
+    <title>React integration</title>
+  </head>
+  <body>
+    <div id="react-header"></div>
+    <div id="react-content"></div>
+    <div>This is server-side content from templ.</div>
+
+    <script src="static/index.js"></script>
+
+    <div data-name="Alice">
+      <script>
+        // Place the React component into the parent div.
+        bundle.renderHello(document.currentScript.closest('div'));
+      </script>
+    </div>
+    <div data-name="Bob">
+      <script>
+        // Place the React component into the parent div.
+	bundle.renderHello(document.currentScript.closest('div'));
+      </script>
+    </div>
+    <div data-name="Charlie">
+      <script>
+        // Place the React component into the parent div.
+	bundle.renderHello(document.currentScript.closest('div'));
+      </script>
+    </div>
+  </body>
+</html>
+```
+
+And the browser shows the expected content after rendering the client side React components.
+
+```
+React component Header
+This is client-side content from React
+This is server-side content from templ.
+Hello Alice (Client-side React, rendering server-side data)
+Hello Bob (Client-side React, rendering server-side data)
+Hello Charlie (Client-side React, rendering server-side data)
+```
+
+## Example code
+
+See https://github.com/a-h/templ/tree/main/examples/integration-react for a complete example.
+# CSS style management
+
+## HTML class and style attributes
+
+The standard HTML `class` and `style` attributes can be added to components. Note the use of standard quotes to denote a static value.
+
+```templ
+templ button(text string) {
+	<button class="button is-primary" style="background-color: red">{ text }</button>
+}
+```
+
+```html title="Output"
+<button class="button is-primary" style="background-color: red">
+ Click me
+</button>
+```
+
+## Style attribute
+
+To use a variable in the style attribute, use braces to denote the Go expression.
+
+```templ
+templ button(style, text string) {
+	<button style={ style }>{ text }</button>
+}
+```
+
+You can pass multiple values to the `style` attribute. The results are all added to the output.
+
+```templ
+templ button(style1, style2 string, text string) {
+	<button style={ style1, style2 }>{ text }</button>
+}
+```
+
+The style attribute supports use of the following types:
+
+* `string` - A string containing CSS properties, e.g. `background-color: red`.
+* `templ.SafeCSS` - A value containing CSS properties and values that will not be sanitized, e.g. `background-color: red; text-decoration: underline`
+* `map[string]string` - A map of string keys to string values, e.g. `map[string]string{"color": "red"}`
+* `map[string]templ.SafeCSSProperty` - A map of string keys to values, where the values will not be sanitized.
+* `templ.KeyValue[string, string]` - A single CSS key/value.
+* `templ.KeyValue[string, templ.SafeCSSProperty` - A CSS key/value, but the value will not be sanitized.
+* `templ.KeyValue[string, bool]` - A map where the CSS in the key is only included in the output if the boolean value is true.
+* `templ.KeyValue[templ.SafeCSS, bool]` - A map where the CSS in the key is only included if the boolean value is true.
+
+Finally, a function value that returns any of the above types can be used.
+
+Go syntax allows you to pass a single function that returns a value and an error.
+
+```templ
+templ Page(userType string) {
+	<div style={ getStyle(userType) }>Styled</div>
+}
+
+func getStyle(userType string) (string, error) {
+   //TODO: Look up in something that might error.
+   return "background-color: red", errors.New("failed")
+}
+```
+
+Or multiple functions and values that return a single type.
+
+```templ
+templ Page(userType string) {
+	<div style={ getStyle(userType), "color: blue" }>Styled</div>
+}
+
+func getStyle(userType string) (string) {
+   return "background-color: red"
+}
+```
+
+### Style attribute examples
+
+#### Maps
+
+Maps are useful when styles need to be dynamically computed based on component state or external inputs.
+
+```templ
+func getProgressStyle(percent int) map[string]string {
+    return map[string]string{
+        "width": fmt.Sprintf("%d%%", percent),
+        "transition": "width 0.3s ease",
+    }
+}
+
+templ ProgressBar(percent int) {
+    <div style={ getProgressStyle(percent) } class="progress-bar">
+        <div class="progress-fill"></div>
+    </div>
+}
+```
+
+```html title="Output (percent=75)"
+<div style="transition:width 0.3s ease;width:75%;" class="progress-bar">
+    <div class="progress-fill"></div>
+</div>
+```
+
+#### KeyValue pattern
+
+The `templ.KV` helper provides conditional style application in a more compact syntax.
+
+```templ
+templ TextInput(value string, hasError bool) {
+    <input
+        type="text"
+        value={ value }
+        style={
+            templ.KV("border-color: #ff3860", hasError),
+            templ.KV("background-color: #fff5f7", hasError),
+            "padding: 0.5em 1em;",
+        }
+    >
+}
+```
+
+```html title="Output (hasError=true)"
+<input 
+    type="text" 
+    value="" 
+    style="border-color: #ff3860; background-color: #fff5f7; padding: 0.5em 1em;">
+```
+
+#### Bypassing sanitization
+
+By default, dynamic CSS values are sanitized to protect against dangerous CSS values that might introduce vulnerabilities into your application.
+
+However, if you're sure, you can bypass sanitization by marking your content as safe with the `templ.SafeCSS` and `templ.SafeCSSProperty` types.
+
+```templ
+func calculatePositionStyles(x, y int) templ.SafeCSS {
+    return templ.SafeCSS(fmt.Sprintf(
+        "transform: translate(%dpx, %dpx);",
+        x*2,  // Example calculation
+        y*2,
+    ))
+}
+
+templ DraggableElement(x, y int) {
+    <div style={ calculatePositionStyles(x, y) }>
+        Drag me
+    </div>
+}
+```
+
+```html title="Output (x=10, y=20)"
+<div style="transform: translate(20px, 40px);">
+    Drag me
+</div>
+```
+
+### Pattern use cases
+
+| Pattern | Best For | Example Use Case |
+|---------|----------|------------------|
+| **Maps** | Dynamic style sets requiring multiple computed values | Progress indicators, theme switching |
+| **KeyValue** | Conditional style toggling | Form validation, interactive states |
+| **Functions** | Complex style generation | Animations, data visualizations |
+| **Direct Strings** | Simple static styles | Basic formatting, utility classes |
+
+### Sanitization behaviour
+
+By default, dynamic CSS values are sanitized to protect against dangerous CSS values that might introduce vulnerabilities into your application.
+
+```templ
+templ UnsafeExample() {
+    <div style={ "background-image: url('javascript:alert(1)')" }>
+        Dangerous content
+    </div>
+}
+```
+
+```html title="Output"
+<div style="background-image:zTemplUnsafeCSSPropertyValue;">
+    Dangerous content
+</div>
+```
+
+These protections can be bypassed with the `templ.SafeCSS` and `templ.SafeCSSProperty` types.
+
+```templ
+templ SafeEmbed() {
+    <div style={ templ.SafeCSS("background-image: url(/safe.png);") }>
+        Trusted content
+    </div>
+}
+```
+
+```html title="Output"
+<div style="background-image: url(/safe.png);">
+    Trusted content
+</div>
+```
+
+:::note
+HTML attribute escaping is not bypassed, so `<`, `>`, `&` and quotes will always appear as HTML entities (`&lt;` etc.) in attributes - this is good practice, and doesn't affect how browsers use the CSS.
+:::
+
+### Error Handling
+
+Invalid values are automatically sanitized:
+
+```templ
+templ InvalidButton() {
+    <button style={ 
+        map[string]string{
+            "": "invalid-property",
+            "color": "</style>",
+        }
+    }>Click me</button>
+}
+```
+
+```html title="Output"
+<button style="zTemplUnsafeCSSPropertyName:zTemplUnsafeCSSPropertyValue;color:zTemplUnsafeCSSPropertyValue;">
+    Click me
+</button>
+```
+
+Go's type system doesn't support union types, so it's not possible to limit the inputs to the style attribute to just the supported types.
+
+As such, the attribute takes `any`, and executes type checks at runtime. Any invalid types will produce the CSS value `zTemplUnsupportedStyleAttributeValue:Invalid;`.
+
+## Class attributes
+
+To use a variable as the name of a CSS class, use a CSS expression.
+
+```templ title="component.templ"
+package main
+
+templ button(text string, className string) {
+	<button class={ className }>{ text }</button>
+}
+```
+
+The class expression can take an array of values.
+
+```templ title="component.templ"
+package main
+
+templ button(text string, className string) {
+	<button class={ "button", className }>{ text }</button>
+}
+```
+
+### Dynamic class names
+
+Toggle addition of CSS classes to an element based on a boolean value by passing:
+
+* A `string` containing the name of a class to apply.
+* A `templ.KV` value containing the name of the class to add to the element, and a boolean that determines whether the class is added to the attribute at render time.
+    * `templ.KV("is-primary", true)`
+    * `templ.KV("hover:red", true)`
+* A map of string class names to a boolean that determines if the class is added to the class attribute value at render time:
+    * `map[string]bool`
+    * `map[CSSClass]bool`
+
+```templ title="component.templ"
+package main
+
+css red() {
+	background-color: #ff0000;
+}
+
+templ button(text string, isPrimary bool) {
+	<button class={ "button", templ.KV("is-primary", isPrimary), templ.KV(red(), isPrimary) }>{ text }</button>
+}
+```
+
+```go title="main.go"
+package main
+
+import (
+	"context"
+	"os"
+)
+
+func main() {
+	button("Click me", false).Render(context.Background(), os.Stdout)
+}
+```
+
+```html title="Output"
+<button class="button">
+ Click me
+</button>
+```
+
+## CSS elements
+
+The standard `<style>` element can be used within a template.
+
+`<style>` element contents are rendered to the output without any changes.
+
+```templ
+templ page() {
+	<style type="text/css">
+		p {
+			font-family: sans-serif;
+		}
+		.button {
+			background-color: black;
+			foreground-color: white;
+		}
+	</style>
+	<p>
+		Paragraph contents.
+	</p>
+}
+```
+
+```html title="Output"
+<style type="text/css">
+	p {
+		font-family: sans-serif;
+	}
+	.button {
+		background-color: black;
+		foreground-color: white;
+	}
+</style>
+<p>
+	Paragraph contents.
+</p>
+```
+
+:::tip
+If you want to make sure that the CSS element is only output once, even if you use a template many times, use a CSS expression.
+:::
+
+## CSS components
+
+When developing a component library, it may not be desirable to require that specific CSS classes are present when the HTML is rendered.
+
+There may be CSS class name clashes, or developers may forget to include the required CSS.
+
+To include CSS within a component library, use a CSS component.
+
+CSS components can also be conditionally rendered.
+
+```templ title="component.templ"
+package main
+
+var red = "#ff0000"
+var blue = "#0000ff"
+
+css primaryClassName() {
+	background-color: #ffffff;
+	color: { red };
+}
+
+css className() {
+	background-color: #ffffff;
+	color: { blue };
+}
+
+templ button(text string, isPrimary bool) {
+	<button class={ "button", className(), templ.KV(primaryClassName(), isPrimary) }>{ text }</button>
+}
+```
+
+```html title="Output"
+<style type="text/css">
+ .className_f179{background-color:#ffffff;color:#ff0000;}
+</style>
+<button class="button className_f179">
+ Click me
+</button>
+```
+
+:::info
+The CSS class is given a unique name the first time it is used, and only rendered once per HTTP request to save bandwidth.
+:::
+
+:::caution
+The class name is autogenerated, don't rely on it being consistent.
+:::
+
+### CSS component arguments
+
+CSS components can also require function arguments.
+
+```templ title="component.templ"
+package main
+
+css loading(percent int) {
+	width: { fmt.Sprintf("%d%%", percent) };
+}
+
+templ index() {
+    <div class={ loading(50) }></div>
+    <div class={ loading(100) }></div>
+}
+```
+
+```html title="Output"
+<style type="text/css">
+ .loading_a3cc{width:50%;}
+</style>
+<div class="loading_a3cc"></div>
+<style type="text/css">
+ .loading_9ccc{width:100%;}
+</style>
+<div class="loading_9ccc"></div>
+```
+
+### CSS Sanitization
+
+To prevent CSS injection attacks, templ automatically sanitizes dynamic CSS property names and values using the `templ.SanitizeCSS` function. Internally, this uses a lightweight fork of Google's `safehtml` package to sanitize the value.
+
+If a property name or value has been sanitized, it will be replaced with `zTemplUnsafeCSSPropertyName` for property names, or `zTemplUnsafeCSSPropertyValue` for property values.
+
+To bypass this sanitization, e.g. for URL values of `background-image`, you can mark the value as safe using the `templ.SafeCSSProperty` type.
+
+```templ
+css windVaneRotation(degrees float64) {
+	transform: { templ.SafeCSSProperty(fmt.Sprintf("rotate(%ddeg)", int(math.Round(degrees)))) };
+}
+
+templ Rotate(degrees float64) {
+	<div class={ windVaneRotation(degrees) }>Rotate</div>
+}
+```
+
+### CSS Middleware
+
+The use of CSS templates means that `<style>` elements containing the CSS are rendered on each HTTP request.
+
+To save bandwidth, templ can provide a global stylesheet that includes the output of CSS templates instead of including `<style>` tags in each HTTP request.
+
+To provide a global stylesheet, use templ's CSS middleware, and register templ classes on application startup.
+
+The middleware adds a HTTP route to the web server (`/styles/templ.css` by default) that renders the `text/css` classes that would otherwise be added to `<style>` tags when components are rendered.
+
+For example, to stop the `className` CSS class from being added to the output, the HTTP middleware can be used.
+
+```go
+c1 := className()
+handler := NewCSSMiddleware(httpRoutes, c1)
+http.ListenAndServe(":8000", handler)
+```
+
+:::caution
+Don't forget to add a `<link rel="stylesheet" href="/styles/templ.css">` to your HTML to include the generated CSS class names!
+:::
+# Raw Go
+
+For some more advanced use cases it may be useful to write Go code statements in your template.
+
+Use the `{{ ... }}` syntax for this.
+
+## Variable declarations
+
+Scoped variables can be created using this syntax, to reduce the need for multiple function calls.
+
+```templ title="component.templ"
+package main
+
+templ nameList(items []Item) {
+    {{ first := items[0] }}
+    <p>
+        { first.Name }
+    </p>
+}
+```
+
+```html title="Output"
+<p>A</p>
+```
+# If/else
+
+templ uses standard Go `if`/`else` statements which can be used to conditionally render components and elements.
+
+```templ title="component.templ"
+templ login(isLoggedIn bool) {
+  if isLoggedIn {
+    <div>Welcome back!</div>
+  } else {
+    <input name="login" type="button" value="Log in"/>
+  }
+}
+```
+
+```go title="main.go"
+package main
+
+import (
+	"context"
+	"os"
+)
+
+func main() {
+	login(true).Render(context.Background(), os.Stdout)
+}
+```
+
+```html title="Output"
+<div>
+ Welcome back!
+</div>
+```
+# FAQ
+
+## How can I migrate from templ version 0.1.x to templ 0.2.x syntax?
+
+Versions of templ &lt;= v0.2.663 include a `templ migrate` command that can migrate v1 syntax to v2.
+
+The v1 syntax used some extra characters for variable injection, e.g. `{%= name %}` whereas the latest (v2) syntax uses a single pair of braces within HTML, e.g. `{ name }`.
+# Getting help
+
+For help from the community, talking about new ideas, and general discussion:
+
+## Slack
+
+Use the #templ channel in the Gopher Slack community.
+
+https://invite.slack.golangbridge.org/
+
+## GitHub Discussion
+
+https://github.com/a-h/templ/discussions
+# Code signing
+
+Binaries are created by the GitHub Actions workflow at https://github.com/a-h/templ/blob/main/.github/workflows/release.yml
+
+Binaries are signed by cosign. The public key is stored in the repository at https://github.com/a-h/templ/blob/main/cosign.pub
+
+Instructions for key verification at https://docs.sigstore.dev/verifying/verify/
+# Content security policy
+
+## Nonces
+
+In templ [script templates](/syntax-and-usage/script-templates#script-templates) are rendered as inline `<script>` tags.
+
+Strict Content Security Policies (CSP) can prevent these inline scripts from executing.
+
+By setting a nonce attribute on the `<script>` tag, and setting the same nonce in the CSP header, the browser will allow the script to execute.
+
+:::info
+It's your responsibility to generate a secure nonce. Nonces should be generated using a cryptographically secure random number generator.
+
+See https://content-security-policy.com/nonce/ for more information.
+:::
+
+## Setting a nonce
+
+The `templ.WithNonce` function can be used to set a nonce for templ to use when rendering scripts.
+
+It returns an updated `context.Context` with the nonce set.
+
+In this example, the `alert` function is rendered as a script element by templ.
+
+```templ title="templates.templ"
+package main
+
+import "context"
+import "os"
+
+script onLoad() {
+    alert("Hello, world!")
+}
+
+templ template() {
+    @onLoad()
+}
+```
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"time"
+)
+
+func withNonce(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		nonce := securelyGenerateRandomString()
+		w.Header().Add("Content-Security-Policy", fmt.Sprintf("script-src 'nonce-%s'", nonce))
+		// Use the context to pass the nonce to the handler.
+		ctx := templ.WithNonce(r.Context(), nonce)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func main() {
+	mux := http.NewServeMux()
+
+	// Handle template.
+	mux.HandleFunc("/", templ.Handler(template()))
+
+	// Apply middleware.
+	withNonceMux := withNonce(mux)
+
+	// Start the server.
+	fmt.Println("listening on :8080")
+	if err := http.ListenAndServe(":8080", withNonceMux); err != nil {
+		log.Printf("error listening: %v", err)
+	}
+}
+```
+
+```html title="Output"
+<script nonce="randomly generated nonce">
+  function __templ_onLoad_5a85() {
+    alert("Hello, world!")
+  }
+</script>
+<script nonce="randomly generated nonce">
+  __templ_onLoad_5a85()
+</script>
+```
+# Injection attacks
+
+templ is designed to prevent user-provided data from being used to inject vulnerabilities.
+
+`<script>` and `<style>` tags could allow user data to inject vulnerabilities, so variables are not permitted in these sections.
+
+```html
+templ Example() {
+  <script>
+    function showAlert() {
+      alert("hello");
+    }
+  </script>
+  <style type="text/css">
+    /* Only CSS is allowed */
+  </style>
+}
+```
+
+`onClick` attributes, and other `on*` attributes are used to execute JavaScript. To prevent user data from being unescaped, `on*` attributes accept a `templ.ComponentScript`.
+
+```html
+script onClickHandler(msg string) {
+  alert(msg);
+}
+
+templ Example(msg string) {
+  <div onClick={ onClickHandler(msg) }>
+    { "will be HTML encoded using templ.Escape" }
+  </div>
+}
+```
+
+Style attributes cannot be expressions, only constants, to avoid escaping vulnerabilities. templ style templates (`css className()`) should be used instead.
+
+```html
+templ Example() {
+  <div style={ "will throw an error" }></div>
+}
+```
+
+Class names are sanitized by default. A failed class name is replaced by `--templ-css-class-safe-name`. The sanitization can be bypassed using the `templ.SafeClass` function, but the result is still subject to escaping.
+
+```html
+templ Example() {
+  <div class={ "unsafe</style&gt;-will-sanitized", templ.SafeClass("&sanitization bypassed") }></div>
+}
+```
+
+Rendered output:
+
+```html
+<div class="--templ-css-class-safe-name &amp;sanitization bypassed"></div>
+```
+
+```html
+templ Example() {
+  <div>Node text is not modified at all.</div>
+  <div>{ "will be escaped using templ.EscapeString" }</div>
+}
+```
+
+`href` attributes must be a `templ.SafeURL` and are sanitized to remove JavaScript URLs unless bypassed.
+
+```html
+templ Example() {
+  <a href="http://constants.example.com/are/not/sanitized">Text</a>
+  <a href={ templ.URL("will be sanitized by templ.URL to remove potential attacks") }</a>
+  <a href={ templ.SafeURL("will not be sanitized by templ.URL") }</a>
+}
+```
+
+Within css blocks, property names, and constant CSS property values are not sanitized or escaped.
+
+```css
+css className() {
+	background-color: #ffffff;
+}
+```
+
+CSS property values based on expressions are passed through `templ.SanitizeCSS` to replace potentially unsafe values with placeholders.
+
+```css
+css className() {
+	color: { red };
+}
+```
+# Web frameworks
+
+Templ is framework agnostic but that does not mean it can not be used with Go frameworks and other tools.
+
+Below are some examples of how to use templ with other Go libraries, frameworks and tools, and links to systems that have built-in templ support.
+
+### Chi
+
+See an example of using https://github.com/go-chi/chi with templ at:
+
+https://github.com/a-h/templ/tree/main/examples/integration-chi
+
+### Echo
+
+See an example of using https://echo.labstack.com/ with templ at:
+
+https://github.com/a-h/templ/tree/main/examples/integration-echo
+
+### Gin
+
+See an example of using https://github.com/gin-gonic/gin with templ at:
+
+https://github.com/a-h/templ/tree/main/examples/integration-gin
+
+### Go Fiber
+
+See an example of using https://github.com/gofiber/fiber with templ at:
+
+https://github.com/a-h/templ/tree/main/examples/integration-gofiber
+
+### github.com/gorilla/csrf
+
+`gorilla/csrf` is a HTTP middleware library that provides cross-site request forgery (CSRF) protection.
+
+Follow the instructions at https://github.com/gorilla/csrf to add it to your project, by using the library as HTTP middleware.
+
+```go title="main.go"
+package main
+
+import (
+  "crypto/rand"
+  "fmt"
+  "net/http"
+  "github.com/gorilla/csrf"
+)
+
+func mustGenerateCSRFKey() (key []byte) {
+  key = make([]byte, 32)
+  n, err := rand.Read(key)
+  if err != nil {
+    panic(err)
+  }
+  if n != 32 {
+    panic("unable to read 32 bytes for CSRF key")
+  }
+  return
+}
+
+func main() {
+  r := http.NewServeMux()
+  r.Handle("/", templ.Handler(Form()))
+
+  csrfMiddleware := csrf.Protect(mustGenerateCSRFKey(), csrf.TrustedOrigins([]string{"localhost:8000"}))
+  withCSRFProtection := csrfMiddleware(r)
+
+  fmt.Println("Listening on localhost:8000")
+  http.ListenAndServe("localhost:8000", withCSRFProtection)
+}
+```
+
+Creating a `CSRF` templ component makes it easy to include the CSRF token in your forms.
+
+```templ title="form.templ"
+templ Form() {
+  <h1>CSRF Example</h1>
+  <form method="post" action="/">
+    @CSRF()
+    <div>
+      If you inspect the HTML form, you will see a hidden field with the value: { ctx.Value("gorilla.csrf.Token").(string) }
+    </div>
+    <input type="submit" value="Submit with CSRF token"/>
+  </form>
+  <form method="post" action="/">
+    <div>
+      You can also submit the form without the CSRF token to validate that the CSRF protection is working.
+    </div>
+    <input type="submit" value="Submit without CSRF token"/>
+  </form>
+}
+
+templ CSRF() {
+  <input type="hidden" name="gorilla.csrf.Token" value={ ctx.Value("gorilla.csrf.Token").(string) }/>
+}
+```
+
+## Project scaffolding
+
+- Gowebly - https://github.com/gowebly/gowebly
+- Go-blueprint - https://github.com/Melkeydev/go-blueprint
+- Slick - https://github.com/anthdm/slick
+
+## Other templates
+
+### `template/html`
+
+See [Using with Go templates](../syntax-and-usage/using-with-go-templates)
+# Internationalization
+
+templ can be used with 3rd party internationalization libraries.
+
+## ctxi18n
+
+https://github.com/invopop/ctxi18n uses the context package to load strings based on the selected locale.
+
+An example is available at https://github.com/a-h/templ/tree/main/examples/internationalization
+
+### Storing translations
+
+Translations are stored in YAML files, according to the language.
+
+```yaml title="locales/en/en.yaml"
+en:
+  hello: "Hello"
+  select_language: "Select Language"
+```
+
+### Selecting the language
+
+HTTP middleware selects the language to load based on the URL path, `/en`, `/de`, etc.
+
+```go title="main.go"
+func newLanguageMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		lang := "en" // Default language
+		pathSegments := strings.Split(r.URL.Path, "/")
+		if len(pathSegments) > 1 {
+			lang = pathSegments[1]
+		}
+		ctx, err := ctxi18n.WithLocale(r.Context(), lang)
+		if err != nil {
+			log.Printf("error setting locale: %v", err)
+			http.Error(w, "error setting locale", http.StatusBadRequest)
+			return
+		}
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+```
+
+### Using the middleware
+
+The `ctxi18n.Load` function is used to load the translations, and the middleware is used to set the language.
+
+```go title="main.go"
+func main() {
+	if err := ctxi18n.Load(locales.Content); err != nil {
+		log.Fatalf("error loading locales: %v", err)
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle("/", templ.Handler(page()))
+
+	withLanguageMiddleware := newLanguageMiddleware(mux)
+
+	log.Println("listening on :8080")
+	if err := http.ListenAndServe("127.0.0.1:8080", withLanguageMiddleware); err != nil {
+		log.Printf("error listening: %v", err)
+	}
+}
+```
+
+### Fetching translations in templates
+
+Translations are fetched using the `i18n.T` function, passing the implicit context that's available in all templ components, and the key for the translation.
+
+```templ
+package main
+
+import (
+	"github.com/invopop/ctxi18n/i18n"
+)
+
+templ page() {
+	<html>
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ i18n.T(ctx, "hello") }</title>
+		</head>
+		<body>
+			<h1>{ i18n.T(ctx, "hello") }</h1>
+			<h2>{ i18n.T(ctx, "select_language") }</h2>
+			<ul>
+				<li><a href="/en">English</a></li>
+				<li><a href="/de">Deutsch</a></li>
+				<li><a href="/zh-cn">中文</a></li>
+			</ul>
+		</body>
+	</html>
+}
+```
+# Media and talks
+
+# Go Podcast 2024
+
+https://gopodcast.dev/episodes/adrian-hesketh-and-joe-davidson-on-templ
+
+# Gophercon 2024
+
+Go Full Stack Server-Side Rendering vs SPAs - Fernando J. Villamarin Diaz, JPMC
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/X30eAwuUgrE?si=agO05C0M_d2TlkdZ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+# Big Sky Dev Con 2024
+
+Covers the reason for creating templ, how it works, and how to use it.
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/uVKSmR_hBMs?si=yacWP-H43ib_J2d4&amp;start=7635" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+# Go Time
+
+<audio data-theme="night" data-src="https://changelog.com/gotime/291/embed" src="https://op3.dev/e/https://cdn.changelog.com/uploads/gotime/291/go-time-291.mp3" preload="none" class="changelog-episode" controls></audio><p><a href="https://changelog.com/gotime/291">Go Time 291: Go templating using Templ</a> – Listen on <a href="https://changelog.com/">Changelog.com</a></p><script async src="//cdn.changelog.com/embed.js"></script>
+
+# Gophercon UK 2023
+
+This talk covers Language Server Protocol from the ground up, and how templ's language server works with gopls.
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/EkK8Jxjj95s?si=ZrT26jb-lItk6FiB" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+
+# How To Setup A Golang + Templ Project Structure
+
+This tutorial shows how to create a simple web app using templ and the echo router.
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/wttTTFVrQiw?si=ri-7Pzsaq53xXwvK" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+# Blog example
+
+This example demonstrates building a static blog with templ.
+
+## Create a blog template
+
+Create a template for the site header and site content. Then, create a template for the content page and index page.
+
+```templ title="blog.templ"
+package main
+
+import "path"
+import "github.com/gosimple/slug"
+
+templ headerComponent(title string) {
+	<head><title>{ title }</title></head>
+}
+
+templ contentComponent(title string, body templ.Component) {
+	<body>
+		<h1>{ title }</h1>
+		<div class="content">
+			@body
+		</div>
+	</body>
+}
+
+templ contentPage(title string, body templ.Component) {
+	<html>
+		@headerComponent(title)
+		@contentComponent(title, body)
+	</html>
+}
+
+templ indexPage(posts []Post) {
+	<html>
+		@headerComponent("My Blog")
+		<body>
+			<h1>My Blog</h1>
+			for _, post := range posts {
+				<div><a href={ templ.SafeURL(path.Join(post.Date.Format("2006/01/02"), slug.Make(post.Title), "/")) }>{ post.Title }</a></div>
+			}
+		</body>
+	</html>
+}
+```
+
+In the Go code, create a `Post` struct to store information about a blog post.
+
+```go
+type Post struct {
+	Date    time.Time
+	Title   string
+	Content string
+}
+```
+
+Create some pretend blog posts.
+
+```go
+posts := []Post{
+	{
+		Date:  time.Date(2023, time.January, 1, 0, 0, 0, 0, time.UTC),
+		Title: "Happy New Year!",
+		Content: `New Year is a widely celebrated occasion in the United Kingdom, marking the end of one year and the beginning of another.
+
+Top New Year Activities in the UK include:
+
+* Attending a Hogmanay celebration in Scotland
+* Taking part in a local First-Foot tradition in Scotland and Northern England
+* Setting personal resolutions and goals for the upcoming year
+* Going for a New Year's Day walk to enjoy the fresh start
+* Visiting a local pub for a celebratory toast and some cheer
+`,
+	},
+	{
+		Date:  time.Date(2023, time.May, 1, 0, 0, 0, 0, time.UTC),
+		Title: "May Day",
+		Content: `May Day is an ancient spring festival celebrated on the first of May in the United Kingdom, embracing the arrival of warmer weather and the renewal of life.
+
+Top May Day Activities in the UK:
+
+* Dancing around the Maypole, a traditional folk activity
+* Attending local village fetes and fairs
+* Watching or participating in Morris dancing performances
+* Enjoying the public holiday known as Early May Bank Holiday
+`,
+	},
+}
+```
+
+## Rendering HTML directly
+
+The example blog posts contain markdown, so we'll use `github.com/yuin/goldmark` to convert the markdown to HTML.
+
+We can't use a string containing HTML directly in templ, because all strings are escaped in templ. So we'll create an `Unsafe` code component to write the HTML directly to the output writer without first escaping it.
+
+```go
+func Unsafe(html string) templ.Component {
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) (err error) {
+		_, err = io.WriteString(w, html)
+		return
+	})
+}
+```
+
+## Creating the static pages
+
+The code creates the index page. The code then iterates through the posts, creating an output file for each blog post.
+
+```go title="main.go"
+package main
+
+import (
+	"bytes"
+	"context"
+	"io"
+	"log"
+	"os"
+	"path"
+	"time"
+
+	"github.com/a-h/templ"
+	"github.com/gosimple/slug"
+	"github.com/yuin/goldmark"
+)
+
+func main() {
+	// Output path.
+	rootPath := "public"
+	if err := os.Mkdir(rootPath, 0755); err != nil {
+		log.Fatalf("failed to create output directory: %v", err)
+	}
+
+	// Create an index page.
+	name := path.Join(rootPath, "index.html")
+	f, err := os.Create(name)
+	if err != nil {
+		log.Fatalf("failed to create output file: %v", err)
+	}
+	// Write it out.
+	err = indexPage(posts).Render(context.Background(), f)
+	if err != nil {
+		log.Fatalf("failed to write index page: %v", err)
+	}
+
+	// Create a page for each post.
+	for _, post := range posts {
+		// Create the output directory.
+		dir := path.Join(rootPath, post.Date.Format("2006/01/02"), slug.Make(post.Title))
+		if err := os.MkdirAll(dir, 0755); err != nil && err != os.ErrExist {
+			log.Fatalf("failed to create dir %q: %v", dir, err)
+		}
+
+		// Create the output file.
+		name := path.Join(dir, "index.html")
+		f, err := os.Create(name)
+		if err != nil {
+			log.Fatalf("failed to create output file: %v", err)
+		}
+
+		// Convert the markdown to HTML, and pass it to the template.
+		var buf bytes.Buffer
+		if err := goldmark.Convert([]byte(post.Content), &buf); err != nil {
+			log.Fatalf("failed to convert markdown to HTML: %v", err)
+		}
+
+		// Create an unsafe component containing raw HTML.
+		content := Unsafe(buf.String())
+
+		// Use templ to render the template containing the raw HTML.
+		err = contentPage(post.Title, content).Render(context.Background(), f)
+		if err != nil {
+			log.Fatalf("failed to write output file: %v", err)
+		}
+	}
+}
+```
+
+## Results
+
+After generating Go code from the templates, and running it with `templ generate` followed by `go run *.go`, the following files will be created.
+
+```
+public/index.html
+public/2023/01/01/happy-new-year/index.html
+public/2023/05/01/may-day/index.html
+```
+
+The `index.html` contains links to all of the posts.
+
+```html title="index.html"
+<title>
+ My Website
+</title>
+<h1>
+ My Website
+</h1>
+<div>
+ <a href="2023/01/01/happy-new-year/">
+  Happy New Year!
+ </a>
+</div>
+<div>
+ <a href="2023/05/01/may-day/">
+  May Day
+ </a>
+</div>
+```
+
+While each content page contains the HTML generated from the markdown, and the surrounding template.
+
+```html title="2023/05/01/may-day/index.html"
+<title>
+ May Day
+</title>
+<h1>
+ May Day
+</h1>
+<div class="content">
+ <p>
+  May Day is an ancient spring festival celebrated on the first of May in the United Kingdom, embracing the arrival of warmer weather and the renewal of life.
+ </p>
+ <p>
+  Top May Day Activities in the UK:
+ </p>
+ <ul>
+  <li>
+   Dancing around the Maypole, a traditional folk activity
+  </li>
+  <li>
+   Attending local village fetes and fairs
+  </li>
+  <li>
+   Watching or participating in Morris dancing performances
+  </li>
+  <li>
+   Enjoying the public holiday known as Early May Bank Holiday
+  </li>
+ </ul>
+</div>
+```
+
+The files in the `public` directory can then be hosted in any static website hosting provider.
+# Generating static HTML files with templ
+
+templ components implement the `templ.Component` interface.
+
+The interface has a `Render` method which outputs HTML to an `io.Writer` that is passed in.
+
+```go
+type Component interface {
+	// Render the template.
+	Render(ctx context.Context, w io.Writer) error
+}
+```
+
+In Go, the `io.Writer` interface is implemented by many built-in types in the standard library, including `os.File` (files), `os.Stdout`, and `http.ResponseWriter` (HTTP responses).
+
+This makes it easy to use templ components in a variety of contexts to generate HTML.
+
+To render static HTML files using templ component, first create a new Go project.
+
+## Setup project
+
+Create a new directory.
+
+```bash
+mkdir static-generator
+```
+
+Initialize a new Go project within it.
+
+```bash
+cd static-generator
+go mod init github.com/a-h/templ-examples/static-generator
+```
+
+## Create a templ file
+
+To use it, create a `hello.templ` file containing a component.
+
+Components are functions that contain templ elements, markup, `if`, `switch` and `for` Go expressions.
+
+```templ title="hello.templ"
+package main
+
+templ hello(name string) {
+	<div>Hello, { name }</div>
+}
+```
+
+## Generate Go code from the templ file
+
+Run the `templ generate` command.
+
+```bash
+templ generate
+```
+
+templ will generate a `hello_templ.go` file containing Go code.
+
+This file will contain a function called `hello` which takes `name` as an argument, and returns a `templ.Component` that renders HTML.
+
+```go
+func hello(name string) templ.Component {
+  // ...
+}
+```
+
+## Write a program that renders to stdout
+
+Create a `main.go` file. The program creates a `hello.html` file and uses the component to write HTML to the file.
+
+```go title="main.go"
+package main
+
+import (
+	"context"
+	"log"
+	"os"
+)
+
+func main() {
+	f, err := os.Create("hello.html")
+	if err != nil {
+		log.Fatalf("failed to create output file: %v", err)
+	}
+
+	err = hello("John").Render(context.Background(), f)
+	if err != nil {
+		log.Fatalf("failed to write output file: %v", err)
+	}
+}
+```
+
+## Run the program
+
+Running the code will create a file called `hello.html` containing the component's HTML.
+
+```bash
+go run *.go
+```
+
+```html title="hello.html"
+<div>Hello, John</div>
+```
+# Deploying static files
+
+Once you have built static HTML files with templ, you can serve them on any static site hosting platform, or use a web server to serve them.
+
+Ways you could host your site include:
+
+* Fly.io
+* Netlify
+* Vercel
+* AWS Amplify
+* Firebase Hosting
+
+Typically specialist static hosting services are more cost-effective than VM or Docker-based services, due to the less complex compute and networking requirements.
+
+Most require you to commit your code to a source repository, with a build process being triggered on commit, but Fly.io allows you to deploy easily from the CLI.
+
+## fly.io
+
+Fly.io is a provider of hosting that is straightforward to use, and has a generous free tier. Fly.io is Docker-based, so you can easily switch out to a dynamic website if you need to.
+
+Following on from the blog example, all that's required is to add a Dockerfile to the project that copies the contents of the `public` directory into the Docker image, followed by running `flyctl launch` to initialize configuration.
+
+```Dockerfile title="Dockerfile"
+FROM pierrezemb/gostatic
+COPY ./public/ /srv/http/
+ENTRYPOINT ["/goStatic", "-port", "8080"]
+```
+
+More detailed documentation is available at https://fly.io/docs/languages-and-frameworks/static/
+
+# Hosting using Docker
+
+Applications that use templ can be deployed using the same techniques and platforms as any other Go application.
+
+An example Dockerfile is provided in the https://github.com/a-h/templ/tree/main/examples/counter-basic example.
+
+# Static content
+
+### Adding static content to the Docker container
+
+Web applications often need to include static content such as CSS, images, and icon files.
+
+The https://github.com/a-h/templ/tree/main/examples/counter-basic example has an `assets` directory for this purpose.
+
+The `COPY` instruction in the Dockerfile copies all of the code and the `assets` directory to the container so that it can be served by the application.
+
+```Dockerfile title="Dockerfile"
+# Build.
+FROM golang:1.20 AS build-stage
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+// highlight-next-line
+COPY . /app
+RUN CGO_ENABLED=0 GOOS=linux go build -o /entrypoint
+
+# Deploy.
+FROM gcr.io/distroless/static-debian11 AS release-stage
+WORKDIR /
+COPY --from=build-stage /entrypoint /entrypoint
+// highlight-next-line
+COPY --from=build-stage /app/assets /assets
+EXPOSE 8080
+USER nonroot:nonroot
+ENTRYPOINT ["/entrypoint"]
+```
+
+### Serving static content
+
+Once the `/assets` directory has been added to the deployment Docker container, the `http.FileServer` function must be used to serve the content.
+
+```go title="main.go"
+func main() {
+	// Initialize the session.
+	sessionManager = scs.New()
+	sessionManager.Lifetime = 24 * time.Hour
+
+	mux := http.NewServeMux()
+
+	// Handle POST and GET requests.
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			postHandler(w, r)
+			return
+		}
+		getHandler(w, r)
+	})
+
+	// Include the static content.
+	// highlight-next-line
+	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
+
+	// Add the middleware.
+	muxWithSessionMiddleware := sessionManager.LoadAndSave(mux)
+
+	// Start the server.
+	fmt.Println("listening on :8080")
+	if err := http.ListenAndServe(":8080", muxWithSessionMiddleware); err != nil {
+		log.Printf("error listening: %v", err)
+	}
+}
+```
+
+## Building and running the Docker container locally
+
+Before you deploy your application to a hosting provider, you can build and run it locally.
+
+First, you'll need to build the Docker container image.
+
+```bash
+docker build -t counter-basic:latest .
+```
+
+Then you can run the container image, making port `8080` on your `localhost` connect through to port `8080` inside the Docker container.
+
+```bash
+docker run -p 8080:8080 counter-basic:latest
+```
+
+Once the container starts, you can open a web browser at `localhost:8080` and view the application.
+
+## Example deployment
+
+The https://github.com/a-h/templ/tree/main/examples/counter-basic example is deployed at https://counter-basic.fly.dev/
+
+:::note
+This sample application stores the counts in RAM. If the server restarts, all of the information is lost. To avoid this, use a data store such as DynamoDB or Cloud Firestore. See https://github.com/a-h/templ/tree/main/examples/counter for an example of this.
+:::
+
+# Hosting on AWS Lambda
+
+AWS Lambda is a great way to host templ applications.
+
+The example at https://github.com/a-h/templ/tree/main/examples/counter includes AWS CDK code for deploying onto AWS Lambda.
+
+See the `/cdk` directory for the details.
+
+## Entrypoint
+
+Lambda functions require an entrypoint that receives Lambda requests, and returns Lambda responses.
+
+The https://github.com/akrylysov/algnhsa package provides an adaptor that allows the standard Go HTTP interface to be used.
+
+```go title="lambda/main.go"
+package main
+
+import (
+	"os"
+
+	"github.com/a-h/templ/examples/counter/db"
+	"github.com/a-h/templ/examples/counter/handlers"
+	"github.com/a-h/templ/examples/counter/services"
+	"github.com/a-h/templ/examples/counter/session"
+	"github.com/akrylysov/algnhsa"
+	"golang.org/x/exp/slog"
+)
+
+func main() {
+	// Create handlers.
+	log := slog.New(slog.NewJSONHandler(os.Stderr))
+	s, err := db.NewCountStore(os.Getenv("TABLE_NAME"), os.Getenv("AWS_REGION"))
+	if err != nil {
+		log.Error("failed to create store", slog.Any("error", err))
+		os.Exit(1)
+	}
+	cs := services.NewCount(log, s)
+	h := handlers.New(log, cs)
+
+	// Add session middleware.
+	sh := session.NewMiddleware(h)
+
+	// Start Lambda.
+	algnhsa.ListenAndServe(sh, nil)
+}
+```
+
+## Building and deploying
+
+CDK provides the `github.com/aws/aws-cdk-go/awscdklambdagoalpha/v2` package (aliased in this code as `awslambdago`) construct.
+
+All that's required is to pass the path to the directory containing your Lambda function's `main.go` file and CDK will compile the code and deploy it.
+
+```go title="cdk/stack.go"
+// Strip the binary, and remove the deprecated Lambda SDK RPC code for performance.
+// These options are not required, but make cold start faster.
+bundlingOptions := &awslambdago.BundlingOptions{
+  GoBuildFlags: &[]*string{jsii.String(`-ldflags "-s -w" -tags lambda.norpc`)},
+}
+f := awslambdago.NewGoFunction(stack, jsii.String("handler"), &awslambdago.GoFunctionProps{
+  Runtime:      awslambda.Runtime_PROVIDED_AL2(),
+  MemorySize:   jsii.Number(1024),
+  Architecture: awslambda.Architecture_ARM_64(),
+  Entry:        jsii.String("../lambda"),
+  Bundling:     bundlingOptions,
+  Environment: &map[string]*string{
+    "TABLE_NAME": db.TableName(),
+  },
+})
+// Add a Function URL.
+lambdaURL := f.AddFunctionUrl(&awslambda.FunctionUrlOptions{
+  AuthType: awslambda.FunctionUrlAuthType_NONE,
+})
+awscdk.NewCfnOutput(stack, jsii.String("lambdaFunctionUrl"), &awscdk.CfnOutputProps{
+  ExportName: jsii.String("lambdaFunctionUrl"),
+  Value:      lambdaURL.Url(),
+})
+```
+
+## Static content
+
+To serve static content such as images alongside Lambda functions that serve HTML or REST API responses, a common pattern is to use a CloudFront distribution that routes traffic to S3 or to the Lambda Function URL, based on the URL structure.
+
+```mermaid
+graph TD
+    browser[Browser] --> cf[Cloudfront];
+    cf -- HTTP /* --> furl[Lambda Function URL]
+    cf -- HTTP /assets/* --> s3[S3 Assets Bucket]
+    furl --> lservice[Lambda Service]
+    lservice -- API Gateway V2 request/response --> adaptor[algnhsa Adaptor]
+    adaptor -- Go http.Handler request/response --> code[Your code]
+```
+
+The example CDK stack includes a deployment process that updates the contents of the S3 bucket.
+
+## Deployed example
+
+To see the deployed sample application running on AWS Lambda, visit https://d3qfg6xxljj3ky.cloudfront.net
+# Installation
+
+## go install (global)
+
+With Go 1.24 or greater installed, run:
+
+```bash
+go install github.com/a-h/templ/cmd/templ@latest
+```
+
+This installs templ into your path.
+
+## go install (as tool)
+
+To install templ locally in your project, run:
+
+```bash
+go get -tool github.com/a-h/templ/cmd/templ@latest
+```
+
+:::info
+This uses the [tool directive](https://tip.golang.org/doc/modules/managing-dependencies#tools) feature of Go added in v1.24.
+
+To run templ once installed, use `go tool templ` instead of `templ`.
+:::
+
+## GitHub binaries
+
+Download the latest release from https://github.com/a-h/templ/releases/latest
+
+## Nix
+
+templ provides a Nix flake with an exported package containing the binary at https://github.com/a-h/templ/blob/main/flake.nix
+
+```bash
+nix run github:a-h/templ
+```
+
+templ also provides a development shell which includes all of the tools required to build templ, e.g. go, gopls etc. but not templ itself.
+
+```bash
+nix develop github:a-h/templ
+```
+
+To install in your Nix Flake:
+
+This flake exposes an overlay, so you can add it to your own Flake and/or NixOS system.
+
+```nix
+{
+  inputs = {
+    ...
+    templ.url = "github:a-h/templ";
+    ...
+  };
+  outputs = inputs@{
+    ...
+  }:
+
+  # For NixOS configuration:
+  {
+    # Add the overlay,
+    nixpkgs.overlays = [
+      inputs.templ.overlays.default
+    ];
+    # and install the package
+    environment.systemPackages = with pkgs; [
+      templ
+    ];
+  };
+
+  # For a flake project:
+  let
+    forAllSystems = f: nixpkgs.lib.genAttrs allSystems (system: f {
+      inherit system;
+      pkgs = import nixpkgs { inherit system; };
+    });
+    templ = system: inputs.templ.packages.${system}.templ;
+  in {
+    packages = forAllSystems ({ pkgs, system }: {
+      myNewPackage = pkgs.buildGoModule {
+        ...
+        preBuild = ''
+          ${templ system}/bin/templ generate
+        '';
+      };
+    });
+
+    devShell = forAllSystems ({ pkgs, system }:
+      pkgs.mkShell {
+        buildInputs = with pkgs; [
+          go
+          (templ system)
+        ];
+      };
+  });
+}
+```
+
+## Docker
+
+A Docker container is pushed on each release to https://github.com/a-h/templ/pkgs/container/templ
+
+Pull the latest version with:
+
+```bash
+docker pull ghcr.io/a-h/templ:latest
+```
+
+To use the container, mount the source code of your application into the `/app` directory, set the working directory to the same directory and run `templ generate`, e.g. in a Linux or Mac shell, you can generate code for the current directory with:
+
+```bash
+docker run -v `pwd`:/app -w=/app ghcr.io/a-h/templ:latest generate
+```
+
+If you want to build templates using a multi-stage Docker build, you can use the `templ` image as a base image.
+
+Here's an example multi-stage Dockerfile. Note that in the `generate-stage` the source code is copied into the container, and the `templ generate` command is run. The `build-stage` then copies the generated code into the container and builds the application.
+
+The permissions of the source code are set to a user with a UID of 65532, which is the UID of the `nonroot` user in the `ghcr.io/a-h/templ:latest` image.
+
+Note also the use of the `RUN ["templ", "generate"]` command instead of the common `RUN templ generate` command. This is because the templ Docker container does not contain a shell environment to keep its size minimal, so the command must be ran in the ["exec" form](https://docs.docker.com/reference/dockerfile/#shell-and-exec-form).
+
+```Dockerfile
+# Fetch
+FROM golang:latest AS fetch-stage
+COPY go.mod go.sum /app
+WORKDIR /app
+RUN go mod download
+
+# Generate
+FROM ghcr.io/a-h/templ:latest AS generate-stage
+COPY --chown=65532:65532 . /app
+WORKDIR /app
+RUN ["templ", "generate"]
+
+# Build
+FROM golang:latest AS build-stage
+COPY --from=generate-stage /app /app
+WORKDIR /app
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/app
+
+# Test
+FROM build-stage AS test-stage
+RUN go test -v ./...
+
+# Deploy
+FROM gcr.io/distroless/base-debian12 AS deploy-stage
+WORKDIR /
+COPY --from=build-stage /app/app /app
+EXPOSE 8080
+USER nonroot:nonroot
+ENTRYPOINT ["/app"]
+```
+# Running your first templ application
+
+Let's update the previous application to serve HTML over HTTP instead of writing it to the terminal.
+
+## Create a web server
+
+Update the `main.go` file.
+
+templ components can be served as a standard HTTP handler using the `templ.Handler` function.
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/a-h/templ"
+)
+
+func main() {
+	component := hello("John")
+	
+	http.Handle("/", templ.Handler(component))
+
+	fmt.Println("Listening on :3000")
+	http.ListenAndServe(":3000", nil)
+}
+```
+
+## Run the program
+
+Running the code will start a web server on port 3000.
+
+```bash
+go run *.go
+```
+
+If you run another terminal session and run `curl` you can see the exact HTML that is returned matches the `hello` component, with the name "John".
+
+```bash
+curl localhost:3000
+```
+
+```html name="Output"
+<div>Hello, John</div>
+```
+# Creating a simple templ component
+
+To create a templ component, first create a new Go project.
+
+## Setup project
+
+Create a new directory containing our project.
+
+```bash
+mkdir hello-world
+```
+
+Initialize a new Go project within it.
+
+```bash
+cd hello-world
+go mod init github.com/a-h/templ-examples/hello-world
+go get github.com/a-h/templ
+```
+
+## Create a templ file
+
+To use it, create a `hello.templ` file containing a component.
+
+Components are functions that contain templ elements, markup, and `if`, `switch`, and `for` Go expressions.
+
+```templ title="hello.templ"
+package main
+
+templ hello(name string) {
+	<div>Hello, { name }</div>
+}
+```
+
+## Generate Go code from the templ file
+
+Run the `templ generate` command.
+
+```bash
+templ generate
+```
+
+templ will generate a `hello_templ.go` file containing Go code.
+
+This file will contain a function called `hello` which takes `name` as an argument, and returns a `templ.Component` that renders HTML.
+
+```go
+func hello(name string) templ.Component {
+  // ...
+}
+```
+
+## Write a program that renders to stdout
+
+Create a `main.go` file.
+
+```go title="main.go"
+package main
+
+import (
+	"context"
+	"os"
+)
+
+func main() {
+	component := hello("John")
+	component.Render(context.Background(), os.Stdout)
+}
+```
+
+## Run the program
+
+Running the code will render the component's HTML to stdout.
+
+```bash
+go run .
+```
+
+```html title="Output"
+<div>Hello, John</div>
+```
+
+Instead of passing `os.Stdout` to the component's render function, you can pass any type that implements the `io.Writer` interface. This includes files, `bytes.Buffer`, and HTTP responses.
+
+In this way, templ can be used to generate HTML files that can be hosted as static content in an S3 bucket, Google Cloud Storage, or used to generate HTML that is fed into PDF conversion processes, or sent via email.
+# Component Libraries
+
+Component libraries in the templ ecosystem provide ready-to-use UI elements.
+
+## templUI
+
+![templUI Banner](/img/ecosystem/templui.png)
+
+### About
+
+templUI is the premier UI component library built specifically for templ. It combines the type-safety of Go with the interactivity of Alpine.js and the styling power of Tailwind CSS to create beautiful, responsive web applications.
+
+### Features
+
+- **30+ Ready-made Components**: Buttons, cards, modals, charts, and more
+- **Enterprise-Ready**: Built for production with security in mind
+- **CSP Compliant**: Works seamlessly with Content Security Policy
+- **Type-Safe**: Full Go type system integration and checking
+- **Customizable**: Easily adapt to match your brand identity
+
+### Example
+
+```go
+import "github.com/axzilla/templui/components"
+
+templ ExamplePage() {
+  @components.Button(components.ButtonProps{
+    Text: "Click me",
+    IconRight: icons.ArrowRight(icons.IconProps{Size: "16"}),
+  })
+}
+```
+
+### Links
+
+- [Documentation](https://templui.io)
+- [GitHub](https://github.com/axzilla/templui)
+- [Quick Start Template](https://github.com/axzilla/templui-quickstart)
+# Ensuring templ files have been committed
+
+It's common practice to commit generated `*_templ.go` files to your source code repository, so that your codebase is always in a state where it can be built and run without needing to run `templ generate`, e.g. by running `go install` on your project, or by importing it as a dependency in another project.
+
+In your CI/CD pipeline, if you want to check that `templ generate` has been ran on all templ files (with the same version of templ used by the CI/CD pipeline), you can run `templ generate` again.
+
+If any files have changed, then the pipeline should fail, as this would indicate that the generated files are not up-to-date with the templ files.
+
+```bash
+templ generate
+git diff --exit-code
+```
+# IDE support
+
+## Visual Studio Code
+
+There's a VS Code extension, just make sure you've already installed templ and that it's on your path.
+
+- https://marketplace.visualstudio.com/items?itemName=a-h.templ
+- https://github.com/a-h/templ-vscode
+
+VSCodium users can find the extension on the Open VSX Registry at https://open-vsx.org/extension/a-h/templ
+
+### Format on Save
+
+Include the following into your settings.json to activate formatting `.templ` files on save with the
+templ plugin:
+
+```json
+{
+    "editor.formatOnSave": true,
+    "[templ]": {
+        "editor.defaultFormatter": "a-h.templ"
+    },
+}
+```
+
+### Tailwind CSS Intellisense
+
+Include the following to the settings.json in order to enable autocompletion for Tailwind CSS in `.templ` files:
+
+```json
+{
+  "tailwindCSS.includeLanguages": {
+    "templ": "html"
+  }
+}
+```
+:::note
+Tailwind language servers require a tailwind.config.js file to be present in the root of your project. You can create a new config file with `npx tailwindcss init`, or use samples available at https://tailwindcss.com/docs/configuration
+:::
+
+### Emmet HTML completion
+
+Include the following to the settings.json in order to get smooth HTML completion via emmet (such as expanding `input:button<Tab>` to `<input type="button" value="">`). The emmet plugin is built into vscode and just needs to be activated for `.templ` files:
+
+```json
+{
+  "emmet.includeLanguages": {
+    "templ": "html"
+  }
+}
+```
+
+## Neovim &gt; 0.5.0
+
+A plugin written in VimScript which adds syntax highlighting: [joerdav/templ.vim](https://github.com/Joe-Davidson1802/templ.vim).
+
+For neovim you can use [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) and install [tree-sitter-templ](https://github.com/vrischmann/tree-sitter-templ) with `:TSInstall templ`.
+
+The configuration for the templ Language Server is included in [lspconfig](https://github.com/neovim/nvim-lspconfig), [mason](https://github.com/williamboman/mason.nvim),
+and [mason-lspconfig](https://github.com/williamboman/mason-lspconfig.nvim).
+
+The `templ` command must be in your system path for the LSP to be able to start. Ensure that you can run it from the command line before continuing.
+
+Installing and configuring the templ LSP is no different to setting up any other Language Server.
+
+```lua
+local lspconfig = require("lspconfig")
+
+-- Use a loop to conveniently call 'setup' on multiple servers and
+-- map buffer local keybindings when the language server attaches
+
+local servers = { 'gopls', 'ccls', 'cmake', 'tsserver', 'templ' }
+for _, lsp in ipairs(servers) do
+  lspconfig[lsp].setup({
+    on_attach = on_attach,
+    capabilities = capabilities,
+  })
+end
+```
+
+In Neovim, you can use the `:LspInfo` command to check which Language Servers (if any) are running. If the expected language server has not started, it could be due to the unregistered templ file extension.
+
+To resolve this issue, add the following code to your configuration. This is also necessary for other LSPs to "pick up" on .templ files.
+
+```lua
+vim.filetype.add({ extension = { templ = "templ" } })
+```
+
+##### Other LSPs within .templ files
+
+These LSPs can be used *in conjunction* with the templ lsp and tree-sitter. Here's how to set them up.
+
+[html-lsp](https://github.com/neovim/nvim-lspconfig/blob/master/doc/configs.md#html) - First make sure you have it installed `:LspInstall html` or find it on the `:Mason` list.
+
+```lua
+lspconfig.html.setup({
+    on_attach = on_attach,
+    capabilities = capabilities,
+    filetypes = { "html", "templ" },
+})
+```
+
+[htmx-lsp](https://github.com/neovim/nvim-lspconfig/blob/master/doc/configs.md#htmx) - First make sure you have it installed `:LspInstall htmx` or find it on the `:Mason` list. Note with this LSP, it activates after you type `hx-` in an html attribute, because that's how all htmx attributes are written.
+
+```lua
+lspconfig.htmx.setup({
+    on_attach = on_attach,
+    capabilities = capabilities,
+    filetypes = { "html", "templ" },
+})
+```
+
+[tailwindcss](https://github.com/neovim/nvim-lspconfig/blob/master/doc/configs.md#tailwindcss) - First make sure you have it installed `:LspInstall tailwindcss` or find it on the `:Mason` list.
+
+```lua
+lspconfig.tailwindcss.setup({
+    on_attach = on_attach,
+    capabilities = capabilities,
+    filetypes = { "templ", "astro", "javascript", "typescript", "react" },
+    settings = {
+      tailwindCSS = {
+        includeLanguages = {
+          templ = "html",
+        },
+      },
+    },
+})
+```
+
+Inside of your `tailwind.config.js`, you need to tell tailwind to look inside of .templ files and/or .go files.
+
+:::tip
+If you don't have a `tailwind.config.js` in the root directory of your project, the Tailwind LSP won't activate, and you won't see autocompletion results.
+:::
+
+```js
+module.exports = {
+    content: [ "./**/*.html", "./**/*.templ", "./**/*.go", ],
+    theme: { extend: {}, },
+    plugins: [],
+}
+```
+
+### Formatting
+
+With the templ LSP installed and configured, you can use the following code snippet to format on save:
+
+
+```lua
+vim.api.nvim_create_autocmd({ "BufWritePre" }, { pattern = { "*.templ" }, callback = vim.lsp.buf.format })
+```
+`BufWritePre` means that the callback gets ran after you call `:write`.
+
+If you have multiple LSPs attached to the same buffer, and you have issues with `vim.lsp.buf.format`, you can use this snippet to run `templ fmt` in the same way that you might from the command line.
+
+This will get the buffer and its corresponding filename, and refresh the buffer after it has been formatted so you don't get out of sync issues.
+
+```lua
+local custom_format = function()
+    if vim.bo.filetype == "templ" then
+        local bufnr = vim.api.nvim_get_current_buf()
+        local filename = vim.api.nvim_buf_get_name(bufnr)
+        local cmd = "templ fmt " .. vim.fn.shellescape(filename)
+
+        vim.fn.jobstart(cmd, {
+            on_exit = function()
+                -- Reload the buffer only if it's still the current buffer
+                if vim.api.nvim_get_current_buf() == bufnr then
+                    vim.cmd('e!')
+                end
+            end,
+        })
+    else
+        vim.lsp.buf.format()
+    end
+end
+```
+
+To apply this `custom_format` in your neovim configuration as a keybinding, apply it to the `on_attach` function.
+
+```lua
+local on_attach = function(client, bufnr)
+    local opts = { buffer = bufnr, remap = false }
+    -- other configuration options
+    vim.keymap.set("n", "<leader>lf", custom_format, opts)
+end
+```
+
+To make this `custom_format` run on save, make the same autocmd from before and replace the callback with `custom_format`.
+
+```lua
+vim.api.nvim_create_autocmd({ "BufWritePre" }, { pattern = { "*.templ" }, callback = custom_format })
+```
+
+You can also rewrite the function like so, given that the function will only be executed on .templ files.
+
+```lua
+local templ_format = function()
+    local bufnr = vim.api.nvim_get_current_buf()
+    local filename = vim.api.nvim_buf_get_name(bufnr)
+    local cmd = "templ fmt " .. vim.fn.shellescape(filename)
+
+    vim.fn.jobstart(cmd, {
+        on_exit = function()
+            -- Reload the buffer only if it's still the current buffer
+            if vim.api.nvim_get_current_buf() == bufnr then
+                vim.cmd('e!')
+            end
+        end,
+    })
+end
+```
+
+### Troubleshooting
+
+If you cannot run `:TSInstall templ`, ensure you have an up-to-date version of [tree-sitter](https://github.com/nvim-treesitter/nvim-treesitter). The [package for templ](https://github.com/vrischmann/tree-sitter-templ) was [added to the main tree-sitter repository](https://github.com/nvim-treesitter/nvim-treesitter/pull/5667) so you shouldn't need to install a separate plugin for it.
+
+If you still don't get syntax highlighting after it's installed, try running `:TSBufEnable highlight`. If you find that you need to do this every time you open a .templ file, you can run this autocmd to do it for your neovim configuration.
+
+```lua
+vim.api.nvim_create_autocmd("BufEnter", { pattern = "*.templ", callback = function() vim.cmd("TSBufEnable highlight") end }) 
+```
+
+### Minimal Config
+
+Minimal config with the following features (useful for debugging):
+- [lazy-vim](https://github.com/folke/lazy.nvim): neovim package manager
+- [lsp config](https://github.com/neovim/nvim-lspconfig)
+    - templ-lsp
+    - html-lsp
+    - htmx-lsp
+    - tailwind-lsp
+- [cmp](https://github.com/hrsh7th/nvim-cmp): for autocompletion
+- [tree-sitter](https://github.com/nvim-treesitter/nvim-treesitter): for synx highlighting
+    - [tree sitter templ](https://github.com/vrischmann/tree-sitter-templ)
+
+To use this config:
+
+* As a permanent setup: Create/replace `init.lua` in your config folder (`~/.config/nvim/`)
+* As a temporary setup: create a new folder in your `.config` (e.g.`~/.config/nvim_test`) and tell neovim to start up with that as the nvim appname `NVIM_APPNAME=nvim_test nvim` (see [neovim docs](https://neovim.io/doc/user/starting.html#%24NVIM_APPNAME) for further explanation.
+
+
+```lua
+local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+if not vim.loop.fs_stat(lazypath) then
+  vim.fn.system({
+    "git",
+    "clone",
+    "--filter=blob:none",
+    "https://github.com/folke/lazy.nvim.git",
+    "--branch=stable", -- latest stable release
+    lazypath,
+  })
+end
+vim.opt.rtp:prepend(lazypath)
+vim.g.mapleader = " " -- Make sure to set `mapleader` before lazy so your mappings are correct
+
+require("lazy").setup({
+  'neovim/nvim-lspconfig',
+  {
+    -- Autocompletion
+    'hrsh7th/nvim-cmp',
+    dependencies = {
+      'hrsh7th/cmp-nvim-lsp',
+    },
+  },
+  {
+    -- Highlight, edit, and navigate code
+    'nvim-treesitter/nvim-treesitter',
+    dependencies = {
+      'vrischmann/tree-sitter-templ',
+    },
+    build = ':TSUpdate',
+  },
+})
+
+vim.filetype.add({ extension = { templ = "templ" } })
+
+capabilities = require('cmp_nvim_lsp').default_capabilities(capabilities)
+local lspconfig = require("lspconfig")
+
+lspconfig.templ.setup{
+  on_attach = on_attach,
+  capabilities = capabilities,
+}
+
+lspconfig.tailwindcss.setup({
+  on_attach = on_attach,
+  capabilities = capabilities,
+  filetypes = { "templ", "astro", "javascript", "typescript", "react" },
+  init_options = { userLanguages = { templ = "html" } },
+})
+
+lspconfig.html.setup({
+  on_attach = on_attach,
+  capabilities = capabilities,
+  filetypes = { "html", "templ" },
+})
+
+lspconfig.htmx.setup({
+  on_attach = on_attach,
+  capabilities = capabilities,
+  filetypes = { "html", "templ" },
+})
+
+local cmp = require 'cmp'
+cmp.setup({
+  mapping = cmp.mapping.preset.insert({
+    ['<C-b>'] = cmp.mapping.scroll_docs(-4),
+    ['<C-f>'] = cmp.mapping.scroll_docs(4),
+    ['<C-Space>'] = cmp.mapping.complete(),
+    ['<C-e>'] = cmp.mapping.abort(),
+    ['<CR>'] = cmp.mapping.confirm({ select = true }),
+  }),
+  sources = cmp.config.sources({
+    { name = 'nvim_lsp' },
+  })
+})
+
+require'nvim-treesitter.configs'.setup {
+  ensure_installed = { "templ" },
+  sync_install = false,
+  auto_install = true,
+  ignore_install = { "javascript" },
+  highlight = {
+    enable = true,
+  },
+}
+```
+
+## Vim
+
+This requires Vim version 8 or later. Install LSP and autocomplete plugins, using
+[vim-plug](https://github.com/junegunn/vim-plug) or other plugin manager.
+
+_Note_: this example is for [vim-lsp](https://github.com/prabirshrestha/vim-lsp). Other LSP plugins can be also
+be used, but they need to be configured differently.
+
+```vim
+Plug 'prabirshrestha/vim-lsp'
+Plug 'prabirshrestha/asyncomplete.vim'
+Plug 'prabirshrestha/asyncomplete-lsp.vim'
+```
+
+Add configuration:
+
+```vim
+" Register LSP server for Templ.
+au User lsp_setup call lsp#register_server({
+        \ 'name': 'templ',
+        \ 'cmd': [$GOPATH . '/bin/templ', 'lsp'],
+        \ 'allowlist': ['templ'],
+        \ })
+
+function! s:on_lsp_buffer_enabled() abort
+  setlocal signcolumn=yes
+  if exists('+tagfunc') | setlocal tagfunc=lsp#tagfunc | endif
+  nmap <buffer> gd <plug>(lsp-definition)
+  nmap <buffer> gs <plug>(lsp-document-symbol-search)
+  nmap <buffer> gS <plug>(lsp-workspace-symbol-search)
+  nmap <buffer> gr <plug>(lsp-references)
+  nmap <buffer> gi <plug>(lsp-implementation)
+  nmap <buffer> gt <plug>(lsp-type-definition)
+  nmap <buffer> <leader>rn <plug>(lsp-rename)
+  nmap <buffer> [g <plug>(lsp-previous-diagnostic)
+  nmap <buffer> ]g <plug>(lsp-next-diagnostic)
+  nmap <buffer> K <plug>(lsp-hover)
+
+  let g:lsp_format_sync_timeout = 1000
+  autocmd! BufWritePre *.templ call execute('LspDocumentFormatSync')
+endfunction
+
+augroup lsp_install
+    au!
+    " call s:on_lsp_buffer_enabled only for languages that has the server registered.
+    autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
+augroup END
+```
+
+See [vim-lsp](https://github.com/prabirshrestha/vim-lsp) for additional configuration options.
+
+Configure autocomplete, for example:
+
+```vim
+inoremap <expr> <Tab>   pumvisible() ? "\<C-n>" : "\<Tab>"
+inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
+inoremap <expr> <cr>    pumvisible() ? asyncomplete#close_popup() : "\<cr>"
+```
+
+See [asyncomplete.vim](https://github.com/prabirshrestha/asyncomplete.vim) for more options.
+
+If you're also using [deoplete](https://github.com/Shougo/deoplete.nvim), you may need to disable it for templ files to
+avoid conflict with `asyncomplete`:
+
+```vim
+autocmd FileType templ call deoplete#custom#buffer_option('auto_complete', v:false)
+```
+
+_Optional_: If you'd like indentation to better match Go outside of `templ` blocks, install:
+
+```
+Plug 'iefserge/templ.vim'
+```
+
+* This plugin also adds [tcomment_vim](https://github.com/tomtom/tcomment_vim) support.
+* This is a fork of [joerdav/templ.vim](https://github.com/Joe-Davidson1802/templ.vim).
+
+## Helix
+
+https://helix-editor.com/
+
+Helix has built-in templ support in unstable since https://github.com/helix-editor/helix/pull/8540/commits/084628d3e0c29f4021f53b3e45997ae92033d2d2
+
+It will be included in official releases after version 23.05.
+
+## Emacs
+
+[templ-ts-mode](https://github.com/danderson/templ-ts-mode) is a major mode for templ files that provides syntax highlighting, indentation, and the other usual major mode things. It is available on [MELPA](https://melpa.org/#/templ-ts-mode) and can be installed like any other Emacs package.
+
+Templ support requires the [tree-sitter parser for Templ](https://github.com/vrischmann/tree-sitter-templ). If the parser is missing, the mode asks you on first use whether you want to download and build it via `treesit-install-language-grammar` (requires git and a C compiler).
+
+## Troubleshooting
+
+### Check that go, gopls and templ are installed and are present in the path
+
+```bash
+which go gopls templ
+```
+
+You should see 3 lines returned, showing the location of each binary:
+
+```
+/run/current-system/sw/bin/go
+/Users/adrian/go/bin/gopls
+/Users/adrian/bin/templ
+```
+
+### Check that you can run the templ binary
+
+Run `templ lsp --help`, you should see help text.
+
+* If you can't run the `templ` command at the command line:
+    * Check that the `templ` binary is within a directory that's in your path (`echo $PATH` for Linux/Mac/WSL, `$env:path` for Powershell).
+    * Update your profile to ensure that the change to your path applies to new shells and processes.
+        * On MacOS / Linux, you may need to update your `~/.zsh_profile`, `~/.bash_profile` or `~/.profile` file.
+        * On Windows, you will need to use the "Environment Variables" dialog. For WSL, use the Linux config.
+    * On MacOS / Linux, check that the file is executable and resolve it with `chmod +x /path/to/templ`.
+    * On MacOS, you might need to go through the steps at https://support.apple.com/en-gb/guide/mac-help/mh40616/mac to enable binaries from an "unidentified developer" to run.
+* If you're running VS Code using Windows Subsystem for Linux (WSL), then templ must also be installed within the WSL environment, not just inside your Windows environment.
+* If you're running VS Code in a Devcontainer, it must be installed in there.
+
+
+### Enable LSP logging
+
+For VS Code, use the "Preferences: Open User Settings (JSON)" command in VS Code and add the configuration options.
+
+```js
+{
+    // More settings...
+    "templ.log": "/Users/adrian/templ.log",
+    "templ.goplsLog": "/Users/adrian/gopls.log",
+    "templ.http": "localhost:7575",
+    "templ.goplsRPCTrace": true,
+    "templ.pprof": false,
+    // More stuff...
+}
+```
+
+For Neovim, configure the LSP command to add the additional command line options.
+
+```lua
+local configs = require('lspconfig.configs')
+configs.templ = {
+  default_config = {
+    cmd = { "templ", "lsp", "-http=localhost:7474", "-log=/Users/adrian/templ.log" },
+    filetypes = { 'templ' },
+    root_dir = nvim_lsp.util.root_pattern("go.mod", ".git"),
+    settings = {},
+  },
+}
+```
+
+For IntelliJ, configure the plugin settings `.idea/templ.xml`.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="TemplSettings">
+    <option name="goplsLog" value="$USER_HOME$/gopls.log" />
+    <option name="goplsRPCTrace" value="true" />
+    <option name="http" value="localhost:7575" />
+    <option name="log" value="$USER_HOME$/templ.log" />
+  </component>
+</project>
+```
+
+### Make a minimal reproduction, and include the logs
+
+The logs can be quite verbose, since almost every keypress results in additional logging. If you're thinking about submitting an issue, please try and make a minimal reproduction.
+
+### Look at the web server
+
+The LSP has a `http` argument that starts a web server that can show the internal state of the LSP - in particular, the mapping between templ files and Go source code. The default is `templ lsp -http=localhost:7474`. See the log options above for instructions on how to set it.
+
+### Run templ info
+
+The `templ info` command outputs information that's useful for debugging issues.
+
+### "missing metadata for import" / "could not import"
+
+If you see an error like this coming from gopls:
+
+```
+could not import strconv (missing metadata for import of "strconv") compiler (BrokenImport)
+```
+
+Running `go mod tidy` in your project usually solves it.
+# CLI
+
+`templ` provides a command line interface. Most users will only need to run the `templ generate` command to generate Go code from `*.templ` files.
+
+```
+usage: templ <command> [<args>...]
+
+templ - build HTML UIs with Go
+
+See docs at https://templ.guide
+
+commands:
+  generate   Generates Go code from templ files
+  fmt        Formats templ files
+  lsp        Starts a language server for templ files
+  info       Displays information about the templ environment
+  version    Prints the version
+```
+
+## Generating Go code from templ files
+
+The `templ generate` command generates Go code from `*.templ` files in the current directory tree.
+
+The command provides additional options:
+
+```
+usage: templ generate [<args>...]
+
+Generates Go code from templ files.
+
+Args:
+  -path <path>
+    Generates code for all files in path. (default .)
+  -f <file>
+    Optionally generates code for a single file, e.g. -f header.templ
+  -source-map-visualisations
+    Set to true to generate HTML files to visualise the templ code and its corresponding Go code.
+  -include-version
+    Set to false to skip inclusion of the templ version in the generated code. (default true)
+  -include-timestamp
+    Set to true to include the current time in the generated code.
+  -watch
+    Set to true to watch the path for changes and regenerate code.
+  -cmd <cmd>
+    Set the command to run after generating code.
+  -proxy
+    Set the URL to proxy after generating code and executing the command.
+  -proxyport
+    The port the proxy will listen on. (default 7331)
+  -proxybind
+    The address the proxy will listen on. (default 127.0.0.1)
+  -w
+    Number of workers to use when generating code. (default runtime.NumCPUs)
+  -lazy
+    Only generate .go files if the source .templ file is newer.	
+  -pprof
+    Port to run the pprof server on.
+  -keep-orphaned-files
+    Keeps orphaned generated templ files. (default false)
+  -v
+    Set log verbosity level to "debug". (default "info")
+  -log-level
+    Set log verbosity level. (default "info", options: "debug", "info", "warn", "error")
+  -help
+    Print help and exit.
+```
+
+For example, to generate code for a single file:
+
+```
+templ generate -f header.templ
+```
+
+## Formatting templ files
+
+The `templ fmt` command formats template files. You can use this command in different ways:
+
+1. Format all template files in the current directory and subdirectories:
+
+```
+templ fmt .
+```
+
+2. Format input from stdin and output to stdout:
+
+```
+templ fmt
+```
+
+Alternatively, you can run `fmt` in CI to ensure that invalidly formatted templatess do not pass CI. This will cause the command
+to exit with unix error-code `1` if any templates needed to be modified.
+
+```
+templ fmt -fail .
+```
+
+## Language Server for IDE integration
+
+`templ lsp` provides a Language Server Protocol (LSP) implementation to support IDE integrations.
+
+This command isn't intended to be used directly by users, but is used by IDE integrations such as the VSCode extension and by Neovim support.
+
+By default, `templ lsp` starts its own instance of gopls. However, gopls supports a [shared daemon mode](https://github.com/golang/tools/blob/master/gopls/doc/daemon.md), allowing multiple clients to connect to a single, long-lived instance. You can enable this mode using the `-gopls-remote` flag, which will either connect to an existing shared gopls instance or create one if none is running. This can improve performance and reduce resource usage.
+
+A number of additional options are provided to enable runtime logging and profiling tools.
+
+```
+  -goplsLog string
+        The file to log gopls output, or leave empty to disable logging.
+  -goplsRPCTrace
+        Set gopls to log input and output messages.
+  -gopls-remote
+        Specify remote gopls instance to connect to.
+  -help
+        Print help and exit.
+  -http string
+        Enable http debug server by setting a listen address (e.g. localhost:7474)
+  -log string
+        The file to log templ LSP output to, or leave empty to disable logging.
+  -pprof
+        Enable pprof web server (default address is localhost:9999)
+```
+# Live reload with other tools
+
+Browser live reload allows you to see your changes immediately without having to switch to your browser and press `F5` or `CMD+R`.
+
+However, Web projects usually involve multiple build processes, e.g. css bundling, js bundling, alongside templ code generation and Go compilation.
+
+Tools like `air` can be used with templ's built-in proxy server to carry out additional steps.
+
+## Example
+
+This example, demonstrates setting up a live reload environment that integrates:
+
+- [Tailwind CSS](https://tailwindcss.com/) for generating a css bundle.
+- [esbuild](https://esbuild.github.io/) for bundling JavaScript or TypeScript.
+- [air](https://github.com/air-verse/air) for re-building Go source as well as sending a reload event to the `templ` proxy server.
+
+## How does it work
+
+templ's built-in proxy server automatically refreshes the browser when a file changes. The proxy server injects a script that reloads the page in the browser if a "reload" event is sent to the browser by the proxy. See [Live Reload page](/developer-tools/live-reload) for a detailed explanation.
+
+:::tip
+The live reload JavaScript is only injected by the templ proxy if your HTML file contains a closing `</body>` tag.
+:::
+
+The "reload" event can be triggered in two ways:
+
+- `templ generate --watch` sends the event whenever a ".templ" file changes.
+- Manually trigger it by sending a HTTP POST request to `/_templ/reload/event` endpoint. The `templ` CLI provides this via `templ generate --notify-proxy`.
+
+:::tip
+templ proxy server `--watch` mode generates different `_templ.go` files. In `--watch` mode `_templ.txt` files are generated that contain just the text that's in templ files. This is used to skip compilation of the Go code when only the text content changes.
+:::
+
+## Setting up the Makefile
+
+A `Makefile` can be used to run all of the necessary commands in parallel. This is useful for starting all of the watch processes at once.
+
+### templ watch mode
+
+To start the `templ` proxy server in watch mode, run:
+
+```bash
+templ generate --watch --proxy="http://localhost:8080" --open-browser=false
+```
+
+This assumes that your http server is running on `http://localhost:8080`. `--open-browser=false` is to prevent `templ` from opening the browser automatically.
+
+### Tailwind CSS
+
+Tailwind requires a `tailwind.config.js` file at the root of your project, alongside an `input.css` file.
+
+```bash
+npx --yes tailwindcss -i ./input.css -o ./assets/styles.css --minify --watch
+```
+
+This will watch `input.css` as well as your `.templ` files and re-generate `assets/styles.css` whenever there's a change.
+
+### esbuild
+
+To bundle JavaScript, TypeScript, JSX, or TSX files, you can use `esbuild`:
+
+```bash
+npx --yes esbuild js/index.ts --bundle --outdir=assets/ --watch
+```
+
+This will watch `js/index.ts` and relevant files, and re-generate `assets/index.js` whenever there's a change.
+
+### Re-build Go source
+
+To watch and restart your Go server, when only the `go` files change you can use `air`:
+
+```bash
+go run github.com/air-verse/air@v1.51.0 \
+  --build.cmd "go build -o tmp/bin/main" --build.bin "tmp/bin/main" --build.delay "100" \
+  --build.exclude_dir "node_modules" \
+  --build.include_ext "go" \
+  --build.stop_on_error "false" \
+  --misc.clean_on_exit true
+```
+
+:::tip
+Using `go run` directly allows the version of `air` to be specified. This ensures that the version of `air` is consistent between machines. In addition, you don't need to run `air init` to generate `.air.toml`.
+:::
+
+:::note
+This command doesn't do anything to restart or send a reload event to the `templ` proxy server. We'll use a separate `air` command to trigger a notify event when any non-go related files change.
+:::
+
+### Reload event
+
+We also want the browser to automatically reload when the:
+
+1. HTML content changes
+2. CSS bundle changes
+3. JavaScript bundle changes
+
+To trigger the event, we can use the `air` command to use a different set of options, using the `templ` CLI to send a reload event to the browser.
+
+```bash
+go run github.com/air-verse/air@v1.51.0 \
+  --build.cmd "templ generate --notify-proxy" \
+  --build.bin "true" \
+  --build.delay "100" \
+  --build.exclude_dir "" \
+  --build.include_dir "assets" \
+  --build.include_ext "js,css"
+```
+
+:::note
+The `build.bin` option is set to use the `true` command instead of executing the output of the `build.cmd` option, because the `templ generate --notify-proxy` command doesn't build anything, it just sends a reload event to the `templ` proxy server.
+
+`true` is a command that exits with a zero status code, so you might see `Process Exit with Code 0` printed to the console.
+:::
+
+### Serving static assets
+
+When using live reload, static assets must be served directly from the filesystem instead of being embedded in the Go binary, because the Go binary won't be re-built when the assets change.
+
+In practice this means using `http.Dir` instead of `http.FS` to serve your assets.
+
+If you don't want to do this, you can add additional asset file extensions to the `--build.include_ext` argument of the `air` command that rebuilds Go code to force a recompilation and restart of the Go server when the assets change.
+
+#### Before
+
+```go
+//go:embed assets/*
+var assets embed.FS
+...
+mux.Handle("/assets/", http.FileServer(http.FS(assets)))
+```
+
+#### After
+
+```go
+mux.Handle("/assets/", 
+  http.StripPrefix("/assets", 
+    http.FileServer(http.Dir("assets"))))
+```
+
+:::tip
+Web browsers will cache assets when they receive a HTTP 304 response. This will result in asset changes not being visible within your application.
+
+To avoid this, set the `Cache-Control` header to `no-store` for assets in development mode:
+
+```go
+var dev = true
+
+func disableCacheInDevMode(next http.Handler) http.Handler {
+	if !dev {
+		return next
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		next.ServeHTTP(w, r)
+	})
+}
+
+mux.Handle("/assets/", 
+  disableCacheInDevMode(
+    http.StripPrefix("/assets", 
+      http.FileServer(http.Dir("assets")))))
+```
+:::
+
+## Putting it all together
+
+A `Makefile` can be used to run all of the commands in parallel.
+
+```make
+# run templ generation in watch mode to detect all .templ files and 
+# re-create _templ.txt files on change, then send reload event to browser. 
+# Default url: http://localhost:7331
+live/templ:
+	templ generate --watch --proxy="http://localhost:8080" --open-browser=false -v
+
+# run air to detect any go file changes to re-build and re-run the server.
+live/server:
+	go run github.com/air-verse/air@v1.51.0 \
+	--build.cmd "go build -o tmp/bin/main" --build.bin "tmp/bin/main" --build.delay "100" \
+	--build.exclude_dir "node_modules" \
+	--build.include_ext "go" \
+	--build.stop_on_error "false" \
+	--misc.clean_on_exit true
+
+# run tailwindcss to generate the styles.css bundle in watch mode.
+live/tailwind:
+	npx --yes tailwindcss -i ./input.css -o ./assets/styles.css --minify --watch
+
+# run esbuild to generate the index.js bundle in watch mode.
+live/esbuild:
+	npx --yes esbuild js/index.ts --bundle --outdir=assets/ --watch
+
+# watch for any js or css change in the assets/ folder, then reload the browser via templ proxy.
+live/sync_assets:
+	go run github.com/air-verse/air@v1.51.0 \
+	--build.cmd "templ generate --notify-proxy" \
+	--build.bin "true" \
+	--build.delay "100" \
+	--build.exclude_dir "" \
+	--build.include_dir "assets" \
+	--build.include_ext "js,css"
+
+# start all 5 watch processes in parallel.
+live: 
+	make -j5 live/templ live/server live/tailwind live/esbuild live/sync_assets
+```
+
+:::note
+The `-j5` argument to `make` runs all 5 commands in parallel.
+:::
+
+Run `make live` to start all of the watch processes.
+# Coding assistants / LLMs
+
+To provide AI coding assistants such as GitHub Copilot, Cursor or similar with help on how to write templ code, the templ project maintains a single file containing documentation for LLMs to read.
+
+You can find the file at `https://templ.guide/llms.md`.
+
+## LLM tools
+
+### https://github.com/CopilotC-Nvim/CopilotChat.nvim
+
+CopilotChat is a plugin for Neovim that provides a chat interface for GitHub Copilot. It allows you to ask Copilot questions and get responses in real-time.
+
+Use the URL feature to load `https://templ.guide/llms.md`.
+# Live reload
+
+To enable live reload on a `templ` app use:
+
+```bash
+templ generate --watch --proxy="http://localhost:8080" --cmd="go run ."
+```
+
+This will:
+
+- Automatically re-generate Go code if you change `*.templ` files.
+- Restart the web server if you change `*.go` files.
+- Automatically reload the browser if you change `*.go` or `*.templ` files.
+- Run a HTTP proxy on `localhost:7331` (by default) that proxies requests to your web server (default `http://localhost:8080`).
+
+## Example
+
+Create `main.go` and `hello.templ` files.
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/a-h/templ"
+)
+
+func main() {
+	component := hello("World")
+
+	http.Handle("/", templ.Handler(component))
+
+	fmt.Println("Listening on :8080")
+	http.ListenAndServe(":8080", nil)
+}
+```
+
+```templ title="hello.templ"
+package main
+
+templ hello(name string) {
+  <body>
+	    <div>Hello, { name }</div>
+  </body>
+}
+```
+
+Run `templ generate --watch --proxy="http://localhost:8080" --cmd="go run ."`.
+
+Observe that the web server is started, and the browser opens to `http://localhost:7331`.
+
+Make changes to `hello.templ` and `main.go`, and see the changes reflected in the browser without having to press F5.
+
+## How it works
+
+### templ watches files for changes
+
+The `templ generate --watch` argument tells `templ` to watch for changes to `*.templ` and `*.go` files in the current directory.
+
+When a change is detected, `templ` will:
+
+- Automatically generate `*.go` code from your `*.templ` files when you save changes to them.
+- Create text files in the `tmp` directory that is read by generated templ Go code if the `TEMPL_DEV_MODE` enabled.
+    - This means that the Go web server doesn't need to be restarted when changes are made to HTML or text in `*.templ` files, `templ` can read the files at runtime instead.
+    - The web server is only restarted when changes are made to Go code in `*.templ` files.
+
+### templ restarts your server automatically
+
+The `--cmd` argument tells `templ` to run a command when `*.go` files change, for example:
+
+```bash
+templ generate --watch --cmd="go run ."
+```
+
+The command is executed if `*.go` files change, or if any Go code within `*.templ` files change.
+
+You can run any command you like, e.g. `go build -o app && ./app`, or `air`, or `wgo`.
+
+### templ uses a proxy to auto-reload the browser
+
+The `--proxy` argument tells `templ` to run a HTTP proxy that proxies requests to your web server.
+
+For example, if your web server listens on port 8080:
+
+```bash
+templ generate --watch --cmd="go run ." --proxy="http://localhost:8080"
+```
+
+This starts a HTTP proxy that proxies requests to your web server (default `http://localhost:7331`). The proxy inserts client-side JavaScript before the `</body>` tag that will cause the browser to reload the window when the app is restarted instead of you having to reload the page manually - no more pressing F5!
+
+By default, the proxy binds to `127.0.0.1:7331`. You can use `--proxybind` to bind to another address, e.g., `--proxybind="0.0.0.0"`.
+
+:::note
+In order for templ to successfully inject the reload JavaScript into the HTML response:
+
+- The HTML must have a `<body>` tag.
+- The HTML must be served with a `Content-Type` of `text/html`.
+- The response must be compressed with no compression, or a supported compression algorithm (e.g. gzip).
+  :::
+
+## Live reload process
+
+The live reload process can be shown in the following diagram:
+
+```mermaid
+sequenceDiagram
+    browser->>templ_proxy: HTTP
+    activate templ_proxy
+    templ_proxy->>app: HTTP
+    activate app
+    app->>templ_proxy: HTML
+    deactivate app
+    templ_proxy->>templ_proxy: add reload script
+    templ_proxy->>browser: HTML
+    deactivate templ_proxy
+    browser->>templ_proxy: SSE request to /_templ/reload/events
+    activate templ_proxy
+    templ_proxy->>generate: run templ generate if *.templ files have changed
+    templ_proxy->>app: restart app if *.go files have changed
+    templ_proxy->>browser: notify browser to reload page
+    deactivate templ_proxy
+```
+
+### Triggering live reload from outside `templ generate --watch`
+
+If you want to trigger a live reload from outside `templ generate --watch` (e.g. if you're using `air`, `wgo` or another tool to build, but you want to use the templ live reload proxy), you can use the `--notify-proxy` argument.
+
+```bash
+templ generate --notify-proxy
+```
+
+This will default to the default templ proxy address of `localhost:7331`, but can be changed with the `--proxybind` and `--proxyport` arguments.
+
+```bash
+templ generate --notify-proxy --proxybind="localhost" --proxyport="8080"
+```
+
+## Alternatives
+
+If you don't want to use `templ generate --watch`, you can use other tools to watch for changes and restart the server.
+
+### wgo
+
+[wgo](https://github.com/bokwoon95/wgo):
+
+> Live reload for Go apps. Watch arbitrary files and respond with arbitrary commands. Supports running multiple invocations in parallel.
+
+```
+wgo -file=.go -file=.templ -xfile=_templ.go templ generate :: go run main.go
+```
+
+To avoid a continuous reloading files ending with `_templ.go` should be skipped via `-xfile`.
+
+### air
+
+Air can also monitor the filesystem for changes, and provides a proxy to automatically reload pages.
+
+It uses a `toml` configuration file.
+
+See https://github.com/air-verse/air for details.
+
+#### Example configuration
+
+```toml title=".air.toml"
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  bin = "./tmp/main"
+  cmd = "templ generate && go build -o ./tmp/main ."
+  delay = 1000
+  exclude_dir = ["assets", "tmp", "vendor"]
+  exclude_file = []
+  exclude_regex = [".*_templ.go"]
+  exclude_unchanged = false
+  follow_symlink = false
+  full_bin = ""
+  include_dir = []
+  include_ext = ["go", "tpl", "tmpl", "templ", "html"]
+  kill_delay = "0s"
+  log = "build-errors.log"
+  send_interrupt = false
+  stop_on_error = true
+
+[color]
+  app = ""
+  build = "yellow"
+  main = "magenta"
+  runner = "green"
+  watcher = "cyan"
+
+[log]
+  time = false
+
+[misc]
+  clean_on_exit = false
+
+[proxy]
+  enabled = true
+  proxy_port = 8383
+  app_port = 8282
+```
+---
+sidebar_position: 1
+---
+
+# Introduction
+
+## templ - build HTML with Go
+
+Create components that render fragments of HTML and compose them to create screens, pages, documents, or apps.
+
+* Server-side rendering: Deploy as a serverless function, Docker container, or standard Go program.
+* Static rendering: Create static HTML files to deploy however you choose.
+* Compiled code: Components are compiled into performant Go code.
+* Use Go: Call any Go code, and use standard `if`, `switch`, and `for` statements.
+* No JavaScript: Does not require any client or server-side JavaScript.
+* Great developer experience: Ships with IDE autocompletion.
+
+```templ
+package main
+
+templ Hello(name string) {
+  <div>Hello, { name }</div>
+}
+
+templ Greeting(person Person) {
+  <div class="greeting">
+    @Hello(person.Name)
+  </div>
+}
+```

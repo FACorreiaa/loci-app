@@ -56,6 +56,10 @@ type Repository interface {
 	GetRecentChatSessions(ctx context.Context, userID uuid.UUID, limit int) ([]models.ChatSession, error)
 	// Get recent chat sessions filtered by search_type
 	GetRecentChatSessionsByType(ctx context.Context, userID uuid.UUID, searchType models.SearchType, limit int) ([]models.ChatSession, error)
+	// Get trending discoveries (most searched cities/queries today)
+	GetTrendingDiscoveries(ctx context.Context, limit int) ([]models.TrendingDiscovery, error)
+	// Get featured collections (curated content)
+	GetFeaturedCollections(ctx context.Context, limit int) ([]models.FeaturedCollection, error)
 }
 
 type RepositoryImpl struct {
@@ -2203,4 +2207,107 @@ func (r *RepositoryImpl) GetRecentChatSessionsByType(ctx context.Context, userID
 		slog.Int("count", len(sessions)))
 
 	return sessions, nil
+}
+
+// GetTrendingDiscoveries returns the most searched cities/queries today
+func (r *RepositoryImpl) GetTrendingDiscoveries(ctx context.Context, limit int) ([]models.TrendingDiscovery, error) {
+	query := `
+		SELECT
+			city_name,
+			COUNT(*) as search_count,
+			CASE
+				WHEN city_name ILIKE '%tokyo%' THEN '🍜'
+				WHEN city_name ILIKE '%paris%' THEN '☕'
+				WHEN city_name ILIKE '%new york%' OR city_name ILIKE '%nyc%' THEN '🏙️'
+				WHEN city_name ILIKE '%bali%' THEN '🏖️'
+				WHEN city_name ILIKE '%rome%' THEN '🍅'
+				WHEN city_name ILIKE '%london%' THEN '☂️'
+				WHEN city_name ILIKE '%barcelona%' THEN '🎨'
+				ELSE '🗺️'
+			END as emoji,
+			COALESCE(
+				(SELECT content FROM unnest(conversation_history) WHERE role = 'user' LIMIT 1),
+				city_name
+			) as first_message
+		FROM chat_sessions
+		WHERE created_at >= CURRENT_DATE
+			AND status = 'active'
+			AND city_name IS NOT NULL
+			AND city_name != ''
+		GROUP BY city_name
+		ORDER BY search_count DESC, city_name ASC
+		LIMIT $1
+	`
+
+	rows, err := r.pgpool.Query(ctx, query, limit)
+	if err != nil {
+		r.logger.ErrorContext(ctx, "Failed to query trending discoveries", slog.Any("error", err))
+		return nil, fmt.Errorf("failed to query trending discoveries: %w", err)
+	}
+	defer rows.Close()
+
+	var discoveries []models.TrendingDiscovery
+	for rows.Next() {
+		var discovery models.TrendingDiscovery
+		err := rows.Scan(&discovery.CityName, &discovery.SearchCount, &discovery.Emoji, &discovery.FirstMessage)
+		if err != nil {
+			r.logger.WarnContext(ctx, "Failed to scan trending discovery row", slog.Any("error", err))
+			continue
+		}
+		discoveries = append(discoveries, discovery)
+	}
+
+	r.logger.InfoContext(ctx, "Retrieved trending discoveries", slog.Int("count", len(discoveries)))
+	return discoveries, nil
+}
+
+// GetFeaturedCollections returns curated featured collections
+func (r *RepositoryImpl) GetFeaturedCollections(ctx context.Context, limit int) ([]models.FeaturedCollection, error) {
+	// For now, return hardcoded collections
+	// TODO: Move this to a database table when we have proper featured collections system
+	collections := []models.FeaturedCollection{
+		{
+			ID:          uuid.New(),
+			Title:       "European Food Capitals",
+			Description: "Culinary adventures across Europe",
+			Emoji:       "🇪🇺",
+			ItemCount:   12,
+			Category:    "food",
+			CreatedAt:   time.Now(),
+		},
+		{
+			ID:          uuid.New(),
+			Title:       "Asian Night Markets",
+			Description:       "Street food and night life",
+			Emoji:       "🏮",
+			ItemCount:   15,
+			Category:    "markets",
+			CreatedAt:   time.Now(),
+		},
+		{
+			ID:          uuid.New(),
+			Title:       "California Wineries",
+			Description: "Wine tasting tours",
+			Emoji:       "🍷",
+			ItemCount:   8,
+			Category:    "wine",
+			CreatedAt:   time.Now(),
+		},
+		{
+			ID:          uuid.New(),
+			Title:       "Art Museums Worldwide",
+			Description: "World-class art collections",
+			Emoji:       "🎨",
+			ItemCount:   20,
+			Category:    "culture",
+			CreatedAt:   time.Now(),
+		},
+	}
+
+	if limit > 0 && limit < len(collections) {
+		collections = collections[:limit]
+	}
+
+	r.logger.InfoContext(ctx, "Retrieved featured collections", slog.Int("count", len(collections)))
+	return collections, nil
 }

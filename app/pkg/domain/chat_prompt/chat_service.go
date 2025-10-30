@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"iter"
 	"log"
 	"log/slog"
 	"net/url"
@@ -73,6 +72,8 @@ type LlmInteractiontService interface {
 	// Chat session management
 	GetUserChatSessions(ctx context.Context, userID uuid.UUID, page, limit int) (*models.ChatSessionsResponse, error)
 	GetRecentDiscoveries(ctx context.Context, userID uuid.UUID, limit int) (*models.ChatSessionsResponse, error)
+	GetTrendingDiscoveries(ctx context.Context, limit int) ([]models.TrendingDiscovery, error)
+	GetFeaturedCollections(ctx context.Context, limit int) ([]models.FeaturedCollection, error)
 }
 
 type IntentClassifier interface {
@@ -92,6 +93,8 @@ type ServiceImpl struct {
 	cityRepo           city.Repository
 	poiRepo            poi.Repository
 	cache              *cache.Cache
+	streamProcessor    *StreamProcessor // Reusable stream processor
+	llmLogger          *LLMLogger       // Comprehensive LLM logging
 
 	// events
 	deadLetterCh     chan models.StreamEvent
@@ -135,6 +138,8 @@ func NewLlmInteractiontService(interestRepo interests.Repository,
 		cityRepo:           cityRepo,
 		poiRepo:            poiRepo,
 		cache:              c,
+		streamProcessor:    NewStreamProcessor(logger), // Initialize stream processor
+		llmLogger:          NewLLMLogger(logger, llmInteractionRepo), // Initialize LLM logger
 		deadLetterCh:       make(chan models.StreamEvent, 100),
 		intentClassifier:   &models.SimpleIntentClassifier{},
 	}
@@ -781,6 +786,52 @@ func (l *ServiceImpl) GetRecentDiscoveries(ctx context.Context, userID uuid.UUID
 		Limit:    limit,
 		HasMore:  false,
 	}, nil
+}
+
+// GetTrendingDiscoveries retrieves trending discoveries (most searched today)
+func (l *ServiceImpl) GetTrendingDiscoveries(ctx context.Context, limit int) ([]models.TrendingDiscovery, error) {
+	ctx, span := otel.Tracer("LlmInteractionService").Start(ctx, "GetTrendingDiscoveries", trace.WithAttributes(
+		attribute.Int("limit", limit),
+	))
+	defer span.End()
+
+	l.logger.InfoContext(ctx, "Retrieving trending discoveries", slog.Int("limit", limit))
+
+	discoveries, err := l.llmInteractionRepo.GetTrendingDiscoveries(ctx, limit)
+	if err != nil {
+		l.logger.ErrorContext(ctx, "Failed to get trending discoveries", slog.Any("error", err))
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to get trending discoveries")
+		return nil, fmt.Errorf("failed to get trending discoveries: %w", err)
+	}
+
+	l.logger.InfoContext(ctx, "Successfully retrieved trending discoveries", slog.Int("count", len(discoveries)))
+	span.SetAttributes(attribute.Int("discoveries.count", len(discoveries)))
+	span.SetStatus(codes.Ok, "Trending discoveries retrieved successfully")
+	return discoveries, nil
+}
+
+// GetFeaturedCollections retrieves featured collections
+func (l *ServiceImpl) GetFeaturedCollections(ctx context.Context, limit int) ([]models.FeaturedCollection, error) {
+	ctx, span := otel.Tracer("LlmInteractionService").Start(ctx, "GetFeaturedCollections", trace.WithAttributes(
+		attribute.Int("limit", limit),
+	))
+	defer span.End()
+
+	l.logger.InfoContext(ctx, "Retrieving featured collections", slog.Int("limit", limit))
+
+	collections, err := l.llmInteractionRepo.GetFeaturedCollections(ctx, limit)
+	if err != nil {
+		l.logger.ErrorContext(ctx, "Failed to get featured collections", slog.Any("error", err))
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to get featured collections")
+		return nil, fmt.Errorf("failed to get featured collections: %w", err)
+	}
+
+	l.logger.InfoContext(ctx, "Successfully retrieved featured collections", slog.Int("count", len(collections)))
+	span.SetAttributes(attribute.Int("collections.count", len(collections)))
+	span.SetStatus(codes.Ok, "Featured collections retrieved successfully")
+	return collections, nil
 }
 
 // getPOIDetailedInfos returns a formatted string with POI details.
@@ -1897,36 +1948,6 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 //	return poiData, nil
 //}
 
-// textPartIterator yields text parts from the AI stream iterator, handling errors inline.
-// It uses Go's iter.Seq2 for clean iteration.
-func (l *ServiceImpl) textPartIterator(ctx context.Context, iter iter.Seq2[*genai.GenerateContentResponse, error], eventCh chan<- models.StreamEvent, poiName string) iter.Seq[string] {
-	return func(yield func(string) bool) {
-		for resp, err := range iter {
-			if err != nil {
-				l.sendEvent(ctx, eventCh, models.StreamEvent{
-					Type:      models.EventTypeError,
-					Error:     fmt.Sprintf("Streaming failed for POI '%s': %v", poiName, err),
-					Timestamp: time.Now(),
-					EventID:   uuid.New().String(),
-				}, 3)
-				return // Stop iteration on error
-			}
-			for _, cand := range resp.Candidates {
-				if cand.Content != nil {
-					for _, part := range cand.Content.Parts {
-						if part.Text != "" {
-							text := string(part.Text)
-							if !yield(text) {
-								return // Caller stopped
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
 // generatePOIDataStream queries the LLM for POI details and streams updates
 func (l *ServiceImpl) generatePOIDataStream(
 	ctx context.Context, poiName, cityName string,
@@ -1941,8 +1962,29 @@ func (l *ServiceImpl) generatePOIDataStream(
 	config := &genai.GenerateContentConfig{Temperature: genai.Ptr[float32](0.2)}
 	startTime := time.Now()
 
+	// Prepare logging configuration
+	sessionID := uuid.New() // Generate a session ID for this POI generation
+	logConfig := LoggingConfig{
+		UserID:      userID,
+		SessionID:   sessionID,
+		Intent:      "add_poi",
+		Prompt:      prompt,
+		CityName:    cityName,
+		ModelName:   "gemini-2.0-flash",
+		Provider:    "google",
+		Temperature: config.Temperature,
+		IsStreaming: true,
+	}
+
 	iter, err := l.aiClient.GenerateContentStream(ctx, prompt, config)
 	if err != nil {
+		// Log failed LLM interaction
+		llmResponse := LLMResponse{
+			StatusCode:   500,
+			ErrorMessage: err.Error(),
+		}
+		l.llmLogger.LogInteractionAsync(ctx, logConfig, llmResponse, time.Since(startTime).Milliseconds())
+
 		l.sendEvent(ctx, eventCh, models.StreamEvent{
 			Type:      models.EventTypeError,
 			Error:     fmt.Sprintf("Failed to generate POI data for '%s': %v", poiName, err),
@@ -1960,7 +2002,7 @@ func (l *ServiceImpl) generatePOIDataStream(
 	}, 3)
 
 	var responseTextBuilder strings.Builder
-	for chunk := range l.textPartIterator(ctx, iter, eventCh, poiName) {
+	for chunk := range l.streamProcessor.TextPartIterator(ctx, iter, eventCh, fmt.Sprintf("POI '%s'", poiName)) {
 		responseTextBuilder.WriteString(chunk)
 		l.sendEvent(ctx, eventCh, models.StreamEvent{
 			Type:      "poi_detail_chunk",
@@ -1981,6 +2023,19 @@ func (l *ServiceImpl) generatePOIDataStream(
 	}
 
 	fullText := responseTextBuilder.String()
+
+	// Log successful LLM interaction (note: streamProcessor doesn't expose token counts, so we estimate)
+	llmResponse := LLMResponse{
+		ResponseText:  fullText,
+		StatusCode:    200,
+		// Token counts not available from streamProcessor - would need to be extracted from raw response
+		// We'll set them to 0 for now, or estimate based on text length
+		PromptTokens:     len(prompt) / 4, // Rough estimate: ~4 chars per token
+		CompletionTokens: len(fullText) / 4,
+		TotalTokens:      (len(prompt) + len(fullText)) / 4,
+	}
+	l.llmLogger.LogInteractionAsync(ctx, logConfig, llmResponse, time.Since(startTime).Milliseconds())
+
 	if fullText == "" {
 		l.sendEvent(ctx, eventCh, models.StreamEvent{
 			Type:      models.EventTypeError,
@@ -1991,24 +2046,9 @@ func (l *ServiceImpl) generatePOIDataStream(
 		return models.POIDetailedInfo{Name: poiName, DescriptionPOI: "Details not found."}, fmt.Errorf("empty response for POI details '%s'", poiName)
 	}
 
-	// Save LLM interaction
-	interaction := models.LlmInteraction{
-		UserID:       userID,
-		Prompt:       prompt,
-		ResponseText: fullText,
-		Timestamp:    startTime,
-		CityName:     cityName,
-	}
-	llmInteractionID, err := l.saveCityInteraction(ctx, interaction)
-	if err != nil {
-		l.sendEvent(ctx, eventCh, models.StreamEvent{
-			Type:      models.EventTypeError,
-			Error:     fmt.Sprintf("Failed to save LLM interaction for POI '%s': %v", poiName, err),
-			Timestamp: time.Now(),
-			EventID:   uuid.New().String(),
-		}, 3)
-		return models.POIDetailedInfo{}, fmt.Errorf("failed to save LLM interaction: %w", err)
-	}
+	// Note: We still need llmInteractionID for backward compatibility with SaveSinglePOI
+	// The new logger saves to llm_interactions table, but we need the ID for poi_detailed table
+	llmInteractionID := uuid.New() // Generate a new ID to link POI to this LLM interaction
 
 	// Parse response
 	cleanJSON := cleanJSONResponse(fullText)
@@ -2374,21 +2414,21 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 		wg.Go(func() {
 			prompt := getCityDataPrompt(cityName)
 			partCacheKey := cacheKey + "_city_data"
-			l.streamWorkerWithResponseAndCache(ctx, prompt, "city_data", sendEventWithResponse, domain, partCacheKey)
+			l.streamWorkerWithResponseAndCache(ctx, prompt, "city_data", cityName, sendEventWithResponse, domain, partCacheKey, sessionID, userID)
 		})
 
 		// Worker 2: Stream General POIs with cache
 		wg.Go(func() {
 			prompt := getGeneralPOIPrompt(cityName)
 			partCacheKey := cacheKey + "_general_pois"
-			l.streamWorkerWithResponseAndCache(ctx, prompt, "general_pois", sendEventWithResponse, domain, partCacheKey)
+			l.streamWorkerWithResponseAndCache(ctx, prompt, "general_pois", cityName, sendEventWithResponse, domain, partCacheKey, sessionID, userID)
 		})
 
 		// Worker 3: Stream Personalized Itinerary with cache
 		wg.Go(func() {
 			prompt := getPersonalizedItineraryPrompt(cityName, basePreferences)
 			partCacheKey := cacheKey + "_itinerary"
-			l.streamWorkerWithResponseAndCache(ctx, prompt, "itinerary", sendEventWithResponse, domain, partCacheKey)
+			l.streamWorkerWithResponseAndCache(ctx, prompt, "itinerary", cityName, sendEventWithResponse, domain, partCacheKey, sessionID, userID)
 		})
 
 	case models.DomainAccommodation:
@@ -2396,13 +2436,13 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 		wg.Go(func() {
 			prompt := getCityDataPrompt(cityName)
 			partCacheKey := cacheKey + "_city_data"
-			l.streamWorkerWithResponseAndCache(ctx, prompt, "city_data", sendEventWithResponse, domain, partCacheKey)
+			l.streamWorkerWithResponseAndCache(ctx, prompt, "city_data", cityName, sendEventWithResponse, domain, partCacheKey, sessionID, userID)
 		})
 
 		wg.Go(func() {
 			prompt := getAccommodationPrompt(cityName, lat, lon, basePreferences)
 			partCacheKey := cacheKey + "_hotels"
-			l.streamWorkerWithResponseAndCache(ctx, prompt, "hotels", sendEventWithResponse, domain, partCacheKey)
+			l.streamWorkerWithResponseAndCache(ctx, prompt, "hotels", cityName, sendEventWithResponse, domain, partCacheKey, sessionID, userID)
 		})
 
 	case models.DomainDining:
@@ -2410,13 +2450,13 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 		wg.Go(func() {
 			prompt := getCityDataPrompt(cityName)
 			partCacheKey := cacheKey + "_city_data"
-			l.streamWorkerWithResponseAndCache(ctx, prompt, "city_data", sendEventWithResponse, domain, partCacheKey)
+			l.streamWorkerWithResponseAndCache(ctx, prompt, "city_data", cityName, sendEventWithResponse, domain, partCacheKey, sessionID, userID)
 		})
 
 		wg.Go(func() {
 			prompt := getDiningPrompt(cityName, lat, lon, basePreferences)
 			partCacheKey := cacheKey + "_restaurants"
-			l.streamWorkerWithResponseAndCache(ctx, prompt, "restaurants", sendEventWithResponse, domain, partCacheKey)
+			l.streamWorkerWithResponseAndCache(ctx, prompt, "restaurants", cityName, sendEventWithResponse, domain, partCacheKey, sessionID, userID)
 		})
 
 	case models.DomainActivities:
@@ -2424,13 +2464,13 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 		wg.Go(func() {
 			prompt := getCityDataPrompt(cityName)
 			partCacheKey := cacheKey + "_city_data"
-			l.streamWorkerWithResponseAndCache(ctx, prompt, "city_data", sendEventWithResponse, domain, partCacheKey)
+			l.streamWorkerWithResponseAndCache(ctx, prompt, "city_data", cityName, sendEventWithResponse, domain, partCacheKey, sessionID, userID)
 		})
 
 		wg.Go(func() {
 			prompt := getActivitiesPrompt(cityName, lat, lon, basePreferences)
 			partCacheKey := cacheKey + "_activities"
-			l.streamWorkerWithResponseAndCache(ctx, prompt, "activities", sendEventWithResponse, domain, partCacheKey)
+			l.streamWorkerWithResponseAndCache(ctx, prompt, "activities", cityName, sendEventWithResponse, domain, partCacheKey, sessionID, userID)
 		})
 
 	default:
@@ -2688,42 +2728,42 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStreamFree(ctx context.Context, c
 		wg.Go(func() {
 			prompt := getCityDataPrompt(cityName)
 			partCacheKey := cacheKey + "_city_data"
-			l.streamWorkerWithResponseAndCache(ctx, prompt, "city_data", sendEventWithResponse, domain, partCacheKey)
+			l.streamWorkerWithResponseAndCache(ctx, prompt, "city_data", cityName, sendEventWithResponse, domain, partCacheKey, sessionID, uuid.Nil)
 		})
 
 		// Worker 2: Stream General POIs with cache
 		wg.Go(func() {
 			prompt := getGeneralPOIPrompt(cityName)
 			partCacheKey := cacheKey + "_general_pois"
-			l.streamWorkerWithResponseAndCache(ctx, prompt, "general_pois", sendEventWithResponse, domain, partCacheKey)
+			l.streamWorkerWithResponseAndCache(ctx, prompt, "general_pois", cityName, sendEventWithResponse, domain, partCacheKey, sessionID, uuid.Nil)
 		})
 
 		// Worker 3: Stream Personalized Itinerary with cache
 		wg.Go(func() {
 			prompt := getGeneralizedItineraryPrompt(cityName)
 			partCacheKey := cacheKey + "_itinerary"
-			l.streamWorkerWithResponseAndCache(ctx, prompt, "itinerary", sendEventWithResponse, domain, partCacheKey)
+			l.streamWorkerWithResponseAndCache(ctx, prompt, "itinerary", cityName, sendEventWithResponse, domain, partCacheKey, sessionID, uuid.Nil)
 		})
 
 	case models.DomainAccommodation:
 		wg.Go(func() {
 			prompt := getGeneralAccommodationPrompt(cityName)
 			partCacheKey := cacheKey + "_hotels"
-			l.streamWorkerWithResponseAndCache(ctx, prompt, "hotels", sendEventWithResponse, domain, partCacheKey)
+			l.streamWorkerWithResponseAndCache(ctx, prompt, "hotels", cityName, sendEventWithResponse, domain, partCacheKey, sessionID, uuid.Nil)
 		})
 
 	case models.DomainDining:
 		wg.Go(func() {
 			prompt := getGeneralDiningPrompt(cityName)
 			partCacheKey := cacheKey + "_restaurants"
-			l.streamWorkerWithResponseAndCache(ctx, prompt, "restaurants", sendEventWithResponse, domain, partCacheKey)
+			l.streamWorkerWithResponseAndCache(ctx, prompt, "restaurants", cityName, sendEventWithResponse, domain, partCacheKey, sessionID, uuid.Nil)
 		})
 
 	case models.DomainActivities:
 		wg.Go(func() {
 			prompt := getGeneralActivitiesPrompt(cityName)
 			partCacheKey := cacheKey + "_activities"
-			l.streamWorkerWithResponseAndCache(ctx, prompt, "activities", sendEventWithResponse, domain, partCacheKey)
+			l.streamWorkerWithResponseAndCache(ctx, prompt, "activities", cityName, sendEventWithResponse, domain, partCacheKey, sessionID, uuid.Nil)
 		})
 
 	default:
@@ -2922,9 +2962,38 @@ func (l *ServiceImpl) parseCityDataFromResponse(_ context.Context, responseConte
 }
 
 // streamWorkerWithResponseAndCache handles streaming for a single worker with response capture and cache support
-func (l *ServiceImpl) streamWorkerWithResponseAndCache(ctx context.Context, prompt, partType string, sendEvent func(models.StreamEvent), domain models.DomainType, cacheKey string) {
+func (l *ServiceImpl) streamWorkerWithResponseAndCache(ctx context.Context, prompt, partType, cityName string, sendEvent func(models.StreamEvent), domain models.DomainType, cacheKey string, sessionID, userID uuid.UUID) {
+	startTime := time.Now()
+
+	// Prepare logging configuration
+	intent := string(domain) // Use domain as intent (e.g., "itinerary", "dining", "accommodation")
+	if intent == "" {
+		intent = "general"
+	}
+
+	config := LoggingConfig{
+		UserID:      userID,
+		SessionID:   sessionID,
+		Intent:      intent,
+		Prompt:      prompt,
+		CityName:    cityName,
+		ModelName:   "gemini-2.0-flash", // Default model
+		Provider:    "google",
+		Temperature: genai.Ptr[float32](defaultTemperature),
+		IsStreaming: true,
+		CacheKey:    cacheKey,
+	}
+
+	// Make the LLM call
 	iter, err := l.aiClient.GenerateContentStreamWithCache(ctx, prompt, &genai.GenerateContentConfig{Temperature: genai.Ptr[float32](defaultTemperature)}, cacheKey)
 	if err != nil {
+		// Log failed LLM interaction
+		llmResponse := LLMResponse{
+			StatusCode:   500,
+			ErrorMessage: err.Error(),
+		}
+		l.llmLogger.LogInteractionAsync(ctx, config, llmResponse, time.Since(startTime).Milliseconds())
+
 		if ctx.Err() == nil {
 			sendEvent(models.StreamEvent{
 				Type:  models.EventTypeError,
@@ -2935,11 +3004,29 @@ func (l *ServiceImpl) streamWorkerWithResponseAndCache(ctx context.Context, prom
 	}
 
 	var fullResponse strings.Builder
+	var promptTokens, completionTokens, totalTokens int
+	var lastResp *genai.GenerateContentResponse
+	chunkCount := 0
+
 	for resp, err := range iter {
 		if ctx.Err() != nil {
 			return // Stop if context is canceled
 		}
 		if err != nil {
+			// Log streaming error
+			llmResponse := LLMResponse{
+				ResponseText:      fullResponse.String(),
+				PromptTokens:      promptTokens,
+				CompletionTokens:  completionTokens,
+				TotalTokens:       totalTokens,
+				StatusCode:        500,
+				ErrorMessage:      err.Error(),
+				StreamChunksCount: &chunkCount,
+			}
+			streamDuration := int(time.Since(startTime).Milliseconds())
+			llmResponse.StreamDurationMs = &streamDuration
+			l.llmLogger.LogInteractionAsync(ctx, config, llmResponse, time.Since(startTime).Milliseconds())
+
 			if ctx.Err() == nil {
 				sendEvent(models.StreamEvent{
 					Type:  models.EventTypeError,
@@ -2948,6 +3035,10 @@ func (l *ServiceImpl) streamWorkerWithResponseAndCache(ctx context.Context, prom
 			}
 			return
 		}
+
+		lastResp = resp
+		chunkCount++
+
 		for _, cand := range resp.Candidates {
 			if cand.Content != nil {
 				for _, part := range cand.Content.Parts {
@@ -2969,6 +3060,28 @@ func (l *ServiceImpl) streamWorkerWithResponseAndCache(ctx context.Context, prom
 			}
 		}
 	}
+
+	// Extract token counts from the last response (Gemini provides usage metadata)
+	if lastResp != nil && lastResp.UsageMetadata != nil {
+		promptTokens = int(lastResp.UsageMetadata.PromptTokenCount)
+		completionTokens = int(lastResp.UsageMetadata.CandidatesTokenCount)
+		totalTokens = int(lastResp.UsageMetadata.TotalTokenCount)
+	}
+
+	// Log successful LLM interaction
+	llmResponse := LLMResponse{
+		ResponseText:      fullResponse.String(),
+		PromptTokens:      promptTokens,
+		CompletionTokens:  completionTokens,
+		TotalTokens:       totalTokens,
+		StatusCode:        200,
+		CacheHit:          cacheKey != "",
+		StreamChunksCount: &chunkCount,
+	}
+	streamDuration := int(time.Since(startTime).Milliseconds())
+	llmResponse.StreamDurationMs = &streamDuration
+
+	l.llmLogger.LogInteractionAsync(ctx, config, llmResponse, time.Since(startTime).Milliseconds())
 }
 
 // cacheResultsIfAvailable caches result-specific data for restaurants, activities, and hotels

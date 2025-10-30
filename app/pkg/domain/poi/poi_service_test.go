@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/FACorreiaa/go-templui/app/internal/models"
+	"github.com/FACorreiaa/go-templui/app/pkg/llmlogging"
 )
 
 type MockCityRepository struct {
@@ -87,6 +88,19 @@ func (m *MockCityRepository) GetAllCities(ctx context.Context) ([]models.CityDet
 		return nil, args.Error(1)
 	}
 	return args.Get(0).([]models.CityDetail), args.Error(1)
+}
+
+// MockLLMRepository is a mock implementation of llmchat.Repository
+type MockLLMRepository struct {
+	mock.Mock
+}
+
+func (m *MockLLMRepository) SaveInteraction(ctx context.Context, interaction models.LlmInteraction) (uuid.UUID, error) {
+	args := m.Called(ctx, interaction)
+	if args.Get(0) == nil {
+		return uuid.Nil, args.Error(1)
+	}
+	return args.Get(0).(uuid.UUID), args.Error(1)
 }
 
 // MockPOIRepository is a mock implementation of POIRepository
@@ -381,8 +395,9 @@ func setupPOIServiceTest() (*ServiceImpl, *MockPOIRepository, *MockCityRepositor
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})) // or io.Discard
 	mockRepo := new(MockPOIRepository)
 	mockCityRepo := new(MockCityRepository)
+	mockLLMRepo := new(MockLLMRepository)
 	embeddingService := &generativeAI.EmbeddingService{} // Mock or nil
-	service := NewServiceImpl(mockRepo, embeddingService, mockCityRepo, logger)
+	service := NewServiceImpl(mockRepo, embeddingService, mockCityRepo, mockLLMRepo, logger)
 	return service, mockRepo, mockCityRepo
 }
 

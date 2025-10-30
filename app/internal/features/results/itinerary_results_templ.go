@@ -5,16 +5,16 @@ package results
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
+import "github.com/a-h/templ"
+import templruntime "github.com/a-h/templ/runtime"
+
 import (
 	"fmt"
-	"strings"
-	"time"
-
 	"github.com/FACorreiaa/go-templui/app/internal/components/chat"
 	"github.com/FACorreiaa/go-templui/app/internal/features/components"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
-	"github.com/a-h/templ"
-	templruntime "github.com/a-h/templ/runtime"
+	"strings"
+	"time"
 )
 
 func ItineraryResults(cityData models.GeneralCityData, generalPOIs []models.POIDetailedInfo, itinerary models.AIItineraryResponse, compact bool, showToggle bool, initialLimit int, favorites []string, sessionID string) templ.Component {

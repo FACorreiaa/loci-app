@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -36,6 +37,7 @@ type DiscoverHandlers struct {
 	llmService llmchat.LlmInteractiontService
 	aiClient   *generativeAI.LLMChatClient
 	logger     *slog.Logger
+	llmLogger  *llmchat.LLMLogger
 }
 
 func NewDiscoverHandlers(poiRepo poi.Repository, chatRepo llmchat.Repository, llmService llmchat.LlmInteractiontService, logger *slog.Logger) *DiscoverHandlers {
@@ -46,23 +48,48 @@ func NewDiscoverHandlers(poiRepo poi.Repository, chatRepo llmchat.Repository, ll
 		logger.Error("Failed to initialize AI client", slog.Any("error", err))
 	}
 
+	// Initialize LLM logger
+	llmLogger := llmchat.NewLLMLogger(logger, chatRepo)
+
 	return &DiscoverHandlers{
 		poiRepo:    poiRepo,
 		chatRepo:   chatRepo,
 		llmService: llmService,
 		aiClient:   aiClient,
 		logger:     logger,
+		llmLogger:  llmLogger,
 	}
 }
 
 func (h *DiscoverHandlers) Show(c *gin.Context) templ.Component {
 	var recentDiscoveries []models.ChatSession
+	var trending []models.TrendingDiscovery
+	var featured []models.FeaturedCollection
 
+	ctx := c.Request.Context()
+
+	// Get trending discoveries (public data)
+	trendingData, err := h.llmService.GetTrendingDiscoveries(ctx, 5)
+	if err == nil {
+		trending = trendingData
+	} else {
+		h.logger.Error("Failed to get trending discoveries", slog.Any("error", err))
+	}
+
+	// Get featured collections (public data)
+	featuredData, err := h.llmService.GetFeaturedCollections(ctx, 4)
+	if err == nil {
+		featured = featuredData
+	} else {
+		h.logger.Error("Failed to get featured collections", slog.Any("error", err))
+	}
+
+	// Get user-specific recent discoveries (only for authenticated users)
 	userID, exists := c.Get("user_id")
 	if exists && userID != "" && userID != "anonymous" {
 		userUUID, err := uuid.Parse(userID.(string))
 		if err == nil {
-			response, err := h.llmService.GetRecentDiscoveries(c.Request.Context(), userUUID, 6) // Fetching 6 recent discoveries
+			response, err := h.llmService.GetRecentDiscoveries(ctx, userUUID, 6) // Fetching 6 recent discoveries
 			if err == nil && response != nil {
 				recentDiscoveries = response.Sessions
 			} else {
@@ -70,7 +97,40 @@ func (h *DiscoverHandlers) Show(c *gin.Context) templ.Component {
 			}
 		}
 	}
-	return discover.DiscoverPage(recentDiscoveries)
+	return discover.DiscoverPage(recentDiscoveries, trending, featured)
+}
+
+func (h *DiscoverHandlers) ShowDetail(c *gin.Context) templ.Component {
+	sessionID := c.Param("sessionId")
+	if sessionID == "" {
+		h.logger.Error("Session ID is required")
+		// Return error page component
+		return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+			_, err := io.WriteString(w, "<div class='text-red-500 text-center py-8'>Session ID is required</div>")
+			return err
+		})
+	}
+
+	sessionUUID, err := uuid.Parse(sessionID)
+	if err != nil {
+		h.logger.Error("Invalid session ID", slog.String("sessionId", sessionID), slog.Any("error", err))
+		return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+			_, err := io.WriteString(w, "<div class='text-red-500 text-center py-8'>Invalid session ID</div>")
+			return err
+		})
+	}
+
+	// Get the session details
+	session, err := h.chatRepo.GetSession(c.Request.Context(), sessionUUID)
+	if err != nil {
+		h.logger.Error("Failed to get session", slog.String("sessionId", sessionID), slog.Any("error", err))
+		return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+			_, err := io.WriteString(w, "<div class='text-red-500 text-center py-8'>Discovery not found</div>")
+			return err
+		})
+	}
+
+	return discover.DiscoveryDetailPage(*session)
 }
 
 func (h *DiscoverHandlers) Search(c *gin.Context) {
@@ -102,10 +162,45 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 	prompt := llmchat.GetDiscoverSearchPrompt(query, location)
 	h.logger.InfoContext(ctx, "Calling LLM for discover search", slog.String("query", query), slog.String("location", location))
 
+	// Prepare logging configuration
+	startTime := time.Now()
+	sessionID := uuid.New()
+
+	// Get user ID for logging
+	userUUID := uuid.Nil
+	if user != "" && user != "anonymous" {
+		if parsedUserID, err := uuid.Parse(user); err == nil {
+			userUUID = parsedUserID
+		}
+	}
+
+	logConfig := llmchat.LoggingConfig{
+		UserID:      userUUID,
+		SessionID:   sessionID,
+		Intent:      "discover",
+		Prompt:      prompt,
+		CityName:    location,
+		ModelName:   "gemini-2.0-flash",
+		Provider:    "google",
+		Temperature: genai.Ptr[float32](0.5),
+		IsStreaming: false,
+	}
+
 	response, err := h.aiClient.GenerateResponse(ctx, prompt, &genai.GenerateContentConfig{
 		Temperature: genai.Ptr[float32](0.5), // Balanced temperature for diverse but consistent results
 	})
+
+	// Prepare LLM response for logging
+	llmResponse := llmchat.LLMResponse{
+		StatusCode: 200,
+	}
+
 	if err != nil {
+		// Log failed LLM interaction
+		llmResponse.StatusCode = 500
+		llmResponse.ErrorMessage = err.Error()
+		h.llmLogger.LogInteractionAsync(ctx, logConfig, llmResponse, time.Since(startTime).Milliseconds())
+
 		h.logger.ErrorContext(ctx, "LLM request failed", slog.Any("error", err))
 		c.HTML(http.StatusInternalServerError, "", `<div class="text-red-500 text-center py-8">Failed to generate search results. Please try again.</div>`)
 		return
@@ -113,6 +208,10 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 
 	// Extract text from response
 	if response == nil || len(response.Candidates) == 0 {
+		llmResponse.StatusCode = 500
+		llmResponse.ErrorMessage = "Empty LLM response"
+		h.llmLogger.LogInteractionAsync(ctx, logConfig, llmResponse, time.Since(startTime).Milliseconds())
+
 		h.logger.ErrorContext(ctx, "Empty LLM response")
 		c.HTML(http.StatusInternalServerError, "", `<div class="text-red-500 text-center py-8">No results returned. Please try again.</div>`)
 		return
@@ -124,6 +223,14 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 			responseText.WriteString(string(part.Text))
 		}
 	}
+
+	// Extract token counts from response metadata
+	if response.UsageMetadata != nil {
+		llmResponse.PromptTokens = int(response.UsageMetadata.PromptTokenCount)
+		llmResponse.CompletionTokens = int(response.UsageMetadata.CandidatesTokenCount)
+		llmResponse.TotalTokens = int(response.UsageMetadata.TotalTokenCount)
+	}
+	llmResponse.ResponseText = responseText.String()
 
 	// Parse JSON response
 	var searchResponse struct {
@@ -146,10 +253,17 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 	}
 
 	if err := json.Unmarshal([]byte(responseStr), &searchResponse); err != nil {
+		llmResponse.StatusCode = 500
+		llmResponse.ErrorMessage = fmt.Sprintf("Failed to parse JSON: %v", err)
+		h.llmLogger.LogInteractionAsync(ctx, logConfig, llmResponse, time.Since(startTime).Milliseconds())
+
 		h.logger.ErrorContext(ctx, "Failed to parse LLM response", slog.Any("error", err), slog.String("response", responseStr))
 		c.HTML(http.StatusInternalServerError, "", `<div class="text-red-500 text-center py-8">Failed to parse search results. Please try again.</div>`)
 		return
 	}
+
+	// Log successful LLM interaction
+	h.llmLogger.LogInteractionAsync(ctx, logConfig, llmResponse, time.Since(startTime).Milliseconds())
 
 	logger.Log.Info("Search completed",
 		zap.String("query", query),

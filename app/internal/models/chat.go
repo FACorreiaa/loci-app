@@ -30,28 +30,88 @@ var (
 )
 
 type LlmInteraction struct {
-	ID                 uuid.UUID       `json:"id"`
-	SessionID          uuid.UUID       `json:"session_id"`
-	UserID             uuid.UUID       `json:"user_id"`
-	ProfileID          uuid.UUID       `json:"profile_id"`
-	CityName           string          `json:"city_name,omitempty"` // The city context for this interaction
-	Prompt             string          `json:"prompt"`
-	RequestPayload     json.RawMessage `json:"request_payload"`
-	ResponseText       string          `json:"response"`
-	ResponsePayload    json.RawMessage `json:"response_payload"`
-	ModelUsed          string          `json:"model_name"`
-	PromptTokens       int             `json:"prompt_tokens"`
-	CompletionTokens   int             `json:"completion_tokens"`
-	TotalTokens        int             `json:"total_tokens"`
-	LatencyMs          int             `json:"latency_ms"`
-	Timestamp          time.Time       `json:"timestamp"`
-	ModelName          string          `json:"model"`
-	Response           string          `json:"response_content"`
-	Latitude           *float64        `json:"latitude"`
-	Longitude          *float64        `json:"longitude"`
-	Distance           *float64        `json:"distance"`
-	PromptTokenCount   int             `json:"prompt_token_count"`
-	ResponseTokenCount int             `json:"response_token_count"`
+	// Core identification
+	ID        uuid.UUID `json:"id" db:"id"`
+	RequestID uuid.UUID `json:"request_id" db:"request_id"` // Unique UUID for tracing across systems
+	SessionID uuid.UUID `json:"session_id" db:"session_id"`
+	UserID    uuid.UUID `json:"user_id" db:"user_id"`
+	ProfileID uuid.UUID `json:"profile_id" db:"profile_id"`
+
+	// Context
+	CityName string `json:"city_name,omitempty" db:"city_name"` // The city context for this interaction
+	CityID   *uuid.UUID `json:"city_id,omitempty" db:"city_id"`
+
+	// Request/Response data
+	Prompt          string          `json:"prompt" db:"prompt"`
+	RequestPayload  json.RawMessage `json:"request_payload" db:"request_payload"`
+	ResponseText    string          `json:"response" db:"response"`
+	ResponsePayload json.RawMessage `json:"response_payload" db:"response_payload"`
+	Response        string          `json:"response_content" db:"-"` // Duplicate field for compatibility
+
+	// Model information
+	ModelUsed string `json:"model_name" db:"model_name"`
+	ModelName string `json:"model" db:"-"`      // Duplicate field for compatibility
+	Provider  string `json:"provider" db:"provider"` // e.g., 'google', 'openai', 'anthropic'
+
+	// Token usage
+	PromptTokens       int `json:"prompt_tokens" db:"prompt_tokens"`
+	CompletionTokens   int `json:"completion_tokens" db:"completion_tokens"`
+	TotalTokens        int `json:"total_tokens" db:"total_tokens"`
+	PromptTokenCount   int `json:"prompt_token_count" db:"-"`   // Duplicate for compatibility
+	ResponseTokenCount int `json:"response_token_count" db:"-"` // Duplicate for compatibility
+
+	// Performance metrics
+	LatencyMs int `json:"latency_ms" db:"latency_ms"`
+
+	// Status and error tracking
+	StatusCode   int    `json:"status_code" db:"status_code"`     // HTTP status or error code
+	ErrorMessage string `json:"error_message" db:"error_message"` // Error details if failed
+
+	// Intent and context tracking
+	Intent     string `json:"intent" db:"intent"`           // e.g., 'itinerary', 'restaurant', 'hotel', 'discover', 'nearby'
+	SearchType string `json:"search_type" db:"search_type"` // e.g., 'general', 'dining', 'accommodation', 'activities'
+
+	// Model parameters
+	Temperature *float32 `json:"temperature,omitempty" db:"temperature"`
+	TopP        *float32 `json:"top_p,omitempty" db:"top_p"`
+	TopK        *int     `json:"top_k,omitempty" db:"top_k"`
+	MaxTokens   *int     `json:"max_tokens,omitempty" db:"max_tokens"`
+
+	// Cost tracking
+	CostEstimateUSD *float64 `json:"cost_estimate_usd,omitempty" db:"cost_estimate_usd"`
+
+	// User feedback
+	UserFeedbackRating    *int       `json:"user_feedback_rating,omitempty" db:"user_feedback_rating"`
+	UserFeedbackComment   string     `json:"user_feedback_comment,omitempty" db:"user_feedback_comment"`
+	UserFeedbackTimestamp *time.Time `json:"user_feedback_timestamp,omitempty" db:"user_feedback_timestamp"`
+
+	// Cache efficiency
+	CacheHit bool   `json:"cache_hit" db:"cache_hit"`
+	CacheKey string `json:"cache_key,omitempty" db:"cache_key"`
+
+	// Device and platform
+	DeviceType string `json:"device_type,omitempty" db:"device_type"` // e.g., 'ios', 'android', 'web', 'desktop'
+	Platform   string `json:"platform,omitempty" db:"platform"`       // e.g., 'mobile', 'web', 'api'
+	UserAgent  string `json:"user_agent,omitempty" db:"user_agent"`
+
+	// Privacy
+	PromptHash     string `json:"prompt_hash,omitempty" db:"prompt_hash"`         // SHA256 hash for anonymized tracking
+	IsPIIRedacted  bool   `json:"is_pii_redacted" db:"is_pii_redacted"`
+
+	// Streaming metadata
+	IsStreaming       bool `json:"is_streaming" db:"is_streaming"`
+	StreamChunksCount *int `json:"stream_chunks_count,omitempty" db:"stream_chunks_count"`
+	StreamDurationMs  *int `json:"stream_duration_ms,omitempty" db:"stream_duration_ms"`
+
+	// Location data (for backward compatibility)
+	Latitude  *float64 `json:"latitude,omitempty" db:"latitude"`
+	Longitude *float64 `json:"longitude,omitempty" db:"longitude"`
+	Distance  *float64 `json:"distance,omitempty" db:"distance"`
+
+	// Timestamps
+	Timestamp time.Time `json:"timestamp" db:"created_at"`
+	CreatedAt time.Time `json:"created_at" db:"-"` // Duplicate for compatibility
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
 type AIItineraryResponse struct {

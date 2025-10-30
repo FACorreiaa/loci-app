@@ -5,10 +5,8 @@ package streaming
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import (
-	"github.com/a-h/templ"
-	templruntime "github.com/a-h/templ/runtime"
-)
+import "github.com/a-h/templ"
+import templruntime "github.com/a-h/templ/runtime"
 
 // StreamingTriggerPage shows a page that automatically triggers streaming when loaded
 func StreamingTriggerPage(query string, requestType string) templ.Component {

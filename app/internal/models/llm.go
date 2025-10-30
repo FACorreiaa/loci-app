@@ -41,3 +41,23 @@ type ItinerarySSEEvent struct {
 	Type string      `json:"type"`
 	Data interface{} `json:"data"`
 }
+
+// TrendingDiscovery represents a trending search/discovery
+type TrendingDiscovery struct {
+	CityName     string `json:"city_name" db:"city_name"`
+	SearchCount  int    `json:"search_count" db:"search_count"`
+	Emoji        string `json:"emoji" db:"emoji"`
+	Category     string `json:"category" db:"category"`
+	FirstMessage string `json:"first_message" db:"first_message"`
+}
+
+// FeaturedCollection represents a curated collection
+type FeaturedCollection struct {
+	ID          uuid.UUID `json:"id" db:"id"`
+	Title       string    `json:"title" db:"title"`
+	Description string    `json:"description" db:"description"`
+	Emoji       string    `json:"emoji" db:"emoji"`
+	ItemCount   int       `json:"item_count" db:"item_count"`
+	Category    string    `json:"category" db:"category"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+}

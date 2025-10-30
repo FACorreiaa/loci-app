@@ -3,7 +3,7 @@ package discover
 import "fmt"
 import "github.com/FACorreiaa/go-templui/app/internal/models"
 
-templ DiscoverPage(recentDiscoveries []models.ChatSession) {
+templ DiscoverPage(recentDiscoveries []models.ChatSession, trending []models.TrendingDiscovery, featured []models.FeaturedCollection) {
 	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900" x-data="{ searching: false }">
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
 			<!-- Header -->
@@ -32,6 +32,7 @@ templ DiscoverPage(recentDiscoveries []models.ChatSession) {
 							<div class="flex-1 relative">
 								<input
 									type="text"
+									id="search-query"
 									name="query"
 									placeholder="What are you looking for? (e.g., 'best ramen in Tokyo', 'romantic restaurants Paris')"
 									class="w-full pl-12 pr-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background text-base"
@@ -96,11 +97,13 @@ templ DiscoverPage(recentDiscoveries []models.ChatSession) {
 						Trending Now
 					</h2>
 					<div class="space-y-3">
-						@TrendingItem("Tokyo's Best Ramen Spots", "47 searches today", "🍜", 1)
-						@TrendingItem("Paris Hidden Cafés", "32 searches today", "☕", 2)
-						@TrendingItem("NYC Rooftop Bars", "28 searches today", "🏙️", 3)
-						@TrendingItem("Bali Beach Clubs", "24 searches today", "🏖️", 4)
-						@TrendingItem("Rome Food Markets", "21 searches today", "🍅", 5)
+						if len(trending) > 0 {
+							for i, item := range trending {
+								@TrendingItem(item.CityName, fmt.Sprintf("%d searches today", item.SearchCount), item.Emoji, i+1)
+							}
+						} else {
+							<p class="text-sm text-muted-foreground">No trending discoveries yet today</p>
+						}
 					</div>
 				</div>
 				<!-- Featured Collections -->
@@ -112,10 +115,13 @@ templ DiscoverPage(recentDiscoveries []models.ChatSession) {
 						Featured
 					</h2>
 					<div class="space-y-3">
-						@FeaturedItem("European Food Capitals", "12 cities", "🇪🇺")
-						@FeaturedItem("Asian Night Markets", "15 markets", "🏮")
-						@FeaturedItem("California Wineries", "8 vineyards", "🍷")
-						@FeaturedItem("Art Museums Worldwide", "20 museums", "🎨")
+						if len(featured) > 0 {
+							for _, collection := range featured {
+								@FeaturedItem(collection.Title, fmt.Sprintf("%d items", collection.ItemCount), collection.Emoji)
+							}
+						} else {
+							<p class="text-sm text-muted-foreground">No featured collections available</p>
+						}
 					</div>
 				</div>
 			</div>
@@ -144,13 +150,21 @@ templ DiscoverPage(recentDiscoveries []models.ChatSession) {
 
 templ CategoryCard(name string, emoji string, category string) {
 	<button
-		hx-get={ "/discover/category/" + category }
-		hx-target="#discover-results"
+		type="button"
+		onclick={ fillSearchInput(name) }
 		class="p-4 bg-card rounded-xl border hover:shadow-md hover:border-blue-300 transition-all group text-center"
 	>
 		<div class="text-3xl mb-2 group-hover:scale-110 transition-transform">{ emoji }</div>
 		<p class="text-sm font-medium text-card-foreground">{ name }</p>
 	</button>
+}
+
+script fillSearchInput(value string) {
+	const input = document.getElementById('search-query');
+	if (input) {
+		input.value = value;
+		input.focus();
+	}
 }
 
 templ TrendingItem(title string, searches string, emoji string, rank int) {
@@ -309,7 +323,7 @@ templ RecentDiscoveryCard(session models.ChatSession) {
 			</div>
 			<div class="flex items-center justify-between mt-4 pt-4 border-t border-border">
 				<a
-					href={ templ.URL(fmt.Sprintf("/itinerary?sessionId=%s&city=%s", session.ID.String(), session.CityName)) }
+					href={ templ.URL(fmt.Sprintf("/discover/detail/%s", session.ID.String())) }
 					class="text-blue-600 hover:text-blue-700 text-sm font-medium"
 				>
 					View Details

@@ -126,7 +126,10 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 		}
 	}
 
-	poiService := poiPkg.NewServiceImpl(poiRepo, embeddingService, cityRepo, slog.Default())
+	// Create chat LLM repository (needed by poiService for LLM logging)
+	chatRepo := llmchat.NewRepositoryImpl(dbPool, slog.Default())
+
+	poiService := poiPkg.NewServiceImpl(poiRepo, embeddingService, cityRepo, chatRepo, slog.Default())
 
 	// Create handlers
 	authHandlers := authPkg.NewAuthHandlers(authRepo, cfg, slog.Default())
@@ -134,7 +137,6 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	interestsHandlers := h.NewInterestsHandler(interestsRepo)
 	tagsHandlers := h.NewTagsHandler(tagsRepo)
 	// Create chat LLM service
-	chatRepo := llmchat.NewRepositoryImpl(dbPool, slog.Default())
 	chatService := llmchat.NewLlmInteractiontService(
 		interestsRepo,
 		profilesRepo,
@@ -231,6 +233,26 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 			Title:   "Discover - Loci",
 			Content: discoverHandlers.Show(c),
+			Nav: models.Navigation{
+				Items: []models.NavItem{
+					{Name: "Home", URL: "/"},
+					{Name: "Discover", URL: "/discover"},
+					{Name: "About", URL: "/about"},
+				},
+			},
+			ActiveNav: "Discover",
+			User:      getUserFromContext(c),
+		}))
+	})
+
+	// Discovery detail page
+	r.GET("/discover/detail/:sessionId", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
+		logger.Log.Info("Discovery detail page accessed",
+			zap.String("sessionId", c.Param("sessionId")),
+			zap.String("ip", c.ClientIP()))
+		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			Title:   "Discovery Details - Loci",
+			Content: discoverHandlers.ShowDetail(c),
 			Nav: models.Navigation{
 				Items: []models.NavItem{
 					{Name: "Home", URL: "/"},

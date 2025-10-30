@@ -12,7 +12,7 @@ primary_region = 'fra'
 
 [env]
   MODE="production"
-  APP_ENV="development"
+  APP_ENV="production"
   ENABLE_PPROF=true
   PPROF_PORT=6060
   HTTP_PORT=8000

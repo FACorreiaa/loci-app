@@ -23,6 +23,7 @@ import (
 
 	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"github.com/FACorreiaa/go-templui/app/pkg/domain/city"
+	"github.com/FACorreiaa/go-templui/app/pkg/llmlogging"
 	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
 )
 
@@ -65,17 +66,19 @@ type Service interface {
 }
 
 type ServiceImpl struct {
-	logger           *slog.Logger
-	poiRepository    Repository
-	embeddingService *generativeAI.EmbeddingService
-	aiClient         *generativeAI.LLMChatClient
-	cityRepo         city.Repository
-	cache            *cache.Cache
+	logger             *slog.Logger
+	poiRepository      Repository
+	embeddingService   *generativeAI.EmbeddingService
+	aiClient           *generativeAI.LLMChatClient
+	cityRepo           city.Repository
+	cache              *cache.Cache
+	llmInteractionRepo llmlogging.Repository
 }
 
 func NewServiceImpl(poiRepository Repository,
 	embeddingService *generativeAI.EmbeddingService,
 	cityRepo city.Repository,
+	llmInteractionRepo llmlogging.Repository,
 	logger *slog.Logger) *ServiceImpl {
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	aiClient, err := generativeAI.NewLLMChatClient(context.Background(), apiKey)
@@ -86,14 +89,80 @@ func NewServiceImpl(poiRepository Repository,
 	}
 
 	return &ServiceImpl{
-		logger:           logger,
-		poiRepository:    poiRepository,
-		aiClient:         aiClient,
-		cityRepo:         cityRepo,
-		cache:            cache.New(5*time.Minute, 10*time.Minute),
-		embeddingService: embeddingService,
+		logger:             logger,
+		poiRepository:      poiRepository,
+		aiClient:           aiClient,
+		cityRepo:           cityRepo,
+		cache:              cache.New(5*time.Minute, 10*time.Minute),
+		embeddingService:   embeddingService,
+		llmInteractionRepo: llmInteractionRepo,
 	}
 }
+
+// Helper functions for LLM logging without circular dependency
+
+// calculateCost estimates the cost in USD for an LLM interaction
+func calculateCost(modelName string, promptTokens, completionTokens int) float64 {
+	// Gemini pricing (as of 2024)
+	pricing := map[string]struct {
+		InputPer1M  float64
+		OutputPer1M float64
+	}{
+		"gemini-1.5-pro":   {InputPer1M: 3.50, OutputPer1M: 10.50},
+		"gemini-1.5-flash": {InputPer1M: 0.075, OutputPer1M: 0.30},
+		"gemini-2.0-flash": {InputPer1M: 0.10, OutputPer1M: 0.40},
+	}
+
+	normalizedModel := strings.ToLower(modelName)
+	for key, p := range pricing {
+		if strings.Contains(normalizedModel, strings.ToLower(key)) {
+			inputCost := (float64(promptTokens) / 1_000_000) * p.InputPer1M
+			outputCost := (float64(completionTokens) / 1_000_000) * p.OutputPer1M
+			return inputCost + outputCost
+		}
+	}
+	return 0
+}
+
+// logLLMInteractionAsync logs an LLM interaction asynchronously
+func (s *ServiceImpl) logLLMInteractionAsync(ctx context.Context, userID, sessionID uuid.UUID, intent, searchType, prompt, modelName, provider, responseText, errorMessage string, temperature *float32, promptTokens, completionTokens, totalTokens, statusCode int, latencyMs int64) {
+	// Create a new context for async operation to avoid cancellation when request ends
+	asyncCtx := context.WithoutCancel(ctx)
+
+	go func() {
+		cost := calculateCost(modelName, promptTokens, completionTokens)
+
+		interaction := models.LlmInteraction{
+			RequestID:        uuid.New(),
+			SessionID:        sessionID,
+			UserID:           userID,
+			Prompt:           prompt,
+			ResponseText:     responseText,
+			ModelUsed:        modelName,
+			Provider:         provider,
+			PromptTokens:     promptTokens,
+			CompletionTokens: completionTokens,
+			TotalTokens:      totalTokens,
+			LatencyMs:        int(latencyMs),
+			StatusCode:       statusCode,
+			ErrorMessage:     errorMessage,
+			Intent:           intent,
+			SearchType:       searchType,
+			Temperature:      temperature,
+			CostEstimateUSD:  &cost,
+			IsStreaming:      false,
+			Timestamp:        time.Now(),
+		}
+
+		if _, err := s.llmInteractionRepo.SaveInteraction(asyncCtx, interaction); err != nil {
+			s.logger.ErrorContext(asyncCtx, "Failed to log LLM interaction asynchronously",
+				slog.String("intent", intent),
+				slog.String("session_id", sessionID.String()),
+				slog.Any("error", err))
+		}
+	}()
+}
+
 func (s *ServiceImpl) AddPoiToFavourites(ctx context.Context, userID, poiID uuid.UUID, isLLMGenerated bool) (uuid.UUID, error) {
 	var id uuid.UUID
 	if !isLLMGenerated {
@@ -890,17 +959,33 @@ func (s *ServiceImpl) getGeneralPOIByDistance(wg *sync.WaitGroup,
 		return
 	}
 
+	// Prepare LLM logging
+	sessionID := uuid.New()
+	intent := "nearby"
+	searchType := "general"
+	modelName := "gemini-2.0-flash"
+	provider := "google"
+	temperature := config.Temperature
+
 	startTime := time.Now()
 	response, err := s.aiClient.GenerateResponse(ctx, prompt, config)
-	latencyMs := int(time.Since(startTime).Milliseconds())
-	span.SetAttributes(attribute.Int("response.latency_ms", latencyMs))
+	latencyMs := int64(time.Since(startTime).Milliseconds())
+	span.SetAttributes(attribute.Int("response.latency_ms", int(latencyMs)))
 
 	if err != nil {
+		// Log failed LLM interaction
+		s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, "", err.Error(), temperature, 0, 0, 0, 500, latencyMs)
+
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to generate general POIs")
 		resultCh <- models.GenAIResponse{Err: fmt.Errorf("failed to generate general POIs: %w", err)}
 		return
 	}
+
+	// Extract token counts
+	promptTokens := 0
+	completionTokens := 0
+	totalTokens := 0
 
 	var txt string
 	for _, candidate := range response.Candidates {
@@ -909,7 +994,17 @@ func (s *ServiceImpl) getGeneralPOIByDistance(wg *sync.WaitGroup,
 			break
 		}
 	}
+
+	// Extract token counts from response metadata
+	if response.UsageMetadata != nil {
+		promptTokens = int(response.UsageMetadata.PromptTokenCount)
+		completionTokens = int(response.UsageMetadata.CandidatesTokenCount)
+		totalTokens = int(response.UsageMetadata.TotalTokenCount)
+	}
+
 	if txt == "" {
+		s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, "", "no valid general POI content from AI", temperature, promptTokens, completionTokens, totalTokens, 500, latencyMs)
+
 		err := fmt.Errorf("no valid general POI content from AI")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Empty response from AI")
@@ -923,11 +1018,16 @@ func (s *ServiceImpl) getGeneralPOIByDistance(wg *sync.WaitGroup,
 		PointsOfInterest []models.POIDetailedInfo `json:"points_of_interest"`
 	}
 	if err := json.Unmarshal([]byte(cleanTxt), &poiData); err != nil {
+		s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, txt, fmt.Sprintf("Failed to parse JSON: %v", err), temperature, promptTokens, completionTokens, totalTokens, 500, latencyMs)
+
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to parse general POI JSON")
 		resultCh <- models.GenAIResponse{Err: fmt.Errorf("failed to parse general POI JSON: %w", err)}
 		return
 	}
+
+	// Log successful LLM interaction
+	s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, txt, "", temperature, promptTokens, completionTokens, totalTokens, 200, latencyMs)
 
 	fmt.Println(cleanTxt)
 
@@ -1342,12 +1442,27 @@ func (s *ServiceImpl) getGeneralRestaurantByDistance(wg *sync.WaitGroup,
 		return
 	}
 
+	// Prepare LLM logging
+	sessionID := uuid.New()
+	intent := "nearby"
+	searchType := "dining"
+	modelName := "gemini-2.0-flash"
+	provider := "google"
+	temperature := config.Temperature
+
 	startTime := time.Now()
 	response, err := s.aiClient.GenerateResponse(ctx, prompt, config)
-	latencyMs := int(time.Since(startTime).Milliseconds())
-	span.SetAttributes(attribute.Int("response.latency_ms", latencyMs))
+	latencyMs := int64(time.Since(startTime).Milliseconds())
+	span.SetAttributes(attribute.Int("response.latency_ms", int(latencyMs)))
+
+	// Extract token counts
+	promptTokens := 0
+	completionTokens := 0
+	totalTokens := 0
 
 	if err != nil {
+		s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, "", err.Error(), temperature, 0, 0, 0, 500, latencyMs)
+
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to generate general POIs")
 		resultCh <- models.GenAIResponse{Err: fmt.Errorf("failed to generate general POIs: %w", err)}
@@ -1361,7 +1476,17 @@ func (s *ServiceImpl) getGeneralRestaurantByDistance(wg *sync.WaitGroup,
 			break
 		}
 	}
+
+	// Extract token counts from response metadata
+	if response.UsageMetadata != nil {
+		promptTokens = int(response.UsageMetadata.PromptTokenCount)
+		completionTokens = int(response.UsageMetadata.CandidatesTokenCount)
+		totalTokens = int(response.UsageMetadata.TotalTokenCount)
+	}
+
 	if txt == "" {
+		s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, "", "no valid general POI content from AI", temperature, promptTokens, completionTokens, totalTokens, 500, latencyMs)
+
 		err := fmt.Errorf("no valid general POI content from AI")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Empty response from AI")
@@ -1375,11 +1500,16 @@ func (s *ServiceImpl) getGeneralRestaurantByDistance(wg *sync.WaitGroup,
 		PointsOfInterest []models.POIDetailedInfo `json:"points_of_interest"`
 	}
 	if err := json.Unmarshal([]byte(cleanTxt), &poiData); err != nil {
+		s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, txt, fmt.Sprintf("Failed to parse JSON: %v", err), temperature, promptTokens, completionTokens, totalTokens, 500, latencyMs)
+
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to parse general POI JSON")
 		resultCh <- models.GenAIResponse{Err: fmt.Errorf("failed to parse general POI JSON: %w", err)}
 		return
 	}
+
+	// Log successful LLM interaction
+	s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, txt, "", temperature, promptTokens, completionTokens, totalTokens, 200, latencyMs)
 
 	fmt.Println(cleanTxt)
 
@@ -1443,12 +1573,27 @@ func (s *ServiceImpl) getGeneralActivitiesByDistance(wg *sync.WaitGroup,
 		return
 	}
 
+	// Prepare LLM logging
+	sessionID := uuid.New()
+	intent := "nearby"
+	searchType := "activities"
+	modelName := "gemini-2.0-flash"
+	provider := "google"
+	temperature := config.Temperature
+
 	startTime := time.Now()
 	response, err := s.aiClient.GenerateResponse(ctx, prompt, config)
-	latencyMs := int(time.Since(startTime).Milliseconds())
-	span.SetAttributes(attribute.Int("response.latency_ms", latencyMs))
+	latencyMs := int64(time.Since(startTime).Milliseconds())
+	span.SetAttributes(attribute.Int("response.latency_ms", int(latencyMs)))
+
+	// Extract token counts
+	promptTokens := 0
+	completionTokens := 0
+	totalTokens := 0
 
 	if err != nil {
+		s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, "", err.Error(), temperature, 0, 0, 0, 500, latencyMs)
+
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to generate general POIs")
 		resultCh <- models.GenAIResponse{Err: fmt.Errorf("failed to generate general POIs: %w", err)}
@@ -1462,7 +1607,17 @@ func (s *ServiceImpl) getGeneralActivitiesByDistance(wg *sync.WaitGroup,
 			break
 		}
 	}
+
+	// Extract token counts from response metadata
+	if response.UsageMetadata != nil {
+		promptTokens = int(response.UsageMetadata.PromptTokenCount)
+		completionTokens = int(response.UsageMetadata.CandidatesTokenCount)
+		totalTokens = int(response.UsageMetadata.TotalTokenCount)
+	}
+
 	if txt == "" {
+		s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, "", "no valid general POI content from AI", temperature, promptTokens, completionTokens, totalTokens, 500, latencyMs)
+
 		err := fmt.Errorf("no valid general POI content from AI")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Empty response from AI")
@@ -1476,11 +1631,16 @@ func (s *ServiceImpl) getGeneralActivitiesByDistance(wg *sync.WaitGroup,
 		PointsOfInterest []models.POIDetailedInfo `json:"points_of_interest"`
 	}
 	if err := json.Unmarshal([]byte(cleanTxt), &poiData); err != nil {
+		s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, txt, fmt.Sprintf("Failed to parse JSON: %v", err), temperature, promptTokens, completionTokens, totalTokens, 500, latencyMs)
+
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to parse general POI JSON")
 		resultCh <- models.GenAIResponse{Err: fmt.Errorf("failed to parse general POI JSON: %w", err)}
 		return
 	}
+
+	// Log successful LLM interaction
+	s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, txt, "", temperature, promptTokens, completionTokens, totalTokens, 200, latencyMs)
 
 	fmt.Println(cleanTxt)
 
@@ -1536,22 +1696,41 @@ func (s *ServiceImpl) getGeneralHotelsByDistance(wg *sync.WaitGroup,
 	prompt := getHotelsNeabyPrompt(userLocation)
 	span.SetAttributes(attribute.Int("prompt.length", len(prompt)))
 
+	// Prepare LLM logging
+	sessionID := uuid.New()
+	intent := "nearby"
+	searchType := "accommodation"
+	modelName := "gemini-2.0-flash"
+	provider := "google"
+	temperature := config.Temperature
+
 	if s.aiClient == nil {
 		err := fmt.Errorf("AI client is not available - check API key configuration")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "AI client unavailable")
+
+		s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, "", err.Error(), temperature, 0, 0, 0, 500, 0)
+
 		resultCh <- models.GenAIResponse{Err: err}
 		return
 	}
 
 	startTime := time.Now()
 	response, err := s.aiClient.GenerateResponse(ctx, prompt, config)
-	latencyMs := int(time.Since(startTime).Milliseconds())
-	span.SetAttributes(attribute.Int("response.latency_ms", latencyMs))
+	latencyMs := int64(time.Since(startTime).Milliseconds())
+	span.SetAttributes(attribute.Int("response.latency_ms", int(latencyMs)))
+
+	// Extract token counts
+	promptTokens := 0
+	completionTokens := 0
+	totalTokens := 0
 
 	if err != nil {
+		s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, "", err.Error(), temperature, 0, 0, 0, 500, int64(latencyMs))
+
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to generate general POIs")
+
 		resultCh <- models.GenAIResponse{Err: fmt.Errorf("failed to generate general POIs: %w", err)}
 		return
 	}
@@ -1563,10 +1742,21 @@ func (s *ServiceImpl) getGeneralHotelsByDistance(wg *sync.WaitGroup,
 			break
 		}
 	}
+
+	// Extract token counts from response metadata
+	if response.UsageMetadata != nil {
+		promptTokens = int(response.UsageMetadata.PromptTokenCount)
+		completionTokens = int(response.UsageMetadata.CandidatesTokenCount)
+		totalTokens = int(response.UsageMetadata.TotalTokenCount)
+	}
+
 	if txt == "" {
 		err := fmt.Errorf("no valid general POI content from AI")
+		s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, "", err.Error(), temperature, promptTokens, completionTokens, totalTokens, 500, int64(latencyMs))
+
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Empty response from AI")
+
 		resultCh <- models.GenAIResponse{Err: err}
 		return
 	}
@@ -1577,11 +1767,17 @@ func (s *ServiceImpl) getGeneralHotelsByDistance(wg *sync.WaitGroup,
 		PointsOfInterest []models.POIDetailedInfo `json:"points_of_interest"`
 	}
 	if err := json.Unmarshal([]byte(cleanTxt), &poiData); err != nil {
+		s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, txt, fmt.Sprintf("Failed to parse JSON: %v", err), temperature, promptTokens, completionTokens, totalTokens, 500, int64(latencyMs))
+
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to parse general POI JSON")
+
 		resultCh <- models.GenAIResponse{Err: fmt.Errorf("failed to parse general POI JSON: %w", err)}
 		return
 	}
+
+	// Log successful LLM interaction
+	s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, txt, "", temperature, promptTokens, completionTokens, totalTokens, 200, latencyMs)
 
 	fmt.Println(cleanTxt)
 
@@ -1637,22 +1833,41 @@ func (s *ServiceImpl) getGeneralAttractionsByDistance(wg *sync.WaitGroup,
 	prompt := getAttractionsNeabyPrompt(userLocation)
 	span.SetAttributes(attribute.Int("prompt.length", len(prompt)))
 
+	// Prepare LLM logging
+	sessionID := uuid.New()
+	intent := "nearby"
+	searchType := "attractions"
+	modelName := "gemini-2.0-flash"
+	provider := "google"
+	temperature := config.Temperature
+
 	if s.aiClient == nil {
 		err := fmt.Errorf("AI client is not available - check API key configuration")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "AI client unavailable")
+
+		s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, "", err.Error(), temperature, 0, 0, 0, 500, 0)
+
 		resultCh <- models.GenAIResponse{Err: err}
 		return
 	}
 
 	startTime := time.Now()
 	response, err := s.aiClient.GenerateResponse(ctx, prompt, config)
-	latencyMs := int(time.Since(startTime).Milliseconds())
-	span.SetAttributes(attribute.Int("response.latency_ms", latencyMs))
+	latencyMs := int64(time.Since(startTime).Milliseconds())
+	span.SetAttributes(attribute.Int("response.latency_ms", int(latencyMs)))
+
+	// Extract token counts
+	promptTokens := 0
+	completionTokens := 0
+	totalTokens := 0
 
 	if err != nil {
+		s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, "", err.Error(), temperature, 0, 0, 0, 500, int64(latencyMs))
+
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to generate general POIs")
+
 		resultCh <- models.GenAIResponse{Err: fmt.Errorf("failed to generate general POIs: %w", err)}
 		return
 	}
@@ -1664,10 +1879,21 @@ func (s *ServiceImpl) getGeneralAttractionsByDistance(wg *sync.WaitGroup,
 			break
 		}
 	}
+
+	// Extract token counts from response metadata
+	if response.UsageMetadata != nil {
+		promptTokens = int(response.UsageMetadata.PromptTokenCount)
+		completionTokens = int(response.UsageMetadata.CandidatesTokenCount)
+		totalTokens = int(response.UsageMetadata.TotalTokenCount)
+	}
+
 	if txt == "" {
 		err := fmt.Errorf("no valid general POI content from AI")
+		s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, "", err.Error(), temperature, promptTokens, completionTokens, totalTokens, 500, int64(latencyMs))
+
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Empty response from AI")
+
 		resultCh <- models.GenAIResponse{Err: err}
 		return
 	}
@@ -1678,11 +1904,17 @@ func (s *ServiceImpl) getGeneralAttractionsByDistance(wg *sync.WaitGroup,
 		PointsOfInterest []models.POIDetailedInfo `json:"points_of_interest"`
 	}
 	if err := json.Unmarshal([]byte(cleanTxt), &poiData); err != nil {
+		s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, txt, fmt.Sprintf("Failed to parse JSON: %v", err), temperature, promptTokens, completionTokens, totalTokens, 500, int64(latencyMs))
+
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to parse general POI JSON")
+
 		resultCh <- models.GenAIResponse{Err: fmt.Errorf("failed to parse general POI JSON: %w", err)}
 		return
 	}
+
+	// Log successful LLM interaction
+	s.logLLMInteractionAsync(ctx, userID, sessionID, intent, searchType, prompt, modelName, provider, txt, "", temperature, promptTokens, completionTokens, totalTokens, 200, latencyMs)
 
 	fmt.Println(cleanTxt)
 

@@ -88,17 +88,33 @@ func RunMigrations(databaseURL string, logger *zap.Logger) error {
 		return fmt.Errorf("failed to initialize migrate instance: %w", err)
 	}
 
+	// Check for dirty state before attempting migration
+	version, dirty, vErr := m.Version()
+	if vErr != nil && vErr != migrate.ErrNilVersion {
+		logger.Warn("Could not determine migration version before running", zap.Error(vErr))
+	} else if dirty {
+		logger.Warn("DATABASE MIGRATION STATE IS DIRTY - attempting to fix",
+			zap.Uint64("version", uint64(version)))
+
+		// Force the version to clean state
+		if err := m.Force(int(version)); err != nil {
+			logger.Error("Failed to force migration version", zap.Error(err))
+			return fmt.Errorf("failed to force migration version: %w", err)
+		}
+		logger.Info("Successfully forced migration to clean state", zap.Uint64("version", uint64(version)))
+	}
+
 	err = m.Up()
 	if err != nil && err != migrate.ErrNoChange {
 		logger.Error("Failed to apply migrations", zap.Error(err))
 		return fmt.Errorf("failed to apply migrations: %w", err)
 	}
 
-	version, dirty, err := m.Version()
+	version, dirty, err = m.Version()
 	if err != nil {
 		logger.Warn("Could not determine migration version", zap.Error(err))
 	} else if dirty {
-		logger.Error("DATABASE MIGRATION STATE IS DIRTY!", zap.Uint64("version", uint64(version)))
+		logger.Error("DATABASE MIGRATION STATE IS STILL DIRTY!", zap.Uint64("version", uint64(version)))
 	} else if err == migrate.ErrNoChange {
 		logger.Info("No new migrations to apply.", zap.Uint64("current_version", uint64(version)))
 	} else {
