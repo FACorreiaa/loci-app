@@ -20,6 +20,7 @@ import (
 	interestsPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/interests"
 	poiPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/poi"
 	profilesPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/profiles"
+	recentsPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/recents"
 	tagsPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/tags"
 	userPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/user"
 	h "github.com/FACorreiaa/go-templui/app/pkg/handlers"
@@ -39,7 +40,6 @@ import (
 	"github.com/FACorreiaa/go-templui/app/internal/features/nearby"
 	"github.com/FACorreiaa/go-templui/app/internal/features/pricing"
 	"github.com/FACorreiaa/go-templui/app/internal/features/profile"
-	"github.com/FACorreiaa/go-templui/app/internal/features/recents"
 	"github.com/FACorreiaa/go-templui/app/internal/features/reviews"
 	"github.com/FACorreiaa/go-templui/app/internal/features/settings"
 	streamingfeatures "github.com/FACorreiaa/go-templui/app/internal/features/streaming"
@@ -131,6 +131,10 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 
 	poiService := poiPkg.NewServiceImpl(poiRepo, embeddingService, cityRepo, chatRepo, slog.Default())
 
+	// Create recents repository and service
+	recentsRepo := recentsPkg.NewRepository(dbPool, slog.Default())
+	recentsService := recentsPkg.NewService(recentsRepo, slog.Default())
+
 	// Create handlers
 	authHandlers := authPkg.NewAuthHandlers(authRepo, cfg, slog.Default())
 	profilesHandlers := h.NewProfilesHandler(profilesService)
@@ -158,6 +162,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	settingsHandlers := h.NewSettingsHandlers()
 	resultsHandlers := h.NewResultsHandlers()
 	filterHandlers := h.NewFilterHandlers(logger.Log.Sugar())
+	recentsHandlers := h.NewRecentsHandlers(recentsService, log)
 
 	// Public routes (with optional auth)
 	r.GET("/", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
@@ -666,22 +671,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 		})
 
 		// Recents
-		protected.GET("/recents", func(c *gin.Context) {
-			logger.Log.Info("Recents page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
-				Title:   "Recent Activity - Loci",
-				Content: recents.RecentsPage(),
-				Nav: models.Navigation{
-					Items: []models.NavItem{
-						{Name: "Dashboard", URL: "/dashboard"},
-						{Name: "Recents", URL: "/recents"},
-						{Name: "Settings", URL: "/settings"},
-					},
-				},
-				ActiveNav: "Recents",
-				User:      getUserFromContext(c),
-			}))
-		})
+		protected.GET("/recents", recentsHandlers.HandleRecentsPage)
 
 		// Settings
 		protected.GET("/settings", func(c *gin.Context) {

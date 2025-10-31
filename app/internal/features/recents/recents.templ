@@ -1,11 +1,18 @@
 package recents
 
-templ RecentsPage() {
+import (
+	"fmt"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
+	"strings"
+	"time"
+)
+
+templ RecentsPage(response *models.RecentInteractionsResponse, filter models.RecentInteractionsFilter) {
 	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
 			<!-- Header -->
 			<div class="mb-8">
-				<div class="flex items-center justify-between mb-6">
+				<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
 					<div class="flex items-center gap-3">
 						<div class="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
 							<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -17,110 +24,280 @@ templ RecentsPage() {
 							<p class="text-muted-foreground">Your travel history and recent discoveries</p>
 						</div>
 					</div>
-					<div class="flex items-center gap-3">
-						<!-- Time Filter -->
-						<select class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background text-sm">
-							<option value="today">Today</option>
-							<option value="week" selected>This Week</option>
-							<option value="month">This Month</option>
-							<option value="year">This Year</option>
-							<option value="all">All Time</option>
+					<div class="flex items-center gap-3 flex-wrap">
+						<!-- Type Filter -->
+						<select
+							name="type"
+							onchange="window.location.href='/recents?type=' + this.value + '&sort_by=' + document.querySelector('[name=sort_by]').value + '&sort_order=' + document.querySelector('[name=sort_order]').value + (document.querySelector('[name=search]').value ? '&search=' + document.querySelector('[name=search]').value : '')"
+							class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background text-sm"
+						>
+							<option value="" selected?={ filter.SearchType == "" }>All Types</option>
+							<option value="itinerary" selected?={ filter.SearchType == "itinerary" }>Itineraries</option>
+							<option value="restaurant" selected?={ filter.SearchType == "restaurant" }>Restaurants</option>
+							<option value="hotel" selected?={ filter.SearchType == "hotel" }>Hotels</option>
+							<option value="activity" selected?={ filter.SearchType == "activity" }>Activities</option>
 						</select>
-						<button class="px-4 py-2 border rounded-lg hover:bg-accent transition-colors text-sm">
-							<svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-							</svg>
-							Export
-						</button>
+						<!-- Sort By -->
+						<select
+							name="sort_by"
+							onchange="window.location.href='/recents?sort_by=' + this.value + '&sort_order=' + document.querySelector('[name=sort_order]').value + (document.querySelector('[name=type]').value ? '&type=' + document.querySelector('[name=type]').value : '') + (document.querySelector('[name=search]').value ? '&search=' + document.querySelector('[name=search]').value : '')"
+							class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background text-sm"
+						>
+							<option value="last_activity" selected?={ filter.SortBy == "" || filter.SortBy == "last_activity" }>Latest Activity</option>
+							<option value="city_name" selected?={ filter.SortBy == "city_name" }>City Name</option>
+							<option value="interaction_count" selected?={ filter.SortBy == "interaction_count" }>Most Interactions</option>
+							<option value="poi_count" selected?={ filter.SortBy == "poi_count" }>Most Places</option>
+						</select>
+						<!-- Sort Order -->
+						<select
+							name="sort_order"
+							onchange="window.location.href='/recents?sort_order=' + this.value + '&sort_by=' + document.querySelector('[name=sort_by]').value + (document.querySelector('[name=type]').value ? '&type=' + document.querySelector('[name=type]').value : '') + (document.querySelector('[name=search]').value ? '&search=' + document.querySelector('[name=search]').value : '')"
+							class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background text-sm"
+						>
+							<option value="desc" selected?={ filter.SortOrder == "" || filter.SortOrder == "desc" }>Descending</option>
+							<option value="asc" selected?={ filter.SortOrder == "asc" }>Ascending</option>
+						</select>
 					</div>
+				</div>
+				<!-- Search Bar -->
+				<div class="max-w-xl">
+					<form action="/recents" method="get" class="flex gap-2">
+						<input
+							type="hidden"
+							name="sort_by"
+							value={ filter.SortBy }
+						/>
+						<input
+							type="hidden"
+							name="sort_order"
+							value={ filter.SortOrder }
+						/>
+						<input
+							type="hidden"
+							name="type"
+							value={ filter.SearchType }
+						/>
+						<input
+							type="text"
+							name="search"
+							value={ filter.Search }
+							placeholder="Search cities..."
+							class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background text-sm"
+						/>
+						<button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+							Search
+						</button>
+					</form>
 				</div>
 			</div>
 			<!-- Activity Timeline -->
 			<div class="space-y-6">
-				<!-- Today -->
-				<div class="bg-card rounded-xl shadow-sm border p-6">
-					<h3 class="text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2">
-						<div class="w-2 h-2 bg-green-500 rounded-full"></div>
-						Today
-					</h3>
-					<div class="space-y-4">
-						@RecentActivityItem("Added to favorites", "Eleven Madison Park", "Restaurant • New York, NY", "2 hours ago", "🌱", "add")
-						@RecentActivityItem("Searched for", "Best pizza in Brooklyn", "Search query", "4 hours ago", "🔍", "search")
-						@RecentActivityItem("Viewed details", "Central Park", "Activity • New York, NY", "6 hours ago", "🌳", "view")
+				if response == nil || len(response.Cities) == 0 {
+					<div class="bg-card rounded-xl shadow-sm border p-12 text-center">
+						<div class="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+							<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+							</svg>
+						</div>
+						<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">No recent activity</h3>
+						<p class="text-gray-600 dark:text-gray-400 mb-6">Start exploring to see your travel history here</p>
+						<a href="/" class="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+							Start Exploring
+						</a>
 					</div>
-				</div>
-				<!-- Yesterday -->
-				<div class="bg-card rounded-xl shadow-sm border p-6">
-					<h3 class="text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2">
-						<div class="w-2 h-2 bg-blue-500 rounded-full"></div>
-						Yesterday
-					</h3>
-					<div class="space-y-4">
-						@RecentActivityItem("Visited", "Brooklyn Bridge", "Attraction • New York, NY", "Yesterday, 3:30 PM", "🌉", "visit")
-						@RecentActivityItem("Created list", "NYC Food Tour", "8 restaurants added", "Yesterday, 11:15 AM", "📝", "create")
-						@RecentActivityItem("Shared list", "Weekend in Paris", "Shared with 3 friends", "Yesterday, 9:20 AM", "🗼", "share")
+				} else {
+					for _, city := range response.Cities {
+						@CityInteractionCard(city)
+					}
+				}
+				if response != nil && response.Total > len(response.Cities) {
+					<!-- Pagination or Load More could go here -->
+					<div class="text-center text-sm text-muted-foreground">
+						Showing { fmt.Sprintf("%d", len(response.Cities)) } of { fmt.Sprintf("%d", response.Total) } cities
 					</div>
-				</div>
-				<!-- This Week -->
-				<div class="bg-card rounded-xl shadow-sm border p-6">
-					<h3 class="text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2">
-						<div class="w-2 h-2 bg-purple-500 rounded-full"></div>
-						Earlier This Week
-					</h3>
-					<div class="space-y-4">
-						@RecentActivityItem("Booked", "The Plaza Hotel", "Hotel • New York, NY", "2 days ago", "🏨", "book")
-						@RecentActivityItem("Added review", "Joe's Pizza", "4.5 stars • \"Amazing NY slice!\"", "3 days ago", "🍕", "review")
-						@RecentActivityItem("Discovered", "High Line Park", "Activity • New York, NY", "4 days ago", "🚶", "discover")
-						@RecentActivityItem("Updated list", "Hidden NYC Gems", "Added 3 new places", "5 days ago", "🏙️", "update")
-						@RecentActivityItem("Searched for", "Rooftop bars Manhattan", "Search query", "6 days ago", "🔍", "search")
-					</div>
-				</div>
-				<!-- Load More -->
-				<div class="text-center">
-					<button
-						hx-get="/recents/load-more"
-						hx-target="#load-more-container"
-						hx-swap="outerHTML"
-						class="px-6 py-3 border rounded-lg hover:bg-accent transition-colors text-sm font-medium"
-					>
-						Load Earlier Activity
-					</button>
-				</div>
-				<div id="load-more-container"></div>
+				}
 			</div>
 		</div>
 	</div>
 }
 
-templ RecentActivityItem(action string, title string, details string, time string, emoji string, activityType string) {
-	<div class="flex items-start gap-4 p-4 hover:bg-accent rounded-lg transition-colors cursor-pointer">
-		<div class="flex-shrink-0">
-			<div
-				class={ "w-12 h-12 rounded-full flex items-center justify-center",
-				templ.KV("bg-green-100 dark:bg-green-900/30", activityType == "add" || activityType == "visit"),
-				templ.KV("bg-blue-100 dark:bg-blue-900/30", activityType == "view" || activityType == "search" || activityType == "book"),
-				templ.KV("bg-purple-100 dark:bg-purple-900/30", activityType == "create" || activityType == "share"),
-				templ.KV("bg-orange-100 dark:bg-orange-900/30", activityType == "review" || activityType == "update"),
-				templ.KV("bg-gray-100 dark:bg-gray-900/30", activityType == "discover") }
-			>
-				<span class="text-xl">{ emoji }</span>
-			</div>
-		</div>
-		<div class="flex-1 min-w-0">
-			<div class="flex items-start justify-between">
-				<div>
-					<p class="text-sm text-card-foreground">
-						<span class="font-medium">{ action }</span> { title }
-					</p>
-					<p class="text-sm text-muted-foreground mt-1">{ details }</p>
-					<p class="text-xs text-muted-foreground mt-2">{ time }</p>
+templ CityInteractionCard(city models.CityInteractions) {
+	<div class="bg-card rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow">
+		<div class="flex items-start justify-between mb-4">
+			<div class="flex-1">
+				<div class="flex items-center gap-3 mb-2">
+					<h3 class="text-xl font-semibold text-card-foreground">{ city.Title }</h3>
+					<span class="text-sm text-muted-foreground">
+						{ formatTimeAgo(city.LastActivity) }
+					</span>
 				</div>
-				<button class="p-1 text-muted-foreground hover:text-foreground transition-colors">
-					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
-					</svg>
-				</button>
+				<div class="flex items-center gap-4 text-sm text-muted-foreground">
+					<span class="flex items-center gap-1">
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+						</svg>
+						{ fmt.Sprintf("%d", len(city.Interactions)) } { pluralize("interaction", len(city.Interactions)) }
+					</span>
+					if city.POICount > 0 {
+						<span class="flex items-center gap-1">
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+							</svg>
+							{ fmt.Sprintf("%d", city.POICount) } { pluralize("place", city.POICount) }
+						</span>
+					}
+				</div>
 			</div>
+			<a
+				href={ templ.SafeURL(getDomainURL(getPrimaryDomain(city.Interactions), city.SessionID.String(), city.CityName)) }
+				class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+			>
+				View Details
+			</a>
 		</div>
+		<!-- Recent Interactions Preview -->
+		if len(city.Interactions) > 0 {
+			<div class="space-y-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700" x-data="{ expanded: false }">
+				<h4 class="text-sm font-medium text-muted-foreground mb-3">Recent queries:</h4>
+				for i, interaction := range city.Interactions {
+					if i < 3 {
+						<div class="text-sm text-card-foreground bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+							<p class="font-medium mb-1">{ extractUserFriendlyQuery(interaction.Prompt, city.CityName) }</p>
+							<p class="text-xs text-muted-foreground">
+								{ interaction.CreatedAt.Format("Jan 2, 2006 at 3:04 PM") }
+							</p>
+						</div>
+					} else {
+						<div x-show="expanded" x-transition class="text-sm text-card-foreground bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+							<p class="font-medium mb-1">{ extractUserFriendlyQuery(interaction.Prompt, city.CityName) }</p>
+							<p class="text-xs text-muted-foreground">
+								{ interaction.CreatedAt.Format("Jan 2, 2006 at 3:04 PM") }
+							</p>
+						</div>
+					}
+				}
+				if len(city.Interactions) > 3 {
+					<button
+						@click="expanded = !expanded"
+						class="w-full text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-center pt-2 transition-colors"
+					>
+						<span x-show="!expanded">+ { fmt.Sprintf("%d", len(city.Interactions)-3) } more { pluralize("interaction", len(city.Interactions)-3) }</span>
+						<span x-show="expanded">Show less</span>
+					</button>
+				}
+			</div>
+		}
 	</div>
+}
+
+func formatTimeAgo(t time.Time) string {
+	duration := time.Since(t)
+
+	if duration < time.Minute {
+		return "just now"
+	} else if duration < time.Hour {
+		minutes := int(duration.Minutes())
+		return fmt.Sprintf("%d %s ago", minutes, pluralize("minute", minutes))
+	} else if duration < 24*time.Hour {
+		hours := int(duration.Hours())
+		return fmt.Sprintf("%d %s ago", hours, pluralize("hour", hours))
+	} else if duration < 7*24*time.Hour {
+		days := int(duration.Hours() / 24)
+		return fmt.Sprintf("%d %s ago", days, pluralize("day", days))
+	} else if duration < 30*24*time.Hour {
+		weeks := int(duration.Hours() / (24 * 7))
+		return fmt.Sprintf("%d %s ago", weeks, pluralize("week", weeks))
+	} else if duration < 365*24*time.Hour {
+		months := int(duration.Hours() / (24 * 30))
+		return fmt.Sprintf("%d %s ago", months, pluralize("month", months))
+	}
+	years := int(duration.Hours() / (24 * 365))
+	return fmt.Sprintf("%d %s ago", years, pluralize("year", years))
+}
+
+func pluralize(word string, count int) string {
+	if count == 1 {
+		return word
+	}
+	return word + "s"
+}
+
+// getPrimaryDomain returns the most common domain from city interactions
+func getPrimaryDomain(interactions []models.RecentInteraction) string {
+	if len(interactions) == 0 {
+		return "itinerary"
+	}
+
+	// Count domains
+	domainCounts := make(map[string]int)
+	for _, interaction := range interactions {
+		if interaction.Domain != "" {
+			domainCounts[interaction.Domain]++
+		}
+	}
+
+	// Find most common domain
+	maxCount := 0
+	primaryDomain := "itinerary"
+	for domain, count := range domainCounts {
+		if count > maxCount {
+			maxCount = count
+			primaryDomain = domain
+		}
+	}
+
+	return primaryDomain
+}
+
+// getDomainURL returns the appropriate URL for the given domain
+func getDomainURL(domain string, sessionID string, cityName string) string {
+	switch domain {
+	case "hotels":
+		return fmt.Sprintf("/hotels?sessionId=%s&cityName=%s&domain=hotels", sessionID, cityName)
+	case "restaurants":
+		return fmt.Sprintf("/restaurants?sessionId=%s&cityName=%s&domain=restaurants", sessionID, cityName)
+	case "activities":
+		return fmt.Sprintf("/activities?sessionId=%s&cityName=%s&domain=activities", sessionID, cityName)
+	case "discover":
+		return fmt.Sprintf("/discover/detail/%s", sessionID)
+	case "nearby":
+		return fmt.Sprintf("/nearby?sessionId=%s", sessionID)
+	default: // "itinerary" or unknown
+		return fmt.Sprintf("/itinerary?sessionId=%s&cityName=%s&domain=itinerary", sessionID, cityName)
+	}
+}
+
+// extractUserFriendlyQuery converts raw LLM prompts into user-friendly display text
+func extractUserFriendlyQuery(prompt string, cityName string) string {
+	prompt = strings.TrimSpace(prompt)
+
+	// If it's a JSON schema prompt (starts with "You are"), extract the actual intent
+	if strings.HasPrefix(prompt, "You are a travel") {
+		// Extract the core request from system prompts
+		if strings.Contains(prompt, "List general points of interest") {
+			return fmt.Sprintf("Show me points of interest in %s", cityName)
+		}
+		if strings.Contains(prompt, "Create a personalized itinerary") {
+			return fmt.Sprintf("Create an itinerary for %s", cityName)
+		}
+		if strings.Contains(prompt, "Recommend restaurants") {
+			return fmt.Sprintf("Recommend restaurants in %s", cityName)
+		}
+		if strings.Contains(prompt, "Recommend hotels") {
+			return fmt.Sprintf("Recommend hotels in %s", cityName)
+		}
+		if strings.Contains(prompt, "Recommend activities") {
+			return fmt.Sprintf("Recommend activities in %s", cityName)
+		}
+		// Generic travel assistant prompt
+		return fmt.Sprintf("Search for travel information about %s", cityName)
+	}
+
+	// If it's already a user-friendly prompt, return as is (but truncate if too long)
+	if len(prompt) > 120 {
+		return prompt[:117] + "..."
+	}
+
+	return prompt
 }

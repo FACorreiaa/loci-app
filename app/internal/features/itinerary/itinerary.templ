@@ -2,12 +2,13 @@ package itinerary
 
 import (
 	"fmt"
+	"github.com/FACorreiaa/go-templui/app/internal/components/chat"
 	mapcomponents "github.com/FACorreiaa/go-templui/app/internal/components/map"
 	"github.com/FACorreiaa/go-templui/app/internal/models"
 )
 
 templ ItineraryPage() {
-	<div class="h-full flex">
+	<div class="h-full flex" x-data="itineraryPage()">
 		<!-- Left Panel - Chat/Text Content -->
 		<div class="w-1/2 flex flex-col bg-white">
 			<!-- Header -->
@@ -210,6 +211,21 @@ templ ItineraryPage() {
 				</div>
 			</div>
 		</div>
+		<script>
+			function itineraryPage() {
+				return {
+					showChat: false,
+				};
+			}
+		</script>
+		<!-- Chat Panel for continuing conversation -->
+		@chat.ChatPanel(chat.ChatPanelProps{
+			SessionID:     "",
+			CityName:      "Travel Planning",
+			Domain:        "itinerary",
+			Placeholder:   "Ask about your travel plans...",
+			ShowByDefault: false,
+		})
 	</div>
 	<style>
 		.quick-action-btn {
@@ -491,7 +507,7 @@ templ ItineraryPOICard(poi models.NearbyPOI) {
 }
 
 templ ItineraryPageWithQuery(query string) {
-	<div class="h-full flex">
+	<div class="h-full flex" x-data="itineraryPageWithQuery()">
 		<!-- Left Panel - Chat/Text Content -->
 		<div class="w-1/2 flex flex-col bg-white">
 			<!-- Header -->
@@ -698,6 +714,21 @@ templ ItineraryPageWithQuery(query string) {
 				</div>
 			</div>
 		</div>
+		<script>
+			function itineraryPageWithQuery() {
+				return {
+					showChat: false,
+				};
+			}
+		</script>
+		<!-- Chat Panel for continuing conversation -->
+		@chat.ChatPanel(chat.ChatPanelProps{
+			SessionID:     "",
+			CityName:      "Travel Planning",
+			Domain:        "itinerary",
+			Placeholder:   "Ask about your travel plans...",
+			ShowByDefault: false,
+		})
 	</div>
 	<style>
 		.quick-action-btn {

@@ -10,6 +10,7 @@ import (
 )
 
 templ ItineraryResults(cityData models.GeneralCityData, generalPOIs []models.POIDetailedInfo, itinerary models.AIItineraryResponse, compact bool, showToggle bool, initialLimit int, favorites []string, sessionID string) {
+	@ItineraryStateScript()
 	<div class="min-h-screen bg-gray-50 dark:bg-gray-900 itinerary-results" id="itinerary-container" x-data="itineraryPage()">
 		<!-- Mobile-First Enhanced Header -->
 		<div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
@@ -660,6 +661,7 @@ templ ItineraryResults(cityData models.GeneralCityData, generalPOIs []models.POI
 			</div>
 		</div>
 		<!-- Chat Panel for continuing conversation -->
+		<!-- DEBUG: SessionID = { sessionID } -->
 		if sessionID != "" {
 			@chat.ChatPanel(chat.ChatPanelProps{
 				SessionID:     sessionID,
@@ -668,11 +670,12 @@ templ ItineraryResults(cityData models.GeneralCityData, generalPOIs []models.POI
 				Placeholder:   "Ask to modify your itinerary...",
 				ShowByDefault: false,
 			})
+		} else {
+			<!-- DEBUG: SessionID is empty! -->
 		}
 	</div>
 	@components.LocationRequestBanner(true)
 	@components.FloatingLocationButton()
-	@ItineraryStateScript()
 	@components.LocationScript()
 }
 

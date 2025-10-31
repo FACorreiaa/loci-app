@@ -396,7 +396,7 @@ func (h *ItineraryHandlers) loadItineraryBySessionSSE(sessionIDParam string, cac
 				true,
 				true,
 				15,
-				[]string{}, cacheKey)
+				[]string{}, sessionIDParam)
 		}
 	}
 

@@ -426,6 +426,7 @@ type RecentInteraction struct {
 	ModelUsed    string                   `json:"model_name"`
 	LatencyMs    int                      `json:"latency_ms"`
 	CreatedAt    time.Time                `json:"created_at"`
+	Domain       string                   `json:"domain,omitempty"` // itinerary, hotels, restaurants, activities, discover, nearby
 	POIs         []POIDetailedInfo        `json:"pois,omitempty"`
 	Hotels       []HotelDetailedInfo      `json:"hotels,omitempty"`
 	Restaurants  []RestaurantDetailedInfo `json:"restaurants,omitempty"`
@@ -458,6 +459,7 @@ type RecentInteractionsFilter struct {
 	SortBy          string `json:"sort_by"`          // last_activity, city_name, interaction_count, poi_count
 	SortOrder       string `json:"sort_order"`       // asc, desc
 	Search          string `json:"search"`           // Search term for city name
+	SearchType      string `json:"search_type"`      // Filter by type: itinerary, restaurant, hotel, activity
 	MinInteractions int    `json:"min_interactions"` // Minimum number of interactions
 	MaxInteractions int    `json:"max_interactions"` // Maximum number of interactions
 }

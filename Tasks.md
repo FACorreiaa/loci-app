@@ -957,7 +957,6 @@ and the chat window (that should show the continue chat window) isn't showing.
 13.1.8 [x] on my chat service can the textPartIterator be reused? or abstract more data into different methods, in a different file, using Golang streams and iterators to abstract and resuse some logic? Implement for performance.
 
 13.2 Save LLM information on DB
-
 13.2.1 Save LLM related data to database
 We need to store LLM related data in the database. Every LLM endpoint should be saving this for future use or for search repeated cities with PGVector.
 the results that go to /itinerary, /restaurants, /hotels, /restaurants, /discover, /nearby all use LLM to have data retrueved. 
@@ -1129,7 +1128,7 @@ This could be due to the 13.1 error or the chat not having the chat sessionID bu
 Use websockets, htmx and whatever needed. The idea is the user to be able to walk, and when the coordinates of the user changes, the AI generates new points of interest around the user dynamically.
 Elaborate on the effort for this and build the UI and Service logic. go to go-ai-poi-server (cd ..), this implementation should be similar to the /discover endpoint on the old api. 
 
-15. The Recents page should have all the recents itineraries, restaurants, hotels, activities or chats built and should be able to sort by date
+15. [x] The Recents page should have all the recents itineraries, restaurants, hotels, activities or chats built and should be able to sort by date
 All this data should be available on the Database so for recents only queries and displays should be needed.
 
 16. The chat view should work as it does under go-ai-poi-client and go-ai-poi-server but improved. The chat should be able to return an intent data (restaurant, itinerary, hotel, activity) and upon writing "Add" or "Remove" should add to the current context more points and writing "New" on chat creates a new conversation with the Agent.
@@ -1993,7 +1992,9 @@ func CallGeminiAndLog(ctx context.Context, client *generativelanguage.Client, re
 }
 ```
 
+
 35. My current Travel preferences under my settings seem to simplistic. Add more options based on what is already done on the database
+35.1 When I make a search on the main page, it goes to the intended results (restaurants, hotels, etc), but if I click on the home button and try to search somethign again, it will not work. I have to refresh the page to have LLM calls again.
 36. Add functionality to pause and resume between chat streams and llm searches:
     To add "Stop" and "Resume" functionality to LLM calls using Go with the Gemini SDK (specifically `cloud.google.com/go/ai/generativelanguage/apiv1beta`), you'll need to switch from the synchronous `GenerateContent` method to the streaming `StreamGenerateContent` method. This allows for incremental response handling, which is key for interruption. The synchronous call doesn't provide partial results easily, making true stop/resume challenging without streaming.
 

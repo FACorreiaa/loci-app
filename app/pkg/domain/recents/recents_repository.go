@@ -247,19 +247,40 @@ func (r *RepositoryImpl) GetUserRecentInteractions(ctx context.Context, userID u
 // getCityInteractions gets recent interactions for a specific city
 func (r *RepositoryImpl) getCityInteractions(ctx context.Context, userID uuid.UUID, cityName string) ([]models.RecentInteraction, error) {
 	query := `
-		SELECT 
-			id,
-			user_id,
-			city_name,
-			city_id,
-			prompt,
-			response,
-			model_name,
-			latency_ms,
-			created_at
-		FROM llm_interactions 
-		WHERE user_id = $1 AND city_name = $2 
-		ORDER BY created_at DESC 
+		SELECT
+			li.id,
+			li.user_id,
+			li.city_name,
+			li.city_id,
+			li.prompt,
+			li.response,
+			li.model_name,
+			li.latency_ms,
+			li.created_at,
+			CASE
+				-- Check what detail tables have records for this interaction
+				WHEN EXISTS (SELECT 1 FROM hotel_details hd WHERE hd.llm_interaction_id = li.id) THEN 'hotels'
+				WHEN EXISTS (SELECT 1 FROM restaurant_details rd WHERE rd.llm_interaction_id = li.id) THEN 'restaurants'
+				WHEN EXISTS (SELECT 1 FROM poi_details pd WHERE pd.llm_interaction_id = li.id) THEN
+					-- For POIs, check the prompt to determine if it's activities or itinerary
+					CASE
+						WHEN LOWER(li.prompt) LIKE '%activit%' THEN 'activities'
+						WHEN LOWER(li.prompt) LIKE '%itinerary%' OR LOWER(li.prompt) LIKE '%plan%' THEN 'itinerary'
+						WHEN LOWER(li.prompt) LIKE '%discover%' THEN 'discover'
+						WHEN LOWER(li.prompt) LIKE '%nearby%' THEN 'nearby'
+						ELSE 'itinerary' -- default for POIs
+					END
+				-- If no detail records, try to infer from prompt
+				WHEN LOWER(li.prompt) LIKE '%hotel%' THEN 'hotels'
+				WHEN LOWER(li.prompt) LIKE '%restaurant%' OR LOWER(li.prompt) LIKE '%food%' OR LOWER(li.prompt) LIKE '%dining%' THEN 'restaurants'
+				WHEN LOWER(li.prompt) LIKE '%activit%' THEN 'activities'
+				WHEN LOWER(li.prompt) LIKE '%discover%' THEN 'discover'
+				WHEN LOWER(li.prompt) LIKE '%nearby%' THEN 'nearby'
+				ELSE 'itinerary' -- default
+			END as domain
+		FROM llm_interactions li
+		WHERE li.user_id = $1 AND li.city_name = $2
+		ORDER BY li.created_at DESC
 		LIMIT 5
 	`
 
@@ -285,6 +306,7 @@ func (r *RepositoryImpl) getCityInteractions(ctx context.Context, userID uuid.UU
 			&interaction.ModelUsed,
 			&interaction.LatencyMs,
 			&interaction.CreatedAt,
+			&interaction.Domain,
 		)
 		if err != nil {
 			r.logger.WarnContext(ctx, "Failed to scan interaction row", slog.Any("error", err))

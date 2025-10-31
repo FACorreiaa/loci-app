@@ -29,8 +29,8 @@ templ ChatPanel(props ChatPanelProps) {
 		</button>
 		<!-- Chat Panel -->
 		<div
-			x-data="{ messages: [] }"
-			x-show="showChat"
+			x-data="{ messages: [], message: '', isLoading: false }"
+		x-show="showChat"
 			x-transition:enter="transition ease-out duration-300"
 			x-transition:enter-start="opacity-0 transform translate-y-4"
 			x-transition:enter-end="opacity-1 transform translate-y-0"
@@ -103,8 +103,7 @@ templ ChatPanel(props ChatPanelProps) {
 			<!-- Input Area -->
 			<div class="p-4 border-t border-gray-200 dark:border-gray-700">
 				<form
-					x-data="{ message: '', isLoading: false }"
-					hx-post={ fmt.Sprintf("/chat/continue/%s", props.SessionID) }
+						hx-post={ fmt.Sprintf("/chat/continue/%s", props.SessionID) }
 					hx-ext="sse"
 					hx-target="#chat-messages"
 					hx-swap="beforeend"
@@ -133,7 +132,7 @@ templ ChatPanel(props ChatPanelProps) {
 						type="text"
 						name="message"
 						x-model="message"
-						:placeholder={ fmt.Sprintf("props.Placeholder || 'Ask to add more %s...'", props.Domain) }
+						placeholder={ props.Placeholder }
 						class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm"
 						required
 						@keydown.enter="if (!$event.shiftKey) { $event.target.closest('form').requestSubmit(); }"
@@ -152,7 +151,7 @@ templ ChatPanel(props ChatPanelProps) {
 				<!-- Quick Actions -->
 				<div class="mt-2 flex flex-wrap gap-2">
 					<button
-						@click="message = 'Add more ' + '{ props.Domain }' + ' similar to these'"
+						@click={ fmt.Sprintf("message = 'Add more %s similar to these'", props.Domain) }
 						class="text-xs px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full transition-colors"
 					>
 						✨ More like these
