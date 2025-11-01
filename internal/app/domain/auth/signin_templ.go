@@ -9,12 +9,12 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	button "github.com/FACorreiaa/go-templui/interal/app/components/button"
-	card "github.com/FACorreiaa/go-templui/interal/app/components/card"
-	checkbox "github.com/FACorreiaa/go-templui/interal/app/components/checkbox"
-	input "github.com/FACorreiaa/go-templui/interal/app/components/input"
-	label "github.com/FACorreiaa/go-templui/interal/app/components/label"
-	separator "github.com/FACorreiaa/go-templui/interal/app/components/separator"
+	button "github.com/FACorreiaa/go-templui/internal/app/components/button"
+	card "github.com/FACorreiaa/go-templui/internal/app/components/card"
+	checkbox "github.com/FACorreiaa/go-templui/internal/app/components/checkbox"
+	input "github.com/FACorreiaa/go-templui/internal/app/components/input"
+	label "github.com/FACorreiaa/go-templui/internal/app/components/label"
+	separator "github.com/FACorreiaa/go-templui/internal/app/components/separator"
 )
 
 func SignIn() templ.Component {

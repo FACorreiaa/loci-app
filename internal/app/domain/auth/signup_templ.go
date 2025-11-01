@@ -9,8 +9,8 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	button "github.com/FACorreiaa/go-templui/interal/app/components/button"
-	card "github.com/FACorreiaa/go-templui/interal/app/components/card"
+	button "github.com/FACorreiaa/go-templui/internal/app/components/button"
+	card "github.com/FACorreiaa/go-templui/internal/app/components/card"
 )
 
 func SignUp() templ.Component {
