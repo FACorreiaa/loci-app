@@ -31,11 +31,18 @@ var _ Service = (*ServiceImpl)(nil)
 
 // Service defines the business logic contract for POI operations.
 type Service interface {
+	// Favourites methods
 	AddPoiToFavourites(ctx context.Context, userID, poiID uuid.UUID, isLLMGenerated bool) (uuid.UUID, error)
 	RemovePoiFromFavourites(ctx context.Context, userID, poiID uuid.UUID, isLLMGenerated bool) error
 	GetFavouritePOIsByUserID(ctx context.Context, userID uuid.UUID) ([]models.POIDetailedInfo, error)
 	GetFavouritePOIsByUserIDPaginated(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.POIDetailedInfo, int, error)
+	GetFavouritesFiltered(ctx context.Context, filter models.FavouritesFilter) ([]models.POIDetailedInfo, int, error)
 	GetPOIsByCityID(ctx context.Context, cityID uuid.UUID) ([]models.POIDetailedInfo, error)
+
+	// Bookmarks methods
+	AddItineraryToBookmarks(ctx context.Context, userID, itineraryID uuid.UUID) (uuid.UUID, error)
+	RemoveItineraryFromBookmarks(ctx context.Context, userID, itineraryID uuid.UUID) error
+	GetBookmarksFiltered(ctx context.Context, filter models.BookmarksFilter) ([]models.SavedItinerary, int, error)
 
 	// SearchPOIs Traditional search
 	SearchPOIs(ctx context.Context, filter models.POIFilter) ([]models.POIDetailedInfo, error)
@@ -217,6 +224,35 @@ func (s *ServiceImpl) GetFavouritePOIsByUserIDPaginated(ctx context.Context, use
 	}
 	return pois, total, nil
 }
+
+// GetFavouritesFiltered retrieves favourites with search and filter support
+func (s *ServiceImpl) GetFavouritesFiltered(ctx context.Context, filter models.FavouritesFilter) ([]models.POIDetailedInfo, int, error) {
+	// Set default pagination if not provided
+	if filter.Limit <= 0 {
+		filter.Limit = 20
+	}
+	if filter.Offset < 0 {
+		filter.Offset = 0
+	}
+
+	pois, total, err := s.poiRepository.GetFavouritesFiltered(ctx, filter)
+	if err != nil {
+		s.logger.Error("failed to get filtered favourites",
+			"userID", filter.UserID.String(),
+			"search", filter.SearchText,
+			"category", filter.Category,
+			"error", err)
+		return nil, 0, err
+	}
+
+	s.logger.Info("Retrieved filtered favourites",
+		"userID", filter.UserID.String(),
+		"count", len(pois),
+		"total", total)
+
+	return pois, total, nil
+}
+
 func (s *ServiceImpl) GetPOIsByCityID(ctx context.Context, cityID uuid.UUID) ([]models.POIDetailedInfo, error) {
 	pois, err := s.poiRepository.GetPOIsByCityID(ctx, cityID)
 	if err != nil {
@@ -314,6 +350,26 @@ func (s *ServiceImpl) UpdateItinerary(ctx context.Context, userID, itineraryID u
 
 	span.SetStatus(codes.Ok, "Itinerary updated")
 	return updatedItinerary, nil
+}
+
+func (s *ServiceImpl) AddItineraryToBookmarks(ctx context.Context, userID, itineraryID uuid.UUID) (uuid.UUID, error) {
+	_, span := otel.Tracer("LlmInteractionService").Start(ctx, "AddItineraryToBookmarks", trace.WithAttributes(
+		attribute.String("user.id", userID.String()),
+		attribute.String("itinerary.id", itineraryID.String()),
+	))
+	defer span.End()
+
+	s.logger.DebugContext(ctx, "Service: Adding itinerary to bookmarks", slog.String("userID", userID.String()), slog.String("itineraryID", itineraryID.String()))
+
+	bookmarkID, err := s.poiRepository.AddItineraryToBookmarks(ctx, userID, itineraryID)
+	if err != nil {
+		s.logger.ErrorContext(ctx, "Repository failed to add itinerary to bookmarks", slog.Any("error", err))
+		span.RecordError(err)
+		return uuid.Nil, err
+	}
+
+	span.SetStatus(codes.Ok, "Itinerary added to bookmarks")
+	return bookmarkID, nil
 }
 
 // SearchPOIsSemantic performs semantic search for POIs using natural language queries
@@ -1926,4 +1982,74 @@ func (s *ServiceImpl) getGeneralAttractionsByDistance(wg *sync.WaitGroup,
 		Prompt:     prompt,
 		Response:   cleanTxt,
 	}
+}
+
+// AddItineraryToBookmarks adds an itinerary to the user's bookmarks
+// RemoveItineraryFromBookmarks removes an itinerary from the user's bookmarks
+func (s *ServiceImpl) RemoveItineraryFromBookmarks(ctx context.Context, userID, itineraryID uuid.UUID) error {
+	ctx, span := otel.Tracer("poi-service").Start(ctx, "RemoveItineraryFromBookmarks")
+	defer span.End()
+
+	err := s.poiRepository.RemoveItineraryFromBookmarks(ctx, userID, itineraryID)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		s.logger.Error("Failed to remove itinerary from bookmarks",
+			slog.String("user_id", userID.String()),
+			slog.String("itinerary_id", itineraryID.String()),
+			slog.Any("error", err))
+		return fmt.Errorf("failed to remove itinerary from bookmarks: %w", err)
+	}
+
+	span.SetAttributes(
+		attribute.String("user.id", userID.String()),
+		attribute.String("itinerary.id", itineraryID.String()),
+	)
+	span.SetStatus(codes.Ok, "Bookmark removed successfully")
+
+	s.logger.Info("Itinerary removed from bookmarks",
+		slog.String("user_id", userID.String()),
+		slog.String("itinerary_id", itineraryID.String()))
+
+	return nil
+}
+
+// GetBookmarksFiltered retrieves bookmarked itineraries with search and filter support
+func (s *ServiceImpl) GetBookmarksFiltered(ctx context.Context, filter models.BookmarksFilter) ([]models.SavedItinerary, int, error) {
+	ctx, span := otel.Tracer("poi-service").Start(ctx, "GetBookmarksFiltered")
+	defer span.End()
+
+	// Set default pagination if not provided
+	if filter.Limit <= 0 {
+		filter.Limit = 20
+	}
+	if filter.Offset < 0 {
+		filter.Offset = 0
+	}
+
+	itineraries, total, err := s.poiRepository.GetBookmarksFiltered(ctx, filter)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		s.logger.Error("Failed to get filtered bookmarks",
+			slog.String("user_id", filter.UserID.String()),
+			slog.Any("error", err))
+		return nil, 0, fmt.Errorf("failed to get bookmarks: %w", err)
+	}
+
+	span.SetAttributes(
+		attribute.String("user.id", filter.UserID.String()),
+		attribute.Int("bookmarks.total", total),
+		attribute.Int("bookmarks.returned", len(itineraries)),
+		attribute.String("filter.search_text", filter.SearchText),
+		attribute.String("filter.sort_by", filter.SortBy),
+	)
+	span.SetStatus(codes.Ok, "Bookmarks retrieved successfully")
+
+	s.logger.Info("Retrieved filtered bookmarks",
+		slog.String("user_id", filter.UserID.String()),
+		slog.Int("total", total),
+		slog.Int("returned", len(itineraries)))
+
+	return itineraries, total, nil
 }

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"time"
 
 	"github.com/a-h/templ"
 	"github.com/google/uuid"
@@ -18,6 +19,7 @@ import (
 	llmchat "github.com/FACorreiaa/go-templui/app/pkg/domain/chat_prompt"
 	cityPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/city"
 	interestsPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/interests"
+	locationPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/location"
 	poiPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/poi"
 	profilesPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/profiles"
 	recentsPkg "github.com/FACorreiaa/go-templui/app/pkg/domain/recents"
@@ -164,6 +166,10 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	filterHandlers := h.NewFilterHandlers(logger.Log.Sugar())
 	recentsHandlers := h.NewRecentsHandlers(recentsService, log)
 
+	// Initialize location repository for nearby feature
+	locationRepo := locationPkg.NewRepository(dbPool)
+	nearbyHandler := h.NewNearbyHandler(slog.Default(), chatService, locationRepo)
+
 	// Public routes (with optional auth)
 	r.GET("/", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
 		logger.Log.Info("Landing page accessed",
@@ -288,6 +294,35 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 			User:      getUserFromContext(c),
 		}))
 	})
+
+	// WebSocket endpoint for real-time nearby POI updates
+	// Configure JWT authentication (optional - allows anonymous users)
+	jwtSecret := os.Getenv("JWT_SECRET_KEY")
+	if jwtSecret == "" {
+		jwtSecret = "default-secret-key-change-in-production-min-32-chars"
+		slog.Warn("JWT_SECRET_KEY not set, using default (INSECURE - set environment variable in production)")
+	}
+
+	jwtConfig := middleware.JWTConfig{
+		SecretKey:       jwtSecret,
+		TokenExpiration: 24 * time.Hour,
+		Logger:          slog.Default(),
+		Optional:        true, // Allow both authenticated and anonymous users
+	}
+
+	// Configure rate limiting for WebSocket connections
+	wsRateLimiter := middleware.NewRateLimiter(
+		slog.Default(),
+		10,              // Max 10 WebSocket connections
+		1*time.Minute,   // Per minute
+	)
+
+	// Apply middleware: JWT auth (optional) + rate limiting
+	r.GET("/ws/nearby",
+		middleware.JWTAuthMiddleware(jwtConfig),
+		middleware.WebSocketRateLimitMiddleware(wsRateLimiter),
+		nearbyHandler.HandleWebSocket,
+	)
 
 	// Auth routes
 	authGroup := r.Group("/auth")
@@ -574,7 +609,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 			logger.Log.Info("Favorites page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Favorites - Loci",
-				Content: favorites.FavoritesPage(),
+				Content: favorites.FavoritesPage(favorites.FavoritesPageData{}),
 				Nav: models.Navigation{
 					Items: []models.NavItem{
 						{Name: "Dashboard", URL: "/dashboard"},
@@ -807,34 +842,47 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 
 	// API routes (JSON endpoints for settings UI)
 	apiGroup := r.Group("/api")
-	apiGroup.Use(middleware.AuthMiddleware())
 	{
-		// Profiles endpoints
-		profilesGroup := apiGroup.Group("/profiles")
+		// Auth token endpoints (public - for development/testing)
+		authTokenHandler := h.NewAuthTokenHandler(slog.Default(), jwtConfig)
+		authGroup := apiGroup.Group("/auth")
 		{
-			profilesGroup.GET("", profilesHandlers.GetProfiles)
-			profilesGroup.POST("", profilesHandlers.CreateProfile)
-			profilesGroup.GET("/:id", profilesHandlers.GetProfile)
-			profilesGroup.PUT("/:id", profilesHandlers.UpdateProfile)
-			profilesGroup.DELETE("/:id", profilesHandlers.DeleteProfile)
-			profilesGroup.PUT("/:id/default", profilesHandlers.SetDefaultProfile)
+			authGroup.POST("/token", authTokenHandler.GenerateToken)
+			authGroup.GET("/verify", middleware.JWTAuthMiddleware(jwtConfig), authTokenHandler.VerifyToken)
+			authGroup.GET("/example", authTokenHandler.GetTokenExample)
 		}
 
-		// Interests endpoints
-		interestsGroup := apiGroup.Group("/interests")
+		// Protected API routes
+		protectedAPI := apiGroup.Group("/")
+		protectedAPI.Use(middleware.AuthMiddleware())
 		{
-			interestsGroup.GET("", interestsHandlers.GetInterests)
-			interestsGroup.POST("", interestsHandlers.CreateInterest)
-			interestsGroup.DELETE("/:id", interestsHandlers.RemoveInterest)
-		}
+			// Profiles endpoints
+			profilesGroup := protectedAPI.Group("/profiles")
+			{
+				profilesGroup.GET("", profilesHandlers.GetProfiles)
+				profilesGroup.POST("", profilesHandlers.CreateProfile)
+				profilesGroup.GET("/:id", profilesHandlers.GetProfile)
+				profilesGroup.PUT("/:id", profilesHandlers.UpdateProfile)
+				profilesGroup.DELETE("/:id", profilesHandlers.DeleteProfile)
+				profilesGroup.PUT("/:id/default", profilesHandlers.SetDefaultProfile)
+			}
 
-		// Tags endpoints
-		tagsGroup := apiGroup.Group("/tags")
-		{
-			tagsGroup.GET("", tagsHandlers.GetTags)
-			tagsGroup.POST("", tagsHandlers.CreateTag)
-			tagsGroup.PUT("/:id", tagsHandlers.UpdateTag)
-			tagsGroup.DELETE("/:id", tagsHandlers.DeleteTag)
+			// Interests endpoints
+			interestsGroup := protectedAPI.Group("/interests")
+			{
+				interestsGroup.GET("", interestsHandlers.GetInterests)
+				interestsGroup.POST("", interestsHandlers.CreateInterest)
+				interestsGroup.DELETE("/:id", interestsHandlers.RemoveInterest)
+			}
+
+			// Tags endpoints
+			tagsGroup := protectedAPI.Group("/tags")
+			{
+				tagsGroup.GET("", tagsHandlers.GetTags)
+				tagsGroup.POST("", tagsHandlers.CreateTag)
+				tagsGroup.PUT("/:id", tagsHandlers.UpdateTag)
+				tagsGroup.DELETE("/:id", tagsHandlers.DeleteTag)
+			}
 		}
 	}
 

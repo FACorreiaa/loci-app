@@ -1127,13 +1127,13 @@ This could be due to the 13.1 error or the chat not having the chat sessionID bu
 14. Similar to Discover, I have a new view called nearby. The nearby should update new views when user locations changes without the user needing to update this. 
 Use websockets, htmx and whatever needed. The idea is the user to be able to walk, and when the coordinates of the user changes, the AI generates new points of interest around the user dynamically.
 Elaborate on the effort for this and build the UI and Service logic. go to go-ai-poi-server (cd ..), this implementation should be similar to the /discover endpoint on the old api. 
-
+17. Favourites tab should contain all the favourited items from the database. Search and filter by type should work and be implemented. Pagination as well.
+18. Bookmarks tab should contain all the bookmarked itineraries from the database. Search and filter by type should work and be implemented. Pagination as well.
 15. [x] The Recents page should have all the recents itineraries, restaurants, hotels, activities or chats built and should be able to sort by date
 All this data should be available on the Database so for recents only queries and displays should be needed.
 
-16. The chat view should work as it does under go-ai-poi-client and go-ai-poi-server but improved. The chat should be able to return an intent data (restaurant, itinerary, hotel, activity) and upon writing "Add" or "Remove" should add to the current context more points and writing "New" on chat creates a new conversation with the Agent.
-17. Favourites tab should contain all the favourited items from the database. Search and filter by type should work and be implemented. Pagination as well.  
-18. Bookmarks tab should contain all the bookmarked itineraries from the database. Search and filter by type should work and be implemented. Pagination as well. 
+16. The chat (/chatcontinue) view should work as it does under go-ai-poi-client and go-ai-poi-server but improved. The chat should be able to return an intent data (restaurant, itinerary, hotel, activity) and upon writing "Add" or "Remove" should add to the current context more points and writing "New" on chat creates a new conversation with the Agent.
+
 19. Lists should also work as it does under go-ai-poi-client and go-ai-poi-server. On a list an user should be able to create a new one and be able to add diverse activities already searched from the database. 
 To discuss: A list should be a mix of itineraries, hotels, activities and restaurants or only itineraries?
 20. The settings page should be working like go-ai-poi-client and go-ai-poi-server saving on the database the data from the tabs:
@@ -1993,7 +1993,7 @@ func CallGeminiAndLog(ctx context.Context, client *generativelanguage.Client, re
 ```
 
 
-35. My current Travel preferences under my settings seem to simplistic. Add more options based on what is already done on the database
+35. [x] My current Travel preferences under my settings seem to simplistic. Add more options based on what is already done on the database
 35.1 When I make a search on the main page, it goes to the intended results (restaurants, hotels, etc), but if I click on the home button and try to search somethign again, it will not work. I have to refresh the page to have LLM calls again.
 36. Add functionality to pause and resume between chat streams and llm searches:
     To add "Stop" and "Resume" functionality to LLM calls using Go with the Gemini SDK (specifically `cloud.google.com/go/ai/generativelanguage/apiv1beta`), you'll need to switch from the synchronous `GenerateContent` method to the streaming `StreamGenerateContent` method. This allows for incremental response handling, which is key for interruption. The synchronous call doesn't provide partial results easily, making true stop/resume challenging without streaming.

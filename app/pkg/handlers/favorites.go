@@ -2,11 +2,14 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/FACorreiaa/go-templui/app/internal/features/favorites"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
 	"github.com/FACorreiaa/go-templui/app/pkg/domain/poi"
 	"github.com/FACorreiaa/go-templui/app/pkg/logger"
 	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
@@ -171,4 +174,79 @@ func (h *FavoritesHandlers) SearchFavorites(c *gin.Context) {
 	// In real app, search database and return filtered results
 	// For now, return empty grid
 	c.HTML(http.StatusOK, "", `<div class="text-center py-8 text-muted-foreground">No results found for "`+query+`"</div>`)
+}
+
+// ListFavorites displays the favourites list page with search, filter, and pagination
+func (h *FavoritesHandlers) ListFavorites(c *gin.Context) {
+	userIDStr := middleware.GetUserIDFromContext(c)
+	if userIDStr == "" || userIDStr == "anonymous" {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		logger.Log.Error("Invalid user ID", zap.String("user_id", userIDStr), zap.Error(err))
+		c.HTML(http.StatusBadRequest, "", `<div class="text-red-500">Invalid user ID</div>`)
+		return
+	}
+
+	// Parse query parameters
+	searchText := c.Query("search")
+	category := c.Query("category")
+	sortBy := c.DefaultQuery("sort_by", "added_at")
+	sortOrder := c.DefaultQuery("sort_order", "desc")
+
+	page := 1
+	if pageStr := c.Query("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+
+	pageSize := 20
+	if pageSizeStr := c.Query("page_size"); pageSizeStr != "" {
+		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 && ps <= 100 {
+			pageSize = ps
+		}
+	}
+
+	// Build filter
+	filter := models.FavouritesFilter{
+		UserID:     userID,
+		SearchText: searchText,
+		Category:   category,
+		SortBy:     sortBy,
+		SortOrder:  sortOrder,
+		Limit:      pageSize,
+		Offset:     (page - 1) * pageSize,
+	}
+
+	// Get filtered favourites
+	pois, total, err := h.poiService.GetFavouritesFiltered(c.Request.Context(), filter)
+	if err != nil {
+		logger.Log.Error("Failed to get favourites", zap.Error(err))
+		c.HTML(http.StatusInternalServerError, "", `<div class="text-red-500">Failed to load favourites</div>`)
+		return
+	}
+
+	// Calculate pagination info
+	totalPages := (total + pageSize - 1) / pageSize
+
+	// Prepare data for template
+	data := favorites.FavoritesPageData{
+		POIs:       pois,
+		Total:      total,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalPages: totalPages,
+		SearchText: searchText,
+		Category:   category,
+		SortBy:     sortBy,
+		SortOrder:  sortOrder,
+	}
+
+	// Render the favourites list page using templ
+	c.Writer.Header().Set("Content-Type", "text/html; charset=utf-8")
+	favorites.FavoritesPage(data).Render(c.Request.Context(), c.Writer)
 }

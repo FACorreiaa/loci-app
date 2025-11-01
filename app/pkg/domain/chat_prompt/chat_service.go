@@ -3227,3 +3227,26 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 		}
 	}
 }
+
+// GenerateNearbyPOIs generates POI recommendations based on location coordinates
+func (l *ServiceImpl) GenerateNearbyPOIs(ctx context.Context, prompt string, config *genai.GenerateContentConfig) (string, error) {
+	response, err := l.aiClient.GenerateResponse(ctx, prompt, config)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate nearby POIs: %w", err)
+	}
+
+	// Extract text from response
+	var txt string
+	for _, candidate := range response.Candidates {
+		if candidate.Content != nil && len(candidate.Content.Parts) > 0 {
+			txt = candidate.Content.Parts[0].Text
+			break
+		}
+	}
+
+	if txt == "" {
+		return "", fmt.Errorf("no valid content from AI")
+	}
+
+	return txt, nil
+}

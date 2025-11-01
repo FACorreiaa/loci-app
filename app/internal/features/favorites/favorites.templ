@@ -1,6 +1,24 @@
 package favorites
 
-templ FavoritesPage() {
+import (
+	"fmt"
+	"strconv"
+	"github.com/FACorreiaa/go-templui/app/internal/models"
+)
+
+type FavoritesPageData struct {
+	POIs        []models.POIDetailedInfo
+	Total       int
+	Page        int
+	PageSize    int
+	TotalPages  int
+	SearchText  string
+	Category    string
+	SortBy      string
+	SortOrder   string
+}
+
+templ FavoritesPage(data FavoritesPageData) {
 	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
 			<!-- Header -->
@@ -14,112 +32,123 @@ templ FavoritesPage() {
 						</div>
 						<div>
 							<h1 class="text-2xl font-bold text-foreground">Your Favorites</h1>
-							<p class="text-muted-foreground">Places you've loved and want to remember</p>
+							<p class="text-muted-foreground">{ strconv.Itoa(data.Total) } places you've loved and want to remember</p>
 						</div>
 					</div>
 					<div class="flex items-center gap-3">
-						<!-- Search -->
-						<div class="relative">
-							<input
-								type="text"
-								placeholder="Search favorites..."
-								class="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background"
-								hx-post="/favorites/search"
-								hx-trigger="input changed delay:300ms"
-								hx-target="#favorites-grid"
-							/>
-							<svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-							</svg>
-						</div>
-						<!-- Filter -->
-						<select class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background">
-							<option value="">All Types</option>
-							<option value="restaurant">Restaurants</option>
-							<option value="hotel">Hotels</option>
-							<option value="activity">Activities</option>
-							<option value="attraction">Attractions</option>
-						</select>
-					</div>
-				</div>
-				<!-- Stats -->
-				<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-					<div class="bg-card rounded-xl p-4 border">
-						<div class="flex items-center justify-between">
-							<div>
-								<p class="text-sm text-muted-foreground">Total Favorites</p>
-								<p class="text-2xl font-bold text-card-foreground">42</p>
+						<form method="get" action="/favorites" class="flex items-center gap-3">
+							<!-- Search -->
+							<div class="relative">
+								<input
+									type="text"
+									name="search"
+									value={ data.SearchText }
+									placeholder="Search favorites..."
+									class="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background"
+								/>
+								<svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+								</svg>
 							</div>
-							<svg class="w-8 h-8 text-red-500 fill-current" fill="currentColor" viewBox="0 0 24 24">
-								<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-							</svg>
-						</div>
-					</div>
-					<div class="bg-card rounded-xl p-4 border">
-						<div class="flex items-center justify-between">
-							<div>
-								<p class="text-sm text-muted-foreground">Restaurants</p>
-								<p class="text-2xl font-bold text-card-foreground">18</p>
-							</div>
-							<svg class="w-8 h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"></path>
-							</svg>
-						</div>
-					</div>
-					<div class="bg-card rounded-xl p-4 border">
-						<div class="flex items-center justify-between">
-							<div>
-								<p class="text-sm text-muted-foreground">Activities</p>
-								<p class="text-2xl font-bold text-card-foreground">15</p>
-							</div>
-							<svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
-							</svg>
-						</div>
-					</div>
-					<div class="bg-card rounded-xl p-4 border">
-						<div class="flex items-center justify-between">
-							<div>
-								<p class="text-sm text-muted-foreground">Hotels</p>
-								<p class="text-2xl font-bold text-card-foreground">9</p>
-							</div>
-							<svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-							</svg>
-						</div>
+							<!-- Category Filter -->
+							<select name="category" class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background" onchange="this.form.submit()">
+								<option value="" selected?={ data.Category == "" }>All Types</option>
+								<option value="restaurant" selected?={ data.Category == "restaurant" }>Restaurants</option>
+								<option value="hotel" selected?={ data.Category == "hotel" }>Hotels</option>
+								<option value="activity" selected?={ data.Category == "activity" }>Activities</option>
+								<option value="attraction" selected?={ data.Category == "attraction" }>Attractions</option>
+								<option value="museum" selected?={ data.Category == "museum" }>Museums</option>
+							</select>
+							<!-- Sort By -->
+							<select name="sort_by" class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background" onchange="this.form.submit()">
+								<option value="added_at" selected?={ data.SortBy == "added_at" || data.SortBy == "" }>Recently Added</option>
+								<option value="name" selected?={ data.SortBy == "name" }>Name</option>
+								<option value="rating" selected?={ data.SortBy == "rating" }>Rating</option>
+							</select>
+							<!-- Sort Order -->
+							<input type="hidden" name="sort_order" value={ data.SortOrder }/>
+							<input type="hidden" name="page" value={ strconv.Itoa(data.Page) }/>
+							<button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+								Search
+							</button>
+						</form>
 					</div>
 				</div>
 			</div>
 			<!-- Favorites Grid -->
-			<div id="favorites-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-				@FavoriteCard("Restaurant", "Pastéis de Belém", "Belém, Lisbon", "Authentic Portuguese pastries in a historic setting", "🍰", "restaurant")
-				@FavoriteCard("Activity", "Fado Performance at Alfama", "Alfama, Lisbon", "Traditional Portuguese music in the historic neighborhood", "🎵", "activity")
-				@FavoriteCard("Hotel", "Pestana Palace Lisboa", "Lisbon", "Luxury hotel in a restored 19th-century palace", "🏰", "hotel")
-				@FavoriteCard("Restaurant", "Ramiro", "Intendente, Lisbon", "Famous seafood spot known for percebes and prawns", "🦐", "restaurant")
-				@FavoriteCard("Activity", "Jerónimos Monastery", "Belém, Lisbon", "UNESCO World Heritage site with stunning Manueline architecture", "⛪", "activity")
-				@FavoriteCard("Restaurant", "Time Out Market", "Cais do Sodré, Lisbon", "Food hall featuring the city's best chefs and restaurants", "🍽️", "restaurant")
-			</div>
+			if len(data.POIs) == 0 {
+				<div class="text-center py-12">
+					<svg class="w-16 h-16 mx-auto text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+					</svg>
+					<h3 class="text-lg font-medium text-foreground mb-2">No favorites yet</h3>
+					<p class="text-muted-foreground">Start exploring and add places you love to your favorites!</p>
+				</div>
+			} else {
+				<div id="favorites-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+					for _, poi := range data.POIs {
+						@FavoriteCardFromPOI(poi)
+					}
+				</div>
+				<!-- Pagination -->
+				if data.TotalPages > 1 {
+					<div class="flex justify-center items-center gap-2 mt-8">
+						if data.Page > 1 {
+							<a
+								href={ templ.URL(fmt.Sprintf("/favorites?page=%d&search=%s&category=%s&sort_by=%s&sort_order=%s", data.Page-1, data.SearchText, data.Category, data.SortBy, data.SortOrder)) }
+								class="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+							>
+								Previous
+							</a>
+						}
+						for i := 1; i <= data.TotalPages; i++ {
+							if i == data.Page {
+								<span class="px-4 py-2 bg-blue-600 text-white rounded-lg">{ strconv.Itoa(i) }</span>
+							} else {
+								<a
+									href={ templ.URL(fmt.Sprintf("/favorites?page=%d&search=%s&category=%s&sort_by=%s&sort_order=%s", i, data.SearchText, data.Category, data.SortBy, data.SortOrder)) }
+									class="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+								>
+									{ strconv.Itoa(i) }
+								</a>
+							}
+						}
+						if data.Page < data.TotalPages {
+							<a
+								href={ templ.URL(fmt.Sprintf("/favorites?page=%d&search=%s&category=%s&sort_by=%s&sort_order=%s", data.Page+1, data.SearchText, data.Category, data.SortBy, data.SortOrder)) }
+								class="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+							>
+								Next
+							</a>
+						}
+					</div>
+				}
+			}
 		</div>
 	</div>
 }
 
-templ FavoriteCard(category string, title string, location string, description string, emoji string, cardType string) {
+templ FavoriteCardFromPOI(poi models.POIDetailedInfo) {
 	<div class="bg-card rounded-xl shadow-sm border hover:shadow-md transition-shadow group cursor-pointer">
 		<div class="p-6">
 			<div class="flex items-start justify-between mb-4">
 				<div class="flex items-center gap-3">
-					<span class="text-3xl">{ emoji }</span>
+					<div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center text-white font-bold">
+						{ poi.Category[:1] }
+					</div>
 					<span
 						class={ "inline-flex items-center px-3 py-1 rounded-full text-sm font-medium",
-						templ.KV("bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300", cardType == "restaurant"),
-						templ.KV("bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300", cardType == "activity"),
-						templ.KV("bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300", cardType == "hotel") }
+						templ.KV("bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300", poi.Category == "restaurant"),
+						templ.KV("bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300", poi.Category == "activity"),
+						templ.KV("bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300", poi.Category == "hotel"),
+						templ.KV("bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300", poi.Category == "attraction"),
+						templ.KV("bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300", poi.Category == "museum") }
 					>
-						{ category }
+						{ poi.Category }
 					</span>
 				</div>
 				<button
-					hx-delete={ "/favorites/" + title }
+					hx-delete={ "/favorites/" + poi.ID.String() }
 					hx-confirm="Remove from favorites?"
 					hx-target="closest .bg-card"
 					hx-swap="outerHTML"
@@ -132,26 +161,38 @@ templ FavoriteCard(category string, title string, location string, description s
 			</div>
 			<div class="space-y-3">
 				<h3 class="font-semibold text-card-foreground group-hover:text-blue-600 transition-colors">
-					{ title }
+					{ poi.Name }
 				</h3>
 				<div class="flex items-center gap-2 text-sm text-muted-foreground">
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
 					</svg>
-					{ location }
+					{ poi.Address }
 				</div>
-				<p class="text-muted-foreground text-sm">
-					{ description }
-				</p>
+				if poi.Rating > 0 {
+					<div class="flex items-center gap-1">
+						<svg class="w-4 h-4 text-yellow-500 fill-current" fill="currentColor" viewBox="0 0 24 24">
+							<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+						</svg>
+						<span class="text-sm font-medium">{ fmt.Sprintf("%.1f", poi.Rating) }</span>
+					</div>
+				}
+				if poi.DescriptionPOI != "" {
+					<p class="text-muted-foreground text-sm line-clamp-2">
+						{ poi.DescriptionPOI }
+					</p>
+				}
 			</div>
 			<div class="flex items-center justify-between mt-4 pt-4 border-t border-border">
-				<button class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+				<a href={ templ.URL("/poi/" + poi.ID.String()) } class="text-blue-600 hover:text-blue-700 text-sm font-medium">
 					View Details
-				</button>
-				<button class="text-muted-foreground hover:text-foreground text-sm">
-					Share
-				</button>
+				</a>
+				if poi.Website != "" {
+					<a href={ templ.URL(poi.Website) } target="_blank" class="text-muted-foreground hover:text-foreground text-sm">
+						Website
+					</a>
+				}
 			</div>
 		</div>
 	</div>

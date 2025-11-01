@@ -45,7 +45,13 @@ type Repository interface {
 	FindLLMPOIByName(ctx context.Context, name string) (uuid.UUID, error)
 	GetFavouritePOIsByUserID(ctx context.Context, userID uuid.UUID) ([]models.POIDetailedInfo, error)
 	GetFavouritePOIsByUserIDPaginated(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.POIDetailedInfo, int, error)
+	GetFavouritesFiltered(ctx context.Context, filter models.FavouritesFilter) ([]models.POIDetailedInfo, int, error)
 	GetPOIsByCityID(ctx context.Context, cityID uuid.UUID) ([]models.POIDetailedInfo, error)
+
+	// Bookmarks methods
+	AddItineraryToBookmarks(ctx context.Context, userID, itineraryID uuid.UUID) (uuid.UUID, error)
+	RemoveItineraryFromBookmarks(ctx context.Context, userID, itineraryID uuid.UUID) error
+	GetBookmarksFiltered(ctx context.Context, filter models.BookmarksFilter) ([]models.SavedItinerary, int, error)
 
 	// POI details
 	FindPOIDetails(ctx context.Context, cityID uuid.UUID, lat, lon float64, tolerance float64) (*models.POIDetailedInfo, error)
@@ -587,6 +593,218 @@ LIMIT $2 OFFSET $3;
 		slog.Int("total", totalCount),
 		slog.Int("limit", limit),
 		slog.Int("offset", offset))
+	return pois, totalCount, nil
+}
+
+// GetFavouritesFiltered retrieves favourites with search and filter support
+func (r *RepositoryImpl) GetFavouritesFiltered(ctx context.Context, filter models.FavouritesFilter) ([]models.POIDetailedInfo, int, error) {
+	// Build WHERE clause based on filters
+	var whereClauses []string
+	var args []interface{}
+	argIdx := 1
+
+	// Add user filter
+	whereClauses = append(whereClauses, fmt.Sprintf("user_id = $%d", argIdx))
+	args = append(args, filter.UserID)
+	argIdx++
+
+	// Build search filter if provided
+	searchFilter := ""
+	if filter.SearchText != "" {
+		searchFilter = fmt.Sprintf("AND (LOWER(name) LIKE LOWER($%d) OR LOWER(description_poi) LIKE LOWER($%d))", argIdx, argIdx)
+		args = append(args, "%"+filter.SearchText+"%")
+		argIdx++
+	}
+
+	// Build category filter if provided
+	categoryFilter := ""
+	if filter.Category != "" {
+		categoryFilter = fmt.Sprintf("AND LOWER(category) = LOWER($%d)", argIdx)
+		args = append(args, filter.Category)
+		argIdx++
+	}
+
+	// Build sort clause
+	sortBy := "added_at"
+	if filter.SortBy != "" {
+		switch filter.SortBy {
+		case "name", "rating", "added_at":
+			sortBy = filter.SortBy
+		}
+	}
+	sortOrder := "DESC"
+	if filter.SortOrder == "asc" {
+		sortOrder = "ASC"
+	}
+
+	// Count query
+	countQuery := fmt.Sprintf(`
+		SELECT COUNT(*) FROM (
+			SELECT 1 FROM user_favorite_pois ufp
+			INNER JOIN points_of_interest poi ON ufp.poi_id = poi.id
+			WHERE %s %s %s
+
+			UNION ALL
+
+			SELECT 1 FROM user_favorite_llm_pois uflp
+			INNER JOIN llm_suggested_pois llmsp ON uflp.llm_poi_id = llmsp.id
+			WHERE %s %s %s
+		) combined_count
+	`, whereClauses[0], searchFilter, categoryFilter, whereClauses[0], searchFilter, categoryFilter)
+
+	var totalCount int
+	err := r.pgpool.QueryRow(ctx, countQuery, args...).Scan(&totalCount)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count filtered favourites: %w", err)
+	}
+
+	// Main query with pagination
+	query := fmt.Sprintf(`
+		SELECT
+			favorite_id,
+			notes,
+			added_at,
+			id,
+			name,
+			longitude,
+			latitude,
+			category,
+			description_poi,
+			address,
+			website,
+			phone_number,
+			opening_hours,
+			rating,
+			price_level,
+			poi_source
+		FROM (
+			SELECT
+				ufp.id as favorite_id,
+				ufp.notes,
+				ufp.added_at,
+				poi.id,
+				poi.name,
+				ST_X(poi.location) AS longitude,
+				ST_Y(poi.location) AS latitude,
+				poi.poi_type AS category,
+				poi.description AS description_poi,
+				poi.address,
+				poi.website,
+				poi.phone_number,
+				poi.opening_hours,
+				poi.average_rating as rating,
+				poi.price_level::text as price_level,
+				'regular' as poi_source
+			FROM user_favorite_pois ufp
+			INNER JOIN points_of_interest poi ON ufp.poi_id = poi.id
+			WHERE %s %s %s
+
+			UNION ALL
+
+			SELECT
+				uflp.id as favorite_id,
+				uflp.notes,
+				uflp.added_at,
+				llmsp.id,
+				llmsp.name,
+				llmsp.longitude,
+				llmsp.latitude,
+				llmsp.category,
+				llmsp.description AS description_poi,
+				llmsp.address,
+				llmsp.website,
+				llmsp.phone_number,
+				llmsp.opening_hours,
+				llmsp.rating,
+				llmsp.price_level,
+				'llm' as poi_source
+			FROM user_favorite_llm_pois uflp
+			INNER JOIN llm_suggested_pois llmsp ON uflp.llm_poi_id = llmsp.id
+			WHERE %s %s %s
+		) combined_favorites
+		ORDER BY %s %s
+		LIMIT $%d OFFSET $%d
+	`, whereClauses[0], searchFilter, categoryFilter,
+		whereClauses[0], searchFilter, categoryFilter,
+		sortBy, sortOrder, argIdx, argIdx+1)
+
+	// Add limit and offset to args
+	args = append(args, filter.Limit, filter.Offset)
+
+	rows, err := r.pgpool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to query filtered favourites: %w", err)
+	}
+	defer rows.Close()
+
+	var pois []models.POIDetailedInfo
+	for rows.Next() {
+		var poi models.POIDetailedInfo
+		var favoriteID uuid.UUID
+		var notes *string
+		var addedAt time.Time
+		var descriptionPOI, address, website, phoneNumber *string
+		var openingHours *string
+		var rating *float64
+		var priceLevel *string
+		var poiSource string
+
+		err := rows.Scan(
+			&favoriteID,     // favorite_id
+			&notes,          // notes
+			&addedAt,        // added_at
+			&poi.ID,         // id
+			&poi.Name,       // name
+			&poi.Longitude,  // longitude
+			&poi.Latitude,   // latitude
+			&poi.Category,   // category
+			&descriptionPOI, // description_poi
+			&address,        // address
+			&website,        // website
+			&phoneNumber,    // phone_number
+			&openingHours,   // opening_hours
+			&rating,         // rating
+			&priceLevel,     // price_level
+			&poiSource,      // poi_source
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to scan filtered favourite POI row: %w", err)
+		}
+
+		// Set optional fields
+		if descriptionPOI != nil {
+			poi.DescriptionPOI = *descriptionPOI
+		}
+		if address != nil {
+			poi.Address = *address
+		}
+		if website != nil {
+			poi.Website = *website
+		}
+		if phoneNumber != nil {
+			poi.PhoneNumber = *phoneNumber
+		}
+		if rating != nil {
+			poi.Rating = *rating
+		}
+		if priceLevel != nil {
+			poi.PriceLevel = *priceLevel
+		}
+
+		pois = append(pois, poi)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("error iterating filtered favourite POI rows: %w", err)
+	}
+
+	r.logger.Info("Filtered favourite POIs retrieved successfully",
+		slog.String("userID", filter.UserID.String()),
+		slog.String("search", filter.SearchText),
+		slog.String("category", filter.Category),
+		slog.Int("count", len(pois)),
+		slog.Int("total", totalCount))
+
 	return pois, totalCount, nil
 }
 
@@ -2691,4 +2909,214 @@ func (r *RepositoryImpl) FindLLMPOIByName(ctx context.Context, name string) (uui
 
 	span.SetAttributes(attribute.String("poi.name", name))
 	return id, nil
+}
+
+// AddItineraryToBookmarks adds an itinerary to the user's bookmarks
+func (r *RepositoryImpl) AddItineraryToBookmarks(ctx context.Context, userID, itineraryID uuid.UUID) (uuid.UUID, error) {
+	ctx, span := otel.Tracer("poi-repository").Start(ctx, "AddItineraryToBookmarks")
+	defer span.End()
+
+	query := `
+		INSERT INTO user_bookmarked_itineraries (user_id, itinerary_id)
+		VALUES ($1, $2)
+		ON CONFLICT (user_id, itinerary_id) DO NOTHING
+		RETURNING id
+	`
+
+	var id uuid.UUID
+	err := r.pgpool.QueryRow(ctx, query, userID, itineraryID).Scan(&id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Already bookmarked - return success
+			span.SetStatus(codes.Ok, "Already bookmarked")
+			return uuid.Nil, nil
+		}
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return uuid.Nil, fmt.Errorf("failed to add itinerary to bookmarks: %w", err)
+	}
+
+	span.SetAttributes(
+		attribute.String("user.id", userID.String()),
+		attribute.String("itinerary.id", itineraryID.String()),
+		attribute.String("bookmark.id", id.String()),
+	)
+	span.SetStatus(codes.Ok, "Bookmark added successfully")
+	return id, nil
+}
+
+// RemoveItineraryFromBookmarks removes an itinerary from the user's bookmarks
+func (r *RepositoryImpl) RemoveItineraryFromBookmarks(ctx context.Context, userID, itineraryID uuid.UUID) error {
+	ctx, span := otel.Tracer("poi-repository").Start(ctx, "RemoveItineraryFromBookmarks")
+	defer span.End()
+
+	query := `
+		DELETE FROM user_bookmarked_itineraries
+		WHERE user_id = $1 AND itinerary_id = $2
+	`
+
+	result, err := r.pgpool.Exec(ctx, query, userID, itineraryID)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("failed to remove itinerary from bookmarks: %w", err)
+	}
+
+	if result.RowsAffected() == 0 {
+		span.SetStatus(codes.Error, "Bookmark not found")
+		return fmt.Errorf("bookmark not found")
+	}
+
+	span.SetAttributes(
+		attribute.String("user.id", userID.String()),
+		attribute.String("itinerary.id", itineraryID.String()),
+	)
+	span.SetStatus(codes.Ok, "Bookmark removed successfully")
+	return nil
+}
+
+// GetBookmarksFiltered retrieves bookmarked itineraries with search and filter support
+func (r *RepositoryImpl) GetBookmarksFiltered(ctx context.Context, filter models.BookmarksFilter) ([]models.SavedItinerary, int, error) {
+	ctx, span := otel.Tracer("poi-repository").Start(ctx, "GetBookmarksFiltered")
+	defer span.End()
+
+	// Build WHERE clause based on filters
+	whereConditions := []string{"ubi.user_id = $1"}
+	args := []interface{}{filter.UserID}
+	argCounter := 2
+
+	// Search filter
+	if filter.SearchText != "" {
+		whereConditions = append(whereConditions, fmt.Sprintf("(usi.title ILIKE $%d OR c.name ILIKE $%d)", argCounter, argCounter))
+		args = append(args, "%"+filter.SearchText+"%")
+		argCounter++
+	}
+
+	whereClause := strings.Join(whereConditions, " AND ")
+
+	// Determine sort column
+	sortColumn := "ubi.bookmarked_at"
+	switch filter.SortBy {
+	case "title":
+		sortColumn = "usi.title"
+	case "city_name":
+		sortColumn = "c.name"
+	case "created_at":
+		sortColumn = "usi.created_at"
+	default:
+		sortColumn = "ubi.bookmarked_at"
+	}
+
+	// Determine sort order
+	sortOrder := "DESC"
+	if filter.SortOrder == "asc" {
+		sortOrder = "ASC"
+	}
+
+	// Count query
+	countQuery := fmt.Sprintf(`
+		SELECT COUNT(DISTINCT ubi.id)
+		FROM user_bookmarked_itineraries ubi
+		JOIN user_saved_itineraries usi ON ubi.itinerary_id = usi.id
+		LEFT JOIN cities c ON usi.primary_city_id = c.id
+		WHERE %s
+	`, whereClause)
+
+	var total int
+	err := r.pgpool.QueryRow(ctx, countQuery, args...).Scan(&total)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, 0, fmt.Errorf("failed to count bookmarks: %w", err)
+	}
+
+	// Main query
+	query := fmt.Sprintf(`
+		SELECT
+			usi.id,
+			usi.user_id,
+			usi.source_llm_interaction_id,
+			usi.primary_city_id,
+			usi.title,
+			usi.description,
+			usi.markdown_content,
+			usi.tags,
+			usi.estimated_duration_days,
+			usi.estimated_cost_level,
+			usi.is_public,
+			usi.created_at,
+			usi.updated_at,
+			ubi.bookmarked_at,
+			c.name as city_name
+		FROM user_bookmarked_itineraries ubi
+		JOIN user_saved_itineraries usi ON ubi.itinerary_id = usi.id
+		LEFT JOIN cities c ON usi.primary_city_id = c.id
+		WHERE %s
+		ORDER BY %s %s
+		LIMIT $%d OFFSET $%d
+	`, whereClause, sortColumn, sortOrder, argCounter, argCounter+1)
+
+	args = append(args, filter.Limit, filter.Offset)
+
+	rows, err := r.pgpool.Query(ctx, query, args...)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, 0, fmt.Errorf("failed to query bookmarks: %w", err)
+	}
+	defer rows.Close()
+
+	var itineraries []models.SavedItinerary
+	for rows.Next() {
+		var itinerary models.SavedItinerary
+		var tags []string
+		var cityName sql.NullString
+
+		err := rows.Scan(
+			&itinerary.ID,
+			&itinerary.UserID,
+			&itinerary.SourceLLMInteractionID,
+			&itinerary.PrimaryCityID,
+			&itinerary.Title,
+			&itinerary.Description,
+			&itinerary.MarkdownContent,
+			&tags,
+			&itinerary.EstimatedDurationDays,
+			&itinerary.EstimatedCostLevel,
+			&itinerary.IsPublic,
+			&itinerary.CreatedAt,
+			&itinerary.UpdatedAt,
+			&itinerary.BookmarkedAt,
+			&cityName,
+		)
+		if err != nil {
+			span.RecordError(err)
+			r.logger.Error("Failed to scan bookmark", slog.Any("error", err))
+			continue
+		}
+
+		itinerary.Tags = tags
+		if cityName.Valid {
+			itinerary.CityName = cityName.String
+		}
+
+		itineraries = append(itineraries, itinerary)
+	}
+
+	if err := rows.Err(); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, 0, fmt.Errorf("error iterating bookmarks: %w", err)
+	}
+
+	span.SetAttributes(
+		attribute.Int("bookmarks.total", total),
+		attribute.Int("bookmarks.returned", len(itineraries)),
+		attribute.String("filter.search_text", filter.SearchText),
+		attribute.String("filter.sort_by", filter.SortBy),
+		attribute.String("filter.sort_order", filter.SortOrder),
+	)
+	span.SetStatus(codes.Ok, "Bookmarks retrieved successfully")
+
+	return itineraries, total, nil
 }

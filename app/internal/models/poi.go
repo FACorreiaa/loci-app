@@ -141,3 +141,43 @@ type AddPoiRequest struct {
 	IsLlmPoi bool             `json:"is_llm_poi"`
 	POIData  *POIDetailedInfo `json:"poi_data,omitempty"` // Optional POI data for creating new POIs
 }
+
+// FavouritesFilter holds filtering parameters for favourites list
+type FavouritesFilter struct {
+	UserID     uuid.UUID
+	SearchText string // Search by name or description
+	Category   string // Filter by category (e.g., "restaurant", "hotel", "museum")
+	SortBy     string // Sort by: "added_at", "name", "rating"
+	SortOrder  string // "asc" or "desc"
+	Limit      int
+	Offset     int
+}
+
+// BookmarksFilter holds filtering parameters for bookmarks list
+type BookmarksFilter struct {
+	UserID     uuid.UUID
+	SearchText string // Search by itinerary title or city
+	SortBy     string // Sort by: "created_at", "title", "city_name"
+	SortOrder  string // "asc" or "desc"
+	Limit      int
+	Offset     int
+}
+
+// SavedItinerary represents a user's saved travel itinerary
+type SavedItinerary struct {
+	ID                      uuid.UUID              `json:"id"`
+	UserID                  uuid.UUID              `json:"user_id"`
+	SourceLLMInteractionID  *uuid.UUID             `json:"source_llm_interaction_id,omitempty"`
+	PrimaryCityID           *uuid.UUID             `json:"primary_city_id,omitempty"`
+	Title                   string                 `json:"title"`
+	Description             *string                `json:"description,omitempty"`
+	MarkdownContent         string                 `json:"markdown_content"`
+	Tags                    []string               `json:"tags,omitempty"`
+	EstimatedDurationDays   *int                   `json:"estimated_duration_days,omitempty"`
+	EstimatedCostLevel      *int                   `json:"estimated_cost_level,omitempty"`
+	IsPublic                bool                   `json:"is_public"`
+	CreatedAt               time.Time              `json:"created_at"`
+	UpdatedAt               time.Time              `json:"updated_at"`
+	BookmarkedAt            *time.Time             `json:"bookmarked_at,omitempty"` // When user bookmarked this itinerary
+	CityName                string                 `json:"city_name,omitempty"`     // For display purposes
+}

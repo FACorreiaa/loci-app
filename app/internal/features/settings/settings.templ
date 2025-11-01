@@ -382,6 +382,399 @@ templ TravelPreferencesContent() {
 					</div>
 				</div>
 			</div>
+			<!-- Accommodation Preferences -->
+			<div class="bg-card rounded-lg border p-6">
+				<h3 class="text-lg font-semibold text-foreground mb-4">Accommodation Preferences</h3>
+				<div class="space-y-4">
+					<div>
+						<label class="block text-sm font-medium text-foreground mb-2">Accommodation Types</label>
+						<div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.accommodation.types" value="hotel" class="text-blue-600"/>
+								<span class="text-sm">Hotel</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.accommodation.types" value="apartment" class="text-blue-600"/>
+								<span class="text-sm">Apartment</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.accommodation.types" value="hostel" class="text-blue-600"/>
+								<span class="text-sm">Hostel</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.accommodation.types" value="resort" class="text-blue-600"/>
+								<span class="text-sm">Resort</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.accommodation.types" value="bnb" class="text-blue-600"/>
+								<span class="text-sm">B&B</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.accommodation.types" value="villa" class="text-blue-600"/>
+								<span class="text-sm">Villa</span>
+							</label>
+						</div>
+					</div>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-medium text-foreground mb-2">Star Rating (Min - Max)</label>
+							<div class="flex gap-2 items-center">
+								<input x-model.number="profileData.accommodation.star_rating_min" type="number" min="1" max="5" class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"/>
+								<span>to</span>
+								<input x-model.number="profileData.accommodation.star_rating_max" type="number" min="1" max="5" class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"/>
+							</div>
+						</div>
+						<div>
+							<label class="block text-sm font-medium text-foreground mb-2">Price Range per Night ($)</label>
+							<div class="flex gap-2 items-center">
+								<input x-model.number="profileData.accommodation.price_min" type="number" min="0" placeholder="Min" class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"/>
+								<span>to</span>
+								<input x-model.number="profileData.accommodation.price_max" type="number" min="0" placeholder="Max" class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"/>
+							</div>
+						</div>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-foreground mb-2">Amenities</label>
+						<div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.accommodation.amenities" value="wifi" class="text-blue-600"/>
+								<span class="text-sm">WiFi</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.accommodation.amenities" value="parking" class="text-blue-600"/>
+								<span class="text-sm">Parking</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.accommodation.amenities" value="pool" class="text-blue-600"/>
+								<span class="text-sm">Pool</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.accommodation.amenities" value="gym" class="text-blue-600"/>
+								<span class="text-sm">Gym</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.accommodation.amenities" value="breakfast" class="text-blue-600"/>
+								<span class="text-sm">Breakfast</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.accommodation.amenities" value="spa" class="text-blue-600"/>
+								<span class="text-sm">Spa</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.accommodation.amenities" value="restaurant" class="text-blue-600"/>
+								<span class="text-sm">Restaurant</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.accommodation.amenities" value="bar" class="text-blue-600"/>
+								<span class="text-sm">Bar</span>
+							</label>
+						</div>
+					</div>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-medium text-foreground mb-2">Chain Preference</label>
+							<select x-model="profileData.accommodation.chain_preference" class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground">
+								<option value="any">Any</option>
+								<option value="chain_only">Chain Hotels Only</option>
+								<option value="independent_only">Independent Only</option>
+								<option value="chain_preferred">Chain Preferred</option>
+								<option value="independent_preferred">Independent Preferred</option>
+							</select>
+						</div>
+						<div>
+							<label class="block text-sm font-medium text-foreground mb-2">Room Type</label>
+							<select x-model="profileData.accommodation.room_type" class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground">
+								<option value="single">Single</option>
+								<option value="double">Double</option>
+								<option value="twin">Twin</option>
+								<option value="suite">Suite</option>
+								<option value="family">Family Room</option>
+							</select>
+						</div>
+					</div>
+					<div>
+						<label class="flex items-center gap-3">
+							<input x-model="profileData.accommodation.free_cancellation" type="checkbox" class="w-4 h-4 text-blue-600"/>
+							<span class="text-foreground">Require free cancellation</span>
+						</label>
+					</div>
+				</div>
+			</div>
+			<!-- Dining Preferences -->
+			<div class="bg-card rounded-lg border p-6">
+				<h3 class="text-lg font-semibold text-foreground mb-4">Dining Preferences</h3>
+				<div class="space-y-4">
+					<div>
+						<label class="block text-sm font-medium text-foreground mb-2">Cuisine Types</label>
+						<div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.dining.cuisines" value="local" class="text-blue-600"/>
+								<span class="text-sm">Local Specialty</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.dining.cuisines" value="italian" class="text-blue-600"/>
+								<span class="text-sm">Italian</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.dining.cuisines" value="asian" class="text-blue-600"/>
+								<span class="text-sm">Asian</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.dining.cuisines" value="mediterranean" class="text-blue-600"/>
+								<span class="text-sm">Mediterranean</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.dining.cuisines" value="french" class="text-blue-600"/>
+								<span class="text-sm">French</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.dining.cuisines" value="seafood" class="text-blue-600"/>
+								<span class="text-sm">Seafood</span>
+							</label>
+						</div>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-foreground mb-2">Meal Types</label>
+						<div class="grid grid-cols-3 gap-2">
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.dining.meal_types" value="breakfast" class="text-blue-600"/>
+								<span class="text-sm">Breakfast</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.dining.meal_types" value="lunch" class="text-blue-600"/>
+								<span class="text-sm">Lunch</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.dining.meal_types" value="dinner" class="text-blue-600"/>
+								<span class="text-sm">Dinner</span>
+							</label>
+						</div>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-foreground mb-2">Service Style</label>
+						<div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.dining.service_styles" value="fine_dining" class="text-blue-600"/>
+								<span class="text-sm">Fine Dining</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.dining.service_styles" value="casual" class="text-blue-600"/>
+								<span class="text-sm">Casual</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.dining.service_styles" value="fast_food" class="text-blue-600"/>
+								<span class="text-sm">Fast Food</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.dining.service_styles" value="street_food" class="text-blue-600"/>
+								<span class="text-sm">Street Food</span>
+							</label>
+						</div>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-foreground mb-2">Price Range per Person ($)</label>
+						<div class="flex gap-2 items-center">
+							<input x-model.number="profileData.dining.price_min" type="number" min="0" placeholder="Min" class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"/>
+							<span>to</span>
+							<input x-model.number="profileData.dining.price_max" type="number" min="0" placeholder="Max" class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"/>
+						</div>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-foreground mb-2">Dietary Needs</label>
+						<div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.dining.dietary_needs" value="vegetarian" class="text-blue-600"/>
+								<span class="text-sm">Vegetarian</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.dining.dietary_needs" value="vegan" class="text-blue-600"/>
+								<span class="text-sm">Vegan</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.dining.dietary_needs" value="gluten_free" class="text-blue-600"/>
+								<span class="text-sm">Gluten Free</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.dining.dietary_needs" value="halal" class="text-blue-600"/>
+								<span class="text-sm">Halal</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.dining.dietary_needs" value="kosher" class="text-blue-600"/>
+								<span class="text-sm">Kosher</span>
+							</label>
+						</div>
+					</div>
+					<div class="space-y-3">
+						<label class="flex items-center gap-3">
+							<input x-model="profileData.dining.michelin_rated" type="checkbox" class="w-4 h-4 text-blue-600"/>
+							<span class="text-foreground">Prefer Michelin-rated restaurants</span>
+						</label>
+						<label class="flex items-center gap-3">
+							<input x-model="profileData.dining.local_recommendations" type="checkbox" class="w-4 h-4 text-blue-600"/>
+							<span class="text-foreground">Prefer local recommendations</span>
+						</label>
+						<label class="flex items-center gap-3">
+							<input x-model="profileData.dining.organic_preference" type="checkbox" class="w-4 h-4 text-blue-600"/>
+							<span class="text-foreground">Prefer organic/farm-to-table</span>
+						</label>
+					</div>
+				</div>
+			</div>
+			<!-- Activity Preferences -->
+			<div class="bg-card rounded-lg border p-6">
+				<h3 class="text-lg font-semibold text-foreground mb-4">Activity Preferences</h3>
+				<div class="space-y-4">
+					<div>
+						<label class="block text-sm font-medium text-foreground mb-2">Activity Categories</label>
+						<div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.activities.categories" value="museums" class="text-blue-600"/>
+								<span class="text-sm">Museums</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.activities.categories" value="history" class="text-blue-600"/>
+								<span class="text-sm">History</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.activities.categories" value="nature" class="text-blue-600"/>
+								<span class="text-sm">Nature</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.activities.categories" value="adventure" class="text-blue-600"/>
+								<span class="text-sm">Adventure</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.activities.categories" value="shopping" class="text-blue-600"/>
+								<span class="text-sm">Shopping</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.activities.categories" value="entertainment" class="text-blue-600"/>
+								<span class="text-sm">Entertainment</span>
+							</label>
+						</div>
+					</div>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-medium text-foreground mb-2">Physical Activity Level</label>
+							<select x-model="profileData.activities.physical_level" class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground">
+								<option value="low">Low - Mostly sedentary</option>
+								<option value="moderate">Moderate - Some walking</option>
+								<option value="high">High - Active/sporty</option>
+								<option value="very_high">Very High - Intense activities</option>
+							</select>
+						</div>
+						<div>
+							<label class="block text-sm font-medium text-foreground mb-2">Indoor/Outdoor Preference</label>
+							<select x-model="profileData.activities.indoor_outdoor" class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground">
+								<option value="indoor">Indoor preferred</option>
+								<option value="outdoor">Outdoor preferred</option>
+								<option value="mixed">No preference</option>
+							</select>
+						</div>
+					</div>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-medium text-foreground mb-2">Cultural Immersion Level</label>
+							<select x-model="profileData.activities.cultural_immersion" class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground">
+								<option value="low">Tourist spots only</option>
+								<option value="moderate">Mix of tourist & local</option>
+								<option value="high">Authentic local experiences</option>
+							</select>
+						</div>
+						<div>
+							<label class="block text-sm font-medium text-foreground mb-2">Must-See vs Hidden Gems</label>
+							<select x-model="profileData.activities.must_see_vs_hidden" class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground">
+								<option value="must_see">Popular attractions</option>
+								<option value="mixed">Both</option>
+								<option value="hidden">Off the beaten path</option>
+							</select>
+						</div>
+					</div>
+					<div class="space-y-3">
+						<label class="flex items-center gap-3">
+							<input x-model="profileData.activities.educational" type="checkbox" class="w-4 h-4 text-blue-600"/>
+							<span class="text-foreground">Prefer educational experiences</span>
+						</label>
+						<label class="flex items-center gap-3">
+							<input x-model="profileData.activities.photography" type="checkbox" class="w-4 h-4 text-blue-600"/>
+							<span class="text-foreground">Prefer photography opportunities</span>
+						</label>
+						<label class="flex items-center gap-3">
+							<input x-model="profileData.activities.avoid_crowds" type="checkbox" class="w-4 h-4 text-blue-600"/>
+							<span class="text-foreground">Avoid crowded places</span>
+						</label>
+					</div>
+				</div>
+			</div>
+			<!-- Itinerary Preferences -->
+			<div class="bg-card rounded-lg border p-6">
+				<h3 class="text-lg font-semibold text-foreground mb-4">Itinerary & Planning</h3>
+				<div class="space-y-4">
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-medium text-foreground mb-2">Planning Style</label>
+							<select x-model="profileData.itinerary.planning_style" class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground">
+								<option value="structured">Highly structured</option>
+								<option value="flexible">Flexible schedule</option>
+								<option value="spontaneous">Very spontaneous</option>
+							</select>
+						</div>
+						<div>
+							<label class="block text-sm font-medium text-foreground mb-2">Time Flexibility</label>
+							<select x-model="profileData.itinerary.time_flexibility" class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground">
+								<option value="strict">Strict schedule</option>
+								<option value="loose">Loose schedule</option>
+								<option value="very_flexible">Very flexible</option>
+							</select>
+						</div>
+					</div>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-medium text-foreground mb-2">Morning vs Evening</label>
+							<select x-model="profileData.itinerary.morning_evening" class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground">
+								<option value="early_bird">Early bird (morning person)</option>
+								<option value="flexible">Flexible</option>
+								<option value="night_owl">Night owl (evening person)</option>
+							</select>
+						</div>
+						<div>
+							<label class="block text-sm font-medium text-foreground mb-2">Adventure vs Relaxation</label>
+							<select x-model="profileData.itinerary.adventure_relaxation" class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground">
+								<option value="adventure">Adventure-focused</option>
+								<option value="balanced">Balanced</option>
+								<option value="relaxation">Relaxation-focused</option>
+							</select>
+						</div>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-foreground mb-2">Preferred Seasons</label>
+						<div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.itinerary.seasons" value="spring" class="text-blue-600"/>
+								<span class="text-sm">Spring</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.itinerary.seasons" value="summer" class="text-blue-600"/>
+								<span class="text-sm">Summer</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.itinerary.seasons" value="fall" class="text-blue-600"/>
+								<span class="text-sm">Fall</span>
+							</label>
+							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+								<input type="checkbox" x-model="profileData.itinerary.seasons" value="winter" class="text-blue-600"/>
+								<span class="text-sm">Winter</span>
+							</label>
+						</div>
+					</div>
+					<div>
+						<label class="flex items-center gap-3">
+							<input x-model="profileData.itinerary.avoid_peak_season" type="checkbox" class="w-4 h-4 text-blue-600"/>
+							<span class="text-foreground">Avoid peak tourist seasons</span>
+						</label>
+					</div>
+				</div>
+			</div>
 			<!-- Preferences -->
 			<div class="bg-card rounded-lg border p-6">
 				<h3 class="text-lg font-semibold text-foreground mb-4">Preferences</h3>
@@ -431,7 +824,47 @@ templ TravelPreferencesContent() {
 					prefer_accessible_pois: false,
 					prefer_outdoor_seating: false,
 					prefer_dog_friendly: false,
-					preferred_transport: 'any'
+					preferred_transport: 'any',
+					accommodation: {
+						types: [],
+						star_rating_min: 3,
+						star_rating_max: 5,
+						price_min: 0,
+						price_max: 300,
+						amenities: [],
+						chain_preference: 'any',
+						room_type: 'double',
+						free_cancellation: false
+					},
+					dining: {
+						cuisines: [],
+						meal_types: [],
+						service_styles: [],
+						price_min: 0,
+						price_max: 100,
+						dietary_needs: [],
+						michelin_rated: false,
+						local_recommendations: true,
+						organic_preference: false
+					},
+					activities: {
+						categories: [],
+						physical_level: 'moderate',
+						indoor_outdoor: 'mixed',
+						cultural_immersion: 'moderate',
+						must_see_vs_hidden: 'mixed',
+						educational: true,
+						photography: true,
+						avoid_crowds: false
+					},
+					itinerary: {
+						planning_style: 'flexible',
+						time_flexibility: 'loose',
+						morning_evening: 'flexible',
+						adventure_relaxation: 'balanced',
+						seasons: [],
+						avoid_peak_season: false
+					}
 				},
 
 				init() {
@@ -472,7 +905,47 @@ templ TravelPreferencesContent() {
 							prefer_accessible_pois: profile.prefer_accessible_pois,
 							prefer_outdoor_seating: profile.prefer_outdoor_seating,
 							prefer_dog_friendly: profile.prefer_dog_friendly,
-							preferred_transport: profile.preferred_transport
+							preferred_transport: profile.preferred_transport,
+							accommodation: profile.accommodation || {
+								types: [],
+								star_rating_min: 3,
+								star_rating_max: 5,
+								price_min: 0,
+								price_max: 300,
+								amenities: [],
+								chain_preference: 'any',
+								room_type: 'double',
+								free_cancellation: false
+							},
+							dining: profile.dining || {
+								cuisines: [],
+								meal_types: [],
+								service_styles: [],
+								price_min: 0,
+								price_max: 100,
+								dietary_needs: [],
+								michelin_rated: false,
+								local_recommendations: true,
+								organic_preference: false
+							},
+							activities: profile.activities || {
+								categories: [],
+								physical_level: 'moderate',
+								indoor_outdoor: 'mixed',
+								cultural_immersion: 'moderate',
+								must_see_vs_hidden: 'mixed',
+								educational: true,
+								photography: true,
+								avoid_crowds: false
+							},
+							itinerary: profile.itinerary || {
+								planning_style: 'flexible',
+								time_flexibility: 'loose',
+								morning_evening: 'flexible',
+								adventure_relaxation: 'balanced',
+								seasons: [],
+								avoid_peak_season: false
+							}
 						};
 						this.selectedInterests = profile.interests ? profile.interests.filter(i => i.active).map(i => i.id) : [];
 						this.selectedTags = profile.tags ? profile.tags.filter(t => t.active).map(t => t.id) : [];

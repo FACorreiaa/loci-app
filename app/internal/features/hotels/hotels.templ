@@ -194,16 +194,16 @@ templ HotelsPage() {
 
 templ HotelsGrid() {
 	<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-		@HotelCard("Pestana Palace Lisboa", "Luxury Hotel", "Historic palace hotel with stunning gardens and luxury amenities", "4.8", "€€€€", "Spa, Pool, Restaurant")
-		@HotelCard("The Lumiares Hotel & Spa", "Luxury Hotel", "Modern luxury in historic Lisbon with world-class spa facilities", "4.7", "€€€€", "Spa, Pool, Bar")
-		@HotelCard("Memmo Alfama Hotel", "Boutique Hotel", "Contemporary design hotel with panoramic views of the Tagus River", "4.6", "€€€", "Rooftop Bar, Restaurant")
-		@HotelCard("Hotel Dom Henrique", "Business Hotel", "Central location with modern amenities perfect for business travelers", "4.4", "€€", "Business Center, Gym")
-		@HotelCard("Palácio Belmonte", "Historic Hotel", "Exclusive historic palace with unique rooms and unparalleled luxury", "4.9", "€€€€", "Historic, Pool, Garden")
-		@HotelCard("Browns Central Hotel", "Boutique Hotel", "Stylish boutique hotel in the heart of Lisbon's downtown", "4.5", "€€€", "Restaurant, Bar, Concierge")
+		@HotelCard("hotel-1", "Pestana Palace Lisboa", "Luxury Hotel", "Historic palace hotel with stunning gardens and luxury amenities", "4.8", "€€€€", "Spa, Pool, Restaurant")
+		@HotelCard("hotel-2", "The Lumiares Hotel & Spa", "Luxury Hotel", "Modern luxury in historic Lisbon with world-class spa facilities", "4.7", "€€€€", "Spa, Pool, Bar")
+		@HotelCard("hotel-3", "Memmo Alfama Hotel", "Boutique Hotel", "Contemporary design hotel with panoramic views of the Tagus River", "4.6", "€€€", "Rooftop Bar, Restaurant")
+		@HotelCard("hotel-4", "Hotel Dom Henrique", "Business Hotel", "Central location with modern amenities perfect for business travelers", "4.4", "€€", "Business Center, Gym")
+		@HotelCard("hotel-5", "Palácio Belmonte", "Historic Hotel", "Exclusive historic palace with unique rooms and unparalleled luxury", "4.9", "€€€€", "Historic, Pool, Garden")
+		@HotelCard("hotel-6", "Browns Central Hotel", "Boutique Hotel", "Stylish boutique hotel in the heart of Lisbon's downtown", "4.5", "€€€", "Restaurant, Bar, Concierge")
 	</div>
 }
 
-templ HotelCard(name, category, description, rating, price, amenities string) {
+templ HotelCard(id, name, category, description, rating, price, amenities string) {
 	<article class="group bg-card rounded-xl shadow-sm border hover:shadow-md transition-all duration-300">
 		<div class="aspect-video bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900 dark:to-indigo-900 rounded-t-xl relative overflow-hidden">
 			<div class="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
@@ -213,7 +213,13 @@ templ HotelCard(name, category, description, rating, price, amenities string) {
 				</span>
 			</div>
 			<div class="absolute top-3 right-3 flex gap-2">
-				<button class="p-2 bg-white/90 dark:bg-black/90 rounded-full hover:bg-white dark:hover:bg-black transition-colors">
+				<button
+					hx-post={ "/favorites/add/" + id }
+					hx-target="this"
+					hx-swap="outerHTML"
+					class="p-2 bg-white/90 dark:bg-black/90 rounded-full hover:bg-white dark:hover:bg-black transition-colors"
+					title="Add to favorites"
+				>
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
 					</svg>

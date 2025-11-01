@@ -119,12 +119,12 @@ templ RestaurantsGrid() {
 	<div class="mb-6">
 		<h2 class="text-2xl font-bold text-foreground mb-4">All Restaurants</h2>
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-			@RestaurantCard("Pastéis de Belém", "Traditional Portuguese", "Home of the original Pastéis de Nata since 1837", "4.7", "€€", "Pastry, Traditional, Historic")
-			@RestaurantCard("Fortaleza do Guincho", "Fine Dining", "Michelin-starred restaurant overlooking the Atlantic Ocean", "4.9", "€€€€", "Michelin Star, Ocean View, Fine Dining")
-			@RestaurantCard("Taberna Real do Fado", "Traditional Portuguese", "Authentic Fado restaurant with traditional Portuguese cuisine", "4.6", "€€€", "Fado, Traditional, Live Music")
-			@RestaurantCard("Pharmacia", "Contemporary Portuguese", "Modern twist on traditional Portuguese flavors in a unique pharmacy-themed setting", "4.5", "€€€", "Contemporary, Unique Decor, Modern")
-			@RestaurantCard("Time Out Market", "Food Court", "Iconic food market with dozens of vendors offering various cuisines", "4.4", "€€", "Food Court, Variety, Market")
-			@RestaurantCard("Café A Brasileira", "Café & Light Meals", "Historic café in Chiado, famous for its coffee and traditional atmosphere", "4.3", "€", "Historic, Coffee, Traditional")
+			@RestaurantCard("restaurant-1", "Pastéis de Belém", "Traditional Portuguese", "Home of the original Pastéis de Nata since 1837", "4.7", "€€", "Pastry, Traditional, Historic")
+			@RestaurantCard("restaurant-2", "Fortaleza do Guincho", "Fine Dining", "Michelin-starred restaurant overlooking the Atlantic Ocean", "4.9", "€€€€", "Michelin Star, Ocean View, Fine Dining")
+			@RestaurantCard("restaurant-3", "Taberna Real do Fado", "Traditional Portuguese", "Authentic Fado restaurant with traditional Portuguese cuisine", "4.6", "€€€", "Fado, Traditional, Live Music")
+			@RestaurantCard("restaurant-4", "Pharmacia", "Contemporary Portuguese", "Modern twist on traditional Portuguese flavors in a unique pharmacy-themed setting", "4.5", "€€€", "Contemporary, Unique Decor, Modern")
+			@RestaurantCard("restaurant-5", "Time Out Market", "Food Court", "Iconic food market with dozens of vendors offering various cuisines", "4.4", "€€", "Food Court, Variety, Market")
+			@RestaurantCard("restaurant-6", "Café A Brasileira", "Café & Light Meals", "Historic café in Chiado, famous for its coffee and traditional atmosphere", "4.3", "€", "Historic, Coffee, Traditional")
 		</div>
 	</div>
 	<script>
@@ -214,7 +214,7 @@ templ FeaturedRestaurantCard(name, cuisine, description, rating, price string) {
 	</div>
 }
 
-templ RestaurantCard(name, cuisine, description, rating, price, tags string) {
+templ RestaurantCard(id, name, cuisine, description, rating, price, tags string) {
 	<article class="group bg-card rounded-xl shadow-sm border hover:shadow-md transition-all duration-300">
 		<div class="aspect-video bg-gradient-to-br from-orange-100 to-red-100 dark:from-orange-900 dark:to-red-900 rounded-t-xl relative overflow-hidden">
 			<div class="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
@@ -224,7 +224,13 @@ templ RestaurantCard(name, cuisine, description, rating, price, tags string) {
 				</span>
 			</div>
 			<div class="absolute top-3 right-3 flex gap-2">
-				<button class="p-2 bg-white/90 dark:bg-black/90 rounded-full hover:bg-white dark:hover:bg-black transition-colors">
+				<button
+					hx-post={ "/favorites/add/" + id }
+					hx-target="this"
+					hx-swap="outerHTML"
+					class="p-2 bg-white/90 dark:bg-black/90 rounded-full hover:bg-white dark:hover:bg-black transition-colors"
+					title="Add to favorites"
+				>
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
 					</svg>

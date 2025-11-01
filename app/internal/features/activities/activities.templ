@@ -178,16 +178,16 @@ templ ActivitiesPage() {
 
 templ ActivitiesGrid() {
 	<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-		@ActivityCard("Torre de Belém", "Cultural & Historic", "Iconic 16th-century tower and UNESCO World Heritage site", "4.6", "€€", "1-2 hours")
-		@ActivityCard("Oceanário de Lisboa", "Family & Entertainment", "One of Europe's largest aquariums with amazing marine life", "4.5", "€€€", "2-3 hours")
-		@ActivityCard("Sintra Day Trip", "Adventure & Cultural", "Magical town with fairy-tale palaces and stunning landscapes", "4.8", "€€€€", "Full day")
-		@ActivityCard("Fado Show", "Cultural & Entertainment", "Traditional Portuguese music performance with dinner", "4.7", "€€€", "2-3 hours")
-		@ActivityCard("Tram 28 Tour", "Sightseeing & Cultural", "Historic tram ride through Lisbon's most iconic neighborhoods", "4.4", "€", "1-2 hours")
-		@ActivityCard("Gulbenkian Museum", "Cultural & Art", "World-class art collection in a beautiful modern setting", "4.5", "€€", "2-3 hours")
+		@ActivityCard("activity-1", "Torre de Belém", "Cultural & Historic", "Iconic 16th-century tower and UNESCO World Heritage site", "4.6", "€€", "1-2 hours")
+		@ActivityCard("activity-2", "Oceanário de Lisboa", "Family & Entertainment", "One of Europe's largest aquariums with amazing marine life", "4.5", "€€€", "2-3 hours")
+		@ActivityCard("activity-3", "Sintra Day Trip", "Adventure & Cultural", "Magical town with fairy-tale palaces and stunning landscapes", "4.8", "€€€€", "Full day")
+		@ActivityCard("activity-4", "Fado Show", "Cultural & Entertainment", "Traditional Portuguese music performance with dinner", "4.7", "€€€", "2-3 hours")
+		@ActivityCard("activity-5", "Tram 28 Tour", "Sightseeing & Cultural", "Historic tram ride through Lisbon's most iconic neighborhoods", "4.4", "€", "1-2 hours")
+		@ActivityCard("activity-6", "Gulbenkian Museum", "Cultural & Art", "World-class art collection in a beautiful modern setting", "4.5", "€€", "2-3 hours")
 	</div>
 }
 
-templ ActivityCard(name, category, description, rating, price, duration string) {
+templ ActivityCard(id, name, category, description, rating, price, duration string) {
 	<article class="group bg-card rounded-xl shadow-sm border hover:shadow-md transition-all duration-300">
 		<div class="aspect-video bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 rounded-t-xl relative overflow-hidden">
 			<div class="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
@@ -197,7 +197,13 @@ templ ActivityCard(name, category, description, rating, price, duration string) 
 				</span>
 			</div>
 			<div class="absolute top-3 right-3">
-				<button class="p-2 bg-white/90 dark:bg-black/90 rounded-full hover:bg-white dark:hover:bg-black transition-colors">
+				<button
+					hx-post={ "/favorites/add/" + id }
+					hx-target="this"
+					hx-swap="outerHTML"
+					class="p-2 bg-white/90 dark:bg-black/90 rounded-full hover:bg-white dark:hover:bg-black transition-colors"
+					title="Add to favorites"
+				>
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
 					</svg>

@@ -110,6 +110,55 @@ func (r *RepositoryImpl) GetSearchProfiles(ctx context.Context, userID uuid.UUID
 			span.RecordError(err)
 			return nil, fmt.Errorf("database error scanning preference profile: %w", err)
 		}
+
+		// Fetch accommodation preferences
+		var accommodationJSON []byte
+		err = r.pgpool.QueryRow(ctx,
+			"SELECT accommodation_filters FROM user_accommodation_preferences WHERE user_preference_profile_id = $1",
+			p.ID).Scan(&accommodationJSON)
+		if err == nil && len(accommodationJSON) > 0 {
+			var accomPrefs models.AccommodationPreferences
+			if err := json.Unmarshal(accommodationJSON, &accomPrefs); err == nil {
+				p.AccommodationPreferences = &accomPrefs
+			}
+		}
+
+		// Fetch dining preferences
+		var diningJSON []byte
+		err = r.pgpool.QueryRow(ctx,
+			"SELECT dining_filters FROM user_dining_preferences WHERE user_preference_profile_id = $1",
+			p.ID).Scan(&diningJSON)
+		if err == nil && len(diningJSON) > 0 {
+			var diningPrefs models.DiningPreferences
+			if err := json.Unmarshal(diningJSON, &diningPrefs); err == nil {
+				p.DiningPreferences = &diningPrefs
+			}
+		}
+
+		// Fetch activity preferences
+		var activityJSON []byte
+		err = r.pgpool.QueryRow(ctx,
+			"SELECT activity_filters FROM user_activity_preferences WHERE user_preference_profile_id = $1",
+			p.ID).Scan(&activityJSON)
+		if err == nil && len(activityJSON) > 0 {
+			var activityPrefs models.ActivityPreferences
+			if err := json.Unmarshal(activityJSON, &activityPrefs); err == nil {
+				p.ActivityPreferences = &activityPrefs
+			}
+		}
+
+		// Fetch itinerary preferences
+		var itineraryJSON []byte
+		err = r.pgpool.QueryRow(ctx,
+			"SELECT itinerary_filters FROM user_itinerary_preferences WHERE user_preference_profile_id = $1",
+			p.ID).Scan(&itineraryJSON)
+		if err == nil && len(itineraryJSON) > 0 {
+			var itineraryPrefs models.ItineraryPreferences
+			if err := json.Unmarshal(itineraryJSON, &itineraryPrefs); err == nil {
+				p.ItineraryPreferences = &itineraryPrefs
+			}
+		}
+
 		profiles = append(profiles, p)
 	}
 
@@ -158,6 +207,54 @@ func (r *RepositoryImpl) GetSearchProfile(ctx context.Context, userID, profileID
 		return nil, fmt.Errorf("preference profile not found: %w", models.ErrNotFound)
 	}
 
+	// Fetch accommodation preferences
+	var accommodationJSON []byte
+	err = r.pgpool.QueryRow(ctx,
+		"SELECT accommodation_filters FROM user_accommodation_preferences WHERE user_preference_profile_id = $1",
+		profileID).Scan(&accommodationJSON)
+	if err == nil && len(accommodationJSON) > 0 {
+		var accomPrefs models.AccommodationPreferences
+		if err := json.Unmarshal(accommodationJSON, &accomPrefs); err == nil {
+			p.AccommodationPreferences = &accomPrefs
+		}
+	}
+
+	// Fetch dining preferences
+	var diningJSON []byte
+	err = r.pgpool.QueryRow(ctx,
+		"SELECT dining_filters FROM user_dining_preferences WHERE user_preference_profile_id = $1",
+		profileID).Scan(&diningJSON)
+	if err == nil && len(diningJSON) > 0 {
+		var diningPrefs models.DiningPreferences
+		if err := json.Unmarshal(diningJSON, &diningPrefs); err == nil {
+			p.DiningPreferences = &diningPrefs
+		}
+	}
+
+	// Fetch activity preferences
+	var activityJSON []byte
+	err = r.pgpool.QueryRow(ctx,
+		"SELECT activity_filters FROM user_activity_preferences WHERE user_preference_profile_id = $1",
+		profileID).Scan(&activityJSON)
+	if err == nil && len(activityJSON) > 0 {
+		var activityPrefs models.ActivityPreferences
+		if err := json.Unmarshal(activityJSON, &activityPrefs); err == nil {
+			p.ActivityPreferences = &activityPrefs
+		}
+	}
+
+	// Fetch itinerary preferences
+	var itineraryJSON []byte
+	err = r.pgpool.QueryRow(ctx,
+		"SELECT itinerary_filters FROM user_itinerary_preferences WHERE user_preference_profile_id = $1",
+		profileID).Scan(&itineraryJSON)
+	if err == nil && len(itineraryJSON) > 0 {
+		var itineraryPrefs models.ItineraryPreferences
+		if err := json.Unmarshal(itineraryJSON, &itineraryPrefs); err == nil {
+			p.ItineraryPreferences = &itineraryPrefs
+		}
+	}
+
 	l.DebugContext(ctx, "Fetched user preference profile successfully")
 	span.SetStatus(codes.Ok, "Preference profile fetched")
 	return &p, nil
@@ -195,6 +292,54 @@ func (r *RepositoryImpl) GetDefaultSearchProfile(ctx context.Context, userID uui
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB query failed")
 		return nil, fmt.Errorf("default preference profile not found: %w", models.ErrNotFound)
+	}
+
+	// Fetch accommodation preferences
+	var accommodationJSON []byte
+	err = r.pgpool.QueryRow(ctx,
+		"SELECT accommodation_filters FROM user_accommodation_preferences WHERE user_preference_profile_id = $1",
+		p.ID).Scan(&accommodationJSON)
+	if err == nil && len(accommodationJSON) > 0 {
+		var accomPrefs models.AccommodationPreferences
+		if err := json.Unmarshal(accommodationJSON, &accomPrefs); err == nil {
+			p.AccommodationPreferences = &accomPrefs
+		}
+	}
+
+	// Fetch dining preferences
+	var diningJSON []byte
+	err = r.pgpool.QueryRow(ctx,
+		"SELECT dining_filters FROM user_dining_preferences WHERE user_preference_profile_id = $1",
+		p.ID).Scan(&diningJSON)
+	if err == nil && len(diningJSON) > 0 {
+		var diningPrefs models.DiningPreferences
+		if err := json.Unmarshal(diningJSON, &diningPrefs); err == nil {
+			p.DiningPreferences = &diningPrefs
+		}
+	}
+
+	// Fetch activity preferences
+	var activityJSON []byte
+	err = r.pgpool.QueryRow(ctx,
+		"SELECT activity_filters FROM user_activity_preferences WHERE user_preference_profile_id = $1",
+		p.ID).Scan(&activityJSON)
+	if err == nil && len(activityJSON) > 0 {
+		var activityPrefs models.ActivityPreferences
+		if err := json.Unmarshal(activityJSON, &activityPrefs); err == nil {
+			p.ActivityPreferences = &activityPrefs
+		}
+	}
+
+	// Fetch itinerary preferences
+	var itineraryJSON []byte
+	err = r.pgpool.QueryRow(ctx,
+		"SELECT itinerary_filters FROM user_itinerary_preferences WHERE user_preference_profile_id = $1",
+		p.ID).Scan(&itineraryJSON)
+	if err == nil && len(itineraryJSON) > 0 {
+		var itineraryPrefs models.ItineraryPreferences
+		if err := json.Unmarshal(itineraryJSON, &itineraryPrefs); err == nil {
+			p.ItineraryPreferences = &itineraryPrefs
+		}
 	}
 
 	l.DebugContext(ctx, "Fetched default user preference profile successfully")
@@ -734,5 +879,113 @@ func (r *RepositoryImpl) SetDefaultSearchProfile(ctx context.Context, userID, pr
 
 	l.InfoContext(ctx, "User preference profile set as default successfully")
 	span.SetStatus(codes.Ok, "Profile set as default")
+	return nil
+}
+
+// updateAccommodationPreferencesInTx updates accommodation preferences within a transaction
+func (r *ProfileRepository) updateAccommodationPreferencesInTx(ctx context.Context, tx pgx.Tx, profileID uuid.UUID, prefs *models.AccommodationPreferences) error {
+	if prefs == nil {
+		return nil
+	}
+
+	accommodationJSON, err := json.Marshal(prefs)
+	if err != nil {
+		return fmt.Errorf("failed to marshal accommodation preferences: %w", err)
+	}
+
+	query := `
+		INSERT INTO user_accommodation_preferences (user_preference_profile_id, accommodation_filters)
+		VALUES ($1, $2)
+		ON CONFLICT (user_preference_profile_id)
+		DO UPDATE SET
+			accommodation_filters = EXCLUDED.accommodation_filters,
+			updated_at = CURRENT_TIMESTAMP
+	`
+	_, err = tx.Exec(ctx, query, profileID, accommodationJSON)
+	if err != nil {
+		return fmt.Errorf("failed to update accommodation preferences: %w", err)
+	}
+
+	return nil
+}
+
+// updateDiningPreferencesInTx updates dining preferences within a transaction
+func (r *ProfileRepository) updateDiningPreferencesInTx(ctx context.Context, tx pgx.Tx, profileID uuid.UUID, prefs *models.DiningPreferences) error {
+	if prefs == nil {
+		return nil
+	}
+
+	diningJSON, err := json.Marshal(prefs)
+	if err != nil {
+		return fmt.Errorf("failed to marshal dining preferences: %w", err)
+	}
+
+	query := `
+		INSERT INTO user_dining_preferences (user_preference_profile_id, dining_filters)
+		VALUES ($1, $2)
+		ON CONFLICT (user_preference_profile_id)
+		DO UPDATE SET
+			dining_filters = EXCLUDED.dining_filters,
+			updated_at = CURRENT_TIMESTAMP
+	`
+	_, err = tx.Exec(ctx, query, profileID, diningJSON)
+	if err != nil {
+		return fmt.Errorf("failed to update dining preferences: %w", err)
+	}
+
+	return nil
+}
+
+// updateActivityPreferencesInTx updates activity preferences within a transaction
+func (r *ProfileRepository) updateActivityPreferencesInTx(ctx context.Context, tx pgx.Tx, profileID uuid.UUID, prefs *models.ActivityPreferences) error {
+	if prefs == nil {
+		return nil
+	}
+
+	activityJSON, err := json.Marshal(prefs)
+	if err != nil {
+		return fmt.Errorf("failed to marshal activity preferences: %w", err)
+	}
+
+	query := `
+		INSERT INTO user_activity_preferences (user_preference_profile_id, activity_filters)
+		VALUES ($1, $2)
+		ON CONFLICT (user_preference_profile_id)
+		DO UPDATE SET
+			activity_filters = EXCLUDED.activity_filters,
+			updated_at = CURRENT_TIMESTAMP
+	`
+	_, err = tx.Exec(ctx, query, profileID, activityJSON)
+	if err != nil {
+		return fmt.Errorf("failed to update activity preferences: %w", err)
+	}
+
+	return nil
+}
+
+// updateItineraryPreferencesInTx updates itinerary preferences within a transaction
+func (r *ProfileRepository) updateItineraryPreferencesInTx(ctx context.Context, tx pgx.Tx, profileID uuid.UUID, prefs *models.ItineraryPreferences) error {
+	if prefs == nil {
+		return nil
+	}
+
+	itineraryJSON, err := json.Marshal(prefs)
+	if err != nil {
+		return fmt.Errorf("failed to marshal itinerary preferences: %w", err)
+	}
+
+	query := `
+		INSERT INTO user_itinerary_preferences (user_preference_profile_id, itinerary_filters)
+		VALUES ($1, $2)
+		ON CONFLICT (user_preference_profile_id)
+		DO UPDATE SET
+			itinerary_filters = EXCLUDED.itinerary_filters,
+			updated_at = CURRENT_TIMESTAMP
+	`
+	_, err = tx.Exec(ctx, query, profileID, itineraryJSON)
+	if err != nil {
+		return fmt.Errorf("failed to update itinerary preferences: %w", err)
+	}
+
 	return nil
 }

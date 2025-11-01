@@ -1,6 +1,7 @@
 package discover
 
 import "fmt"
+import "strings"
 import "github.com/FACorreiaa/go-templui/app/internal/models"
 
 templ DiscoverPage(recentDiscoveries []models.ChatSession, trending []models.TrendingDiscovery, featured []models.FeaturedCollection) {
@@ -68,10 +69,10 @@ templ DiscoverPage(recentDiscoveries []models.ChatSession, trending []models.Tre
 					</form>
 				</div>
 			</div>
-			<!-- Quick Categories -->
-			<div class="mb-8">
-				<h2 class="text-lg font-semibold text-foreground mb-4">Quick Categories</h2>
-				<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+			<!-- Quick Categories - Now at top with smaller cards -->
+			<div class="mb-10">
+				<h2 class="text-base font-semibold text-foreground mb-3">Quick Categories</h2>
+				<div class="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-12 gap-2">
 					@CategoryCard("Restaurants", "🍽️", "restaurant")
 					@CategoryCard("Hotels", "🏨", "hotel")
 					@CategoryCard("Activities", "🎯", "activity")
@@ -86,8 +87,10 @@ templ DiscoverPage(recentDiscoveries []models.ChatSession, trending []models.Tre
 					@CategoryCard("Markets", "🏪", "market")
 				</div>
 			</div>
+			<!-- Search Results Container - Now displayed first when results exist -->
+			<div id="discover-results" class="mb-12"></div>
 			<!-- Trending & Featured -->
-			<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+			<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
 				<!-- Trending Now -->
 				<div class="lg:col-span-2">
 					<h2 class="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
@@ -125,8 +128,6 @@ templ DiscoverPage(recentDiscoveries []models.ChatSession, trending []models.Tre
 					</div>
 				</div>
 			</div>
-			<!-- Search Results Container -->
-			<div id="discover-results" class="space-y-6"></div>
 			<!-- Recent Discoveries (Dynamic Content) -->
 			<div>
 				<h2 class="text-lg font-semibold text-foreground mb-4">Recent Discoveries</h2>
@@ -152,10 +153,10 @@ templ CategoryCard(name string, emoji string, category string) {
 	<button
 		type="button"
 		onclick={ fillSearchInput(name) }
-		class="p-4 bg-card rounded-xl border hover:shadow-md hover:border-blue-300 transition-all group text-center"
+		class="p-2 bg-card rounded-lg border hover:shadow-md hover:border-blue-300 transition-all group text-center"
 	>
-		<div class="text-3xl mb-2 group-hover:scale-110 transition-transform">{ emoji }</div>
-		<p class="text-sm font-medium text-card-foreground">{ name }</p>
+		<div class="text-xl mb-1 group-hover:scale-110 transition-transform">{ emoji }</div>
+		<p class="text-xs font-medium text-card-foreground">{ name }</p>
 	</button>
 }
 
@@ -193,7 +194,7 @@ templ FeaturedItem(title string, count string, emoji string) {
 	</div>
 }
 
-templ DiscoveryCard(category string, title string, location string, description string, emoji string, badge string, rating string) {
+templ DiscoveryCard(id string, category string, title string, location string, description string, emoji string, badge string, rating string) {
 	<div class="bg-card rounded-xl shadow-sm border hover:shadow-md transition-shadow group cursor-pointer">
 		<div class="p-6">
 			<div class="flex items-start justify-between mb-4">
@@ -234,10 +235,11 @@ templ DiscoveryCard(category string, title string, location string, description 
 				</div>
 				<div class="flex items-center gap-1">
 					<button
-						hx-post={ "/favorites/add/" + title }
+						hx-post={ "/favorites/add/" + id }
 						hx-target="this"
 						hx-swap="outerHTML"
 						class="p-2 text-muted-foreground hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+						title="Add to favorites"
 					>
 						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
@@ -274,7 +276,7 @@ templ DiscoveryCard(category string, title string, location string, description 
 				</button>
 				<div class="flex items-center gap-2">
 					<button
-						hx-post={ "/bookmarks/add/" + title }
+						hx-post={ "/bookmarks/add/" + id }
 						class="text-muted-foreground hover:text-foreground text-sm"
 					>
 						Bookmark
@@ -334,4 +336,160 @@ templ RecentDiscoveryCard(session models.ChatSession) {
 			</div>
 		</div>
 	</div>
+}
+
+type DiscoverResult struct {
+	ID           string
+	Name         string
+	Latitude     float64
+	Longitude    float64
+	Category     string
+	Description  string
+	Address      string
+	Website      *string
+	PhoneNumber  *string
+	OpeningHours *string
+	PriceLevel   string
+	Rating       float64
+	Tags         []string
+	Images       []string
+	CuisineType  *string
+	StarRating   *string
+}
+
+templ DiscoverSearchResults(results []DiscoverResult, query, location string) {
+	if len(results) == 0 {
+		<div class="text-center py-12">
+			<svg class="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+			</svg>
+			<p class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">No results found</p>
+			<p class="text-sm text-gray-500 dark:text-gray-400">Try a different search query or location</p>
+		</div>
+	} else {
+		<div>
+			<h2 class="text-lg font-semibold text-foreground mb-4">
+				{ fmt.Sprintf("%d Results for \"%s\" in %s", len(results), query, location) }
+			</h2>
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+				for _, result := range results {
+					@DiscoverResultCard(result)
+				}
+			</div>
+		</div>
+	}
+}
+
+templ DiscoverResultCard(result DiscoverResult) {
+	<div class="bg-card rounded-xl shadow-sm border hover:shadow-md transition-shadow group cursor-pointer">
+		<div class="p-6">
+			<div class="flex items-start justify-between mb-4">
+				<div class="flex items-center gap-3">
+					<span class="text-3xl">{ getCategoryEmoji(result.Category) }</span>
+					<div class="flex flex-col gap-1">
+						<span class={ "inline-flex items-center px-3 py-1 rounded-full text-sm font-medium", getCategoryColor(result.Category) }>
+							{ result.Category }
+						</span>
+						<div class="flex items-center gap-1">
+							<svg class="w-4 h-4 text-yellow-500 fill-current" fill="currentColor" viewBox="0 0 24 24">
+								<path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+							</svg>
+							<span class="text-sm font-medium">{ fmt.Sprintf("%.1f", result.Rating) }</span>
+						</div>
+					</div>
+				</div>
+				<button
+					hx-post={ "/favorites/add/" + result.ID + "?isLLM=true" }
+					hx-target="this"
+					hx-swap="outerHTML"
+					class="p-2 text-muted-foreground hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+					title="Add to favorites"
+				>
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+					</svg>
+				</button>
+			</div>
+			<div class="space-y-3">
+				<h3 class="font-semibold text-card-foreground group-hover:text-blue-600 transition-colors text-lg">{ result.Name }</h3>
+				<div class="flex items-center gap-2 text-sm text-muted-foreground">
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+					</svg>
+					{ result.Address }
+				</div>
+				<p class="text-muted-foreground text-sm line-clamp-3">{ result.Description }</p>
+				if len(result.Tags) > 0 {
+					<div class="flex flex-wrap gap-1">
+						for _, tag := range result.Tags {
+							<span class="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full">{ tag }</span>
+						}
+					</div>
+				}
+			</div>
+			<div class="flex items-center justify-between mt-4 pt-4 border-t border-border">
+				<div class="flex items-center gap-2 text-sm">
+					if result.PriceLevel != "" {
+						<span class="font-medium text-green-600 dark:text-green-400">{ result.PriceLevel }</span>
+					}
+				</div>
+				<div class="flex items-center gap-2">
+					if result.Website != nil && *result.Website != "" {
+						<a href={ templ.URL(*result.Website) } target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-700 dark:text-blue-400 text-sm">
+							Website
+						</a>
+					}
+					if result.PhoneNumber != nil && *result.PhoneNumber != "" {
+						<a href={ templ.URL("tel:" + *result.PhoneNumber) } class="text-blue-600 hover:text-blue-700 dark:text-blue-400 text-sm">
+							Call
+						</a>
+					}
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+func getCategoryEmoji(category string) string {
+	categoryLower := strings.ToLower(category)
+	emojiMap := map[string]string{
+		"restaurant":    "🍽️",
+		"hotel":         "🏨",
+		"activity":      "🎯",
+		"attraction":    "🏛️",
+		"museum":        "🎨",
+		"park":          "🌳",
+		"beach":         "🏖️",
+		"nightlife":     "🌃",
+		"shopping":      "🛍️",
+		"cultural":      "🎭",
+		"market":        "🏪",
+		"adventure":     "⛰️",
+		"cafe":          "☕",
+		"bar":           "🍺",
+		"entertainment": "🎪",
+	}
+	if emoji, ok := emojiMap[categoryLower]; ok {
+		return emoji
+	}
+	return "📍"
+}
+
+func getCategoryColor(category string) string {
+	categoryLower := strings.ToLower(category)
+	colorMap := map[string]string{
+		"restaurant": "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+		"hotel":      "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+		"activity":   "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+		"attraction": "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+		"museum":     "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+		"park":       "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
+		"beach":      "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300",
+		"nightlife":  "bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300",
+	}
+	if color, ok := colorMap[categoryLower]; ok {
+		return color
+	}
+	return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300"
 }

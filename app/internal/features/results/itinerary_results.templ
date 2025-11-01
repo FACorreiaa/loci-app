@@ -94,12 +94,14 @@ templ ItineraryResults(cityData models.GeneralCityData, generalPOIs []models.POI
 							Continue Session
 						</button>
 						<button
-							@click="toggleBookmark()"
-							:class="isBookmarked ? 'text-red-600 bg-red-50 hover:bg-red-100' : 'text-gray-700 hover:bg-gray-100'"
-							class="p-2 rounded-lg transition-colors"
+							hx-post={ "/bookmarks/add/" + itinerary.ItineraryID }
+							hx-target="this"
+							hx-swap="outerHTML"
+							class="p-2 text-muted-foreground hover:text-blue-500 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+							title="Save itinerary"
 						>
-							<svg class="w-4 h-4" :class="isBookmarked ? 'fill-current' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
 							</svg>
 						</button>
 						<button
@@ -177,13 +179,16 @@ templ ItineraryResults(cityData models.GeneralCityData, generalPOIs []models.POI
 						<span class="font-medium">Continue Session</span>
 					</button>
 					<button
-						@click="toggleBookmark(); showMobileMenu = false"
-						class="w-full flex items-center gap-3 px-3 py-2 text-left text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+						hx-post={ "/bookmarks/add/" + itinerary.ItineraryID }
+						hx-target="this"
+						hx-swap="outerHTML"
+						class="w-full flex items-center gap-3 px-3 py-2 text-left text-gray-900 dark:text-white hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+						@click="showMobileMenu = false"
 					>
-						<svg class="w-5 h-5" :class="isBookmarked ? 'text-red-600 fill-current' : 'text-gray-600'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+						<svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
 						</svg>
-						<span x-text="isBookmarked ? 'Remove from Saved' : 'Save Itinerary'"></span>
+						<span>Save Itinerary</span>
 					</button>
 					<button
 						@click="shareItinerary(); showMobileMenu = false"
