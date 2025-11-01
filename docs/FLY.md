@@ -200,7 +200,7 @@ Add other required secrets:
 ```bash
 # Database configuration
 flyctl secrets set \
-  DB_HOST=loci-db.internal \
+  DB_HOST=loci-db.app \
   DB_PORT=5432 \
   DB_NAME=templui_prod \
   DB_USER=postgres \
@@ -423,7 +423,7 @@ flyctl secrets list -a <your-app-name>
 
 # Test connection from app machine
 flyctl ssh console -a <your-app-name>
-nc -zv loci-db.internal 5432
+nc -zv loci-db.app 5432
 ```
 
 ### Extension Not Found

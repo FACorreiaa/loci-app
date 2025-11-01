@@ -6,12 +6,12 @@ services:
   # Make sure the OTel Collector can reach the locally running Go app
 #  otel-collector:
 #    extra_hosts:
-#      - "host.docker.internal:host-gateway"
+#      - "host.docker.app:host-gateway"
   
   # Make sure Prometheus can reach the locally running Go app
   prometheus:
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - "host.docker.app:host-gateway"
   
   # Development volume mounts for hot reloading configs (optional)
 #  grafana:
@@ -19,6 +19,6 @@ services:
 #      - GF_INSTALL_PLUGINS=grafana-piechart-panel
     # Uncomment for config hot reloading during development
     # volumes:
-    #   - grafana-data:/var/internal/grafana
+    #   - grafana-data:/var/app/grafana
     #   - ./app/observability/grafana/provisioning:/etc/grafana/provisioning:ro
-    #   - ./app/observability/grafana/dashboards:/var/internal/grafana/dashboards:ro
+    #   - ./app/observability/grafana/dashboards:/var/app/grafana/dashboards:ro

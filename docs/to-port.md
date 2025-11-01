@@ -272,8 +272,8 @@ import { FolderPlus, Plus, X } from "lucide-solid";
 import { createSignal, For, Show } from "solid-js";
 import {
   useAddToListMutation, useCreateListMutation, useLists
-} from "~/internal/api/lists";
-import { useBookmarkedItineraries } from "~/internal/api/itineraries";
+} from "~/app/api/lists";
+import { useBookmarkedItineraries } from "~/app/api/itineraries";
 ```
 
 **Interface Definition:**

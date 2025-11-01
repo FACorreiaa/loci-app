@@ -1,0 +1,101 @@
+package pages
+
+import (
+	"github.com/FACorreiaa/go-templui/interal/app/features"
+	"github.com/FACorreiaa/go-templui/internal/app/models"
+)
+
+templ Landing() {
+	@LayoutPage(models.LayoutTempl{
+		Title: "Home",
+		Nav: models.Navigation{
+			Items: []models.NavItem{
+				{Name: "Home", URL: "/"},
+				{Name: "About", URL: "/about"},
+				{Name: "Projects", URL: "/projects"},
+				{Name: "Contact", URL: "/contact"},
+			},
+		},
+		ActiveNav: "Home",
+		User:      nil, // Set to actual user when authenticated
+		Content:   features.PublicLandingPage(),
+	})
+}
+
+templ About() {
+	@LayoutPage(models.LayoutTempl{
+		Title: "About",
+		Nav: models.Navigation{
+			Items: []models.NavItem{
+				{Name: "Home", URL: "/"},
+				{Name: "About", URL: "/about"},
+				{Name: "Projects", URL: "/projects"},
+				{Name: "Contact", URL: "/contact"},
+			},
+		},
+		ActiveNav: "About",
+		User:      nil,
+		Content:   AboutContent(),
+	})
+}
+
+templ Projects() {
+	@LayoutPage(models.LayoutTempl{
+		Title: "Projects",
+		Nav: models.Navigation{
+			Items: []models.NavItem{
+				{Name: "Home", URL: "/"},
+				{Name: "About", URL: "/about"},
+				{Name: "Projects", URL: "/projects"},
+				{Name: "Contact", URL: "/contact"},
+			},
+		},
+		ActiveNav: "Projects",
+		User:      nil,
+		Content:   ProjectsContent(),
+	})
+}
+
+templ AboutContent() {
+	<div class="max-w-4xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
+		<div class="text-center mb-12">
+			<h1 class="text-4xl font-bold text-foreground mb-4">About TemplUI</h1>
+			<p class="text-xl text-muted-foreground">
+				Building the future of web development with Go, Templ, and Tailwind CSS.
+			</p>
+		</div>
+		<div class="prose prose-lg mx-auto text-muted-foreground">
+			<p>
+				TemplUI is a modern web development stack that combines the power of Go's performance, 
+				Templ's type-safe templating, and Tailwind CSS's utility-first styling approach.
+			</p>
+			<p>
+				Our mission is to provide developers with a fast, reliable, and enjoyable development 
+				experience while building modern web applications.
+			</p>
+		</div>
+	</div>
+}
+
+templ ProjectsContent() {
+	<div class="max-w-6xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
+		<div class="text-center mb-12">
+			<h1 class="text-4xl font-bold text-foreground mb-4">Our Projects</h1>
+			<p class="text-xl text-muted-foreground">
+				Explore our latest work and contributions to the community.
+			</p>
+		</div>
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+			// Project cards would go here
+			<div class="bg-card border border-border rounded-xl p-6">
+				<h3 class="text-xl font-semibold text-card-foreground mb-2">TemplUI Components</h3>
+				<p class="text-muted-foreground mb-4">
+					A comprehensive library of reusable components built with Templ and Tailwind CSS.
+				</p>
+				<a href="#" class="text-blue-600 hover:text-blue-700 font-medium">
+					Learn more →
+				</a>
+			</div>
+		</div>
+	</div>
+}

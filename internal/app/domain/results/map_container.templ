@@ -1,0 +1,417 @@
+package results
+
+import (
+	"encoding/json"
+	"fmt"
+	"github.com/FACorreiaa/go-templui/internal/app/models"
+)
+
+// package results (no changes to imports or helpers like poisToJSON, cityDataToJSON)
+
+// MapContainer displays the interactive Mapbox map with POI markers
+templ MapContainer(pois []models.POIDetailedInfo, cityData *models.GeneralCityData, sessionId string, showLegend bool, useNumberedMarkers bool, markerColor string, domain string) {
+	<div class="relative w-full h-full min-h-[500px] bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden" x-data="{ mapLoaded: false }" style="min-height: 500px;">
+		<!-- Map Element -->
+		<div id="map" class="w-full h-full" style="min-height: 500px;"></div>
+		<!-- Map Controls (keep these for usability, but style smaller if needed) -->
+		<div class="absolute top-4 right-4 z-10 flex flex-col gap-2">
+			<button
+				@click="window.map && window.map.zoomIn()"
+				class="w-8 h-8 bg-white dark:bg-gray-800 rounded-md shadow flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors text-sm"
+			>
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+				</svg>
+			</button>
+			<button
+				@click="window.map && window.map.zoomOut()"
+				class="w-8 h-8 bg-white dark:bg-gray-800 rounded-md shadow flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors text-sm"
+			>
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
+				</svg>
+			</button>
+			<button
+				@click="window.resetMapView && window.resetMapView()"
+				class="w-8 h-8 bg-white dark:bg-gray-800 rounded-md shadow flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors text-sm"
+			>
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+				</svg>
+			</button>
+		</div>
+		<!-- Loading State -->
+		<div x-show="!mapLoaded" class="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+			<div class="flex flex-col items-center gap-3">
+				<div class="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+				<p class="text-sm text-gray-600 dark:text-gray-300">Loading map...</p>
+			</div>
+		</div>
+		<!-- Map Legend (conditionally shown; pass showLegend=false to hide) -->
+		if showLegend {
+			<div class="absolute bottom-4 left-4 bg-white dark:bg-gray-800 rounded-lg shadow-md p-3 max-w-xs">
+				<h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Legend</h4>
+				<div class="space-y-1">
+					<div class="flex items-center gap-2">
+						<div class="w-3 h-3 rounded-full" style={ "background-color: " + markerColor }></div>
+						<span class="text-xs text-gray-600 dark:text-gray-300">
+							if domain == "restaurants" {
+								Restaurants
+							} else if domain == "hotels" {
+								Hotels
+							} else if domain == "activities" {
+								Activities
+							} else {
+								Points of Interest
+							}
+						</span>
+					</div>
+					<div class="flex items-center gap-2">
+						<div class="w-3 h-3 bg-red-600 rounded-full"></div>
+						<span class="text-xs text-gray-600 dark:text-gray-300">
+							if domain == "restaurants" {
+								Selected Restaurant
+							} else if domain == "hotels" {
+								Selected Hotel
+							} else if domain == "activities" {
+								Selected Activity
+							} else {
+								Selected POI
+							}
+						</span>
+					</div>
+				</div>
+			</div>
+		}
+	</div>
+	@MapInitScript(poisToJSON(pois), cityDataToJSON(cityData), useNumberedMarkers, markerColor)
+}
+
+script MapInitScript(poisJSON, cityJSON string, useNumberedMarkers bool, markerColor string) {
+    // Helper function to validate coordinates
+    function isValidCoordinate(lat, lng) {
+        // Check for valid ranges: lat [-90, 90], lng [-180, 180]
+        // Also reject 0,0 as it's often a placeholder for missing data
+        if (lat === 0 && lng === 0) return false;
+        if (lat < -90 || lat > 90) return false;
+        if (lng < -180 || lng > 180) return false;
+        return true;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        if (!window.mapboxgl) {
+            console.error('Mapbox GL JS not loaded');
+            return;
+        }
+
+        // Check if Mapbox token is set
+        if (!mapboxgl.accessToken && !window.MAPBOX_ACCESS_TOKEN) {
+            console.error('Mapbox access token not set. Please configure MAPBOX_API_KEY.');
+            return;
+        }
+
+        // POI data from server
+        const poisData = JSON.parse(poisJSON);
+        const cityDataParsed = JSON.parse(cityJSON);
+        const cityCenter = getCityCenter(cityDataParsed);
+
+        // Filter POIs to only those with valid coordinates
+        const validPOIs = poisData.filter(poi => isValidCoordinate(poi.latitude, poi.longitude));
+        const invalidPOIsCount = poisData.length - validPOIs.length;
+
+        if (invalidPOIsCount > 0) {
+            console.warn(`Filtered out ${invalidPOIsCount} POI(s) with invalid coordinates`);
+        }
+
+        // Initialize map with constraints for responsive behavior
+        window.map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v11',
+            center: cityCenter,
+            zoom: 12,
+            minZoom: 3,        // Prevent zooming out too far (world view minimum)
+            maxZoom: 18,       // Allow detailed street view
+            renderWorldCopies: false  // Prevent duplicate worlds on wide screens
+        });
+
+        // Map load event
+        window.map.on('load', function() {
+            // Set map loaded state using Alpine's data context
+            const mapContainer = document.getElementById('map').closest('[x-data]');
+            if (mapContainer && window.Alpine) {
+                Alpine.$data(mapContainer).mapLoaded = true;
+            }
+
+            // Ensure map fills its container properly after DOM updates
+            // Use multiple resize calls to handle Alpine.js dynamic class application
+            setTimeout(function() {
+                window.map.resize();
+            }, 100);
+            setTimeout(function() {
+                window.map.resize();
+            }, 300);
+            setTimeout(function() {
+                window.map.resize();
+            }, 500);
+
+            // Watch for container size changes (handles Alpine.js dynamic classes)
+            const mapElement = document.getElementById('map');
+            if (mapElement && window.ResizeObserver) {
+                const resizeObserver = new ResizeObserver(function(entries) {
+                    for (let entry of entries) {
+                        if (entry.target === mapElement.parentElement) {
+                            window.map.resize();
+                        }
+                    }
+                });
+                resizeObserver.observe(mapElement.parentElement);
+            }
+
+            // Create bounds object to fit all markers
+            const bounds = new mapboxgl.LngLatBounds();
+            let hasValidCoordinates = false;
+
+            // Get marker color based on parameter
+            const getMarkerColor = function(color) {
+                const colors = {
+                    'blue': '#2563eb',
+                    'orange': '#f97316',
+                    'green': '#10b981',
+                    'purple': '#9333ea'
+                };
+                return colors[color] || '#2563eb';
+            };
+
+            const markerBgColor = getMarkerColor(markerColor);
+
+            // Add POI markers and extend bounds (using only valid POIs)
+            validPOIs.forEach(function(poi, index) {
+                // Double-check validation (defensive programming)
+                if (isValidCoordinate(poi.latitude, poi.longitude)) {
+                    hasValidCoordinates = true;
+                    bounds.extend([poi.longitude, poi.latitude]);
+
+                    // Create marker element with conditional numbered styling
+                    const markerEl = document.createElement('div');
+                    markerEl.className = 'poi-marker';
+
+                    if (useNumberedMarkers) {
+                        // Numbered marker with centered number
+                        markerEl.style.cssText = `
+                            width: 32px;
+                            height: 32px;
+                            background-color: white;
+                            border: 3px solid ${markerBgColor};
+                            border-radius: 50%;
+                            cursor: pointer;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-weight: bold;
+                            font-size: 14px;
+                            color: ${markerBgColor};
+                        `;
+                        markerEl.textContent = (index + 1).toString();
+                    } else {
+                        // Plain colored dot marker
+                        markerEl.style.cssText = `
+                            width: 24px;
+                            height: 24px;
+                            background-color: ${markerBgColor};
+                            border: 2px solid white;
+                            border-radius: 50%;
+                            cursor: pointer;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                        `;
+                    }
+
+                    // Create popup (unchanged)
+                    const popup = new mapboxgl.Popup({
+                        offset: 25,
+                        closeButton: true,
+                        closeOnClick: false
+                    }).setHTML(`
+                        <div class="p-2 max-w-xs">
+                            <h3 class="font-medium text-gray-900 mb-1">${poi.name}</h3>
+                            <p class="text-sm text-gray-600 mb-2">${poi.description || ''}</p>
+                            <div class="flex items-center gap-1 text-xs text-gray-500">
+                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                                </svg>
+                                ${poi.category || 'Point of Interest'}
+                            </div>
+                            <button onclick="selectPOI(${index})" class="mt-2 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors">
+                                View Details
+                            </button>
+                        </div>
+                    `);
+
+                    // Add marker to map
+                    const marker = new mapboxgl.Marker(markerEl)
+                        .setLngLat([poi.longitude, poi.latitude])
+                        .setPopup(popup)
+                        .addTo(window.map);
+
+                    // Click handler
+                    markerEl.addEventListener('click', function() {
+                        selectPOI(index);
+                    });
+                }
+            });
+
+			// Fit to bounds if there are valid POIs
+			if (hasValidCoordinates && !bounds.isEmpty()) {
+				// Calculate responsive padding based on screen size
+				const padding = {
+					top: window.innerWidth < 640 ? 40 : 60,      // Mobile vs desktop
+					bottom: window.innerWidth < 640 ? 40 : 80,   // More space for legend on desktop
+					left: window.innerWidth < 640 ? 20 : 60,
+					right: window.innerWidth < 640 ? 20 : 60
+				};
+
+				window.map.fitBounds(bounds, {
+					padding: padding,
+					maxZoom: 15,      // Don't zoom in too close
+					duration: 1000
+				});
+			}
+        });
+
+		// Reset map view function with responsive padding
+		window.resetMapView = function() {
+			if (window.map) {
+				const bounds = new mapboxgl.LngLatBounds();
+				let hasValid = false;
+				poisData.forEach(poi => {
+					if (poi.latitude && poi.longitude) {
+						hasValid = true;
+						bounds.extend([poi.longitude, poi.latitude]);
+					}
+				});
+
+				if (hasValid && !bounds.isEmpty()) {
+					const padding = {
+						top: window.innerWidth < 640 ? 40 : 60,
+						bottom: window.innerWidth < 640 ? 40 : 80,
+						left: window.innerWidth < 640 ? 20 : 60,
+						right: window.innerWidth < 640 ? 20 : 60
+					};
+					window.map.fitBounds(bounds, {
+						padding: padding,
+						maxZoom: 15,
+						duration: 1000
+					});
+				} else {
+					window.map.flyTo({ center: cityCenter, zoom: 12, duration: 1000 });
+				}
+			}
+		};
+
+        // Select POI function (unchanged)
+        window.selectPOI = function(index) {
+            console.log('Selected POI:', poisData[index]);
+            const event = new CustomEvent('poi-selected', { detail: poisData[index] });
+            document.dispatchEvent(event);
+        };
+
+        // Handle window resize to maintain map bounds
+        let resizeTimeout;
+        window.addEventListener('resize', function() {
+            // Debounce resize events to avoid performance issues
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(function() {
+                if (window.map) {
+                    window.map.resize();
+                    // Optionally re-fit bounds on resize if needed
+                    // window.resetMapView();
+                }
+            }, 250);
+        });
+    });
+
+    // Helper function to get city center with validation
+    function getCityCenter(cityData) {
+        if (cityData && cityData.center_latitude && cityData.center_longitude) {
+            const lat = cityData.center_latitude;
+            const lng = cityData.center_longitude;
+
+            // Validate city center coordinates
+            if (isValidCoordinate(lat, lng)) {
+                return [lng, lat];  // Mapbox uses [lng, lat] order
+            }
+        }
+
+        // Fallback to world center (0,0 is in the Atlantic Ocean)
+        // Better fallback: Greenwich, London [0, 51.5]
+        console.warn('Invalid or missing city center coordinates, using default fallback');
+        return [0, 51.5];
+    }
+}
+
+// Helper function to convert POIs to JSON
+func poisToJSON(pois []models.POIDetailedInfo) string {
+	type simplifiedPOI struct {
+		Name        string   `json:"name"`
+		Description string   `json:"description"`
+		Category    string   `json:"category"`
+		Latitude    float64  `json:"latitude"`
+		Longitude   float64  `json:"longitude"`
+		Images      []string `json:"images"`
+	}
+
+	var simplified []simplifiedPOI
+	for _, poi := range pois {
+		simplified = append(simplified, simplifiedPOI{
+			Name:        poi.Name,
+			Description: poi.Description,
+			Category:    poi.Category,
+			Latitude:    poi.Latitude,
+			Longitude:   poi.Longitude,
+			Images:      poi.Images,
+		})
+	}
+
+	jsonData, _ := json.Marshal(simplified)
+	return string(jsonData)
+}
+
+// Helper function to validate and format coordinates for display
+func formatCoordinates(lat, lng float64) string {
+	// Validate coordinates
+	if lat == 0 && lng == 0 {
+		return "Location TBD"
+	}
+	if lat < -90 || lat > 90 || lng < -180 || lng > 180 {
+		return "Location TBD"
+	}
+	return fmt.Sprintf("%.4f, %.4f", lat, lng)
+}
+
+// Helper function to check if coordinates are valid
+func hasValidCoordinates(lat, lng float64) bool {
+	if lat == 0 && lng == 0 {
+		return false
+	}
+	return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
+}
+
+// Helper function to convert city data to JSON
+func cityDataToJSON(cityData *models.GeneralCityData) string {
+	if cityData == nil {
+		return "null"
+	}
+
+	type simplifiedCity struct {
+		Latitude  float64 `json:"center_latitude"`
+		Longitude float64 `json:"center_longitude"`
+	}
+
+	simplified := simplifiedCity{
+		Latitude:  cityData.CenterLatitude,
+		Longitude: cityData.CenterLongitude,
+	}
+
+	jsonData, _ := json.Marshal(simplified)
+	return string(jsonData)
+}

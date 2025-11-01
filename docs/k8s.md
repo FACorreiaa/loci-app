@@ -179,7 +179,7 @@ spec:
         - containerPort: 5432
         volumeMounts:
         - name: postgres-storage
-          mountPath: /var/internal/postgresql/data
+          mountPath: /var/app/postgresql/data
         - name: init-scripts
           mountPath: /docker-entrypoint-initdb.d
         resources:
@@ -423,7 +423,7 @@ spec:
         - containerPort: 3000
         volumeMounts:
         - name: grafana-storage
-          mountPath: /var/internal/grafana
+          mountPath: /var/app/grafana
         - name: grafana-datasources
           mountPath: /etc/grafana/provisioning/datasources
         - name: grafana-dashboards

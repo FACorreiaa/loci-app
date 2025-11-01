@@ -9,14 +9,14 @@ import (
 
 	"github.com/joho/godotenv"
 
-	database "github.com/FACorreiaa/go-templui/app/db"
-	"github.com/FACorreiaa/go-templui/app/observability/metrics"
-	"github.com/FACorreiaa/go-templui/app/observability/tracer"
-	"github.com/FACorreiaa/go-templui/app/pkg/config"
-	"github.com/FACorreiaa/go-templui/app/pkg/logger"
-	"github.com/FACorreiaa/go-templui/app/pkg/middleware"
+	database "github.com/FACorreiaa/go-templui/internal/db"
+	"github.com/FACorreiaa/go-templui/internal/app/observability/metrics"
+	"github.com/FACorreiaa/go-templui/internal/app/observability/tracer"
+	"github.com/FACorreiaa/go-templui/internal/pkg/config"
+	"github.com/FACorreiaa/go-templui/internal/pkg/logger"
+	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 
-	"github.com/FACorreiaa/go-templui/app/routes"
+	"github.com/FACorreiaa/go-templui/internal/routes"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"

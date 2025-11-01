@@ -6156,7 +6156,7 @@ import (
 )
 
 func main() {
-	// Create handlers.
+	// Create common.
 	log := slog.New(slog.NewJSONHandler(os.Stderr))
 	s, err := db.NewCountStore(os.Getenv("TABLE_NAME"), os.Getenv("AWS_REGION"))
 	if err != nil {

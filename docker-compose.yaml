@@ -16,7 +16,7 @@ services:
     ports:
       - "5454:5432"
     volumes:
-      - postgres-data:/var/internal/postgresql/data
+      - postgres-data:/var/app/postgresql/data
       - ./scripts/postgres/init:/docker-entrypoint-initdb.d
     networks:
       - microservices-net
@@ -73,7 +73,7 @@ services:
 #    container_name: tempo
 #    ports:
 #      - "3200:3200"   # Tempo HTTP API
-#      - "4318"        # OTLP HTTP receiver (internal)
+#      - "4318"        # OTLP HTTP receiver (app)
 #    volumes:
 #      - ./app/observability/tempo-config.yaml:/etc/tempo/tempo-config.yaml:ro
 #      - tempo-data:/tmp/tempo
@@ -108,9 +108,9 @@ services:
 #      - GF_SECURITY_ADMIN_PASSWORD=admin
 #      - GF_USERS_ALLOW_SIGN_UP=false
 #    volumes:
-#      - grafana-data:/var/internal/grafana
+#      - grafana-data:/var/app/grafana
 #      - ./app/observability/grafana/provisioning:/etc/grafana/provisioning:ro
-#      - ./app/observability/grafana/dashboards:/var/internal/grafana/dashboards:ro
+#      - ./app/observability/grafana/dashboards:/var/app/grafana/dashboards:ro
 #    depends_on:
 #      - prometheus
 #      - loki
@@ -125,7 +125,7 @@ services:
 #    container_name: promtail
 #    volumes:
 #      - /var/log:/var/log:ro
-#      - /var/internal/docker/containers:/var/internal/docker/containers:ro
+#      - /var/app/docker/containers:/var/app/docker/containers:ro
 #      - ./app/observability/promtail.yml:/etc/promtail/config.yml:ro
 #    command:
 #      - '-config.file=/etc/promtail/config.yml'

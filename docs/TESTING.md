@@ -123,21 +123,21 @@ Tests simulate actual usage patterns:
 
 ### Unit Tests (No External Dependencies)
 ```bash
-go test ./app/pkg/handlers -v
+go test ./app/pkg/common -v
 ```
 
 ### Integration Tests (Requires Test Database)
 ```bash
-go test ./app/pkg/handlers -v -tags=integration
+go test ./app/pkg/common -v -tags=integration
 ```
 
 ### Specific Test Suites
 ```bash
 # Core functionality only
-go test ./app/pkg/handlers -v -run="TestFilteringFunctions|TestConversionFunctions"
+go test ./app/pkg/common -v -run="TestFilteringFunctions|TestConversionFunctions"
 
 # Basic integration only  
-go test ./app/pkg/handlers -v -run="TestHandlers_BasicInstantiation|TestUnifiedDataSourceConcept"
+go test ./app/pkg/common -v -run="TestHandlers_BasicInstantiation|TestUnifiedDataSourceConcept"
 ```
 
 ## Test Coverage

@@ -72,7 +72,7 @@ Go Workspaces were introduced in Go 1.18 specifically to solve this problem. A w
 
     ```bash
     cd /my-project/
-    go work init ./services/users-auth ./services/users-payment ./services/chat ./services/pois ./internal/shared-internal
+    go work init ./services/users-auth ./services/users-payment ./services/chat ./services/pois ./app/shared-app
     ```
     This creates a `go.work` file that looks like this:
 
