@@ -9,9 +9,9 @@ import (
 
 	"github.com/joho/godotenv"
 
-	database "github.com/FACorreiaa/go-templui/internal/db"
 	"github.com/FACorreiaa/go-templui/internal/app/observability/metrics"
 	"github.com/FACorreiaa/go-templui/internal/app/observability/tracer"
+	database "github.com/FACorreiaa/go-templui/internal/db"
 	"github.com/FACorreiaa/go-templui/internal/pkg/config"
 	"github.com/FACorreiaa/go-templui/internal/pkg/logger"
 	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
@@ -72,6 +72,11 @@ func main() {
 
 	// Create Gin router
 	r := gin.New()
+
+	if err := SetupAssets(r); err != nil {
+		logger.Log.Fatal("Failed to setup assets", zap.Error(err))
+		panic(err)
+	}
 
 	// Setup middleware (inject database pool into context)
 	r.Use(middleware.LoggerMiddleware())

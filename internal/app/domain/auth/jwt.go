@@ -1,73 +1,72 @@
 package auth
 
 import (
-	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
-
-	"github.com/FACorreiaa/go-templui/internal/pkg/logger"
 )
 
-var jwtSecret = []byte("your-secret-key-change-in-production")
+// JWTConfig holds JWT authentication configuration
+type JWTConfig struct {
+	SecretKey       string
+	TokenExpiration time.Duration
+	Logger          *slog.Logger
+	Optional        bool // If true, missing/invalid tokens won't block the request
+}
 
-type contextKey string
-
-const (
-	UserIDKey    contextKey = "user_id"
-	UserEmailKey contextKey = "user_email"
-	UserNameKey  contextKey = "user_name"
-)
-
+// Claims represents the JWT claims
 type Claims struct {
-	UserID string `json:"user_id"`
-	Email  string `json:"email"`
-	Name   string `json:"name"`
+	UserID   string `json:"user_id"`
+	Email    string `json:"email,omitempty"`
+	Username string `json:"username,omitempty"`
 	jwt.RegisteredClaims
 }
 
-type JWTService struct{}
-
+// NewJWTService creates a new JWT service
 func NewJWTService() *JWTService {
 	return &JWTService{}
 }
 
-func (a *JWTService) GenerateToken(userID, email, name string) (string, error) {
-	expirationTime := time.Now().Add(24 * time.Hour)
-	claims := &Claims{
-		UserID: userID,
-		Email:  email,
-		Name:   name,
+type JWTService struct{}
+
+// GenerateToken generates a new JWT token
+func (s *JWTService) GenerateToken(config JWTConfig, userID, email, username string) (string, error) {
+	now := time.Now()
+	claims := Claims{
+		UserID:   userID,
+		Email:    email,
+		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(expirationTime),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(now.Add(config.TokenExpiration)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(jwtSecret)
+	tokenString, err := token.SignedString([]byte(config.SecretKey))
 	if err != nil {
-		logger.Log.Error("Failed to generate JWT token",
-			zap.Error(err),
-		)
-		return "", err
+		config.Logger.Error("Failed to sign token", slog.Any("error", err))
+		return "", fmt.Errorf("failed to generate token: %w", err)
 	}
 
 	return tokenString, nil
 }
 
-func (a *JWTService) ValidateToken(tokenString string) (*Claims, error) {
+// ValidateToken parses and validates a JWT token
+func (s *JWTService) ValidateToken(config JWTConfig, tokenString string) (*Claims, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return jwtSecret, nil
+		return []byte(config.SecretKey), nil
 	})
 
 	if err != nil {
@@ -81,61 +80,73 @@ func (a *JWTService) ValidateToken(tokenString string) (*Claims, error) {
 	return claims, nil
 }
 
-func (a *JWTService) HashPassword(password string) (string, error) {
+// HashPassword hashes a password using bcrypt
+func (s *JWTService) HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		logger.Log.Error("Failed to hash password",
-			zap.Error(err),
-		)
-		return "", err
-	}
-	return string(bytes), nil
+	return string(bytes), err
 }
 
-func (a *JWTService) CheckPassword(hashedPassword, password string) bool {
+// CheckPassword compares a hashed password with a plaintext password
+func (s *JWTService) CheckPassword(hashedPassword, password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	return err == nil
 }
 
-func JWTMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
+// JWTAuthMiddleware creates a middleware for JWT authentication
+func JWTAuthMiddleware(config JWTConfig) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			// Check for cookie as fallback
-			cookie, err := r.Cookie("auth_token")
-			if err != nil {
-				logger.Log.Info("No auth token provided",
-					zap.String("path", r.URL.Path),
-					zap.String("method", r.Method),
-				)
-				http.Redirect(w, r, "/login", http.StatusFound)
+			authHeader = c.Query("token")
+			if authHeader != "" {
+				authHeader = "Bearer " + authHeader
+			}
+		}
+
+		if authHeader == "" {
+			if config.Optional {
+				c.Set("user_id", "anonymous")
+				c.Set("authenticated", false)
+				c.Next()
 				return
 			}
-			authHeader = "Bearer " + cookie.Value
-		}
-
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenString == authHeader {
-			logger.Log.Warn("Invalid authorization header format")
-			http.Redirect(w, r, "/login", http.StatusFound)
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
+			c.Abort()
 			return
 		}
 
-		jwtService := NewJWTService()
-		claims, err := jwtService.ValidateToken(tokenString)
+		parts := strings.SplitN(authHeader, " ", 2)
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			if config.Optional {
+				c.Set("user_id", "anonymous")
+				c.Set("authenticated", false)
+				c.Next()
+				return
+			}
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization header format"})
+			c.Abort()
+			return
+		}
+
+		tokenString := parts[1]
+		service := NewJWTService()
+		claims, err := service.ValidateToken(config, tokenString)
 		if err != nil {
-			logger.Log.Warn("Invalid JWT token",
-				zap.Error(err),
-			)
-			http.Redirect(w, r, "/login", http.StatusFound)
+			if config.Optional {
+				c.Set("user_id", "anonymous")
+				c.Set("authenticated", false)
+				c.Next()
+				return
+			}
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+			c.Abort()
 			return
 		}
 
-		// Add user info to request context
-		r = r.WithContext(context.WithValue(r.Context(), UserIDKey, claims.UserID))
-		r = r.WithContext(context.WithValue(r.Context(), UserEmailKey, claims.Email))
-		r = r.WithContext(context.WithValue(r.Context(), UserNameKey, claims.Name))
-
-		next.ServeHTTP(w, r)
-	})
+		c.Set("user_id", claims.UserID)
+		c.Set("email", claims.Email)
+		c.Set("username", claims.Username)
+		c.Set("authenticated", true)
+		c.Next()
+	}
 }

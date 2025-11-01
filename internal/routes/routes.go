@@ -2,7 +2,6 @@ package routes
 
 import (
 	"context"
-	"io/fs"
 	"log/slog"
 	"net/http"
 	"net/http/pprof"
@@ -23,7 +22,6 @@ import (
 	"github.com/FACorreiaa/go-templui/internal/app/domain/lists"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/reviews"
 
-	"github.com/FACorreiaa/go-templui/assets"
 	"github.com/FACorreiaa/go-templui/internal/app/common"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/activities"
 	auth2 "github.com/FACorreiaa/go-templui/internal/app/domain/auth"
@@ -54,9 +52,9 @@ import (
 
 	generativeAI "github.com/FACorreiaa/go-genai-sdk/lib"
 
-	"github.com/FACorreiaa/go-templui/internal/app/features/auth"
+	"github.com/FACorreiaa/go-templui/internal/app/domain/auth"
 
-	"github.com/FACorreiaa/go-templui/internal/app/features/pricing"
+	"github.com/FACorreiaa/go-templui/internal/app/domain/pricing"
 
 	"github.com/FACorreiaa/go-templui/internal/app/pages"
 
@@ -78,26 +76,11 @@ func getUserFromContext(c *gin.Context) *models.User {
 	}
 }
 
-// Serve assets folder
-func SetupStatic(r *gin.Engine) error {
-	staticFiles, _ := fs.Sub(assets.Assets, "assets")
-	r.StaticFS("/assets", http.FS(staticFiles))
-	r.StaticFile("/sw.js", "./assets/static/sw.js")
-	r.StaticFile("/manifest.json", "./assets/static/manifest.json")
-	return nil
-}
-
 func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	//r.Use(middleware.AuthMiddleware())
 	// Setup custom templ renderer
 	ginHTMLRenderer := r.HTMLRender
 	r.HTMLRender = &renderer.HTMLTemplRenderer{FallbackHTMLRenderer: ginHTMLRenderer}
-
-	// Assets
-	if err := SetupStatic(r); err != nil {
-		log.Fatal("Failed to setup static resources", zap.Error(err))
-		panic(err)
-	}
 
 	// Pprof debugging routes
 	debugGroup := r.Group("/debug/pprof")

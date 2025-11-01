@@ -5,18 +5,16 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-
-	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 )
 
 // AuthTokenHandler handles JWT token generation for testing/development
 type AuthTokenHandler struct {
 	logger    *slog.Logger
-	jwtConfig middleware.JWTConfig
+	jwtConfig JWTConfig
 }
 
 // NewAuthTokenHandler creates a new auth token handler
-func NewAuthTokenHandler(logger *slog.Logger, jwtConfig middleware.JWTConfig) *AuthTokenHandler {
+func NewAuthTokenHandler(logger *slog.Logger, jwtConfig JWTConfig) *AuthTokenHandler {
 	return &AuthTokenHandler{
 		logger:    logger,
 		jwtConfig: jwtConfig,
@@ -49,7 +47,8 @@ func (h *AuthTokenHandler) GenerateToken(c *gin.Context) {
 	}
 
 	// Generate token
-	token, err := middleware.GenerateToken(
+	jwtService := NewJWTService()
+	token, err := jwtService.GenerateToken(
 		h.jwtConfig,
 		req.UserID,
 		req.Email,

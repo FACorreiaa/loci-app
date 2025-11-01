@@ -1,9 +1,6 @@
 package pages
 
-import (
-	"github.com/FACorreiaa/go-templui/internal/app/features"
-	"github.com/FACorreiaa/go-templui/internal/app/models"
-)
+import "github.com/FACorreiaa/go-templui/internal/app/models"
 
 templ Landing() {
 	@LayoutPage(models.LayoutTempl{
@@ -18,7 +15,7 @@ templ Landing() {
 		},
 		ActiveNav: "Home",
 		User:      nil, // Set to actual user when authenticated
-		Content:   features.PublicLandingPage(),
+		Content:   PublicLandingPage(),
 	})
 }
 

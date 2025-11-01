@@ -10,7 +10,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/a-h/templ"
 
-	auth2 "github.com/FACorreiaa/go-templui/internal/app/features/auth"
+	auth2 "github.com/FACorreiaa/go-templui/internal/app/domain/auth"
 )
 
 func TestSignInTemplate(t *testing.T) {

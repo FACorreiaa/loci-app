@@ -19,7 +19,7 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
-	"github.com/FACorreiaa/go-templui/internal/app/features/discover"
+	"github.com/FACorreiaa/go-templui/internal/app/domain/discover"
 
 	llmchat2 "github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/poi"

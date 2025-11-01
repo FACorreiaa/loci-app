@@ -7,7 +7,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 
-	auth2 "github.com/FACorreiaa/go-templui/internal/app/features/auth"
+	auth2 "github.com/FACorreiaa/go-templui/internal/app/domain/auth"
 )
 
 func TestSignInPage(t *testing.T) {

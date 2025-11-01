@@ -9,7 +9,6 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	"github.com/FACorreiaa/go-templui/internal/app/features"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 )
 
@@ -46,7 +45,7 @@ func Landing() templ.Component {
 			},
 			ActiveNav: "Home",
 			User:      nil, // Set to actual user when authenticated
-			Content:   features.PublicLandingPage(),
+			Content:   PublicLandingPage(),
 		}).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err

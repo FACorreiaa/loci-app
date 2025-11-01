@@ -132,7 +132,13 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		// Create JWT service and validate token
 		jwtService := auth.NewJWTService()
-		claims, err := jwtService.ValidateToken(token)
+		// Replace with your actual configuration
+		config := auth.JWTConfig{
+			SecretKey:       "your-secret-key-change-in-production",
+			TokenExpiration: time.Hour * 24,
+			Logger:          slog.Default(),
+		}
+		claims, err := jwtService.ValidateToken(config, token)
 		if err != nil {
 			logger.Log.Warn("Invalid auth token",
 				zap.String("path", c.Request.URL.Path),
@@ -152,7 +158,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		// Set user context from JWT claims
 		c.Set("user_id", claims.UserID)
 		c.Set("user_email", claims.Email)
-		c.Set("user_name", claims.Name)
+		c.Set("user_name", claims.Username)
 		c.Next()
 	}
 }
@@ -206,12 +212,18 @@ func OptionalAuthMiddleware() gin.HandlerFunc {
 		if err == nil && token != "" {
 			// Create JWT service and validate token
 			jwtService := auth.NewJWTService()
-			claims, err := jwtService.ValidateToken(token)
+			// Replace with your actual configuration
+			config := auth.JWTConfig{
+				SecretKey:       "your-secret-key-change-in-production",
+				TokenExpiration: time.Hour * 24,
+				Logger:          slog.Default(),
+			}
+			claims, err := jwtService.ValidateToken(config, token)
 			if err == nil {
 				// Set user context from JWT claims
 				c.Set("user_id", claims.UserID)
 				c.Set("user_email", claims.Email)
-				c.Set("user_name", claims.Name)
+				c.Set("user_name", claims.Username)
 			}
 		}
 		c.Next()
