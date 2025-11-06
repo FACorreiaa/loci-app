@@ -66,7 +66,7 @@ CREATE TRIGGER trigger_set_user_itinerary_preferences_updated_at
     BEFORE UPDATE ON user_itinerary_preferences
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
--- Create function to initialize default preferences for existing profiles
+-- -- +goose StatementBegin
 CREATE OR REPLACE FUNCTION create_default_domain_preferences()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -131,6 +131,7 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 -- Add trigger to create default domain preferences when a profile is created
 CREATE TRIGGER trigger_create_default_domain_preferences_after_insert

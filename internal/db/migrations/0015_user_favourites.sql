@@ -32,6 +32,7 @@ CREATE TABLE user_favorite_llm_pois (
 
 --CREATE INDEX idx_user_favorite_llm_pois_llm_poi_id ON user_favorite_llm_pois (llm_poi_id);
 
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -39,3 +40,4 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd

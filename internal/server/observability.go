@@ -13,16 +13,18 @@ import (
 type ObservabilityShutdownFunc func(context.Context) error
 
 // InitObservability initializes OpenTelemetry and application metrics
-func InitObservability(serviceName, metricsEndpoint string, logger *zap.Logger) (ObservabilityShutdownFunc, error) {
+func InitObservability(serviceName, metricsEndpoint, otlpEndpoint string, logger *zap.Logger) (ObservabilityShutdownFunc, error) {
 	// Initialize OpenTelemetry
-	otelShutdown, err := tracer.InitOtelProviders(serviceName, metricsEndpoint)
+	otelShutdown, err := tracer.InitOtelProviders(serviceName, metricsEndpoint, otlpEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize OpenTelemetry: %w", err)
 	}
 
 	// Initialize application metrics
 	metrics.InitAppMetrics()
-	logger.Info("Observability initialized", zap.String("metrics_endpoint", metricsEndpoint+"/metrics"))
+	logger.Info("Observability initialized",
+		zap.String("metrics_endpoint", metricsEndpoint+"/metrics"),
+		zap.String("otlp_endpoint", otlpEndpoint))
 
 	return otelShutdown, nil
 }

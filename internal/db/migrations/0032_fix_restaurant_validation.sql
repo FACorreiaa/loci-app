@@ -1,6 +1,7 @@
 -- +goose Up
 
 -- Update the validation trigger to check llm_suggested_pois for restaurant content type
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION validate_list_item_content_type() RETURNS TRIGGER AS $$
 BEGIN
     -- Validate that the item_id exists for the specified content_type
@@ -31,9 +32,12 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
+
 -- +goose Down
 
 -- Revert the validation trigger to check points_of_interest for restaurant content type (previous behavior)
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION validate_list_item_content_type() RETURNS TRIGGER AS $$
 BEGIN
     -- Validate that the item_id exists for the specified content_type
@@ -64,3 +68,4 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd

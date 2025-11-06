@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -56,11 +57,16 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		// Get JWT secret from environment
+		jwtSecret := os.Getenv("JWT_SECRET_KEY")
+		if jwtSecret == "" {
+			jwtSecret = "default-secret-key-change-in-production-min-32-chars"
+		}
+
 		// Create JWT service and validate token
 		jwtService := auth.NewJWTService()
-		// Replace with your actual configuration
 		config := auth.JWTConfig{
-			SecretKey:       "your-secret-key-change-in-production",
+			SecretKey:       jwtSecret,
 			TokenExpiration: time.Hour * 24,
 			Logger:          nil, // Logger will be injected elsewhere
 		}
@@ -126,11 +132,16 @@ func OptionalAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token, err := c.Cookie("auth_token")
 		if err == nil && token != "" {
+			// Get JWT secret from environment
+			jwtSecret := os.Getenv("JWT_SECRET_KEY")
+			if jwtSecret == "" {
+				jwtSecret = "default-secret-key-change-in-production-min-32-chars"
+			}
+
 			// Create JWT service and validate token
 			jwtService := auth.NewJWTService()
-			// Replace with your actual configuration
 			config := auth.JWTConfig{
-				SecretKey:       "your-secret-key-change-in-production",
+				SecretKey:       jwtSecret,
 				TokenExpiration: time.Hour * 24,
 				Logger:          nil, // Logger will be injected elsewhere
 			}

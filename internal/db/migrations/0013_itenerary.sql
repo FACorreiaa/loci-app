@@ -20,6 +20,7 @@ CREATE TABLE itinerary_pois (
     PRIMARY KEY (itinerary_id, poi_id)
 );
 
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION update_timestamp()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -27,6 +28,7 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 CREATE TRIGGER trigger_update_timestamp
 BEFORE UPDATE ON itinerary_pois

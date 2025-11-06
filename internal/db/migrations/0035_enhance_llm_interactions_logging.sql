@@ -68,6 +68,7 @@ CREATE INDEX IF NOT EXISTS idx_llm_interactions_city_intent ON llm_interactions(
 CREATE INDEX IF NOT EXISTS idx_llm_interactions_performance ON llm_interactions(intent, latency_ms, created_at DESC);
 
 -- Create trigger to update 'updated_at' timestamp
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION update_llm_interactions_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -75,6 +76,7 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 CREATE TRIGGER trigger_update_llm_interactions_updated_at
     BEFORE UPDATE ON llm_interactions

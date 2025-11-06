@@ -20,7 +20,7 @@ import (
 
 // InitOtelProviders initializes OpenTelemetry tracing and metrics providers.
 // Returns a shutdown function.
-func InitOtelProviders(serviceName string, metricsAddr string) (func(context.Context) error, error) {
+func InitOtelProviders(serviceName string, metricsAddr string, otlpEndpoint string) (func(context.Context) error, error) {
 	// --- Common Resource ---
 	res := resource.NewWithAttributes(
 		semconv.SchemaURL,
@@ -33,8 +33,8 @@ func InitOtelProviders(serviceName string, metricsAddr string) (func(context.Con
 
 	// Configure OTLP exporter for traces to send to collector via HTTP
 	traceExporter, err := otlptracehttp.New(context.Background(),
-		otlptracehttp.WithEndpoint("otel-collector:4318"), // Send to OTel Collector via HTTP
-		otlptracehttp.WithInsecure(),                      // OK for local docker network
+		otlptracehttp.WithEndpoint(otlpEndpoint), // Send to OTel Collector via HTTP
+		otlptracehttp.WithInsecure(),             // OK for local development
 	)
 	if err != nil {
 		// Fallback to NoOp if OTLP export fails (for local development)

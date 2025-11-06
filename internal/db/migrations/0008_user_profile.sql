@@ -60,6 +60,7 @@ CREATE TRIGGER trigger_set_user_preference_profiles_updated_at
 
 -- Function to ensure only one default profile exists per user
 -- This function will be called by triggers on INSERT and UPDATE
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION ensure_single_default_profile()
     RETURNS TRIGGER AS $$
 BEGIN
@@ -73,6 +74,7 @@ END IF;
 RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 -- Trigger to enforce single default on INSERT
 CREATE TRIGGER trigger_enforce_single_default_insert
@@ -87,6 +89,7 @@ CREATE TRIGGER trigger_enforce_single_default_update
 EXECUTE FUNCTION ensure_single_default_profile();
 
 -- Function to create a default profile when a user is created
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION create_initial_user_profile()
     RETURNS TRIGGER AS $$
 BEGIN
@@ -95,6 +98,7 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 -- Trigger to create default profile after user insert
 CREATE TRIGGER trigger_create_user_profile_after_insert

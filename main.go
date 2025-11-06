@@ -37,7 +37,7 @@ func run() error {
 	}
 
 	// Initialize observability
-	otelShutdown, err := server.InitObservability("loci-templui", ":9092", logger)
+	otelShutdown, err := server.InitObservability("loci-templui", ":9092", cfg.OTEL.Endpoint, logger)
 	if err != nil {
 		return err
 	}

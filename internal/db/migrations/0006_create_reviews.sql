@@ -99,7 +99,7 @@ BEGIN
     END IF;
 END;
 $$ LANGUAGE plpgsql;
--- +goose StatementEnf
+-- +goose StatementEnd
 
 CREATE TRIGGER trigger_update_poi_rating_insert
 AFTER INSERT ON reviews

@@ -5,7 +5,9 @@
 -- Enable TimescaleDB extension (if not already enabled)
 -- Note: This requires TimescaleDB to be installed in PostgreSQL
 -- If TimescaleDB is not available, this migration will be skipped
-DO $$
+
+-- +goose StatementBegin
+        DO $$
 BEGIN
     -- Try to create the extension
     CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
@@ -13,28 +15,30 @@ BEGIN
     -- Convert llm_interactions table to a hypertable if TimescaleDB is available
     -- This enables time-series optimizations like automatic partitioning
     -- The table will be partitioned by created_at with 7-day chunks
-    PERFORM create_hypertable(
+            PERFORM create_hypertable(
         'llm_interactions',
         'created_at',
         chunk_time_interval => INTERVAL '7 days',
         if_not_exists => TRUE,
         migrate_data => TRUE
     );
-EXCEPTION
-    WHEN undefined_function THEN
+            EXCEPTION
+            WHEN undefined_function THEN
         RAISE NOTICE 'TimescaleDB is not available - skipping hypertable creation';
-    WHEN OTHERS THEN
+            WHEN OTHERS THEN
         RAISE NOTICE 'Could not create hypertable: %', SQLERRM;
 END $$;
+-- +goose StatementEnd
 
 -- Create continuous aggregates for common analytics queries
 -- This pre-computes aggregations for faster dashboard queries
 
 -- Daily LLM usage statistics by intent
-DO $$
+-- +goose StatementBegin
+        DO $$
 BEGIN
     CREATE MATERIALIZED VIEW IF NOT EXISTS llm_daily_stats_by_intent
-    WITH (timescaledb.continuous) AS
+        WITH (timescaledb.continuous) AS
     SELECT
         time_bucket('1 day', created_at) AS day,
         intent,
@@ -57,22 +61,24 @@ BEGIN
     GROUP BY day, intent, provider;
 
     -- Add refresh policy to update continuous aggregate every hour
-    PERFORM add_continuous_aggregate_policy('llm_daily_stats_by_intent',
+            PERFORM add_continuous_aggregate_policy('llm_daily_stats_by_intent',
         start_offset => INTERVAL '3 days',
         end_offset => INTERVAL '1 hour',
         schedule_interval => INTERVAL '1 hour');
-EXCEPTION
-    WHEN undefined_function THEN
+            EXCEPTION
+            WHEN undefined_function THEN
         RAISE NOTICE 'TimescaleDB continuous aggregates not available - skipping llm_daily_stats_by_intent';
-    WHEN OTHERS THEN
+            WHEN OTHERS THEN
         RAISE NOTICE 'Could not create continuous aggregate llm_daily_stats_by_intent: %', SQLERRM;
 END $$;
+-- +goose StatementEnd
 
 -- Hourly LLM performance metrics
-DO $$
+-- +goose StatementBegin
+        DO $$
 BEGIN
     CREATE MATERIALIZED VIEW IF NOT EXISTS llm_hourly_performance
-    WITH (timescaledb.continuous) AS
+        WITH (timescaledb.continuous) AS
     SELECT
         time_bucket('1 hour', created_at) AS hour,
         intent,
@@ -91,22 +97,24 @@ BEGIN
     GROUP BY hour, intent, search_type, device_type;
 
     -- Add refresh policy
-    PERFORM add_continuous_aggregate_policy('llm_hourly_performance',
+            PERFORM add_continuous_aggregate_policy('llm_hourly_performance',
         start_offset => INTERVAL '2 days',
         end_offset => INTERVAL '30 minutes',
         schedule_interval => INTERVAL '30 minutes');
-EXCEPTION
-    WHEN undefined_function THEN
+            EXCEPTION
+            WHEN undefined_function THEN
         RAISE NOTICE 'TimescaleDB continuous aggregates not available - skipping llm_hourly_performance';
-    WHEN OTHERS THEN
+            WHEN OTHERS THEN
         RAISE NOTICE 'Could not create continuous aggregate llm_hourly_performance: %', SQLERRM;
 END $$;
+-- +goose StatementEnd
 
 -- City-based LLM usage patterns
-DO $$
+-- +goose StatementBegin
+        DO $$
 BEGIN
     CREATE MATERIALIZED VIEW IF NOT EXISTS llm_city_usage_daily
-    WITH (timescaledb.continuous) AS
+        WITH (timescaledb.continuous) AS
     SELECT
         time_bucket('1 day', created_at) AS day,
         city_name,
@@ -118,82 +126,63 @@ BEGIN
         AVG(user_feedback_rating) FILTER (WHERE user_feedback_rating IS NOT NULL) as avg_rating
     FROM llm_interactions
     WHERE created_at > NOW() - INTERVAL '90 days'
-        AND city_name IS NOT NULL
+      AND city_name IS NOT NULL
     GROUP BY day, city_name, intent;
 
     -- Add refresh policy
-    PERFORM add_continuous_aggregate_policy('llm_city_usage_daily',
+            PERFORM add_continuous_aggregate_policy('llm_city_usage_daily',
         start_offset => INTERVAL '3 days',
         end_offset => INTERVAL '1 hour',
         schedule_interval => INTERVAL '1 hour');
-EXCEPTION
-    WHEN undefined_function THEN
+            EXCEPTION
+            WHEN undefined_function THEN
         RAISE NOTICE 'TimescaleDB continuous aggregates not available - skipping llm_city_usage_daily';
-    WHEN OTHERS THEN
+            WHEN OTHERS THEN
         RAISE NOTICE 'Could not create continuous aggregate llm_city_usage_daily: %', SQLERRM;
 END $$;
+-- +goose StatementEnd
 
 -- Create compression policy to automatically compress old data
 -- Compress chunks older than 14 days to save storage space
-DO $$
+-- +goose StatementBegin
+        DO $$
 BEGIN
-    PERFORM add_compression_policy('llm_interactions', INTERVAL '14 days');
-EXCEPTION
-    WHEN undefined_function THEN
+            PERFORM add_compression_policy('llm_interactions', INTERVAL '14 days');
+            EXCEPTION
+            WHEN undefined_function THEN
         RAISE NOTICE 'TimescaleDB compression policy not available - skipping';
-    WHEN OTHERS THEN
+            WHEN OTHERS THEN
         RAISE NOTICE 'Could not create compression policy: %', SQLERRM;
 END $$;
+-- +goose StatementEnd
 
 -- Create data retention policy
 -- Automatically drop chunks older than 90 days to manage storage
--- Adjust this based on your retention requirements
-DO $$
+-- Adjust this based on your retention
+-- +goose StatementBegin
+        DO $$
 BEGIN
-    PERFORM add_retention_policy('llm_interactions', INTERVAL '90 days');
-EXCEPTION
-    WHEN undefined_function THEN
+            PERFORM add_retention_policy('llm_interactions', INTERVAL '90 days');
+            EXCEPTION
+            WHEN undefined_function THEN
         RAISE NOTICE 'TimescaleDB retention policy not available - skipping';
-    WHEN OTHERS THEN
+            WHEN OTHERS THEN
         RAISE NOTICE 'Could not create retention policy: %', SQLERRM;
 END $$;
+-- +goose StatementEnd
 
 -- Add comments (only if the views were created successfully)
-DO $$
+-- +goose StatementBegin
+        DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_matviews WHERE matviewname = 'llm_daily_stats_by_intent') THEN
         COMMENT ON MATERIALIZED VIEW llm_daily_stats_by_intent IS 'Daily aggregated LLM statistics by intent and provider';
-    END IF;
-    IF EXISTS (SELECT 1 FROM pg_matviews WHERE matviewname = 'llm_hourly_performance') THEN
+END IF;
+IF EXISTS (SELECT 1 FROM pg_matviews WHERE matviewname = 'llm_hourly_performance') THEN
         COMMENT ON MATERIALIZED VIEW llm_hourly_performance IS 'Hourly LLM performance metrics for monitoring';
-    END IF;
-    IF EXISTS (SELECT 1 FROM pg_matviews WHERE matviewname = 'llm_city_usage_daily') THEN
+END IF;
+IF EXISTS (SELECT 1 FROM pg_matviews WHERE matviewname = 'llm_city_usage_daily') THEN
         COMMENT ON MATERIALIZED VIEW llm_city_usage_daily IS 'Daily LLM usage patterns by city and intent';
-    END IF;
+END IF;
 END $$;
-
--- +goose Down
--- Remove TimescaleDB optimizations
-
--- Remove retention and compression policies
-SELECT remove_retention_policy('llm_interactions', if_exists => true);
-SELECT remove_compression_policy('llm_interactions', if_exists => true);
-
--- Remove continuous aggregate policies
-SELECT remove_continuous_aggregate_policy('llm_city_usage_daily', if_exists => true);
-SELECT remove_continuous_aggregate_policy('llm_hourly_performance', if_exists => true);
-SELECT remove_continuous_aggregate_policy('llm_daily_stats_by_intent', if_exists => true);
-
--- Drop materialized views
-DROP MATERIALIZED VIEW IF EXISTS llm_city_usage_daily CASCADE;
-DROP MATERIALIZED VIEW IF EXISTS llm_hourly_performance CASCADE;
-DROP MATERIALIZED VIEW IF EXISTS llm_daily_stats_by_intent CASCADE;
-
--- Note: Cannot easily revert hypertable conversion without data loss
--- The table will remain a hypertable but partitioning will stop being maintained
--- To fully revert, you would need to:
--- 1. Export data
--- 2. Drop hypertable
--- 3. Recreate regular table
--- 4. Import data
--- This is intentionally not automated to prevent accidental data loss
+-- +goose StatementEnd

@@ -44,6 +44,7 @@ ALTER TABLE list_items DROP CONSTRAINT list_items_pkey;
 ALTER TABLE list_items ADD CONSTRAINT list_items_pkey PRIMARY KEY (list_id, content_type, item_id);
 
 -- Update the item count trigger function to work with the new structure
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION update_list_item_count() RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'DELETE' THEN
@@ -69,8 +70,10 @@ BEGIN
     END IF;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 -- Add validation trigger to ensure content type integrity
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION validate_list_item_content_type() RETURNS TRIGGER AS $$
 BEGIN
     -- Validate that the item_id exists for the specified content_type
@@ -101,6 +104,7 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 CREATE TRIGGER trigger_validate_list_item_content_type
     BEFORE INSERT OR UPDATE ON list_items
@@ -158,6 +162,7 @@ DROP COLUMN IF EXISTS item_ai_description;
 ALTER TABLE list_items ADD CONSTRAINT list_items_pkey PRIMARY KEY (list_id, poi_id);
 
 -- Restore original item count trigger function
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION update_list_item_count() RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'DELETE' THEN
@@ -183,3 +188,4 @@ BEGIN
     END IF;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd

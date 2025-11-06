@@ -2240,7 +2240,12 @@ func (r *RepositoryImpl) GetTrendingDiscoveries(ctx context.Context, limit int) 
 				ELSE '🗺️'
 			END as emoji,
 			COALESCE(
-				(SELECT msg->>'content' FROM jsonb_array_elements(conversation_history) msg WHERE msg->>'role' = 'user' LIMIT 1),
+				(SELECT msg->>'content'
+				 FROM chat_sessions cs
+				 CROSS JOIN LATERAL jsonb_array_elements(cs.conversation_history) msg
+				 WHERE cs.city_name = chat_sessions.city_name
+				   AND msg->>'role' = 'user'
+				 LIMIT 1),
 				city_name
 			) as first_message
 		FROM chat_sessions

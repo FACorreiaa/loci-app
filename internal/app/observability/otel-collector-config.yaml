@@ -32,9 +32,9 @@ exporters:
     tls:
       insecure: true
 
-  # Jaeger tracing via OTLP
+  # Jaeger tracing via OTLP gRPC
   otlp/jaeger:
-    endpoint: http://jaeger:4318
+    endpoint: jaeger:4317
     tls:
       insecure: true
 

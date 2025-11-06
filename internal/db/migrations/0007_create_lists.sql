@@ -64,6 +64,7 @@ BEFORE UPDATE ON list_items
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- Trigger to update lists item_count when items are added or removed
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION update_list_item_count() RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'DELETE' THEN
@@ -89,6 +90,7 @@ BEGIN
     END IF;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 CREATE TRIGGER trigger_update_list_item_count_insert
 AFTER INSERT ON list_items
@@ -99,6 +101,7 @@ AFTER DELETE ON list_items
 FOR EACH ROW EXECUTE FUNCTION update_list_item_count();
 
 -- Trigger to update lists save_count when a lists is saved or unsaved
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION update_list_save_count() RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'DELETE' THEN
@@ -124,6 +127,7 @@ BEGIN
     END IF;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 CREATE TRIGGER trigger_update_list_save_count_insert
 AFTER INSERT ON saved_lists

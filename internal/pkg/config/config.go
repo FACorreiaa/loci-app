@@ -37,12 +37,17 @@ type MapConfig struct {
 	MapboxAPIKey string
 }
 
+type OTELConfig struct {
+	Endpoint string
+}
+
 type Config struct {
 	Repositories RepositoriesConfig
 	ServerPort   string
 	JWT          JWTConfig
 	LLM          LLMConfig
 	Map          MapConfig
+	OTEL         OTELConfig
 }
 
 func Load() (*Config, error) {
@@ -91,6 +96,10 @@ func Load() (*Config, error) {
 
 	cfg.Map = MapConfig{
 		MapboxAPIKey: getEnvOrDefault("MAPBOX_API_KEY", ""),
+	}
+
+	cfg.OTEL = OTELConfig{
+		Endpoint: getEnvOrDefault("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4318"),
 	}
 
 	if cfg.JWT.SecretKey == "" {

@@ -26,20 +26,24 @@ WITH (m = 16, ef_construction = 64);
 
 -- Create a function to calculate cosine similarity
 -- This will be useful for hybrid queries combining multiple similarity measures
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION cosine_similarity(a vector, b vector) 
 RETURNS float AS $$
 BEGIN
     RETURN 1 - (a <=> b);
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
+-- +goose StatementEnd
 
 -- Create a function to calculate euclidean distance
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION euclidean_distance(a vector, b vector) 
 RETURNS float AS $$
 BEGIN
     RETURN a <-> b;
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
+-- +goose StatementEnd
 
 -- Add an index on points_of_interest for faster category searches combined with embeddings
 CREATE INDEX IF NOT EXISTS idx_poi_category_embedding 
