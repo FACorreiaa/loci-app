@@ -7,38 +7,59 @@ receivers:
         endpoint: 0.0.0.0:4318
 
 processors:
-  batch: {} # Batches data before sending to exporters. Good for performance.
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+
+  memory_limiter:
+    limit_mib: 512
+    check_interval: 1s
+
+  resourcedetection:
+    detectors: [env, system]
+    timeout: 2s
+    override: false
 
 exporters:
-  # This exporter makes metrics available for Prometheus to scrape
+  # Prometheus metrics
   prometheus:
     endpoint: "0.0.0.0:8889"
-    namespace: "myapp"
+    namespace: loci_templui
+    const_labels:
+      service: loci-templui
 
-  # --- FOR THE FUTURE ---
-  # This is how you would add Tempo (traces)
-  # otlp/tempo:
-  #   endpoint: "tempo:4317"
-  #   tls:
-  #     insecure: true
+  # Prometheus remote write
+  prometheusremotewrite:
+    endpoint: http://prometheus:9090/api/v1/write
+    tls:
+      insecure: true
 
-  # This is how you would add Loki (logs)
-  # loki:
-  #   endpoint: "loki:3100/loki/api/v1/push"
+  # Jaeger tracing via OTLP
+  otlp/jaeger:
+    endpoint: http://jaeger:4318
+    tls:
+      insecure: true
+
+  # Debug logging
+  debug:
+    verbosity: detailed
 
 service:
   pipelines:
+    # Metrics pipeline
     metrics:
       receivers: [otlp]
-      processors: [batch]
-      exporters: [prometheus]
+      processors: [memory_limiter, resourcedetection, batch]
+      exporters: [prometheus, prometheusremotewrite, debug]
 
-    # --- FOR THE FUTURE ---
-    # traces:
-    #   receivers: [otlp]
-    #   processors: [batch]
-    #   exporters: [otlp/tempo]
-    # logs:
-    #   receivers: [otlp]
-    #   processors: [batch]
-    #   exporters: [loki]
+    # Traces pipeline
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection, batch]
+      exporters: [otlp/jaeger, debug]
+
+  telemetry:
+    logs:
+      level: "debug"
+    metrics:
+      level: detailed

@@ -401,7 +401,7 @@ If you have migrations:
 flyctl ssh console -a <your-app-name>
 
 # Run migrations
-./templui migrate up
+./templui goose Up
 
 # Or connect to DB and run SQL
 flyctl postgres connect -a loci-db

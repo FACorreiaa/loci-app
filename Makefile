@@ -1,5 +1,39 @@
-migrate-db:
-	migrate -database "postgresql://postgres:postgres@localhost:5454/loci-dev?sslmode=disable" -path ./app/db/migrations up
+# Database connection settings
+DB_HOST ?= localhost
+DB_PORT ?= 5454
+DB_USER ?= loci
+DB_PASSWORD ?= loci123
+DB_NAME ?= loci-dev
+DB_URL = "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable"
+MIGRATIONS_DIR = internal/db/migrations
+
+# Migration commands using Goose
+migrate-up: ## Run all pending migrations
+	@echo "Running migrations..."
+	@goose -dir $(MIGRATIONS_DIR) postgres $(DB_URL) up
+
+migrate-down: ## Rollback the last migration
+	@echo "Rolling back last migration..."
+	@goose -dir $(MIGRATIONS_DIR) postgres $(DB_URL) down
+
+migrate-status: ## Show migration status
+	@goose -dir $(MIGRATIONS_DIR) postgres $(DB_URL) status
+
+migrate-create: ## Create a new migration (usage: make migrate-create NAME=add_column)
+	@if [ -z "$(NAME)" ]; then \
+		echo "Error: NAME is required. Usage: make migrate-create NAME=add_column"; \
+		exit 1; \
+	fi
+	@echo "Creating new migration: $(NAME)"
+	@goose -s -dir $(MIGRATIONS_DIR) create $(NAME) sql
+	@echo "Migration created successfully!"
+
+migrate-reset: ## Reset database (down all, then up all)
+	@echo "Resetting database..."
+	@goose -dir $(MIGRATIONS_DIR) postgres $(DB_URL) reset
+
+migrate-version: ## Show current migration version
+	@goose -dir $(MIGRATIONS_DIR) postgres $(DB_URL) version
 
 testifylint:
 	testifylint ./...
@@ -52,3 +86,20 @@ db-delete:
 # Start development server with all watchers
 dev:
 	make -j3 db-up tailwind templ server
+
+# OTEL specific targets
+otel-up: ## Start OpenTelemetry collector and observability stack
+	@echo "Starting observability stack..."
+	@docker compose up -d otel-collector prometheus alertmanager
+
+otel-down: ## Stop observability stack
+	@docker compose down otel-collector prometheus alertmanager
+
+otel-logs: ## Show OTEL collector logs
+	@docker compose logs -f otel-collector
+
+help: ## Show this help message
+	@echo 'Usage: make [target]'
+	@echo ''
+	@echo 'Available targets:'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-25s\033[0m %s\n", $$1, $$2}'

@@ -33,8 +33,8 @@ func InitOtelProviders(serviceName string, metricsAddr string) (func(context.Con
 
 	// Configure OTLP exporter for traces to send to collector via HTTP
 	traceExporter, err := otlptracehttp.New(context.Background(),
-		otlptracehttp.WithEndpoint("http://otel-collector:4318"), // Send to OTel Collector via HTTP
-		otlptracehttp.WithInsecure(),                             // OK for local docker network
+		otlptracehttp.WithEndpoint("otel-collector:4318"), // Send to OTel Collector via HTTP
+		otlptracehttp.WithInsecure(),                      // OK for local docker network
 	)
 	if err != nil {
 		// Fallback to NoOp if OTLP export fails (for local development)

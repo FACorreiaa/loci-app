@@ -3,18 +3,15 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"embed"
 	"fmt"
 	"net/url"
-	"strings"
 	"time"
 
-	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres" // Required for postgres driver registration
-	"github.com/golang-migrate/migrate/v4/source/iofs"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	uuid "github.com/vgarvardt/pgx-google-uuid/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/pressly/goose/v3"
 	"go.uber.org/zap"
 
 	"github.com/FACorreiaa/go-templui/internal/pkg/config"
@@ -58,77 +55,44 @@ func WaitForDB(ctx context.Context, pgpool *pgxpool.Pool, logger *zap.Logger) bo
 func RunMigrations(databaseURL string, logger *zap.Logger) error {
 	logger.Info("Running database migrations...")
 
-	entries, err := migrationFS.ReadDir(".")
+	// Set up goose to use embedded migrations
+	goose.SetBaseFS(migrationFS)
+
+	if err := goose.SetDialect(string(goose.DialectPostgres)); err != nil {
+		logger.Error("Failed to set goose dialect", zap.Error(err))
+		return fmt.Errorf("failed to set goose dialect: %w", err)
+	}
+
+	// Open a standard database connection for goose
+	db, err := sql.Open("pgx", databaseURL)
+	if err != nil {
+		logger.Error("Failed to open database for migrations", zap.Error(err))
+		return fmt.Errorf("sql.Open failed: %w", err)
+	}
+	defer db.Close()
+
+	// Log available migrations
+	entries, err := migrationFS.ReadDir("migrations")
 	if err != nil {
 		logger.Error("Failed to read embedded migrations directory", zap.Error(err))
 		return fmt.Errorf("failed to read embedded migrations directory: %w", err)
 	}
 	if len(entries) == 0 {
 		logger.Warn("No migration files found in embedded migrations directory")
-	}
-	for _, entry := range entries {
-		logger.Info("Found embedded migration file", zap.String("name", entry.Name()))
-	}
-
-	sourceDriver, err := iofs.New(migrationFS, "migrations")
-	if err != nil {
-		logger.Error("Failed to create migration source driver", zap.Error(err))
-		return fmt.Errorf("failed to create migration source driver: %w", err)
-	}
-
-	if !strings.HasPrefix(databaseURL, "postgres://") && !strings.HasPrefix(databaseURL, "postgresql://") {
-		errMsg := "invalid database URL scheme for migrate, ensure it starts with postgresql://"
-		logger.Error(errMsg, zap.String("url", databaseURL))
-		return fmt.Errorf("%s", errMsg)
-	}
-
-	m, err := migrate.NewWithSourceInstance("iofs", sourceDriver, databaseURL)
-	if err != nil {
-		logger.Error("Failed to initialize migrate instance", zap.Error(err))
-		return fmt.Errorf("failed to initialize migrate instance: %w", err)
-	}
-
-	// Check for dirty state before attempting migration
-	version, dirty, vErr := m.Version()
-	if vErr != nil && vErr != migrate.ErrNilVersion {
-		logger.Warn("Could not determine migration version before running", zap.Error(vErr))
-	} else if dirty {
-		logger.Warn("DATABASE MIGRATION STATE IS DIRTY - attempting to fix",
-			zap.Uint64("version", uint64(version)))
-
-		// Force the version to clean state
-		if err := m.Force(int(version)); err != nil {
-			logger.Error("Failed to force migration version", zap.Error(err))
-			return fmt.Errorf("failed to force migration version: %w", err)
-		}
-		logger.Info("Successfully forced migration to clean state", zap.Uint64("version", uint64(version)))
-	}
-
-	err = m.Up()
-	if err != nil && err != migrate.ErrNoChange {
-		logger.Error("Failed to apply migrations", zap.Error(err))
-		return fmt.Errorf("failed to apply migrations: %w", err)
-	}
-
-	version, dirty, err = m.Version()
-	if err != nil {
-		logger.Warn("Could not determine migration version", zap.Error(err))
-	} else if dirty {
-		logger.Error("DATABASE MIGRATION STATE IS STILL DIRTY!", zap.Uint64("version", uint64(version)))
-	} else if err == migrate.ErrNoChange {
-		logger.Info("No new migrations to apply.", zap.Uint64("current_version", uint64(version)))
 	} else {
-		logger.Info("Database migrations applied successfully.", zap.Uint64("new_version", uint64(version)))
+		logger.Info("Found migration files", zap.Int("count", len(entries)))
+		for _, entry := range entries {
+			logger.Debug("Migration file", zap.String("name", entry.Name()))
+		}
 	}
 
-	srcErr, dbErr := m.Close()
-	if srcErr != nil {
-		logger.Warn("Error closing migration source", zap.Error(srcErr))
-	}
-	if dbErr != nil {
-		logger.Warn("Error closing migration database connection", zap.Error(dbErr))
+	// Run migrations
+	if err := goose.Up(db, "migrations"); err != nil {
+		logger.Error("Failed to run migrations", zap.Error(err))
+		return fmt.Errorf("goose.Up failed: %w", err)
 	}
 
+	logger.Info("Database migrations completed successfully")
 	return nil
 }
 
@@ -175,13 +139,6 @@ func Init(connectionURL string, logger *zap.Logger) (*pgxpool.Pool, error) {
 	if err != nil {
 		logger.Error("Failed to parse database config", zap.Error(err))
 		return nil, fmt.Errorf("failed parsing db config: %w", err)
-	}
-
-	// Register UUID type HandlerImpl after connecting
-	cfg.AfterConnect = func(_ context.Context, conn *pgx.Conn) error {
-		uuid.Register(conn.TypeMap())
-		logger.Debug("Registered UUID type for database connection")
-		return nil
 	}
 
 	// Consider adjusting pool settings from config

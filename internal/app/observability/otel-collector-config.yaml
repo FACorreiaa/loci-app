@@ -25,19 +25,25 @@ exporters:
     namespace: loci_templui
     const_labels:
       service: loci-templui
-  
+
   # Prometheus remote write
   prometheusremotewrite:
     endpoint: http://prometheus:9090/api/v1/write
     tls:
       insecure: true
-  
-  # Tempo tracing via HTTP
-  otlp/tempo:
-    endpoint: http://tempo:4318
+
+  # Jaeger tracing via OTLP
+  otlp/jaeger:
+    endpoint: http://jaeger:4318
     tls:
       insecure: true
-  
+
+  # Tempo tracing via HTTP (commented out, using Jaeger instead)
+  # otlp/tempo:
+  #   endpoint: http://tempo:4318
+  #   tls:
+  #     insecure: true
+
   # Loki logging
   loki:
     endpoint: http://loki:3100/loki/api/v1/push
@@ -58,7 +64,7 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, resourcedetection, batch]
-      exporters: [otlp/tempo, debug]
+      exporters: [otlp/jaeger, debug]
     
     # Logs pipeline
     logs:

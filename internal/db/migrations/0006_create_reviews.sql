@@ -62,6 +62,7 @@ CREATE TRIGGER trigger_set_review_replies_updated_at
 BEFORE UPDATE ON review_replies
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+-- +goose StatementBegin
 -- Trigger to update POI average rating and rating count when a reviews is added, updated, or deleted
 CREATE OR REPLACE FUNCTION update_poi_rating() RETURNS TRIGGER AS $$
 BEGIN
@@ -98,6 +99,7 @@ BEGIN
     END IF;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnf
 
 CREATE TRIGGER trigger_update_poi_rating_insert
 AFTER INSERT ON reviews

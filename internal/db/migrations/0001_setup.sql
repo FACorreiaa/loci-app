@@ -15,6 +15,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION set_updated_at()
     RETURNS TRIGGER AS $$
 BEGIN
@@ -22,6 +23,7 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 -- Enum types for cleaner data constraints
 CREATE TYPE subscription_plan_type AS ENUM (
