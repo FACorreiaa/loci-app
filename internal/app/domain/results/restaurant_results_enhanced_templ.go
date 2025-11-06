@@ -10,7 +10,7 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"fmt"
-	"github.com/FACorreiaa/go-templui/internal/app/components/chat"
+	llmChat "github.com/FACorreiaa/go-templui/internal/app/components/chat"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"strings"
 )
@@ -313,7 +313,7 @@ func RestaurantsResults(cityData models.GeneralCityData, restaurants []models.Re
 			return templ_7745c5c3_Err
 		}
 		if sessionID != "" {
-			templ_7745c5c3_Err = chat.ChatPanel(chat.ChatPanelProps{
+			templ_7745c5c3_Err = llmChat.ChatPanel(llmChat.ChatPanelProps{
 				SessionID:     sessionID,
 				CityName:      cityData.City,
 				Domain:        "restaurants",
@@ -324,7 +324,7 @@ func RestaurantsResults(cityData models.GeneralCityData, restaurants []models.Re
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "</div><script>\n\t\tfunction restaurantsPage() {\n\t\t\treturn {\n\t\t\t\tviewMode: 'list',\n\t\t\t\tshowChat: false,\n\t\t\t\tselectedRestaurant: null,\n\t\t\t\tsearchQuery: '',\n\t\t\t\tselectedCategory: '',\n\t\t\t\tsortBy: 'name',\n\t\t\t\t\n\t\t\t\tinit() {\n\t\t\t\t\t// Set up SSE event listeners for dynamic restaurant management\n\t\t\t\t\tdocument.addEventListener('htmx:sseMessage', (event) => {\n\t\t\t\t\t\tconst sseEvent = event.detail;\n\n\t\t\t\t\t\t// Parse the SSE data\n\t\t\t\t\t\tlet eventData;\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\teventData = typeof sseEvent.data === 'string' ? JSON.parse(sseEvent.data) : sseEvent.data;\n\t\t\t\t\t\t} catch (e) {\n\t\t\t\t\t\t\tconsole.log('Non-JSON SSE event:', sseEvent);\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\tconsole.log('SSE Event received (restaurants):', eventData);\n\n\t\t\t\t\t\t// Handle item_added events for restaurants domain\n\t\t\t\t\t\tif (eventData.type === 'item_added' && eventData.domain === 'restaurants') {\n\t\t\t\t\t\t\tthis.handleItemAdded(eventData);\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\t// Handle item_removed events for restaurants domain\n\t\t\t\t\t\tif (eventData.type === 'item_removed' && eventData.domain === 'restaurants') {\n\t\t\t\t\t\t\tthis.handleItemRemoved(eventData);\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\t// Handle item_updated events for restaurants domain\n\t\t\t\t\t\tif (eventData.type === 'item_updated' && eventData.domain === 'restaurants') {\n\t\t\t\t\t\t\tthis.handleItemUpdated(eventData);\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\n\t\t\t\t\tconsole.log('Restaurants SSE listeners initialized');\n\t\t\t\t},\n\n\t\t\t\thandleItemAdded(eventData) {\n\t\t\t\t\tconsole.log('Adding restaurant:', eventData);\n\n\t\t\t\t\t// Determine which container to use based on view mode\n\t\t\t\t\tconst listContainer = document.getElementById('restaurants-list');\n\t\t\t\t\tconst gridContainer = document.getElementById('restaurants-grid');\n\n\t\t\t\t\tif (!listContainer || !gridContainer) {\n\t\t\t\t\t\tconsole.warn('Restaurant containers not found');\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\n\t\t\t\t\t// Create temporary div to parse HTML\n\t\t\t\t\tconst tempDiv = document.createElement('div');\n\t\t\t\t\ttempDiv.innerHTML = eventData.html;\n\t\t\t\t\tconst newElement = tempDiv.firstElementChild;\n\n\t\t\t\t\tif (newElement) {\n\t\t\t\t\t\t// Append to both list and grid views (Alpine.js will handle visibility)\n\t\t\t\t\t\tlistContainer.appendChild(newElement.cloneNode(true));\n\t\t\t\t\t\tgridContainer.appendChild(newElement.cloneNode(true));\n\n\t\t\t\t\t\t// Add marker to map if coordinates are valid\n\t\t\t\t\t\tif (eventData.item_data && eventData.item_data.latitude && eventData.item_data.longitude) {\n\t\t\t\t\t\t\tthis.addMarkerToMap(eventData.item_data);\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\t// Show success message\n\t\t\t\t\t\tconsole.log('Restaurant added successfully:', eventData.message);\n\t\t\t\t\t\t// TODO: Show toast notification\n\t\t\t\t\t}\n\t\t\t\t},\n\n\t\t\t\thandleItemRemoved(eventData) {\n\t\t\t\t\tconsole.log('Removing restaurant:', eventData);\n\n\t\t\t\t\t// Find and remove from both list and grid views\n\t\t\t\t\tconst listElement = document.querySelector(`#restaurants-list [id*=\"restaurant-${eventData.item_id}\"]`);\n\t\t\t\t\tconst gridElement = document.querySelector(`#restaurants-grid [id*=\"restaurant-${eventData.item_id}\"]`);\n\n\t\t\t\t\tif (listElement) listElement.remove();\n\t\t\t\t\tif (gridElement) gridElement.remove();\n\n\t\t\t\t\t// Remove marker from map\n\t\t\t\t\tthis.removeMarkerFromMap(eventData.item_id);\n\n\t\t\t\t\tconsole.log('Restaurant removed successfully:', eventData.message);\n\t\t\t\t\t// TODO: Show toast notification\n\t\t\t\t},\n\n\t\t\t\thandleItemUpdated(eventData) {\n\t\t\t\t\tconsole.log('Updating restaurant:', eventData);\n\n\t\t\t\t\t// Find existing elements in both views\n\t\t\t\t\tconst listElement = document.querySelector(`#restaurants-list [id*=\"restaurant-${eventData.item_id}\"]`);\n\t\t\t\t\tconst gridElement = document.querySelector(`#restaurants-grid [id*=\"restaurant-${eventData.item_id}\"]`);\n\n\t\t\t\t\tif (eventData.html) {\n\t\t\t\t\t\tconst tempDiv = document.createElement('div');\n\t\t\t\t\t\ttempDiv.innerHTML = eventData.html;\n\t\t\t\t\t\tconst newElement = tempDiv.firstElementChild;\n\n\t\t\t\t\t\tif (newElement) {\n\t\t\t\t\t\t\tif (listElement) listElement.replaceWith(newElement.cloneNode(true));\n\t\t\t\t\t\t\tif (gridElement) gridElement.replaceWith(newElement.cloneNode(true));\n\n\t\t\t\t\t\t\t// Update marker on map\n\t\t\t\t\t\t\tif (eventData.item_data && eventData.item_data.latitude && eventData.item_data.longitude) {\n\t\t\t\t\t\t\t\tthis.removeMarkerFromMap(eventData.item_id);\n\t\t\t\t\t\t\t\tthis.addMarkerToMap(eventData.item_data);\n\t\t\t\t\t\t\t}\n\n\t\t\t\t\t\t\tconsole.log('Restaurant updated successfully:', eventData.message);\n\t\t\t\t\t\t\t// TODO: Show toast notification\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t},\n\n\t\t\t\taddMarkerToMap(itemData) {\n\t\t\t\t\tif (!window.map || !window.mapboxgl) {\n\t\t\t\t\t\tconsole.warn('Map not available for adding marker');\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\n\t\t\t\t\tconst { latitude, longitude, name, category, index } = itemData;\n\n\t\t\t\t\t// Validate coordinates\n\t\t\t\t\tif (!latitude || !longitude || (latitude === 0 && longitude === 0)) {\n\t\t\t\t\t\tconsole.warn('Invalid coordinates for marker:', itemData);\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\n\t\t\t\t\t// Create marker element with numbered styling (orange for restaurants)\n\t\t\t\t\tconst markerEl = document.createElement('div');\n\t\t\t\t\tmarkerEl.className = 'poi-marker';\n\t\t\t\t\tmarkerEl.style.cssText = `\n\t\t\t\t\t\twidth: 32px;\n\t\t\t\t\t\theight: 32px;\n\t\t\t\t\t\tbackground-color: white;\n\t\t\t\t\t\tborder: 3px solid #f97316;\n\t\t\t\t\t\tborder-radius: 50%;\n\t\t\t\t\t\tcursor: pointer;\n\t\t\t\t\t\tbox-shadow: 0 2px 4px rgba(0,0,0,0.2);\n\t\t\t\t\t\tdisplay: flex;\n\t\t\t\t\t\talign-items: center;\n\t\t\t\t\t\tjustify-content: center;\n\t\t\t\t\t\tfont-weight: bold;\n\t\t\t\t\t\tfont-size: 14px;\n\t\t\t\t\t\tcolor: #f97316;\n\t\t\t\t\t`;\n\t\t\t\t\tmarkerEl.textContent = index ? index.toString() : '●';\n\t\t\t\t\tmarkerEl.dataset.itemId = itemData.item_id || name;\n\n\t\t\t\t\t// Create popup\n\t\t\t\t\tconst popup = new mapboxgl.Popup({\n\t\t\t\t\t\toffset: 25,\n\t\t\t\t\t\tcloseButton: true,\n\t\t\t\t\t\tcloseOnClick: false\n\t\t\t\t\t}).setHTML(`\n\t\t\t\t\t\t<div class=\"p-2 max-w-xs\">\n\t\t\t\t\t\t\t<h3 class=\"font-medium text-gray-900 mb-1\">${name}</h3>\n\t\t\t\t\t\t\t<div class=\"flex items-center gap-1 text-xs text-gray-500\">\n\t\t\t\t\t\t\t\t<svg class=\"w-3 h-3\" fill=\"currentColor\" viewBox=\"0 0 20 20\">\n\t\t\t\t\t\t\t\t\t<path fill-rule=\"evenodd\" d=\"M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z\" clip-rule=\"evenodd\"></path>\n\t\t\t\t\t\t\t\t</svg>\n\t\t\t\t\t\t\t\t${category || 'Restaurant'}\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t`);\n\n\t\t\t\t\t// Add marker to map\n\t\t\t\t\tconst marker = new mapboxgl.Marker(markerEl)\n\t\t\t\t\t\t.setLngLat([longitude, latitude])\n\t\t\t\t\t\t.setPopup(popup)\n\t\t\t\t\t\t.addTo(window.map);\n\n\t\t\t\t\t// Store marker reference\n\t\t\t\t\tif (!window.restaurantMarkers) {\n\t\t\t\t\t\twindow.restaurantMarkers = new Map();\n\t\t\t\t\t}\n\t\t\t\t\twindow.restaurantMarkers.set(itemData.item_id || name, marker);\n\n\t\t\t\t\t// Recalculate map bounds\n\t\t\t\t\tthis.recalculateMapBounds();\n\n\t\t\t\t\tconsole.log('Restaurant marker added to map:', name);\n\t\t\t\t},\n\n\t\t\t\tremoveMarkerFromMap(itemId) {\n\t\t\t\t\tif (!window.restaurantMarkers || !window.restaurantMarkers.has(itemId)) {\n\t\t\t\t\t\tconsole.warn('Marker not found for removal:', itemId);\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\n\t\t\t\t\tconst marker = window.restaurantMarkers.get(itemId);\n\t\t\t\t\tmarker.remove();\n\t\t\t\t\twindow.restaurantMarkers.delete(itemId);\n\n\t\t\t\t\t// Recalculate map bounds\n\t\t\t\t\tthis.recalculateMapBounds();\n\n\t\t\t\t\tconsole.log('Restaurant marker removed from map:', itemId);\n\t\t\t\t},\n\n\t\t\t\trecalculateMapBounds() {\n\t\t\t\t\tif (!window.map || !window.mapboxgl) return;\n\n\t\t\t\t\tconst markers = window.restaurantMarkers ? Array.from(window.restaurantMarkers.values()) : [];\n\n\t\t\t\t\tif (markers.length === 0) return;\n\n\t\t\t\t\tconst bounds = new mapboxgl.LngLatBounds();\n\n\t\t\t\t\tmarkers.forEach(marker => {\n\t\t\t\t\t\tconst lngLat = marker.getLngLat();\n\t\t\t\t\t\tbounds.extend(lngLat);\n\t\t\t\t\t});\n\n\t\t\t\t\tconst padding = {\n\t\t\t\t\t\ttop: window.innerWidth < 640 ? 40 : 60,\n\t\t\t\t\t\tbottom: window.innerWidth < 640 ? 40 : 80,\n\t\t\t\t\t\tleft: window.innerWidth < 640 ? 20 : 60,\n\t\t\t\t\t\tright: window.innerWidth < 640 ? 20 : 60\n\t\t\t\t\t};\n\n\t\t\t\t\twindow.map.fitBounds(bounds, {\n\t\t\t\t\t\tpadding: padding,\n\t\t\t\t\t\tmaxZoom: 15,\n\t\t\t\t\t\tduration: 1000\n\t\t\t\t\t});\n\n\t\t\t\t\tconsole.log('Map bounds recalculated for restaurants');\n\t\t\t\t},\n\t\t\t\t\n\t\t\t\tsetViewMode(mode) {\n\t\t\t\t\tthis.viewMode = mode;\n\t\t\t\t},\n\t\t\t\t\n\t\t\t\tselectRestaurant(restaurant) {\n\t\t\t\t\tthis.selectedRestaurant = restaurant;\n\t\t\t\t},\n\t\t\t\t\n\t\t\t\tcloseModal() {\n\t\t\t\t\tthis.selectedRestaurant = null;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\t\n\t\t// Make function available globally\n\t\twindow.restaurantsPage = restaurantsPage;\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "</div><script>\n\t\tfunction restaurantsPage() {\n\t\t\treturn {\n\t\t\t\tviewMode: 'list',\n\t\t\t\tshowChat: false,\n\t\t\t\tselectedRestaurant: null,\n\t\t\t\tsearchQuery: '',\n\t\t\t\tselectedCategory: '',\n\t\t\t\tsortBy: 'name',\n\t\t\t\t\n\t\t\t\tinit() {\n\t\t\t\t\t// Set up SSE event listeners for dynamic restaurant management\n\t\t\t\t\tdocument.addEventListener('htmx:sseMessage', (event) => {\n\t\t\t\t\t\tconst sseEvent = event.detail;\n\n\t\t\t\t\t\t// Parse the SSE data\n\t\t\t\t\t\tlet eventData;\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\teventData = typeof sseEvent.data === 'string' ? JSON.parse(sseEvent.data) : sseEvent.data;\n\t\t\t\t\t\t} catch (e) {\n\t\t\t\t\t\t\tconsole.log('Non-JSON SSE event:', sseEvent);\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\tconsole.log('SSE Event received (restaurants):', eventData);\n\n\t\t\t\t\t\t// Handle item_added events for restaurants domain\n\t\t\t\t\t\tif (eventData.type === 'item_added' && eventData.domain === 'restaurants') {\n\t\t\t\t\t\t\tthis.handleItemAdded(eventData);\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\t// Handle item_removed events for restaurants domain\n\t\t\t\t\t\tif (eventData.type === 'item_removed' && eventData.domain === 'restaurants') {\n\t\t\t\t\t\t\tthis.handleItemRemoved(eventData);\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\t// Handle item_updated events for restaurants domain\n\t\t\t\t\t\tif (eventData.type === 'item_updated' && eventData.domain === 'restaurants') {\n\t\t\t\t\t\t\tthis.handleItemUpdated(eventData);\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\n\t\t\t\t\tconsole.log('Restaurants SSE listeners initialized');\n\t\t\t\t},\n\n\t\t\t\thandleItemAdded(eventData) {\n\t\t\t\t\tconsole.log('Adding restaurant:', eventData);\n\n\t\t\t\t\t// Determine which container to use based on view mode\n\t\t\t\t\tconst listContainer = document.getElementById('restaurants-list');\n\t\t\t\t\tconst gridContainer = document.getElementById('restaurants-grid');\n\n\t\t\t\t\tif (!listContainer || !gridContainer) {\n\t\t\t\t\t\tconsole.warn('Restaurant containers not found');\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\n\t\t\t\t\t// Create temporary div to parse HTML\n\t\t\t\t\tconst tempDiv = document.createElement('div');\n\t\t\t\t\ttempDiv.innerHTML = eventData.html;\n\t\t\t\t\tconst newElement = tempDiv.firstElementChild;\n\n\t\t\t\t\tif (newElement) {\n\t\t\t\t\t\t// Append to both lists and grid views (Alpine.js will handle visibility)\n\t\t\t\t\t\tlistContainer.appendChild(newElement.cloneNode(true));\n\t\t\t\t\t\tgridContainer.appendChild(newElement.cloneNode(true));\n\n\t\t\t\t\t\t// Add marker to map if coordinates are valid\n\t\t\t\t\t\tif (eventData.item_data && eventData.item_data.latitude && eventData.item_data.longitude) {\n\t\t\t\t\t\t\tthis.addMarkerToMap(eventData.item_data);\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\t// Show success message\n\t\t\t\t\t\tconsole.log('Restaurant added successfully:', eventData.message);\n\t\t\t\t\t\t// TODO: Show toast notification\n\t\t\t\t\t}\n\t\t\t\t},\n\n\t\t\t\thandleItemRemoved(eventData) {\n\t\t\t\t\tconsole.log('Removing restaurant:', eventData);\n\n\t\t\t\t\t// Find and remove from both lists and grid views\n\t\t\t\t\tconst listElement = document.querySelector(`#restaurants-list [id*=\"restaurant-${eventData.item_id}\"]`);\n\t\t\t\t\tconst gridElement = document.querySelector(`#restaurants-grid [id*=\"restaurant-${eventData.item_id}\"]`);\n\n\t\t\t\t\tif (listElement) listElement.remove();\n\t\t\t\t\tif (gridElement) gridElement.remove();\n\n\t\t\t\t\t// Remove marker from map\n\t\t\t\t\tthis.removeMarkerFromMap(eventData.item_id);\n\n\t\t\t\t\tconsole.log('Restaurant removed successfully:', eventData.message);\n\t\t\t\t\t// TODO: Show toast notification\n\t\t\t\t},\n\n\t\t\t\thandleItemUpdated(eventData) {\n\t\t\t\t\tconsole.log('Updating restaurant:', eventData);\n\n\t\t\t\t\t// Find existing elements in both views\n\t\t\t\t\tconst listElement = document.querySelector(`#restaurants-list [id*=\"restaurant-${eventData.item_id}\"]`);\n\t\t\t\t\tconst gridElement = document.querySelector(`#restaurants-grid [id*=\"restaurant-${eventData.item_id}\"]`);\n\n\t\t\t\t\tif (eventData.html) {\n\t\t\t\t\t\tconst tempDiv = document.createElement('div');\n\t\t\t\t\t\ttempDiv.innerHTML = eventData.html;\n\t\t\t\t\t\tconst newElement = tempDiv.firstElementChild;\n\n\t\t\t\t\t\tif (newElement) {\n\t\t\t\t\t\t\tif (listElement) listElement.replaceWith(newElement.cloneNode(true));\n\t\t\t\t\t\t\tif (gridElement) gridElement.replaceWith(newElement.cloneNode(true));\n\n\t\t\t\t\t\t\t// Update marker on map\n\t\t\t\t\t\t\tif (eventData.item_data && eventData.item_data.latitude && eventData.item_data.longitude) {\n\t\t\t\t\t\t\t\tthis.removeMarkerFromMap(eventData.item_id);\n\t\t\t\t\t\t\t\tthis.addMarkerToMap(eventData.item_data);\n\t\t\t\t\t\t\t}\n\n\t\t\t\t\t\t\tconsole.log('Restaurant updated successfully:', eventData.message);\n\t\t\t\t\t\t\t// TODO: Show toast notification\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t},\n\n\t\t\t\taddMarkerToMap(itemData) {\n\t\t\t\t\tif (!window.map || !window.mapboxgl) {\n\t\t\t\t\t\tconsole.warn('Map not available for adding marker');\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\n\t\t\t\t\tconst { latitude, longitude, name, category, index } = itemData;\n\n\t\t\t\t\t// Validate coordinates\n\t\t\t\t\tif (!latitude || !longitude || (latitude === 0 && longitude === 0)) {\n\t\t\t\t\t\tconsole.warn('Invalid coordinates for marker:', itemData);\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\n\t\t\t\t\t// Create marker element with numbered styling (orange for restaurants)\n\t\t\t\t\tconst markerEl = document.createElement('div');\n\t\t\t\t\tmarkerEl.className = 'poi-marker';\n\t\t\t\t\tmarkerEl.style.cssText = `\n\t\t\t\t\t\twidth: 32px;\n\t\t\t\t\t\theight: 32px;\n\t\t\t\t\t\tbackground-color: white;\n\t\t\t\t\t\tborder: 3px solid #f97316;\n\t\t\t\t\t\tborder-radius: 50%;\n\t\t\t\t\t\tcursor: pointer;\n\t\t\t\t\t\tbox-shadow: 0 2px 4px rgba(0,0,0,0.2);\n\t\t\t\t\t\tdisplay: flex;\n\t\t\t\t\t\talign-items: center;\n\t\t\t\t\t\tjustify-content: center;\n\t\t\t\t\t\tfont-weight: bold;\n\t\t\t\t\t\tfont-size: 14px;\n\t\t\t\t\t\tcolor: #f97316;\n\t\t\t\t\t`;\n\t\t\t\t\tmarkerEl.textContent = index ? index.toString() : '●';\n\t\t\t\t\tmarkerEl.dataset.itemId = itemData.item_id || name;\n\n\t\t\t\t\t// Create popup\n\t\t\t\t\tconst popup = new mapboxgl.Popup({\n\t\t\t\t\t\toffset: 25,\n\t\t\t\t\t\tcloseButton: true,\n\t\t\t\t\t\tcloseOnClick: false\n\t\t\t\t\t}).setHTML(`\n\t\t\t\t\t\t<div class=\"p-2 max-w-xs\">\n\t\t\t\t\t\t\t<h3 class=\"font-medium text-gray-900 mb-1\">${name}</h3>\n\t\t\t\t\t\t\t<div class=\"flex items-center gap-1 text-xs text-gray-500\">\n\t\t\t\t\t\t\t\t<svg class=\"w-3 h-3\" fill=\"currentColor\" viewBox=\"0 0 20 20\">\n\t\t\t\t\t\t\t\t\t<path fill-rule=\"evenodd\" d=\"M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z\" clip-rule=\"evenodd\"></path>\n\t\t\t\t\t\t\t\t</svg>\n\t\t\t\t\t\t\t\t${category || 'Restaurant'}\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t`);\n\n\t\t\t\t\t// Add marker to map\n\t\t\t\t\tconst marker = new mapboxgl.Marker(markerEl)\n\t\t\t\t\t\t.setLngLat([longitude, latitude])\n\t\t\t\t\t\t.setPopup(popup)\n\t\t\t\t\t\t.addTo(window.map);\n\n\t\t\t\t\t// Store marker reference\n\t\t\t\t\tif (!window.restaurantMarkers) {\n\t\t\t\t\t\twindow.restaurantMarkers = new Map();\n\t\t\t\t\t}\n\t\t\t\t\twindow.restaurantMarkers.set(itemData.item_id || name, marker);\n\n\t\t\t\t\t// Recalculate map bounds\n\t\t\t\t\tthis.recalculateMapBounds();\n\n\t\t\t\t\tconsole.log('Restaurant marker added to map:', name);\n\t\t\t\t},\n\n\t\t\t\tremoveMarkerFromMap(itemId) {\n\t\t\t\t\tif (!window.restaurantMarkers || !window.restaurantMarkers.has(itemId)) {\n\t\t\t\t\t\tconsole.warn('Marker not found for removal:', itemId);\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\n\t\t\t\t\tconst marker = window.restaurantMarkers.get(itemId);\n\t\t\t\t\tmarker.remove();\n\t\t\t\t\twindow.restaurantMarkers.delete(itemId);\n\n\t\t\t\t\t// Recalculate map bounds\n\t\t\t\t\tthis.recalculateMapBounds();\n\n\t\t\t\t\tconsole.log('Restaurant marker removed from map:', itemId);\n\t\t\t\t},\n\n\t\t\t\trecalculateMapBounds() {\n\t\t\t\t\tif (!window.map || !window.mapboxgl) return;\n\n\t\t\t\t\tconst markers = window.restaurantMarkers ? Array.from(window.restaurantMarkers.values()) : [];\n\n\t\t\t\t\tif (markers.length === 0) return;\n\n\t\t\t\t\tconst bounds = new mapboxgl.LngLatBounds();\n\n\t\t\t\t\tmarkers.forEach(marker => {\n\t\t\t\t\t\tconst lngLat = marker.getLngLat();\n\t\t\t\t\t\tbounds.extend(lngLat);\n\t\t\t\t\t});\n\n\t\t\t\t\tconst padding = {\n\t\t\t\t\t\ttop: window.innerWidth < 640 ? 40 : 60,\n\t\t\t\t\t\tbottom: window.innerWidth < 640 ? 40 : 80,\n\t\t\t\t\t\tleft: window.innerWidth < 640 ? 20 : 60,\n\t\t\t\t\t\tright: window.innerWidth < 640 ? 20 : 60\n\t\t\t\t\t};\n\n\t\t\t\t\twindow.map.fitBounds(bounds, {\n\t\t\t\t\t\tpadding: padding,\n\t\t\t\t\t\tmaxZoom: 15,\n\t\t\t\t\t\tduration: 1000\n\t\t\t\t\t});\n\n\t\t\t\t\tconsole.log('Map bounds recalculated for restaurants');\n\t\t\t\t},\n\t\t\t\t\n\t\t\t\tsetViewMode(mode) {\n\t\t\t\t\tthis.viewMode = mode;\n\t\t\t\t},\n\t\t\t\t\n\t\t\t\tselectRestaurant(restaurant) {\n\t\t\t\t\tthis.selectedRestaurant = restaurant;\n\t\t\t\t},\n\t\t\t\t\n\t\t\t\tcloseModal() {\n\t\t\t\t\tthis.selectedRestaurant = null;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\t\n\t\t// Make function available globally\n\t\twindow.restaurantsPage = restaurantsPage;\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -332,7 +332,7 @@ func RestaurantsResults(cityData models.GeneralCityData, restaurants []models.Re
 	})
 }
 
-// RestaurantListCard for the list view section
+// RestaurantListCard for the lists view section
 func RestaurantListCard(restaurant models.RestaurantDetailedInfo, index int) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -706,7 +706,28 @@ func RestaurantListCard(restaurant models.RestaurantDetailedInfo, index int) tem
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 70, "</div><div class=\"flex items-center gap-2\"><!-- Favorite Button Placeholder --><button class=\"p-1.5 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z\"></path></svg></button></div></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 70, "</div><div class=\"flex items-center gap-2\"><!-- Favorite Button --><div id=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var37 string
+		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("restaurant-favorite-%s", restaurant.ID.String()))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/restaurant_results_enhanced.templ`, Line: 607, Col: 75}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 71, "\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = RestaurantFavoriteButton(restaurant.ID.String()).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 72, "</div></div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -731,138 +752,138 @@ func RestaurantGridCard(restaurant models.RestaurantDetailedInfo, index int) tem
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var37 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var37 == nil {
-			templ_7745c5c3_Var37 = templ.NopComponent
+		templ_7745c5c3_Var38 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var38 == nil {
+			templ_7745c5c3_Var38 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 71, "<div class=\"bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition-shadow relative\"><!-- Index Badge --><div class=\"absolute top-2 right-2 w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg z-10\">")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var38 string
-		templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", index))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/restaurant_results_enhanced.templ`, Line: 622, Col: 29}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 72, "</div><div class=\"p-4\"><div class=\"flex items-start justify-between mb-3 pr-10\"><h4 class=\"font-semibold text-gray-900 dark:text-white line-clamp-1\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 73, "<div class=\"bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition-shadow relative\"><!-- Index Badge --><div class=\"absolute top-2 right-2 w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg z-10\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var39 string
-		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(restaurant.Name)
+		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", index))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/restaurant_results_enhanced.templ`, Line: 626, Col: 90}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/restaurant_results_enhanced.templ`, Line: 620, Col: 29}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 73, "</h4>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 74, "</div><div class=\"p-4\"><div class=\"flex items-start justify-between mb-3 pr-10\"><h4 class=\"font-semibold text-gray-900 dark:text-white line-clamp-1\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var40 string
+		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(restaurant.Name)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/restaurant_results_enhanced.templ`, Line: 624, Col: 90}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 75, "</h4>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if restaurant.Rating > 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 74, "<div class=\"flex items-center gap-1 flex-shrink-0\"><svg class=\"w-4 h-4 text-yellow-400\" fill=\"currentColor\" viewBox=\"0 0 20 20\"><path d=\"M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z\"></path></svg> <span class=\"text-sm font-medium text-gray-700 dark:text-gray-300\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var40 string
-			templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(formatRestaurantRating(restaurant.Rating))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/restaurant_results_enhanced.templ`, Line: 632, Col: 116}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 75, "</span></div>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 76, "</div>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		if restaurant.Category != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 77, "<span class=\"inline-block px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300 rounded-full mb-2\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 76, "<div class=\"flex items-center gap-1 flex-shrink-0\"><svg class=\"w-4 h-4 text-yellow-400\" fill=\"currentColor\" viewBox=\"0 0 20 20\"><path d=\"M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z\"></path></svg> <span class=\"text-sm font-medium text-gray-700 dark:text-gray-300\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var41 string
-			templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(restaurant.Category)
+			templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(formatRestaurantRating(restaurant.Rating))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/restaurant_results_enhanced.templ`, Line: 638, Col: 26}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/restaurant_results_enhanced.templ`, Line: 630, Col: 116}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 78, "</span>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 77, "</span></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 79, "<p class=\"text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-3\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 78, "</div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var42 string
-		templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(restaurant.Description)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/restaurant_results_enhanced.templ`, Line: 641, Col: 97}
+		if restaurant.Category != "" {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 79, "<span class=\"inline-block px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300 rounded-full mb-2\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var42 string
+			templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(restaurant.Category)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/restaurant_results_enhanced.templ`, Line: 636, Col: 26}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 80, "</span>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 81, "<p class=\"text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-3\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 80, "</p><div class=\"flex items-center justify-between mt-auto\">")
+		var templ_7745c5c3_Var43 string
+		templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(restaurant.Description)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/restaurant_results_enhanced.templ`, Line: 639, Col: 97}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 82, "</p><div class=\"flex items-center justify-between mt-auto\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if restaurant.PriceLevel != nil && *restaurant.PriceLevel != "" {
-			var templ_7745c5c3_Var43 = []any{getRestaurantPriceColor(*restaurant.PriceLevel)}
-			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var43...)
+			var templ_7745c5c3_Var44 = []any{getRestaurantPriceColor(*restaurant.PriceLevel)}
+			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var44...)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 81, "<span class=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var44 string
-			templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var43).String())
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/restaurant_results_enhanced.templ`, Line: 1, Col: 0}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 82, "\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 83, "<span class=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var45 string
-			templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(*restaurant.PriceLevel)
+			templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var44).String())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/restaurant_results_enhanced.templ`, Line: 644, Col: 93}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/restaurant_results_enhanced.templ`, Line: 1, Col: 0}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 83, "</span>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 84, "\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var46 string
+			templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(*restaurant.PriceLevel)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/restaurant_results_enhanced.templ`, Line: 642, Col: 93}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 85, "</span>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 84, "<div class=\"flex gap-2\"><button class=\"text-orange-600 hover:text-orange-700 text-sm font-medium\">View Menu</button></div></div></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 86, "<div class=\"flex gap-2\"><button class=\"text-orange-600 hover:text-orange-700 text-sm font-medium\">View Menu</button></div></div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -887,12 +908,12 @@ func RestaurantsMapContainer(restaurants []models.RestaurantDetailedInfo, cityDa
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var46 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var46 == nil {
-			templ_7745c5c3_Var46 = templ.NopComponent
+		templ_7745c5c3_Var47 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var47 == nil {
+			templ_7745c5c3_Var47 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 85, "<div class=\"relative w-full h-full min-h-[500px]\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 87, "<div class=\"relative w-full h-full min-h-[500px]\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -900,7 +921,7 @@ func RestaurantsMapContainer(restaurants []models.RestaurantDetailedInfo, cityDa
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 86, "</div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 88, "</div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1038,6 +1059,49 @@ func getRatingColorClass(rating float64) string {
 		return "text-yellow-600 dark:text-yellow-400"
 	}
 	return "text-gray-600 dark:text-gray-400"
+}
+
+// RestaurantFavoriteButton renders the favorite button for a restaurant
+func RestaurantFavoriteButton(restaurantID string) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var48 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var48 == nil {
+			templ_7745c5c3_Var48 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 89, "<button hx-post=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var49 string
+		templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs("/favorites/restaurants/" + restaurantID)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/restaurant_results_enhanced.templ`, Line: 796, Col: 52}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 90, "\" hx-target=\"closest div\" hx-swap=\"outerHTML\" class=\"p-1.5 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors\" title=\"Add to favorites\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z\"></path></svg></button>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
 }
 
 var _ = templruntime.GeneratedTemplate

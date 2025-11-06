@@ -13,7 +13,7 @@ import (
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 )
 
-// RestaurantsList renders a list of restaurant cards for HTMX swapping
+// RestaurantsList renders a lists of restaurant cards for HTMX swapping
 func RestaurantsList(restaurants []models.RestaurantDetailedInfo) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -59,7 +59,7 @@ func RestaurantsList(restaurants []models.RestaurantDetailedInfo) templ.Componen
 	})
 }
 
-// HotelsList renders a list of hotel cards for HTMX swapping
+// HotelsList renders a lists of hotel cards for HTMX swapping
 func HotelsList(hotels []models.HotelDetailedInfo) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -105,7 +105,7 @@ func HotelsList(hotels []models.HotelDetailedInfo) templ.Component {
 	})
 }
 
-// ActivitiesList renders a list of activity cards for HTMX swapping
+// ActivitiesList renders a lists of activity cards for HTMX swapping
 func ActivitiesList(activities []models.POIDetailedInfo) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -151,7 +151,7 @@ func ActivitiesList(activities []models.POIDetailedInfo) templ.Component {
 	})
 }
 
-// POIsList renders a list of POI cards for itinerary
+// POIsList renders a lists of POI cards for itinerary
 func POIsList(pois []models.POIDetailedInfo) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context

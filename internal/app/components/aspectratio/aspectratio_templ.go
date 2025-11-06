@@ -10,7 +10,7 @@ package aspectratio
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-import "github.com/FACorreiaa/go-templui/internal/app/utils"
+import "github.com/FACorreiaa/go-templui/internal/utils"
 
 type Ratio string
 

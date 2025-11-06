@@ -5,8 +5,8 @@ package tags
 import (
 	"context" // For sql.NullString
 	"fmt"
+	"go.uber.org/zap"
 	"log"
-	"log/slog"
 	"os"
 	"testing"
 
@@ -50,7 +50,7 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Unable to ping test database for tags tests: %v\n", err)
 	}
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	logger := zap.New(zap.NewTextHandler(os.Stdout, &zap.HandlerOptions{Level: zap.LevelDebug}))
 	// Initialize with your *actual* PostgrestagsRepo implementation
 	realRepo := NewPostgrestagsRepo(testtagsDB, logger) // Replace with your actual repo constructor
 	testtagsService = NewtagsService(realRepo, logger)
@@ -132,7 +132,7 @@ func TesttagsServiceImpl_Integration(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("GetTags for user1 (should list personal tags)", func(t *testing.T) {
+	t.Run("GetTags for user1 (should lists personal tags)", func(t *testing.T) {
 		// The GetTags method in service calls repo.GetAll(ctx, userID)
 		// This implies it gets tags *specific* to or *created by* that user.
 		tags, err := testtagsService.GetTags(ctx, userID1)

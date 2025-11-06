@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"log/slog"
+	"go.uber.org/zap"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -9,12 +9,12 @@ import (
 
 // AuthTokenHandler handles JWT token generation for testing/development
 type AuthTokenHandler struct {
-	logger    *slog.Logger
+	logger    *zap.Logger
 	jwtConfig JWTConfig
 }
 
 // NewAuthTokenHandler creates a new auth token handler
-func NewAuthTokenHandler(logger *slog.Logger, jwtConfig JWTConfig) *AuthTokenHandler {
+func NewAuthTokenHandler(logger *zap.Logger, jwtConfig JWTConfig) *AuthTokenHandler {
 	return &AuthTokenHandler{
 		logger:    logger,
 		jwtConfig: jwtConfig,
@@ -39,7 +39,7 @@ type GenerateTokenResponse struct {
 func (h *AuthTokenHandler) GenerateToken(c *gin.Context) {
 	var req GenerateTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Warn("Invalid token request", slog.Any("error", err))
+		h.logger.Warn("Invalid token request", zap.Any("error", err))
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request. user_id is required",
 		})
@@ -56,8 +56,8 @@ func (h *AuthTokenHandler) GenerateToken(c *gin.Context) {
 	)
 	if err != nil {
 		h.logger.Error("Failed to generate token",
-			slog.String("user_id", req.UserID),
-			slog.Any("error", err))
+			zap.String("user_id", req.UserID),
+			zap.Any("error", err))
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to generate token",
 		})
@@ -65,8 +65,8 @@ func (h *AuthTokenHandler) GenerateToken(c *gin.Context) {
 	}
 
 	h.logger.Info("Token generated",
-		slog.String("user_id", req.UserID),
-		slog.String("email", req.Email))
+		zap.String("user_id", req.UserID),
+		zap.String("email", req.Email))
 
 	c.JSON(http.StatusOK, GenerateTokenResponse{
 		Token:     token,

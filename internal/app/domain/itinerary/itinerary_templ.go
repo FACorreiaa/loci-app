@@ -10,7 +10,7 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"fmt"
-	"github.com/FACorreiaa/go-templui/internal/app/components/chat"
+	chat "github.com/FACorreiaa/go-templui/internal/app/components/chat"
 	mapcomponents "github.com/FACorreiaa/go-templui/internal/app/components/map"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 )

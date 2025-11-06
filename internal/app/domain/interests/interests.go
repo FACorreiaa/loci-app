@@ -9,7 +9,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/FACorreiaa/go-templui/internal/app/models"
-	"github.com/FACorreiaa/go-templui/internal/pkg/logger"
 	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 )
 
@@ -22,11 +21,13 @@ type InterestsServiceInterface interface {
 
 type InterestsHandler struct {
 	interestService Repository
+	logger          *zap.Logger
 }
 
-func NewInterestsHandler(interestRepo Repository) *InterestsHandler {
+func NewInterestsHandler(interestRepo Repository, logger *zap.Logger) *InterestsHandler {
 	return &InterestsHandler{
 		interestService: interestRepo,
+		logger:          logger,
 	}
 }
 
@@ -41,7 +42,7 @@ func NewInterestsHandler(interestRepo Repository) *InterestsHandler {
 func (h *InterestsHandler) GetInterests(c *gin.Context) {
 	interests, err := h.interestService.GetAllInterests(c.Request.Context())
 	if err != nil {
-		logger.Log.Error("Failed to get interests", zap.Error(err))
+		h.logger.Error("Failed to get interests", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve interests"})
 		return
 	}
@@ -65,14 +66,14 @@ func (h *InterestsHandler) CreateInterest(c *gin.Context) {
 
 	var req models.CreateInterestRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Log.Error("Invalid request body", zap.Error(err))
+		h.logger.Error("Invalid request body", zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
 	interest, err := h.interestService.CreateInterest(c.Request.Context(), req.Name, req.Description, req.Active, userIDStr)
 	if err != nil {
-		logger.Log.Error("Failed to create interest", zap.String("userID", userIDStr), zap.Error(err))
+		h.logger.Error("Failed to create interest", zap.String("userID", userIDStr), zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create interest"})
 		return
 	}
@@ -95,7 +96,7 @@ func (h *InterestsHandler) RemoveInterest(c *gin.Context) {
 	userIDStr := middleware.GetUserIDFromContext(c)
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
@@ -103,13 +104,13 @@ func (h *InterestsHandler) RemoveInterest(c *gin.Context) {
 	interestIDStr := c.Param("id")
 	interestID, err := uuid.Parse(interestIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid interest ID", zap.String("interestID", interestIDStr), zap.Error(err))
+		h.logger.Error("Invalid interest ID", zap.String("interestID", interestIDStr), zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid interest ID"})
 		return
 	}
 
 	if err := h.interestService.Removeinterests(c.Request.Context(), userID, interestID); err != nil {
-		logger.Log.Error("Failed to remove interest", zap.String("userID", userIDStr), zap.String("interestID", interestIDStr), zap.Error(err))
+		h.logger.Error("Failed to remove interest", zap.String("userID", userIDStr), zap.String("interestID", interestIDStr), zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove interest"})
 		return
 	}

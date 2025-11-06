@@ -10,7 +10,7 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"fmt"
-	"github.com/FACorreiaa/go-templui/internal/app/components/chat"
+	llmChat "github.com/FACorreiaa/go-templui/internal/app/components/chat"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"strings"
 )
@@ -313,7 +313,7 @@ func ActivitiesResults(cityData models.GeneralCityData, activities []models.POID
 			return templ_7745c5c3_Err
 		}
 		if sessionID != "" {
-			templ_7745c5c3_Err = chat.ChatPanel(chat.ChatPanelProps{
+			templ_7745c5c3_Err = llmChat.ChatPanel(llmChat.ChatPanelProps{
 				SessionID:     sessionID,
 				CityName:      cityData.City,
 				Domain:        "activities",
@@ -332,7 +332,7 @@ func ActivitiesResults(cityData models.GeneralCityData, activities []models.POID
 	})
 }
 
-// ActivityListCard for the list view section
+// ActivityListCard for the lists view section
 func ActivityListCard(activity models.POIDetailedInfo, index int) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context

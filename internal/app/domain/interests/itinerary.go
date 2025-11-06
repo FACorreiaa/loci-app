@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -15,24 +14,31 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/itinerary"
 	results2 "github.com/FACorreiaa/go-templui/internal/app/domain/results"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"github.com/FACorreiaa/go-templui/internal/app/services"
-	"github.com/FACorreiaa/go-templui/internal/pkg/logger"
 	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 )
 
-type ItineraryHandlers struct {
-	chatRepo         llmchat.Repository
-	itineraryService *services.ItineraryService
+// ChatRepository defines the minimal interface needed from chat repository
+type ChatRepository interface {
+	GetLatestInteractionBySessionID(ctx context.Context, sessionID uuid.UUID) (*models.LlmInteraction, error)
 }
 
-func NewItineraryHandlers(chatRepo llmchat.Repository) *ItineraryHandlers {
+type ItineraryHandlers struct {
+	chatRepo         ChatRepository
+	itineraryService *services.ItineraryService
+	logger           *zap.Logger
+}
+
+func NewItineraryHandlers(chatRepo ChatRepository,
+	itineraryService *services.ItineraryService,
+	logger *zap.Logger) *ItineraryHandlers {
 	return &ItineraryHandlers{
 		chatRepo:         chatRepo,
-		itineraryService: services.NewItineraryService(),
+		itineraryService: itineraryService,
+		logger:           logger,
 	}
 }
 
@@ -43,7 +49,7 @@ func (h *ItineraryHandlers) HandleDestination(c *gin.Context) {
 		return
 	}
 
-	logger.Log.Info("Destination search request",
+	h.logger.Info("Destination search request",
 		zap.String("destination", destination),
 	)
 
@@ -59,7 +65,7 @@ func (h *ItineraryHandlers) HandleChat(c *gin.Context) {
 	budget := c.DefaultPostForm("budget", "moderate")
 	style := c.DefaultPostForm("style", "relaxation")
 
-	logger.Log.Info("Itinerary chat request",
+	h.logger.Info("Itinerary chat request",
 		zap.String("message", message),
 		zap.String("destination", destination),
 		zap.String("duration", duration),
@@ -96,7 +102,7 @@ func (h *ItineraryHandlers) HandleChat(c *gin.Context) {
 func (h *ItineraryHandlers) AddPOI(c *gin.Context) {
 	poiID := c.Param("id")
 
-	logger.Log.Info("Add POI to itinerary",
+	h.logger.Info("Add POI to itinerary",
 		zap.String("poi_id", poiID),
 	)
 
@@ -112,7 +118,7 @@ func (h *ItineraryHandlers) AddPOI(c *gin.Context) {
 func (h *ItineraryHandlers) RemovePOI(c *gin.Context) {
 	poiID := c.Param("id")
 
-	logger.Log.Info("Remove POI from itinerary",
+	h.logger.Info("Remove POI from itinerary",
 		zap.String("poi_id", poiID),
 	)
 
@@ -296,13 +302,13 @@ func (h *ItineraryHandlers) HandleItineraryPage(c *gin.Context) templ.Component 
 	query := c.Query("q")
 	sessionIDParam := c.Query("sessionId")
 
-	logger.Log.Info("Itinerary page accessed",
+	h.logger.Info("Itinerary page accessed",
 		zap.String("user", userID),
 		zap.String("query", query),
 		zap.String("sessionId", sessionIDParam))
 
 	if sessionIDParam == "" {
-		logger.Log.Info("Direct navigation to /itinerary. Showing default page.")
+		h.logger.Info("Direct navigation to /itinerary. Showing default page.")
 		return itinerary.ItineraryPage()
 	}
 
@@ -317,14 +323,14 @@ func (h *ItineraryHandlers) HandleItineraryPageSSE(c *gin.Context) templ.Compone
 	sessionIDParam := c.Query("sessionId")
 	cacheKey := c.Query("cacheKey")
 
-	logger.Log.Info("Itinerary SSE page accessed",
+	h.logger.Info("Itinerary SSE page accessed",
 		zap.String("user", userID),
 		zap.String("query", query),
 		zap.String("sessionId", sessionIDParam),
 		zap.String("cacheKey", cacheKey))
 
 	if sessionIDParam == "" {
-		logger.Log.Info("Direct navigation to /itinerary SSE. Showing default page.")
+		h.logger.Info("Direct navigation to /itinerary SSE. Showing default page.")
 		return itinerary.ItineraryPage()
 	}
 
@@ -333,21 +339,21 @@ func (h *ItineraryHandlers) HandleItineraryPageSSE(c *gin.Context) templ.Compone
 }
 
 func (h *ItineraryHandlers) loadItineraryBySession(sessionIDParam string) templ.Component {
-	logger.Log.Info("Attempting to load itinerary from cache", zap.String("sessionID", sessionIDParam))
+	h.logger.Info("Attempting to load itinerary from cache", zap.String("sessionID", sessionIDParam))
 
 	// Try complete cache first
 	if completeData, found := middleware.CompleteItineraryCache.Get(sessionIDParam); found {
 		jsonData, err := json.MarshalIndent(completeData, "", "  ")
 		if err != nil {
-			logger.Log.Error("Failed to marshal completeData to JSON", zap.Error(err))
+			h.logger.Error("Failed to marshal completeData to JSON", zap.Error(err))
 		} else {
-			logger.Log.Info("Complete itinerary JSON structure", zap.String("json", string(jsonData)))
+			h.logger.Info("Complete itinerary JSON structure", zap.String("json", string(jsonData)))
 		}
 
 		if err := os.WriteFile("completeData.json", jsonData, 0644); err != nil {
-			logger.Log.Error("Failed to write JSON to file", zap.Error(err))
+			h.logger.Error("Failed to write JSON to file", zap.Error(err))
 		}
-		logger.Log.Info("Complete itinerary found in cache. Rendering results.",
+		h.logger.Info("Complete itinerary found in cache. Rendering results.",
 			zap.String("city", completeData.GeneralCityData.City),
 			zap.Int("generalPOIs", len(completeData.PointsOfInterest)),
 			zap.Int("personalizedPOIs", len(completeData.AIItineraryResponse.PointsOfInterest)))
@@ -361,7 +367,7 @@ func (h *ItineraryHandlers) loadItineraryBySession(sessionIDParam string) templ.
 
 	// Try legacy cache
 	if itineraryData, found := middleware.ItineraryCache.Get(sessionIDParam); found {
-		logger.Log.Info("Legacy itinerary found in cache. Rendering results.",
+		h.logger.Info("Legacy itinerary found in cache. Rendering results.",
 			zap.Int("personalizedPOIs", len(itineraryData.PointsOfInterest)))
 
 		// Create empty city data and general POIs for legacy cached data
@@ -377,14 +383,14 @@ func (h *ItineraryHandlers) loadItineraryBySession(sessionIDParam string) templ.
 
 // loadItineraryBySessionSSE loads itinerary with SSE support
 func (h *ItineraryHandlers) loadItineraryBySessionSSE(sessionIDParam string, cacheKey string) templ.Component {
-	logger.Log.Info("Attempting to load itinerary from cache with SSE",
+	h.logger.Info("Attempting to load itinerary from cache with SSE",
 		zap.String("sessionID", sessionIDParam),
 		zap.String("cacheKey", cacheKey))
 
 	// Try complete cache first with cacheKey (for reusable cache hits)
 	if cacheKey != "" {
 		if completeData, found := middleware.CompleteItineraryCache.Get(cacheKey); found {
-			logger.Log.Info("Complete itinerary found in cache. Rendering SSE results with data.",
+			h.logger.Info("Complete itinerary found in cache. Rendering SSE results with data.",
 				zap.String("city", completeData.GeneralCityData.City),
 				zap.Int("generalPOIs", len(completeData.PointsOfInterest)),
 				zap.Int("personalizedPOIs", len(completeData.AIItineraryResponse.PointsOfInterest)))
@@ -411,7 +417,7 @@ func (h *ItineraryHandlers) HandleItinerarySSE(c *gin.Context) {
 		return
 	}
 
-	logger.Log.Info("SSE connection established for itinerary",
+	h.logger.Info("SSE connection established for itinerary",
 		zap.String("sessionId", sessionID))
 
 	// Set SSE headers
@@ -433,7 +439,7 @@ func (h *ItineraryHandlers) HandleItinerarySSE(c *gin.Context) {
 		select {
 		case event := <-updateChan:
 			if event.Type == "complete" {
-				logger.Log.Info("Sending completion event",
+				h.logger.Info("Sending completion event",
 					zap.String("sessionId", sessionID))
 
 				// Send final completion event
@@ -448,7 +454,7 @@ func (h *ItineraryHandlers) HandleItinerarySSE(c *gin.Context) {
 			flusher.Flush()
 
 		case <-c.Request.Context().Done():
-			logger.Log.Info("SSE connection closed",
+			h.logger.Info("SSE connection closed",
 				zap.String("sessionId", sessionID))
 			return
 		}
@@ -459,7 +465,7 @@ func (h *ItineraryHandlers) HandleItinerarySSE(c *gin.Context) {
 func (h *ItineraryHandlers) monitorItineraryUpdates(sessionID string, updateChan chan<- models.ItinerarySSEEvent) {
 	// Check for cached data first
 	if completeData, found := middleware.CompleteItineraryCache.Get(sessionID); found {
-		logger.Log.Info("Complete data found in cache, sending completion immediately",
+		h.logger.Info("Complete data found in cache, sending completion immediately",
 			zap.String("sessionId", sessionID))
 
 		// Send header update
@@ -495,7 +501,7 @@ func (h *ItineraryHandlers) monitorItineraryUpdates(sessionID string, updateChan
 
 	// Legacy cache check
 	if itineraryData, found := middleware.ItineraryCache.Get(sessionID); found {
-		logger.Log.Info("Legacy data found in cache, sending completion immediately",
+		h.logger.Info("Legacy data found in cache, sending completion immediately",
 			zap.String("sessionId", sessionID))
 
 		updateChan <- models.ItinerarySSEEvent{
@@ -519,7 +525,7 @@ func (h *ItineraryHandlers) monitorItineraryUpdates(sessionID string, updateChan
 		case <-ticker.C:
 			// Check cache again
 			if completeData, found := middleware.CompleteItineraryCache.Get(sessionID); found {
-				logger.Log.Info("Complete data appeared in cache",
+				h.logger.Info("Complete data appeared in cache",
 					zap.String("sessionId", sessionID))
 
 				updateChan <- models.ItinerarySSEEvent{
@@ -535,7 +541,7 @@ func (h *ItineraryHandlers) monitorItineraryUpdates(sessionID string, updateChan
 			}
 
 			if itineraryData, found := middleware.ItineraryCache.Get(sessionID); found {
-				logger.Log.Info("Legacy data appeared in cache",
+				h.logger.Info("Legacy data appeared in cache",
 					zap.String("sessionId", sessionID))
 
 				updateChan <- models.ItinerarySSEEvent{
@@ -559,7 +565,7 @@ func (h *ItineraryHandlers) monitorItineraryUpdates(sessionID string, updateChan
 			}
 
 		case <-timeout:
-			logger.Log.Warn("SSE monitoring timed out", zap.String("sessionId", sessionID))
+			h.logger.Warn("SSE monitoring timed out", zap.String("sessionId", sessionID))
 			updateChan <- models.ItinerarySSEEvent{
 				Type: "error",
 				Data: map[string]interface{}{
@@ -574,12 +580,12 @@ func (h *ItineraryHandlers) monitorItineraryUpdates(sessionID string, updateChan
 
 // loadItineraryFromDatabase loads itinerary from database when not found in cache
 func (h *ItineraryHandlers) loadItineraryFromDatabase(sessionIDParam string) templ.Component {
-	logger.Log.Info("Itinerary not found in cache, attempting to load from database", zap.String("sessionID", sessionIDParam))
+	h.logger.Info("Itinerary not found in cache, attempting to load from database", zap.String("sessionID", sessionIDParam))
 
 	// Parse sessionID as UUID
 	sessionID, err := uuid.Parse(sessionIDParam)
 	if err != nil {
-		logger.Log.Warn("Invalid session ID format", zap.String("sessionID", sessionIDParam), zap.Error(err))
+		h.logger.Warn("Invalid session ID format", zap.String("sessionID", sessionIDParam), zap.Error(err))
 		return results2.PageNotFound("Invalid session ID")
 	}
 
@@ -587,16 +593,16 @@ func (h *ItineraryHandlers) loadItineraryFromDatabase(sessionIDParam string) tem
 	ctx := context.Background()
 	interaction, err := h.chatRepo.GetLatestInteractionBySessionID(ctx, sessionID)
 	if err != nil || interaction == nil {
-		logger.Log.Warn("No interaction found in database for session",
+		h.logger.Warn("No interaction found in database for session",
 			zap.String("sessionID", sessionIDParam),
 			zap.Error(err))
 		return results2.PageNotFound("Itinerary session expired. Please create a new itinerary.")
 	}
 
 	// Parse the stored response as complete itinerary data
-	completeData, err := h.itineraryService.ParseCompleteItineraryResponse(interaction.ResponseText, slog.Default())
+	completeData, err := h.itineraryService.ParseCompleteItineraryResponse(interaction.ResponseText, h.logger)
 	if err != nil || completeData == nil {
-		logger.Log.Warn("Could not parse complete itinerary from stored response",
+		h.logger.Warn("Could not parse complete itinerary from stored response",
 			zap.String("sessionID", sessionIDParam),
 			zap.Error(err))
 		return results2.PageNotFound("Could not load itinerary data. Please create a new itinerary.")
@@ -605,12 +611,12 @@ func (h *ItineraryHandlers) loadItineraryFromDatabase(sessionIDParam string) tem
 	// Print JSON data for debugging what will be displayed from database
 	jsonData, err := json.MarshalIndent(completeData, "", "  ")
 	if err != nil {
-		logger.Log.Error("Failed to marshal database completeData to JSON", zap.Error(err))
+		h.logger.Error("Failed to marshal database completeData to JSON", zap.Error(err))
 	} else {
-		logger.Log.Info("Complete itinerary data from database being displayed in view", zap.String("json", string(jsonData)))
+		h.logger.Info("Complete itinerary data from database being displayed in view", zap.String("json", string(jsonData)))
 	}
 
-	logger.Log.Info("Successfully loaded complete itinerary from database",
+	h.logger.Info("Successfully loaded complete itinerary from database",
 		zap.String("sessionID", sessionIDParam),
 		zap.String("city", completeData.GeneralCityData.City),
 		zap.Int("generalPOIs", len(completeData.PointsOfInterest)),

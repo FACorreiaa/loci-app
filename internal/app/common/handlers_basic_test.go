@@ -12,11 +12,9 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/FACorreiaa/go-templui/internal/app/domain/activities"
-	"github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/hotels"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/restaurants"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
-	"github.com/FACorreiaa/go-templui/internal/pkg/logger"
 	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 )
 

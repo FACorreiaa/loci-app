@@ -9,7 +9,7 @@ CREATE TABLE lists (
     item_count INTEGER NOT NULL DEFAULT 0,
     is_public BOOLEAN NOT NULL DEFAULT FALSE,
     is_itinerary BOOLEAN NOT NULL DEFAULT FALSE,
-    parent_list_id UUID REFERENCES lists (id) ON DELETE SET NULL, -- New: For nesting itineraries within a list
+    parent_list_id UUID REFERENCES lists (id) ON DELETE SET NULL, -- New: For nesting itineraries within a lists
     city_id UUID REFERENCES cities (id) ON DELETE SET NULL,
     view_count INTEGER NOT NULL DEFAULT 0,
     save_count INTEGER NOT NULL DEFAULT 0,
@@ -17,7 +17,7 @@ CREATE TABLE lists (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Table for POIs in a list, with optional ordering for itineraries
+-- Table for POIs in a lists, with optional ordering for itineraries
 CREATE TABLE list_items (
     list_id UUID NOT NULL REFERENCES lists (id) ON DELETE CASCADE,
     poi_id UUID NOT NULL REFERENCES points_of_interest (id) ON DELETE CASCADE,
@@ -58,16 +58,16 @@ CREATE TRIGGER trigger_set_lists_updated_at
 BEFORE UPDATE ON lists
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
--- Trigger to update 'updated_at' timestamp for list items
+-- Trigger to update 'updated_at' timestamp for lists items
 CREATE TRIGGER trigger_set_list_items_updated_at
 BEFORE UPDATE ON list_items
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
--- Trigger to update list item_count when items are added or removed
+-- Trigger to update lists item_count when items are added or removed
 CREATE OR REPLACE FUNCTION update_list_item_count() RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'DELETE' THEN
-        -- Update list item count when an item is deleted
+        -- Update lists item count when an item is deleted
         UPDATE lists
         SET item_count = (
             SELECT COUNT(*)
@@ -77,7 +77,7 @@ BEGIN
         WHERE id = OLD.list_id;
         RETURN OLD;
     ELSE
-        -- Update list item count when an item is inserted
+        -- Update lists item count when an item is inserted
         UPDATE lists
         SET item_count = (
             SELECT COUNT(*)
@@ -98,11 +98,11 @@ CREATE TRIGGER trigger_update_list_item_count_delete
 AFTER DELETE ON list_items
 FOR EACH ROW EXECUTE FUNCTION update_list_item_count();
 
--- Trigger to update list save_count when a list is saved or unsaved
+-- Trigger to update lists save_count when a lists is saved or unsaved
 CREATE OR REPLACE FUNCTION update_list_save_count() RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'DELETE' THEN
-        -- Update list save count when a save is deleted
+        -- Update lists save count when a save is deleted
         UPDATE lists
         SET save_count = (
             SELECT COUNT(*)
@@ -112,7 +112,7 @@ BEGIN
         WHERE id = OLD.list_id;
         RETURN OLD;
     ELSE
-        -- Update list save count when a save is inserted
+        -- Update lists save count when a save is inserted
         UPDATE lists
         SET save_count = (
             SELECT COUNT(*)

@@ -5,7 +5,7 @@ import (
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 )
 
-// RestaurantsList renders a list of restaurant cards for HTMX swapping
+// RestaurantsList renders a lists of restaurant cards for HTMX swapping
 templ RestaurantsList(restaurants []models.RestaurantDetailedInfo) {
 	<div class="space-y-4" id="results-list">
 		for i, restaurant := range restaurants {
@@ -17,7 +17,7 @@ templ RestaurantsList(restaurants []models.RestaurantDetailedInfo) {
 	</div>
 }
 
-// HotelsList renders a list of hotel cards for HTMX swapping
+// HotelsList renders a lists of hotel cards for HTMX swapping
 templ HotelsList(hotels []models.HotelDetailedInfo) {
 	<div class="space-y-4" id="results-list">
 		for i, hotel := range hotels {
@@ -29,7 +29,7 @@ templ HotelsList(hotels []models.HotelDetailedInfo) {
 	</div>
 }
 
-// ActivitiesList renders a list of activity cards for HTMX swapping
+// ActivitiesList renders a lists of activity cards for HTMX swapping
 templ ActivitiesList(activities []models.POIDetailedInfo) {
 	<div class="space-y-4" id="results-list">
 		for i, activity := range activities {
@@ -41,7 +41,7 @@ templ ActivitiesList(activities []models.POIDetailedInfo) {
 	</div>
 }
 
-// POIsList renders a list of POI cards for itinerary
+// POIsList renders a lists of POI cards for itinerary
 templ POIsList(pois []models.POIDetailedInfo) {
 	<div class="space-y-4" id="results-list">
 		for i, poi := range pois {

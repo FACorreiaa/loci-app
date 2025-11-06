@@ -9,25 +9,25 @@ import (
 	"time"
 
 	"github.com/a-h/templ"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 
-	"github.com/FACorreiaa/go-templui/internal/app/pages/home"
-
-	"github.com/FACorreiaa/go-templui/internal/app/domain/about"
-
-	"github.com/FACorreiaa/go-templui/internal/app/domain/chat"
-
-	"github.com/FACorreiaa/go-templui/internal/app/domain/profile"
-
+	llmchat "github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/lists"
+	home "github.com/FACorreiaa/go-templui/internal/app/pages"
+	"github.com/FACorreiaa/go-templui/internal/app/services"
+
+	about "github.com/FACorreiaa/go-templui/internal/app/pages"
+
+	"github.com/FACorreiaa/go-templui/internal/app/domain/profiles"
+
 	"github.com/FACorreiaa/go-templui/internal/app/domain/reviews"
 
 	"github.com/FACorreiaa/go-templui/internal/app/common"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/activities"
-	auth2 "github.com/FACorreiaa/go-templui/internal/app/domain/auth"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/billing"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/bookmarks"
-	llmchat2 "github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
 	cityPkg "github.com/FACorreiaa/go-templui/internal/app/domain/city"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/discover"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/favorites"
@@ -36,7 +36,6 @@ import (
 	locationPkg "github.com/FACorreiaa/go-templui/internal/app/domain/location"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/nearby"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/poi"
-	"github.com/FACorreiaa/go-templui/internal/app/domain/profiles"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/recents"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/restaurants"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/results"
@@ -47,20 +46,17 @@ import (
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"github.com/FACorreiaa/go-templui/internal/app/renderer"
 	"github.com/FACorreiaa/go-templui/internal/pkg/config"
-	"github.com/FACorreiaa/go-templui/internal/pkg/logger"
 	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 
 	generativeAI "github.com/FACorreiaa/go-genai-sdk/lib"
 
 	"github.com/FACorreiaa/go-templui/internal/app/domain/auth"
 
-	"github.com/FACorreiaa/go-templui/internal/app/domain/pricing"
+	pricing "github.com/FACorreiaa/go-templui/internal/app/pages"
 
 	"github.com/FACorreiaa/go-templui/internal/app/pages"
 
-	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"go.uber.org/zap"
 )
 
 func getUserFromContext(c *gin.Context) *models.User {
@@ -79,6 +75,7 @@ func getUserFromContext(c *gin.Context) *models.User {
 func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	//r.Use(middleware.AuthMiddleware())
 	// Setup custom templ renderer
+	slogLog := slog.Default()
 	ginHTMLRenderer := r.HTMLRender
 	r.HTMLRender = &renderer.HTMLTemplRenderer{FallbackHTMLRenderer: ginHTMLRenderer}
 
@@ -107,48 +104,47 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	}
 
 	// Initialize repositories and services
-	authRepo := auth2.NewPostgresAuthRepo(dbPool, slog.Default())
-
+	authRepo := auth.NewPostgresAuthRepo(dbPool, log)
+	authService := auth.NewAuthService(authRepo, cfg, log)
 	// Create repositories
-	profilesRepo := profiles.NewPostgresUserRepo(dbPool, slog.Default())
-	interestsRepo := interestsPkg.NewRepositoryImpl(dbPool, slog.Default())
-	cityRepo := cityPkg.NewCityRepository(dbPool, slog.Default())
-	poiRepo := poi.NewRepository(dbPool, slog.Default())
-	tagsRepo := tagsPkg.NewRepositoryImpl(dbPool, slog.Default())
-	userRepo := user.NewPostgresUserRepo(dbPool, slog.Default())
+	profilesRepo := profiles.NewPostgresUserRepo(dbPool, log)
+	interestsRepo := interestsPkg.NewRepositoryImpl(dbPool, log)
+	cityRepo := cityPkg.NewCityRepository(dbPool, log)
+	poiRepo := poi.NewRepository(dbPool, log)
+	tagsRepo := tagsPkg.NewRepositoryImpl(dbPool, log)
+	userRepo := user.NewPostgresUserRepo(dbPool, log)
 
 	// Create services
-	profilesService := profiles.NewUserProfilesService(profilesRepo, interestsRepo, tagsRepo, slog.Default())
-	userService := user.NewUserService(userRepo, slog.Default())
+	profilesService := profiles.NewUserProfilesService(profilesRepo, interestsRepo, tagsRepo, log)
+	userService := user.NewUserService(userRepo, log)
 
 	// Create embedding service for POI (can be nil if not using semantic search)
 	// Change later GeminiAPIKey env variable
 	var embeddingService *generativeAI.EmbeddingService
 	if os.Getenv("GEMINI_API_KEY") != "" { // Check env var directly
-		ctx := context.Background()                                      // Use a background context for initialization
-		l := slog.Default()                                              // Use default logger
-		embeddingService, err = generativeAI.NewEmbeddingService(ctx, l) // Call with correct args
+		ctx := context.Background()                                            // Use a background context for initialization
+		embeddingService, err = generativeAI.NewEmbeddingService(ctx, slogLog) // Call with correct args
 		if err != nil {
-			slog.Error("Failed to create embedding service", "error", err) // Handle error appropriately
+			log.Error("Failed to create embedding service", zap.Error(err))
 		}
 	}
 
 	// Create chat LLM repository (needed by poiService for LLM logging)
-	chatRepo := llmchat2.NewRepositoryImpl(dbPool, slog.Default())
+	chatRepo := llmchat.NewRepositoryImpl(dbPool, log)
 
-	poiService := poi.NewServiceImpl(poiRepo, embeddingService, cityRepo, chatRepo, slog.Default())
+	poiService := poi.NewServiceImpl(poiRepo, embeddingService, cityRepo, chatRepo, log)
 
 	// Create recents repository and service
-	recentsRepo := recents.NewRepository(dbPool, slog.Default())
-	recentsService := recents.NewService(recentsRepo, slog.Default())
+	recentsRepo := recents.NewRepository(dbPool, log)
+	recentsService := recents.NewService(recentsRepo, log)
 
 	// Create common
-	authHandlers := auth2.NewAuthHandlers(authRepo, cfg, slog.Default())
-	profilesHandlers := profiles.NewProfilesHandler(profilesService)
-	interestsHandlers := interestsPkg.NewInterestsHandler(interestsRepo)
-	tagsHandlers := tagsPkg.NewTagsHandler(tagsRepo)
+	authHandlers := auth.NewAuthHandlers(authService, log)
+	profilesHandlers := profiles.NewProfilesHandler(profilesService, log)
+	interestsHandlers := interestsPkg.NewInterestsHandler(interestsRepo, log)
+	tagsHandlers := tagsPkg.NewTagsHandler(tagsRepo, log)
 	// Create chat LLM service
-	chatService := llmchat2.NewLlmInteractiontService(
+	chatService := llmchat.NewLlmInteractiontService(
 		interestsRepo,
 		profilesRepo,
 		profilesService,
@@ -156,38 +152,41 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 		chatRepo,
 		cityRepo,
 		poiRepo,
-		slog.Default(),
+		log,
 	)
-	chatHandlers := llmchat2.NewChatHandlers(chatService, profilesService, chatRepo)
-	favoritesHandlers := favorites.NewFavoritesHandlers(poiService)
-	bookmarksHandlers := bookmarks.NewBookmarksHandlers()
-	discoverHandlers := discover.NewDiscoverHandlers(poiRepo, chatRepo, chatService, slog.Default())
-	itineraryHandlers := interestsPkg.NewItineraryHandlers(chatRepo)
+	chatHandlers := llmchat.NewChatHandlers(chatService, profilesService, chatRepo, log)
+	favoritesHandlers := favorites.NewFavoritesHandlers(poiService, log)
+	hotelFavoritesHandlers := favorites.NewHotelFavoritesHandlers(poiService, log)
+	restaurantFavoritesHandlers := favorites.NewRestaurantFavoritesHandlers(poiService, log)
+	bookmarksHandlers := bookmarks.NewBookmarksHandlers(poiService, log)
+	discoverHandlers := discover.NewDiscoverHandlers(poiRepo, chatRepo, chatService, log)
+	itineraryService := services.NewItineraryService()
+	itineraryHandlers := interestsPkg.NewItineraryHandlers(chatRepo, itineraryService, log)
 	activitiesHandlers := activities.NewActivitiesHandlers(chatRepo, log)
 	hotelsHandlers := hotels.NewHotelsHandlers(chatRepo, log)
 	restaurantsHandlers := restaurants.NewRestaurantsHandlers(chatRepo, log)
-	settingsHandlers := settings.NewSettingsHandlers()
-	resultsHandlers := results.NewResultsHandlers()
-	filterHandlers := common.NewFilterHandlers(logger.Log.Sugar())
+	settingsHandlers := settings.NewSettingsHandlers(log)
+	resultsHandlers := results.NewResultsHandlers(log)
+	filterHandlers := common.NewFilterHandlers(log.Sugar())
 	recentsHandlers := recents.NewRecentsHandlers(recentsService, log)
 
 	// Initialize location repository for nearby feature
 	locationRepo := locationPkg.NewRepository(dbPool)
-	nearbyHandler := nearby.NewNearbyHandler(slog.Default(), chatService, locationRepo)
+	nearbyHandler := nearby.NewNearbyHandler(log, chatService, locationRepo)
 
 	// Public routes (with optional auth)
 	r.GET("/", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
-		logger.Log.Info("Landing page accessed",
+		log.Info("Landing page accessed",
 			zap.String("ip", c.ClientIP()),
 			zap.String("user_agent", c.GetHeader("User-Agent")),
 		)
 
-		user := getUserFromContext(c)
+		u := getUserFromContext(c)
 		var content templ.Component
-		if user != nil {
+		if u != nil {
 			content = home.LoggedInDashboard()
 		} else {
-			content = features.PublicLandingPage()
+			content = pages.PublicLandingPage()
 		}
 
 		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
@@ -201,13 +200,13 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 				},
 			},
 			ActiveNav: "Home",
-			User:      user,
+			User:      u,
 		}))
 	})
 
 	// Pricing (public)
 	r.GET("/pricing", func(c *gin.Context) {
-		logger.Log.Info("Pricing page accessed", zap.String("ip", c.ClientIP()))
+		log.Info("Pricing page accessed", zap.String("ip", c.ClientIP()))
 		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 			Title:   "Pricing - Loci",
 			Content: pricing.PricingPage(),
@@ -226,7 +225,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 
 	// About (public)
 	r.GET("/about", func(c *gin.Context) {
-		logger.Log.Info("About page accessed", zap.String("ip", c.ClientIP()))
+		log.Info("About page accessed", zap.String("ip", c.ClientIP()))
 		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 			Title:   "About - Loci",
 			Content: about.AboutPage(),
@@ -245,7 +244,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 
 	// Discover (public but enhanced when authenticated)
 	r.GET("/discover", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
-		logger.Log.Info("Discover page accessed", zap.String("ip", c.ClientIP()))
+		log.Info("Discover page accessed", zap.String("ip", c.ClientIP()))
 		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 			Title:   "Discover - Loci",
 			Content: discoverHandlers.Show(c),
@@ -263,7 +262,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 
 	// Discovery detail page
 	r.GET("/discover/detail/:sessionId", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
-		logger.Log.Info("Discovery detail page accessed",
+		log.Info("Discovery detail page accessed",
 			zap.String("sessionId", c.Param("sessionId")),
 			zap.String("ip", c.ClientIP()))
 		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
@@ -283,7 +282,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 
 	// Nearby (location-based discovery - public)
 	r.GET("/nearby", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
-		logger.Log.Info("Nearby page accessed", zap.String("ip", c.ClientIP()))
+		log.Info("Nearby page accessed", zap.String("ip", c.ClientIP()))
 		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 			Title:   "Nearby - Loci",
 			Content: nearby.NearbyPage(),
@@ -305,26 +304,26 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	jwtSecret := os.Getenv("JWT_SECRET_KEY")
 	if jwtSecret == "" {
 		jwtSecret = "default-secret-key-change-in-production-min-32-chars"
-		slog.Warn("JWT_SECRET_KEY not set, using default (INSECURE - set environment variable in production)")
+		log.Warn("JWT_SECRET_KEY not set, using default (INSECURE - set environment variable in production)")
 	}
 
-	jwtConfig := middleware.JWTConfig{
+	jwtConfig := auth.JWTConfig{
 		SecretKey:       jwtSecret,
 		TokenExpiration: 24 * time.Hour,
-		Logger:          slog.Default(),
+		Logger:          log,
 		Optional:        true, // Allow both authenticated and anonymous users
 	}
 
 	// Configure rate limiting for WebSocket connections
 	wsRateLimiter := middleware.NewRateLimiter(
-		slog.Default(),
+		log,
 		10,            // Max 10 WebSocket connections
 		1*time.Minute, // Per minute
 	)
 
 	// Apply middleware: JWT auth (optional) + rate limiting
 	r.GET("/ws/nearby",
-		middleware.JWTAuthMiddleware(jwtConfig),
+		auth.JWTAuthMiddleware(jwtConfig),
 		middleware.WebSocketRateLimitMiddleware(wsRateLimiter),
 		nearbyHandler.HandleWebSocket,
 	)
@@ -333,7 +332,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	authGroup := r.Group("/auth")
 	{
 		authGroup.GET("/signin", func(c *gin.Context) {
-			logger.Log.Info("Sign in page accessed")
+			log.Info("Sign in page accessed")
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Sign In - Loci",
 				Content: auth.SignIn(),
@@ -349,7 +348,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 		})
 
 		authGroup.GET("/signup", func(c *gin.Context) {
-			logger.Log.Info("Sign up page accessed")
+			log.Info("Sign up page accessed")
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Sign Up - Loci",
 				Content: auth.SignUp(),
@@ -365,7 +364,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 		})
 
 		authGroup.GET("/forgot-password", func(c *gin.Context) {
-			logger.Log.Info("Forgot password page accessed")
+			log.Info("Forgot password page accessed")
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Reset Password - Loci",
 				Content: auth.ForgotPassword(),
@@ -571,7 +570,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 
 		// Dashboard (authenticated landing)
 		protected.GET("/dashboard", func(c *gin.Context) {
-			logger.Log.Info("Dashboard accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
+			log.Info("Dashboard accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Dashboard - Loci",
 				Content: home.LoggedInDashboard(),
@@ -591,10 +590,10 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 
 		// Chat
 		protected.GET("/chat", func(c *gin.Context) {
-			logger.Log.Info("Chat page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
+			log.Info("Chat page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "AI Chat - Loci",
-				Content: chat.ChatPage(),
+				Content: llmchat.ChatPage(),
 				Nav: models.Navigation{
 					Items: []models.NavItem{
 						{Name: "Dashboard", URL: "/dashboard"},
@@ -609,49 +608,15 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 			}))
 		})
 
-		// Favorites
-		protected.GET("/favorites", func(c *gin.Context) {
-			logger.Log.Info("Favorites page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
-				Title:   "Favorites - Loci",
-				Content: favorites.FavoritesPage(favorites.FavoritesPageData{}),
-				Nav: models.Navigation{
-					Items: []models.NavItem{
-						{Name: "Dashboard", URL: "/dashboard"},
-						{Name: "Discover", URL: "/discover"},
-						{Name: "Nearby", URL: "/nearby"},
-						{Name: "Chat", URL: "/chat"},
-						{Name: "Favorites", URL: "/favorites"},
-					},
-				},
-				ActiveNav: "Favorites",
-				User:      getUserFromContext(c),
-			}))
-		})
+		// Favorites - use the handler that fetches and displays actual data
+		protected.GET("/favorites", favoritesHandlers.ListFavorites)
 
-		// Bookmarks
-		protected.GET("/bookmarks", func(c *gin.Context) {
-			logger.Log.Info("Bookmarks page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
-				Title:   "Bookmarks - Loci",
-				Content: bookmarks.BookmarksPage(),
-				Nav: models.Navigation{
-					Items: []models.NavItem{
-						{Name: "Dashboard", URL: "/dashboard"},
-						{Name: "Discover", URL: "/discover"},
-						{Name: "Nearby", URL: "/nearby"},
-						{Name: "Chat", URL: "/chat"},
-						{Name: "Favorites", URL: "/favorites"},
-					},
-				},
-				ActiveNav: "Bookmarks",
-				User:      getUserFromContext(c),
-			}))
-		})
+		// Bookmarks - use the handler that fetches and displays actual data
+		protected.GET("/bookmarks", bookmarksHandlers.ListBookmarks)
 
 		// Lists
 		protected.GET("/lists", func(c *gin.Context) {
-			logger.Log.Info("Lists page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
+			log.Info("Lists page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Travel Lists - Loci",
 				Content: lists.ListsPage(),
@@ -672,15 +637,15 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 		// Profile
 		protected.GET("/profile", func(c *gin.Context) {
 			userID := middleware.GetUserIDFromContext(c)
-			logger.Log.Info("Profile page accessed", zap.String("user", userID))
+			log.Info("Profile page accessed", zap.String("user", userID))
 
 			// Parse user ID from string to UUID
 			userUUID, err := uuid.Parse(userID)
 			if err != nil {
-				logger.Log.Error("Invalid user ID", zap.String("userID", userID), zap.Error(err))
+				log.Error("Invalid user ID", zap.String("userID", userID), zap.Error(err))
 				c.HTML(http.StatusBadRequest, "", pages.LayoutPage(models.LayoutTempl{
 					Title:   "Error - Loci",
-					Content: profile.ProfilePage(nil),
+					Content: profiles.ProfilePage(nil),
 					User:    getUserFromContext(c),
 				}))
 				return
@@ -689,14 +654,14 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 			// Fetch user profile from database
 			userProfile, err := userService.GetUserProfile(c.Request.Context(), userUUID)
 			if err != nil {
-				logger.Log.Error("Failed to fetch user profile", zap.String("userID", userID), zap.Error(err))
+				log.Error("Failed to fetch user profile", zap.String("userID", userID), zap.Error(err))
 				// Still show the page but with nil profile
 				userProfile = nil
 			}
 
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Profile - Loci",
-				Content: profile.ProfilePage(userProfile),
+				Content: profiles.ProfilePage(userProfile),
 				Nav: models.Navigation{
 					Items: []models.NavItem{
 						{Name: "Dashboard", URL: "/dashboard"},
@@ -715,7 +680,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 
 		// Settings
 		protected.GET("/settings", func(c *gin.Context) {
-			logger.Log.Info("Settings page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
+			log.Info("Settings page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Settings - Loci",
 				Content: settings.SettingsPage(),
@@ -733,7 +698,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 
 		// Reviews
 		protected.GET("/reviews", func(c *gin.Context) {
-			logger.Log.Info("Reviews page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
+			log.Info("Reviews page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "My Reviews - Loci",
 				Content: reviews.ReviewsPage(),
@@ -752,7 +717,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 
 		// Billing
 		protected.GET("/billing", func(c *gin.Context) {
-			logger.Log.Info("Billing page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
+			log.Info("Billing page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
 			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 				Title:   "Billing & Subscription - Loci",
 				Content: billing.BillingPage(),
@@ -795,10 +760,18 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 		htmxGroup.DELETE("/favorites/:id", favoritesHandlers.RemoveFavorite)
 		htmxGroup.POST("/favorites/search", favoritesHandlers.SearchFavorites)
 
+		// Hotel favorites endpoints
+		htmxGroup.POST("/favorites/hotels/:id", hotelFavoritesHandlers.AddHotelFavorite)
+		htmxGroup.DELETE("/favorites/hotels/:id", hotelFavoritesHandlers.RemoveHotelFavorite)
+
+		// Restaurant favorites endpoints
+		htmxGroup.POST("/favorites/restaurants/:id", restaurantFavoritesHandlers.AddRestaurantFavorite)
+		htmxGroup.DELETE("/favorites/restaurants/:id", restaurantFavoritesHandlers.RemoveRestaurantFavorite)
+
 		// Bookmarks endpoints
 		htmxGroup.POST("/bookmarks/add/:id", bookmarksHandlers.AddBookmark)
 		htmxGroup.DELETE("/bookmarks/:id", bookmarksHandlers.RemoveBookmark)
-		htmxGroup.POST("/bookmarks/search", bookmarksHandlers.SearchBookmarks)
+		// htmxGroup.POST("/bookmarks/search", bookmarksHandlers.SearchBookmarks) // TODO: Implement SearchBookmarks
 
 		// Discover endpoints
 		htmxGroup.POST("/discover/search", discoverHandlers.Search)
@@ -849,11 +822,11 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	apiGroup := r.Group("/api")
 	{
 		// Auth token endpoints (public - for development/testing)
-		authTokenHandler := auth2.NewAuthTokenHandler(slog.Default(), jwtConfig)
+		authTokenHandler := auth.NewAuthTokenHandler(log, jwtConfig)
 		authGroup := apiGroup.Group("/auth")
 		{
 			authGroup.POST("/token", authTokenHandler.GenerateToken)
-			authGroup.GET("/verify", middleware.JWTAuthMiddleware(jwtConfig), authTokenHandler.VerifyToken)
+			authGroup.GET("/verify", auth.JWTAuthMiddleware(jwtConfig), authTokenHandler.VerifyToken)
 			authGroup.GET("/example", authTokenHandler.GetTokenExample)
 		}
 
@@ -893,7 +866,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 
 	// 404 handler - must be last
 	r.NoRoute(func(c *gin.Context) {
-		logger.Log.Info("404 - Page not found",
+		log.Info("404 - Page not found",
 			zap.String("path", c.Request.URL.Path),
 			zap.String("method", c.Request.Method),
 			zap.String("ip", c.ClientIP()),

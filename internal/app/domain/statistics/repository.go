@@ -2,7 +2,8 @@ package statistics
 
 import (
 	"context"
-	"log/slog"
+
+	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,11 +23,11 @@ type Repository interface {
 }
 
 type RepositoryImpl struct {
-	logger *slog.Logger
+	logger *zap.Logger
 	pgpool *pgxpool.Pool
 }
 
-func NewRepository(logger *slog.Logger, pgpool *pgxpool.Pool) *RepositoryImpl {
+func NewRepository(logger *zap.Logger, pgpool *pgxpool.Pool) *RepositoryImpl {
 	return &RepositoryImpl{
 		logger: logger,
 		pgpool: pgpool,
@@ -34,7 +35,7 @@ func NewRepository(logger *slog.Logger, pgpool *pgxpool.Pool) *RepositoryImpl {
 }
 
 func (r *RepositoryImpl) GetMainPageStatistics(ctx context.Context, userID uuid.UUID) (*models.MainPageStatistics, error) {
-	r.logger.InfoContext(ctx, "Getting main page statistics for user")
+	r.logger.Info("Getting main page statistics for user")
 
 	// Check if this is a request for aggregate statistics (system user)
 	systemUserID := uuid.MustParse("00000000-0000-0000-0000-000000000000")
@@ -179,20 +180,20 @@ func (r *RepositoryImpl) GetMainPageStatistics(ctx context.Context, userID uuid.
 	)
 
 	if err != nil {
-		r.logger.ErrorContext(ctx, "failed to get main page statistics", slog.Any("error", err))
+		r.logger.Error("failed to get main page statistics", zap.Any("error", err))
 		return nil, err
 	}
 
-	r.logger.InfoContext(ctx, "Successfully retrieved main page statistics",
-		slog.Int64("total_users", stats.TotalUsersCount),
-		slog.Int64("user_itineraries", stats.TotalItinerariesSaved),
-		slog.Int64("unique_pois", stats.TotalUniquePOIs))
+	r.logger.Info("Successfully retrieved main page statistics",
+		zap.Int64("total_users", stats.TotalUsersCount),
+		zap.Int64("user_itineraries", stats.TotalItinerariesSaved),
+		zap.Int64("unique_pois", stats.TotalUniquePOIs))
 
 	return &stats, nil
 }
 
 func (r *RepositoryImpl) GetDetailedPOIStatistics(ctx context.Context, userID uuid.UUID) (*models.DetailedPOIStatistics, error) {
-	r.logger.InfoContext(ctx, "Getting detailed POI statistics for user")
+	r.logger.Info("Getting detailed POI statistics for user")
 
 	query := `
 		SELECT
@@ -220,22 +221,22 @@ func (r *RepositoryImpl) GetDetailedPOIStatistics(ctx context.Context, userID uu
 	)
 
 	if err != nil {
-		r.logger.ErrorContext(ctx, "failed to get detailed POI statistics", slog.Any("error", err))
+		r.logger.Error("failed to get detailed POI statistics", zap.Any("error", err))
 		return nil, err
 	}
 
-	r.logger.InfoContext(ctx, "Successfully retrieved detailed POI statistics",
-		slog.Int64("general_pois", stats.GeneralPOIs),
-		slog.Int64("suggested_pois", stats.SuggestedPOIs),
-		slog.Int64("hotels", stats.Hotels),
-		slog.Int64("restaurants", stats.Restaurants),
-		slog.Int64("total_pois", stats.TotalPOIs))
+	r.logger.Info("Successfully retrieved detailed POI statistics",
+		zap.Int64("general_pois", stats.GeneralPOIs),
+		zap.Int64("suggested_pois", stats.SuggestedPOIs),
+		zap.Int64("hotels", stats.Hotels),
+		zap.Int64("restaurants", stats.Restaurants),
+		zap.Int64("total_pois", stats.TotalPOIs))
 
 	return &stats, nil
 }
 
 func (r *RepositoryImpl) LandingPageStatistics(ctx context.Context, userID uuid.UUID) (*models.LandingPageUserStats, error) {
-	r.logger.InfoContext(ctx, "Getting LandingPageStatistics")
+	r.logger.Info("Getting LandingPageStatistics")
 
 	query := `
 	SELECT
@@ -255,15 +256,15 @@ func (r *RepositoryImpl) LandingPageStatistics(ctx context.Context, userID uuid.
 	)
 
 	if err != nil {
-		r.logger.ErrorContext(ctx, "failed to get detailed POI statistics", slog.Any("error", err))
+		r.logger.Error("failed to get detailed POI statistics", zap.Any("error", err))
 		return nil, err
 	}
 
-	r.logger.InfoContext(ctx, "Successfully retrieved user Stats",
-		slog.Int("saved_places", stats.SavedPlaces),
-		slog.Int("itineraries", stats.Itineraries),
-		slog.Int("cities_explored", stats.CitiesExplored),
-		slog.Int("discoveries", stats.Discoveries))
+	r.logger.Info("Successfully retrieved user Stats",
+		zap.Int("saved_places", stats.SavedPlaces),
+		zap.Int("itineraries", stats.Itineraries),
+		zap.Int("cities_explored", stats.CitiesExplored),
+		zap.Int("discoveries", stats.Discoveries))
 
 	return &stats, nil
 }

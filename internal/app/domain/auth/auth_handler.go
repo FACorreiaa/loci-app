@@ -1,15 +1,12 @@
 package auth
 
 import (
-	"log/slog"
 	"net/http"
 	"time"
 
 	"go.uber.org/zap"
 
 	"github.com/FACorreiaa/go-templui/internal/app/components/banner"
-	"github.com/FACorreiaa/go-templui/internal/pkg/config"
-	"github.com/FACorreiaa/go-templui/internal/pkg/logger"
 )
 
 type LoginRequest struct {
@@ -35,16 +32,18 @@ type ChangePasswordRequest struct {
 
 type AuthHandlers struct {
 	authService AuthService
+	logger      *zap.Logger
 }
 
-func NewAuthHandlers(repo AuthRepo, cfg *config.Config, logger *slog.Logger) *AuthHandlers {
+func NewAuthHandlers(authService AuthService, logger *zap.Logger) *AuthHandlers {
 	return &AuthHandlers{
-		authService: NewAuthService(repo, cfg, logger),
+		authService: authService,
+		logger:      logger,
 	}
 }
 
 func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
-	logger.Log.Info("Login attempt",
+	h.logger.Info("Login attempt",
 		zap.String("method", r.Method),
 		zap.String("remote_addr", r.RemoteAddr),
 	)
@@ -56,7 +55,7 @@ func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := r.ParseForm()
 	if err != nil {
-		logger.Log.Error("Failed to parse form", zap.Error(err))
+		h.logger.Error("Failed to parse form", zap.Error(err))
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
@@ -65,7 +64,7 @@ func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
 
 	if email == "" || password == "" {
-		logger.Log.Warn("Missing email or password")
+		h.logger.Warn("Missing email or password")
 		w.Header().Set("HX-Retarget", "#login-form")
 		w.WriteHeader(http.StatusBadRequest)
 		component := banner.Banner(banner.BannerProps{
@@ -76,7 +75,7 @@ func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			AutoDismiss: 5,
 		})
 		if err := component.Render(r.Context(), w); err != nil {
-			logger.Log.Error("Failed to render banner", zap.Error(err))
+			h.logger.Error("Failed to render banner", zap.Error(err))
 		}
 		return
 	}
@@ -84,7 +83,7 @@ func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	// Validate credentials
 	user, err := h.authService.GetUserByEmail(r.Context(), email)
 	if err != nil || user == nil || !h.authService.CheckPassword(user.Password, password) {
-		logger.Log.Warn("Invalid login credentials",
+		h.logger.Warn("Invalid login credentials",
 			zap.String("email", email),
 		)
 		w.Header().Set("HX-Retarget", "#login-form")
@@ -98,7 +97,7 @@ func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			AutoDismiss: 5,
 		})
 		if err := component.Render(r.Context(), w); err != nil {
-			logger.Log.Error("Failed to render banner", zap.Error(err))
+			h.logger.Error("Failed to render banner", zap.Error(err))
 		}
 		return
 	}
@@ -106,7 +105,7 @@ func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	// Generate token
 	token, err := h.authService.GenerateToken(user.ID, user.Email, user.Username)
 	if err != nil {
-		logger.Log.Error("Failed to generate token", zap.Error(err))
+		h.logger.Error("Failed to generate token", zap.Error(err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -122,7 +121,7 @@ func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 	})
 
-	logger.Log.Info("Successful login",
+	h.logger.Info("Successful login",
 		zap.String("user_id", user.ID),
 		zap.String("email", email),
 	)
@@ -132,7 +131,7 @@ func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
-	logger.Log.Info("Registration attempt",
+	h.logger.Info("Registration attempt",
 		zap.String("method", r.Method),
 		zap.String("remote_addr", r.RemoteAddr),
 	)
@@ -144,7 +143,7 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := r.ParseForm()
 	if err != nil {
-		logger.Log.Error("Failed to parse form", zap.Error(err))
+		h.logger.Error("Failed to parse form", zap.Error(err))
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
@@ -166,7 +165,7 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			AutoDismiss: 5,
 		})
 		if err := component.Render(r.Context(), w); err != nil {
-			logger.Log.Error("Failed to render banner", zap.Error(err))
+			h.logger.Error("Failed to render banner", zap.Error(err))
 		}
 		return
 	}
@@ -183,7 +182,7 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			AutoDismiss: 5,
 		})
 		if err := component.Render(r.Context(), w); err != nil {
-			logger.Log.Error("Failed to render banner", zap.Error(err))
+			h.logger.Error("Failed to render banner", zap.Error(err))
 		}
 		return
 	}
@@ -192,7 +191,7 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	fullName := firstName + " " + lastName
 	userID, err := h.authService.Register(r.Context(), fullName, email, password, "user")
 	if err != nil {
-		logger.Log.Error("Failed to register user", zap.Error(err))
+		h.logger.Error("Failed to register user", zap.Error(err))
 		w.Header().Set("HX-Retarget", "#signup-response")
 		w.WriteHeader(http.StatusBadRequest)
 		component := banner.Banner(banner.BannerProps{
@@ -204,7 +203,7 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			AutoDismiss: 8,
 		})
 		if err := component.Render(r.Context(), w); err != nil {
-			logger.Log.Error("Failed to render banner", zap.Error(err))
+			h.logger.Error("Failed to render banner", zap.Error(err))
 		}
 		return
 	}
@@ -212,7 +211,7 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	// Generate token for new user using userID
 	token, err := h.authService.GenerateToken(userID, email, fullName)
 	if err != nil {
-		logger.Log.Error("Failed to generate token", zap.Error(err))
+		h.logger.Error("Failed to generate token", zap.Error(err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -228,7 +227,7 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 	})
 
-	logger.Log.Info("Successful registration",
+	h.logger.Info("Successful registration",
 		zap.String("user_id", userID),
 		zap.String("email", email),
 		zap.String("name", fullName),
@@ -239,7 +238,7 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Request) {
-	logger.Log.Info("Change password attempt",
+	h.logger.Info("Change password attempt",
 		zap.String("method", r.Method),
 	)
 
@@ -250,7 +249,7 @@ func (h *AuthHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Requ
 
 	err := r.ParseForm()
 	if err != nil {
-		logger.Log.Error("Failed to parse form", zap.Error(err))
+		h.logger.Error("Failed to parse form", zap.Error(err))
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
@@ -263,7 +262,7 @@ func (h *AuthHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Requ
 		w.Header().Set("HX-Retarget", "#change-password-form")
 		w.WriteHeader(http.StatusBadRequest)
 		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">All fields are required</div>`)); err != nil {
-			logger.Log.Error("Failed to write response", zap.Error(err))
+			h.logger.Error("Failed to write response", zap.Error(err))
 		}
 		return
 	}
@@ -272,7 +271,7 @@ func (h *AuthHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Requ
 		w.Header().Set("HX-Retarget", "#change-password-form")
 		w.WriteHeader(http.StatusBadRequest)
 		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">New passwords do not match</div>`)); err != nil {
-			logger.Log.Error("Failed to write response", zap.Error(err))
+			h.logger.Error("Failed to write response", zap.Error(err))
 		}
 		return
 	}
@@ -280,22 +279,22 @@ func (h *AuthHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Requ
 	// Hash new password
 	_, err = h.authService.HashPassword(newPassword)
 	if err != nil {
-		logger.Log.Error("Failed to hash new password", zap.Error(err))
+		h.logger.Error("Failed to hash new password", zap.Error(err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	logger.Log.Info("Password changed successfully")
+	h.logger.Info("Password changed successfully")
 
 	w.Header().Set("HX-Retarget", "#change-password-form")
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write([]byte(`<div class="text-green-500 text-sm mb-4">Password changed successfully</div>`)); err != nil {
-		logger.Log.Error("Failed to write response", zap.Error(err))
+		h.logger.Error("Failed to write response", zap.Error(err))
 	}
 }
 
 func (h *AuthHandlers) LogoutHandler(w http.ResponseWriter, _ *http.Request) {
-	logger.Log.Info("User logout")
+	h.logger.Info("User logout")
 
 	// Clear auth cookie
 	http.SetCookie(w, &http.Cookie{
@@ -314,7 +313,7 @@ func (h *AuthHandlers) LogoutHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (h *AuthHandlers) ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
-	logger.Log.Info("Password reset request",
+	h.logger.Info("Password reset request",
 		zap.String("method", r.Method),
 		zap.String("remote_addr", r.RemoteAddr),
 	)
@@ -326,7 +325,7 @@ func (h *AuthHandlers) ForgotPasswordHandler(w http.ResponseWriter, r *http.Requ
 
 	err := r.ParseForm()
 	if err != nil {
-		logger.Log.Error("Failed to parse form", zap.Error(err))
+		h.logger.Error("Failed to parse form", zap.Error(err))
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
@@ -336,17 +335,17 @@ func (h *AuthHandlers) ForgotPasswordHandler(w http.ResponseWriter, r *http.Requ
 		w.Header().Set("HX-Retarget", "#forgot-password-form")
 		w.WriteHeader(http.StatusBadRequest)
 		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Email is required</div>`)); err != nil {
-			logger.Log.Error("Failed to write response", zap.Error(err))
+			h.logger.Error("Failed to write response", zap.Error(err))
 		}
 		return
 	}
 
 	// Always show success message for security (don't reveal if email exists)
-	logger.Log.Info("Password reset requested", zap.String("email", email))
+	h.logger.Info("Password reset requested", zap.String("email", email))
 	w.Header().Set("HX-Retarget", "#forgot-password-form")
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write([]byte(`<div class="text-green-500 text-sm mb-4">If this email is registered, you will receive password reset instructions</div>`)); err != nil {
-		logger.Log.Error("Failed to write response", zap.Error(err))
+		h.logger.Error("Failed to write response", zap.Error(err))
 	}
 }
 
@@ -358,7 +357,7 @@ func (h *AuthHandlers) CheckUsernameHandler(w http.ResponseWriter, r *http.Reque
 
 	err := r.ParseForm()
 	if err != nil {
-		logger.Log.Error("Failed to parse form", zap.Error(err))
+		h.logger.Error("Failed to parse form", zap.Error(err))
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
@@ -367,7 +366,7 @@ func (h *AuthHandlers) CheckUsernameHandler(w http.ResponseWriter, r *http.Reque
 	if username == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		if _, err := w.Write([]byte(`<span class="text-red-500 text-sm">Username is required</span>`)); err != nil {
-			logger.Log.Error("Failed to write response", zap.Error(err))
+			h.logger.Error("Failed to write response", zap.Error(err))
 		}
 		return
 	}
@@ -376,7 +375,7 @@ func (h *AuthHandlers) CheckUsernameHandler(w http.ResponseWriter, r *http.Reque
 	if len(username) < 3 {
 		w.WriteHeader(http.StatusBadRequest)
 		if _, err := w.Write([]byte(`<span class="text-red-500 text-sm">Username must be at least 3 characters</span>`)); err != nil {
-			logger.Log.Error("Failed to write response", zap.Error(err))
+			h.logger.Error("Failed to write response", zap.Error(err))
 		}
 		return
 	}
@@ -384,6 +383,6 @@ func (h *AuthHandlers) CheckUsernameHandler(w http.ResponseWriter, r *http.Reque
 	// For demo, assume username is available
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write([]byte(`<span class="text-green-500 text-sm">Username is available</span>`)); err != nil {
-		logger.Log.Error("Failed to write response", zap.Error(err))
+		h.logger.Error("Failed to write response", zap.Error(err))
 	}
 }

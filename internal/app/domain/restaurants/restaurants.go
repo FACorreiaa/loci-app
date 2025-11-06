@@ -2,20 +2,19 @@ package restaurants
 
 import (
 	"context"
-	"log/slog"
 	"strings"
+
+	"go.uber.org/zap"
 
 	"github.com/a-h/templ"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"go.uber.org/zap"
 
-	"github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
+	llmchat "github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
 	results2 "github.com/FACorreiaa/go-templui/internal/app/domain/results"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"github.com/FACorreiaa/go-templui/internal/app/services"
 	"github.com/FACorreiaa/go-templui/internal/pkg/debugger"
-	"github.com/FACorreiaa/go-templui/internal/pkg/logger"
 	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 )
 
@@ -39,7 +38,7 @@ func (h *RestaurantsHandlers) HandleRestaurantsPage(c *gin.Context) templ.Compon
 	sessionIDParam := c.Query("sessionId")
 	cacheKey := c.Query("cacheKey")
 
-	logger.Log.Info("Restaurants page accessed",
+	h.logger.Info("Restaurants page accessed",
 		zap.String("ip", c.ClientIP()),
 		zap.String("query", query),
 		zap.String("sessionId", sessionIDParam),
@@ -63,7 +62,7 @@ func (h *RestaurantsHandlers) HandleRestaurantsPage(c *gin.Context) templ.Compon
 
 func (h *RestaurantsHandlers) loadRestaurantsBySession(sessionIDParam string, cacheKey string) templ.Component {
 
-	logger.Log.Info("Attempting to load restaurants from cache",
+	h.logger.Info("Attempting to load restaurants from cache",
 
 		zap.String("sessionID", sessionIDParam),
 
@@ -73,7 +72,7 @@ func (h *RestaurantsHandlers) loadRestaurantsBySession(sessionIDParam string, ca
 	if cacheKey != "" {
 		if restaurantsData, found := middleware.RestaurantsCache.Get(cacheKey); found {
 
-			logger.Log.Info("Restaurants found in cache. Rendering results.",
+			h.logger.Info("Restaurants found in cache. Rendering results.",
 
 				zap.Int("restaurants", len(restaurantsData)))
 
@@ -81,7 +80,7 @@ func (h *RestaurantsHandlers) loadRestaurantsBySession(sessionIDParam string, ca
 			var cityData models.GeneralCityData
 			if completeData, found := middleware.CompleteItineraryCache.Get(cacheKey); found {
 				cityData = completeData.GeneralCityData
-				logger.Log.Info("City data loaded from complete cache",
+				h.logger.Info("City data loaded from complete cache",
 					zap.String("city", cityData.City))
 			} else {
 				// Fallback: load from database using sessionID
@@ -108,12 +107,12 @@ func (h *RestaurantsHandlers) loadRestaurantsBySession(sessionIDParam string, ca
 
 // loadRestaurantsFromDatabase loads restaurants from database when not found in cache
 func (h *RestaurantsHandlers) loadRestaurantsFromDatabase(sessionIDParam string) templ.Component {
-	logger.Log.Info("Restaurants not found in cache, attempting to load from database", zap.String("sessionID", sessionIDParam))
+	h.logger.Info("Restaurants not found in cache, attempting to load from database", zap.String("sessionID", sessionIDParam))
 
 	// Parse sessionID as UUID
 	sessionID, err := uuid.Parse(sessionIDParam)
 	if err != nil {
-		logger.Log.Warn("Invalid session ID format", zap.String("sessionID", sessionIDParam), zap.Error(err))
+		h.logger.Warn("Invalid session ID format", zap.String("sessionID", sessionIDParam), zap.Error(err))
 		return results2.PageNotFound("Invalid session ID")
 	}
 
@@ -121,7 +120,7 @@ func (h *RestaurantsHandlers) loadRestaurantsFromDatabase(sessionIDParam string)
 	ctx := context.Background()
 	interaction, err := h.chatRepo.GetLatestInteractionBySessionID(ctx, sessionID)
 	if err != nil || interaction == nil {
-		logger.Log.Warn("No interaction found in database for session",
+		h.logger.Warn("No interaction found in database for session",
 			zap.String("sessionID", sessionIDParam),
 			zap.Error(err))
 		// Return empty results instead of PageNotFound - data might still be processing
@@ -131,9 +130,9 @@ func (h *RestaurantsHandlers) loadRestaurantsFromDatabase(sessionIDParam string)
 	}
 
 	// Parse the stored response as complete data
-	completeData, err := h.itineraryService.ParseCompleteItineraryResponse(interaction.ResponseText, slog.Default())
+	completeData, err := h.itineraryService.ParseCompleteItineraryResponse(interaction.ResponseText, h.logger)
 	if err != nil || completeData == nil {
-		logger.Log.Warn("Could not parse complete data from stored response",
+		h.logger.Warn("Could not parse complete data from stored response",
 			zap.String("sessionID", sessionIDParam),
 			zap.Error(err))
 		// Return empty results instead of PageNotFound for parsing errors
@@ -147,14 +146,14 @@ func (h *RestaurantsHandlers) loadRestaurantsFromDatabase(sessionIDParam string)
 	// Print JSON data for debugging
 	//jsonData, err := json.MarshalIndent(completeData, "", "  ")
 	//if err != nil {
-	//	logger.Log.Error("Failed to marshal completeData to JSON", zap.Error(err))
+	//	h.logger.Error("Failed to marshal completeData to JSON", zap.Error(err))
 	//} else {
 	//	if err := os.WriteFile("complete_restaurant.json", jsonData, 0644); err != nil {
-	//		logger.Log.Error("Failed to write JSON to file", zap.Error(err))
+	//		h.logger.Error("Failed to write JSON to file", zap.Error(err))
 	//	}
 	//}
 
-	logger.Log.Info("Successfully loaded complete data from database for restaurants",
+	h.logger.Info("Successfully loaded complete data from database for restaurants",
 		zap.String("sessionID", sessionIDParam),
 		zap.String("city", completeData.GeneralCityData.City),
 		zap.Int("totalPOIs", len(completeData.PointsOfInterest)))
@@ -173,14 +172,14 @@ func (h *RestaurantsHandlers) HandleRestaurantsPageSSE(c *gin.Context) templ.Com
 	sessionIDParam := c.Query("sessionId")
 	cacheKey := c.Query("cacheKey")
 
-	logger.Log.Info("Restaurants SSE page accessed",
+	h.logger.Info("Restaurants SSE page accessed",
 		zap.String("ip", c.ClientIP()),
 		zap.String("query", query),
 		zap.String("sessionId", sessionIDParam),
 		zap.String("cacheKey", cacheKey))
 
 	if sessionIDParam == "" {
-		logger.Log.Info("Direct navigation to /restaurants SSE. Showing default page.")
+		h.logger.Info("Direct navigation to /restaurants SSE. Showing default page.")
 		return RestaurantsPage()
 	}
 
@@ -288,28 +287,28 @@ func convertPOIToRestaurant(poi models.POIDetailedInfo) models.RestaurantDetaile
 func (h *RestaurantsHandlers) loadCityDataFromDatabase(sessionIDParam string) models.GeneralCityData {
 	sessionID, err := uuid.Parse(sessionIDParam)
 	if err != nil {
-		logger.Log.Warn("Invalid session ID format when loading city data", zap.String("sessionID", sessionIDParam), zap.Error(err))
+		h.logger.Warn("Invalid session ID format when loading city data", zap.String("sessionID", sessionIDParam), zap.Error(err))
 		return models.GeneralCityData{}
 	}
 
 	ctx := context.Background()
 	interaction, err := h.chatRepo.GetLatestInteractionBySessionID(ctx, sessionID)
 	if err != nil || interaction == nil {
-		logger.Log.Warn("No interaction found in database for city data",
+		h.logger.Warn("No interaction found in database for city data",
 			zap.String("sessionID", sessionIDParam),
 			zap.Error(err))
 		return models.GeneralCityData{}
 	}
 
-	completeData, err := h.itineraryService.ParseCompleteItineraryResponse(interaction.ResponseText, slog.Default())
+	completeData, err := h.itineraryService.ParseCompleteItineraryResponse(interaction.ResponseText, h.logger)
 	if err != nil || completeData == nil {
-		logger.Log.Warn("Could not parse complete data from stored response for city data",
+		h.logger.Warn("Could not parse complete data from stored response for city data",
 			zap.String("sessionID", sessionIDParam),
 			zap.Error(err))
 		return models.GeneralCityData{}
 	}
 
-	logger.Log.Info("City data loaded from database",
+	h.logger.Info("City data loaded from database",
 		zap.String("sessionID", sessionIDParam),
 		zap.String("city", completeData.GeneralCityData.City),
 		zap.String("country", completeData.GeneralCityData.Country),

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/FACorreiaa/go-templui/internal/app/models"
+	"go.uber.org/zap"
 )
 
 // CacheManager holds all application caches
@@ -27,29 +28,32 @@ type CacheManager struct {
 }
 
 // NewCacheManager creates a new cache manager with default TTLs
-func NewCacheManager() *CacheManager {
+func NewCacheManager(logger *zap.Logger) *CacheManager {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
 	return &CacheManager{
 		// Complete responses have longer TTL (10 minutes)
-		Complete: NewUnifiedCache[models.AiCityResponse](10*time.Minute, "complete"),
+		Complete: NewUnifiedCache[models.AiCityResponse](10*time.Minute, "complete", logger),
 
 		// Domain-specific caches (5 minutes)
-		Restaurants: NewUnifiedCache[[]models.RestaurantDetailedInfo](5*time.Minute, "restaurants"),
-		Hotels:      NewUnifiedCache[[]models.HotelDetailedInfo](5*time.Minute, "hotels"),
-		Activities:  NewUnifiedCache[[]models.POIDetailedInfo](5*time.Minute, "activities"),
-		Itineraries: NewUnifiedCache[models.AIItineraryResponse](5*time.Minute, "itineraries"),
+		Restaurants: NewUnifiedCache[[]models.RestaurantDetailedInfo](5*time.Minute, "restaurants", logger),
+		Hotels:      NewUnifiedCache[[]models.HotelDetailedInfo](5*time.Minute, "hotels", logger),
+		Activities:  NewUnifiedCache[[]models.POIDetailedInfo](5*time.Minute, "activities", logger),
+		Itineraries: NewUnifiedCache[models.AIItineraryResponse](5*time.Minute, "itineraries", logger),
 
 		// City data has longer TTL since it changes less frequently (15 minutes)
-		CityData: NewUnifiedCache[models.GeneralCityData](15*time.Minute, "city_data"),
+		CityData: NewUnifiedCache[models.GeneralCityData](15*time.Minute, "city_data", logger),
 
 		// Vector caches for semantic search (longer TTL since embeddings are expensive to compute)
-		VectorSearch: NewVectorCache(20*time.Minute, 0.95, "vector_search"), // 95% similarity threshold
-		Embeddings:   NewEmbeddingCache(30 * time.Minute),                   // Query embeddings cache
-		UserProfiles: NewEmbeddingCache(60 * time.Minute),                   // User profile embeddings (longest TTL)
+		VectorSearch: NewVectorCache(20*time.Minute, 0.95, "vector_search", logger), // 95% similarity threshold
+		Embeddings:   NewEmbeddingCache(30 * time.Minute),                           // Query embeddings cache
+		UserProfiles: NewEmbeddingCache(60 * time.Minute),                           // User profile embeddings (longest TTL)
 	}
 }
 
 // Global cache manager instance
-var Cache = NewCacheManager()
+var Cache = NewCacheManager(nil)
 
 // GetAllMetrics returns metrics for all caches
 func (cm *CacheManager) GetAllMetrics() map[string]CacheMetrics {

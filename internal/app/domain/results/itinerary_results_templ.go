@@ -10,8 +10,8 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"fmt"
-	"github.com/FACorreiaa/go-templui/internal/app/components/chat"
-	"github.com/FACorreiaa/go-templui/internal/app/domain/components"
+	"github.com/FACorreiaa/go-templui/internal/app/components"
+	chat "github.com/FACorreiaa/go-templui/internal/app/components/chat"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"strings"
 	"time"
@@ -179,9 +179,9 @@ func ItineraryResults(cityData models.GeneralCityData, generalPOIs []models.POID
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var10 string
-		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs("/bookmarks/add/" + itinerary.ItineraryID)
+		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs("/bookmarks/add/" + itinerary.ItineraryID.String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/itinerary_results.templ`, Line: 97, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/itinerary_results.templ`, Line: 97, Col: 67}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -192,9 +192,9 @@ func ItineraryResults(cityData models.GeneralCityData, generalPOIs []models.POID
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var11 string
-		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs("/bookmarks/add/" + itinerary.ItineraryID)
+		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs("/bookmarks/add/" + itinerary.ItineraryID.String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/itinerary_results.templ`, Line: 182, Col: 57}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/itinerary_results.templ`, Line: 182, Col: 66}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -1747,8 +1747,8 @@ func getCityProvince(province string) string {
 
 func ItineraryStateScript() templ.ComponentScript {
 	return templ.ComponentScript{
-		Name: `__templ_ItineraryStateScript_6e90`,
-		Function: `function __templ_ItineraryStateScript_6e90(){function itineraryPage() {
+		Name: `__templ_ItineraryStateScript_da55`,
+		Function: `function __templ_ItineraryStateScript_da55(){function itineraryPage() {
         return {
             viewMode: 'list',
             showChat: false,
@@ -1796,7 +1796,7 @@ func ItineraryStateScript() templ.ComponentScript {
             handleItemAdded(eventData) {
                 console.log('Adding item to itinerary:', eventData);
 
-                // Get the itinerary list container
+                // Get the itinerary lists container
                 const container = document.getElementById('curated-itinerary-list');
                 if (!container) {
                     console.warn('Itinerary list container not found');
@@ -1809,7 +1809,7 @@ func ItineraryStateScript() templ.ComponentScript {
                 const newElement = tempDiv.firstElementChild;
 
                 if (newElement) {
-                    // Append the new POI card to the list
+                    // Append the new POI card to the lists
                     container.appendChild(newElement);
 
                     // Add marker to map if coordinates are valid
@@ -2183,8 +2183,8 @@ func ItineraryStateScript() templ.ComponentScript {
         Alpine.data('itineraryPage', itineraryPage);
     });
 }`,
-		Call:       templ.SafeScript(`__templ_ItineraryStateScript_6e90`),
-		CallInline: templ.SafeScriptInline(`__templ_ItineraryStateScript_6e90`),
+		Call:       templ.SafeScript(`__templ_ItineraryStateScript_da55`),
+		CallInline: templ.SafeScriptInline(`__templ_ItineraryStateScript_da55`),
 	}
 }
 
@@ -2752,7 +2752,7 @@ func CuratedItineraryCard(poi models.POIDetailedInfo, order int) templ.Component
 	})
 }
 
-// AllPOICard for the "All Points of Interest" section (list view)
+// AllPOICard for the "All Points of Interest" section (lists view)
 func AllPOICard(poi models.POIDetailedInfo) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context

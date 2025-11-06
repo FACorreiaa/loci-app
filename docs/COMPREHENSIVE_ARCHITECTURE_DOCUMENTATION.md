@@ -51,7 +51,7 @@ app/
 ├── pkg/                          # Backend services and handlers
 │   ├── domain/                  # Business logic services
 │   │   ├── auth/               # Authentication service
-│   │   ├── chat_prompt/        # AI chat service
+│   │   ├── llmChat/        # AI chat service
 │   │   ├── poi/                # POI management
 │   │   ├── profiles/           # User profiles
 │   │   └── ...
@@ -182,7 +182,7 @@ templ NearbyPOICard(poi models.NearbyPOI) {
 
 ### Domain Services Structure
 
-#### 1. Chat Service (`pkg/domain/chat_prompt/chat_service.go`)
+#### 1. Chat Service (`pkg/domain/llmChat/chat_service.go`)
 
 **Service Interface**:
 ```go
@@ -213,7 +213,7 @@ type LlmInteractionService interface {
 **Service Implementation**:
 ```go
 type ServiceImpl struct {
-    logger             *slog.Logger
+    logger             *zap.Logger
     interestRepo       interests.Repository
     searchProfileRepo  profiles.Repository
     tagsRepo           tags.Repository
@@ -307,7 +307,7 @@ func (h *ChatHandlers) SendMessage(c *gin.Context) {
 }
 ```
 
-*Service* (`pkg/domain/chat_prompt/chat_service.go`):
+*Service* (`pkg/domain/llmChat/chat_service.go`):
 ```go
 func (s *ServiceImpl) ProcessMessage(ctx context.Context, userID uuid.UUID, message string) string {
     // Business logic
@@ -709,7 +709,7 @@ templ ItineraryStreamingPage() {
             </div>
             
             <!-- POI Panel -->
-            <div id="poi-list" class="panel">
+            <div id="poi-lists" class="panel">
                 <div class="loading-state">
                     <div class="skeleton"></div>
                 </div>
@@ -728,7 +728,7 @@ templ ItineraryStreamingPage() {
             hx-ext="sse"
             sse-connect="/itinerary/stream/events"
             sse-swap="city_data:#city-info"
-            sse-swap="general_poi:#poi-list"
+            sse-swap="general_poi:#poi-lists"
             sse-swap="itinerary:#final-itinerary"
         ></div>
     </div>
@@ -1268,7 +1268,7 @@ func (s *ServiceImpl) GetPOIsByLocation(ctx context.Context, lat, lng, radius fl
 ```go
 // Conditional rendering
 templ OptimizedPOIList(pois []models.NearbyPOI, showImages bool) {
-    <div class="poi-list">
+    <div class="poi-lists">
         for _, poi := range pois {
             <div class="poi-item">
                 <h3>{poi.Name}</h3>

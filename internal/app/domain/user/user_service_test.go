@@ -3,7 +3,7 @@ package user
 import (
 	"context"
 	"errors"
-	"log/slog"
+	"go.uber.org/zap"
 	"os"
 	"testing"
 
@@ -62,7 +62,7 @@ func (m *MockUserRepo) ChangePassword(ctx context.Context, email, oldPassword, n
 
 // Helper to setup service with mock repository
 func setupUserServiceTest() (*ServiceUserImpl, *MockUserRepo) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})) // or io.Discard
+	logger := zap.New(zap.NewTextHandler(os.Stdout, &zap.HandlerOptions{Level: zap.LevelDebug})) // or io.Discard
 	mockRepo := new(MockUserRepo)
 	service := NewUserService(mockRepo, logger)
 	return service, mockRepo

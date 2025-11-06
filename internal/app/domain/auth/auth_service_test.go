@@ -3,7 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
-	"log/slog"
+	"go.uber.org/zap"
 	"testing"
 	"time"
 
@@ -91,7 +91,7 @@ func (m *MockAuthRepo) GetUserIDByProvider(ctx context.Context, provider, provid
 func TestLogin(t *testing.T) {
 	// Create a mock repository
 	mockRepo := new(MockAuthRepo)
-	logger := slog.Default()
+	logger := zap.Default()
 	cfg := &config.Config{
 		JWT: config.JWTConfig{
 			SecretKey:       "test-access-secret",
@@ -185,7 +185,7 @@ func TestLogin(t *testing.T) {
 func TestRegister(t *testing.T) {
 	// Create a mock repository
 	mockRepo := new(MockAuthRepo)
-	logger := slog.Default()
+	logger := zap.Default()
 	cfg := &config.Config{
 		JWT: config.JWTConfig{
 			SecretKey:       "test-access-secret",
@@ -240,7 +240,7 @@ func TestRegister(t *testing.T) {
 func TestLogout(t *testing.T) {
 	// Create a mock repository
 	mockRepo := new(MockAuthRepo)
-	logger := slog.Default()
+	logger := zap.Default()
 	cfg := &config.Config{
 		JWT: config.JWTConfig{
 			SecretKey:       "test-access-secret",
@@ -290,7 +290,7 @@ func TestLogout(t *testing.T) {
 func TestRefreshSession(t *testing.T) {
 	// Create a mock repository
 	mockRepo := new(MockAuthRepo)
-	logger := slog.Default()
+	logger := zap.Default()
 	cfg := &config.Config{
 		JWT: config.JWTConfig{
 			SecretKey:       "test-access-secret",
@@ -437,7 +437,7 @@ func TestRefreshSession(t *testing.T) {
 func TestUpdatePassword(t *testing.T) {
 	// Create a mock repository
 	mockRepo := new(MockAuthRepo)
-	logger := slog.Default()
+	logger := zap.Default()
 	cfg := &config.Config{
 		JWT: config.JWTConfig{
 			SecretKey:       "test-access-secret",
@@ -536,7 +536,7 @@ func TestUpdatePassword(t *testing.T) {
 func TestInvalidateAllUserRefreshTokens(t *testing.T) {
 	// Create a mock repository
 	mockRepo := new(MockAuthRepo)
-	logger := slog.Default()
+	logger := zap.Default()
 	cfg := &config.Config{
 		JWT: config.JWTConfig{
 			SecretKey:       "test-access-secret",
@@ -586,7 +586,7 @@ func TestInvalidateAllUserRefreshTokens(t *testing.T) {
 func TestGetUserByID(t *testing.T) {
 	// Create a mock repository
 	mockRepo := new(MockAuthRepo)
-	logger := slog.Default()
+	logger := zap.Default()
 	cfg := &config.Config{
 		JWT: config.JWTConfig{
 			SecretKey:       "test-access-secret",
@@ -663,7 +663,7 @@ func TestGetUserByID(t *testing.T) {
 func TestVerifyPassword(t *testing.T) {
 	// Create a mock repository
 	mockRepo := new(MockAuthRepo)
-	logger := slog.Default()
+	logger := zap.Default()
 	cfg := &config.Config{
 		JWT: config.JWTConfig{
 			SecretKey:       "test-access-secret",
@@ -734,7 +734,7 @@ func TestVerifyPassword(t *testing.T) {
 func TestValidateRefreshToken(t *testing.T) {
 	// Create a mock repository
 	mockRepo := new(MockAuthRepo)
-	logger := slog.Default()
+	logger := zap.Default()
 	cfg := &config.Config{
 		JWT: config.JWTConfig{
 			SecretKey:       "test-access-secret",

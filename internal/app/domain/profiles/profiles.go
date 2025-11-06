@@ -10,23 +10,24 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/FACorreiaa/go-templui/internal/app/models"
-	"github.com/FACorreiaa/go-templui/internal/pkg/logger"
 	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 )
 
 type ProfilesHandler struct {
 	profileService Service
+	logger         *zap.Logger
 }
 
-func NewProfilesHandler(profileService Service) *ProfilesHandler {
+func NewProfilesHandler(profileService Service, logger *zap.Logger) *ProfilesHandler {
 	return &ProfilesHandler{
 		profileService: profileService,
+		logger:         logger,
 	}
 }
 
 // handleProfileError provides consistent error handling for profile operations
 func (h *ProfilesHandler) handleProfileError(c *gin.Context, err error, operation string) {
-	logger.Log.Error("Profile operation failed", zap.String("operation", operation), zap.Error(err))
+	h.logger.Error("Profile operation failed", zap.String("operation", operation), zap.Error(err))
 
 	switch {
 	case errors.Is(err, models.ErrNotFound):
@@ -90,7 +91,7 @@ func (h *ProfilesHandler) GetProfiles(c *gin.Context) {
 	userIDStr := middleware.GetUserIDFromContext(c)
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
 
 		// Check if this is an HTMX request (for select dropdown)
 		if c.GetHeader("HX-Request") == "true" {
@@ -105,7 +106,7 @@ func (h *ProfilesHandler) GetProfiles(c *gin.Context) {
 
 	profiles, err := h.profileService.GetSearchProfiles(c.Request.Context(), userID)
 	if err != nil {
-		logger.Log.Error("Failed to get profiles", zap.String("userID", userIDStr), zap.Error(err))
+		h.logger.Error("Failed to get profiles", zap.String("userID", userIDStr), zap.Error(err))
 
 		// Check if this is an HTMX request (for select dropdown)
 		if c.GetHeader("HX-Request") == "true" {
@@ -165,7 +166,7 @@ func (h *ProfilesHandler) GetProfile(c *gin.Context) {
 	userIDStr := middleware.GetUserIDFromContext(c)
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
@@ -173,14 +174,14 @@ func (h *ProfilesHandler) GetProfile(c *gin.Context) {
 	profileIDStr := c.Param("id")
 	profileID, err := uuid.Parse(profileIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid profile ID", zap.String("profileID", profileIDStr), zap.Error(err))
+		h.logger.Error("Invalid profile ID", zap.String("profileID", profileIDStr), zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
 		return
 	}
 
 	profile, err := h.profileService.GetSearchProfile(c.Request.Context(), userID, profileID)
 	if err != nil {
-		logger.Log.Error("Failed to get profile", zap.String("userID", userIDStr), zap.String("profileID", profileIDStr), zap.Error(err))
+		h.logger.Error("Failed to get profile", zap.String("userID", userIDStr), zap.String("profileID", profileIDStr), zap.Error(err))
 		if err == models.ErrNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found"})
 			return
@@ -208,14 +209,14 @@ func (h *ProfilesHandler) CreateProfile(c *gin.Context) {
 	userIDStr := middleware.GetUserIDFromContext(c)
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
 
 	var params models.CreateUserPreferenceProfileParams
 	if err := c.ShouldBindJSON(&params); err != nil {
-		logger.Log.Error("Invalid request body", zap.Error(err))
+		h.logger.Error("Invalid request body", zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
@@ -247,7 +248,7 @@ func (h *ProfilesHandler) UpdateProfile(c *gin.Context) {
 	userIDStr := middleware.GetUserIDFromContext(c)
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
@@ -255,14 +256,14 @@ func (h *ProfilesHandler) UpdateProfile(c *gin.Context) {
 	profileIDStr := c.Param("id")
 	profileID, err := uuid.Parse(profileIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid profile ID", zap.String("profileID", profileIDStr), zap.Error(err))
+		h.logger.Error("Invalid profile ID", zap.String("profileID", profileIDStr), zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
 		return
 	}
 
 	var params models.UpdateSearchProfileParams
 	if err := c.ShouldBindJSON(&params); err != nil {
-		logger.Log.Error("Invalid request body", zap.Error(err))
+		h.logger.Error("Invalid request body", zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
@@ -291,7 +292,7 @@ func (h *ProfilesHandler) DeleteProfile(c *gin.Context) {
 	userIDStr := middleware.GetUserIDFromContext(c)
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
@@ -299,7 +300,7 @@ func (h *ProfilesHandler) DeleteProfile(c *gin.Context) {
 	profileIDStr := c.Param("id")
 	profileID, err := uuid.Parse(profileIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid profile ID", zap.String("profileID", profileIDStr), zap.Error(err))
+		h.logger.Error("Invalid profile ID", zap.String("profileID", profileIDStr), zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
 		return
 	}
@@ -328,7 +329,7 @@ func (h *ProfilesHandler) SetDefaultProfile(c *gin.Context) {
 	userIDStr := middleware.GetUserIDFromContext(c)
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
@@ -336,13 +337,13 @@ func (h *ProfilesHandler) SetDefaultProfile(c *gin.Context) {
 	profileIDStr := c.Param("id")
 	profileID, err := uuid.Parse(profileIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid profile ID", zap.String("profileID", profileIDStr), zap.Error(err))
+		h.logger.Error("Invalid profile ID", zap.String("profileID", profileIDStr), zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
 		return
 	}
 
 	if err := h.profileService.SetDefaultSearchProfile(c.Request.Context(), userID, profileID); err != nil {
-		logger.Log.Error("Failed to set default profile", zap.String("userID", userIDStr), zap.String("profileID", profileIDStr), zap.Error(err))
+		h.logger.Error("Failed to set default profile", zap.String("userID", userIDStr), zap.String("profileID", profileIDStr), zap.Error(err))
 		if err == models.ErrNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found"})
 			return

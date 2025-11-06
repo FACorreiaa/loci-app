@@ -2,13 +2,13 @@ package auth
 
 import (
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -16,7 +16,7 @@ import (
 type JWTConfig struct {
 	SecretKey       string
 	TokenExpiration time.Duration
-	Logger          *slog.Logger
+	Logger          *zap.Logger
 	Optional        bool // If true, missing/invalid tokens won't block the request
 }
 
@@ -52,7 +52,7 @@ func (s *JWTService) GenerateToken(config JWTConfig, userID, email, username str
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString([]byte(config.SecretKey))
 	if err != nil {
-		config.Logger.Error("Failed to sign token", slog.Any("error", err))
+		config.Logger.Error("Failed to sign token", zap.Error(err))
 		return "", fmt.Errorf("failed to generate token: %w", err)
 	}
 

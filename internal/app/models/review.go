@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// Review represents a user review of a POI
+// Review represents a user reviews of a POI
 type Review struct {
 	Base
 	UserID      uuid.UUID  `json:"user_id" db:"user_id"`
@@ -23,7 +23,7 @@ type Review struct {
 	ModeratedAt *time.Time `json:"moderated_at" db:"moderated_at"`
 }
 
-// ReviewHelpful represents a user marking a review as helpful or unhelpful
+// ReviewHelpful represents a user marking a reviews as helpful or unhelpful
 type ReviewHelpful struct {
 	UserID    uuid.UUID `json:"user_id" db:"user_id"`
 	ReviewID  uuid.UUID `json:"review_id" db:"review_id"`
@@ -31,7 +31,7 @@ type ReviewHelpful struct {
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
-// ReviewReply represents a reply to a review
+// ReviewReply represents a reply to a reviews
 type ReviewReply struct {
 	Base
 	ReviewID   uuid.UUID `json:"review_id" db:"review_id"`
@@ -40,7 +40,7 @@ type ReviewReply struct {
 	IsOfficial bool      `json:"is_official" db:"is_official"`
 }
 
-// NewReview creates a new review with default values
+// NewReview creates a new reviews with default values
 func NewReview(userID, poiID uuid.UUID, rating int, title, content string) *Review {
 	return &Review{
 		Base: Base{
@@ -60,7 +60,7 @@ func NewReview(userID, poiID uuid.UUID, rating int, title, content string) *Revi
 	}
 }
 
-// NewReviewHelpful creates a new review helpful record
+// NewReviewHelpful creates a new reviews helpful record
 func NewReviewHelpful(userID, reviewID uuid.UUID, isHelpful bool) *ReviewHelpful {
 	return &ReviewHelpful{
 		UserID:    userID,
@@ -70,7 +70,7 @@ func NewReviewHelpful(userID, reviewID uuid.UUID, isHelpful bool) *ReviewHelpful
 	}
 }
 
-// NewReviewReply creates a new review reply
+// NewReviewReply creates a new reviews reply
 func NewReviewReply(reviewID, userID uuid.UUID, content string, isOfficial bool) *ReviewReply {
 	return &ReviewReply{
 		Base: Base{

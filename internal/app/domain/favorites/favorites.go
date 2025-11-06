@@ -10,17 +10,18 @@ import (
 
 	"github.com/FACorreiaa/go-templui/internal/app/domain/poi"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
-	"github.com/FACorreiaa/go-templui/internal/pkg/logger"
 	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 )
 
 type FavoritesHandlers struct {
 	poiService poi.Service
+	logger     *zap.Logger
 }
 
-func NewFavoritesHandlers(poiService poi.Service) *FavoritesHandlers {
+func NewFavoritesHandlers(poiService poi.Service, logger *zap.Logger) *FavoritesHandlers {
 	return &FavoritesHandlers{
 		poiService: poiService,
+		logger:     logger,
 	}
 }
 
@@ -55,19 +56,19 @@ func (h *FavoritesHandlers) AddFavorite(c *gin.Context) {
 
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid user ID", zap.String("user_id", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("user_id", userIDStr), zap.Error(err))
 		c.HTML(http.StatusBadRequest, "", `<div class="text-red-500 text-sm">Invalid user ID</div>`)
 		return
 	}
 
 	poiID, err := uuid.Parse(id)
 	if err != nil {
-		logger.Log.Error("Invalid POI ID", zap.String("poi_id", id), zap.Error(err))
+		h.logger.Error("Invalid POI ID", zap.String("poi_id", id), zap.Error(err))
 		c.HTML(http.StatusBadRequest, "", `<div class="text-red-500 text-sm">Invalid place ID</div>`)
 		return
 	}
 
-	logger.Log.Info("Adding place to favorites",
+	h.logger.Info("Adding place to favorites",
 		zap.String("place_id", id),
 		zap.String("user_id", userIDStr),
 		zap.Bool("is_llm", isLLMGenerated),
@@ -76,7 +77,7 @@ func (h *FavoritesHandlers) AddFavorite(c *gin.Context) {
 	// Add to database
 	_, err = h.poiService.AddPoiToFavourites(c.Request.Context(), userID, poiID, isLLMGenerated)
 	if err != nil {
-		logger.Log.Error("Failed to add to favorites", zap.Error(err))
+		h.logger.Error("Failed to add to favorites", zap.Error(err))
 		c.HTML(http.StatusInternalServerError, "", `<div class="text-red-500 text-sm">Failed to add to favorites</div>`)
 		return
 	}
@@ -96,7 +97,7 @@ func (h *FavoritesHandlers) AddFavorite(c *gin.Context) {
 		</button>
 	`)
 
-	logger.Log.Info("Successfully added to favorites",
+	h.logger.Info("Successfully added to favorites",
 		zap.String("place_id", id),
 		zap.String("user_id", userIDStr),
 	)
@@ -114,19 +115,19 @@ func (h *FavoritesHandlers) RemoveFavorite(c *gin.Context) {
 
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid user ID", zap.String("user_id", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("user_id", userIDStr), zap.Error(err))
 		c.HTML(http.StatusBadRequest, "", `<div class="text-red-500 text-sm">Invalid user ID</div>`)
 		return
 	}
 
 	poiID, err := uuid.Parse(id)
 	if err != nil {
-		logger.Log.Error("Invalid POI ID", zap.String("poi_id", id), zap.Error(err))
+		h.logger.Error("Invalid POI ID", zap.String("poi_id", id), zap.Error(err))
 		c.HTML(http.StatusBadRequest, "", `<div class="text-red-500 text-sm">Invalid place ID</div>`)
 		return
 	}
 
-	logger.Log.Info("Removing place from favorites",
+	h.logger.Info("Removing place from favorites",
 		zap.String("place_id", id),
 		zap.String("user_id", userIDStr),
 		zap.Bool("is_llm", isLLMGenerated),
@@ -135,7 +136,7 @@ func (h *FavoritesHandlers) RemoveFavorite(c *gin.Context) {
 	// Remove from database
 	err = h.poiService.RemovePoiFromFavourites(c.Request.Context(), userID, poiID, isLLMGenerated)
 	if err != nil {
-		logger.Log.Error("Failed to remove from favorites", zap.Error(err))
+		h.logger.Error("Failed to remove from favorites", zap.Error(err))
 		c.HTML(http.StatusInternalServerError, "", `<div class="text-red-500 text-sm">Failed to remove from favorites</div>`)
 		return
 	}
@@ -155,7 +156,7 @@ func (h *FavoritesHandlers) RemoveFavorite(c *gin.Context) {
 		</button>
 	`)
 
-	logger.Log.Info("Successfully removed from favorites",
+	h.logger.Info("Successfully removed from favorites",
 		zap.String("place_id", id),
 		zap.String("user_id", userIDStr),
 	)
@@ -165,7 +166,7 @@ func (h *FavoritesHandlers) SearchFavorites(c *gin.Context) {
 	query := c.PostForm("query")
 	user := middleware.GetUserIDFromContext(c)
 
-	logger.Log.Info("Searching favorites",
+	h.logger.Info("Searching favorites",
 		zap.String("query", query),
 		zap.String("user", user),
 	)
@@ -175,7 +176,7 @@ func (h *FavoritesHandlers) SearchFavorites(c *gin.Context) {
 	c.HTML(http.StatusOK, "", `<div class="text-center py-8 text-muted-foreground">No results found for "`+query+`"</div>`)
 }
 
-// ListFavorites displays the favourites list page with search, filter, and pagination
+// ListFavorites displays the favourites lists page with search, filter, and pagination
 func (h *FavoritesHandlers) ListFavorites(c *gin.Context) {
 	userIDStr := middleware.GetUserIDFromContext(c)
 	if userIDStr == "" || userIDStr == "anonymous" {
@@ -185,7 +186,7 @@ func (h *FavoritesHandlers) ListFavorites(c *gin.Context) {
 
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid user ID", zap.String("user_id", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("user_id", userIDStr), zap.Error(err))
 		c.HTML(http.StatusBadRequest, "", `<div class="text-red-500">Invalid user ID</div>`)
 		return
 	}
@@ -224,7 +225,7 @@ func (h *FavoritesHandlers) ListFavorites(c *gin.Context) {
 	// Get filtered favourites
 	pois, total, err := h.poiService.GetFavouritesFiltered(c.Request.Context(), filter)
 	if err != nil {
-		logger.Log.Error("Failed to get favourites", zap.Error(err))
+		h.logger.Error("Failed to get favourites", zap.Error(err))
 		c.HTML(http.StatusInternalServerError, "", `<div class="text-red-500">Failed to load favourites</div>`)
 		return
 	}
@@ -245,7 +246,7 @@ func (h *FavoritesHandlers) ListFavorites(c *gin.Context) {
 		SortOrder:  sortOrder,
 	}
 
-	// Render the favourites list page using templ
+	// Render the favourites lists page using templ
 	c.Writer.Header().Set("Content-Type", "text/html; charset=utf-8")
 	FavoritesPage(data).Render(c.Request.Context(), c.Writer)
 }

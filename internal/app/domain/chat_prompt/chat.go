@@ -17,7 +17,6 @@ import (
 	"github.com/FACorreiaa/go-templui/internal/app/domain/profiles"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"github.com/FACorreiaa/go-templui/internal/pkg/config"
-	"github.com/FACorreiaa/go-templui/internal/pkg/logger"
 	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 )
 
@@ -26,9 +25,13 @@ type ChatHandlers struct {
 	llmService     LlmInteractiontService
 	profileService profiles.Service
 	chatRepository Repository
+	logger         *zap.Logger
 }
 
-func NewChatHandlers(llmService LlmInteractiontService, profileService profiles.Service, chatRepository Repository) *ChatHandlers {
+func NewChatHandlers(llmService LlmInteractiontService,
+	profileService profiles.Service,
+	chatRepository Repository,
+	logger *zap.Logger) *ChatHandlers {
 	cfg, err := config.Load()
 	if err != nil {
 		// Use default config if loading fails
@@ -39,12 +42,13 @@ func NewChatHandlers(llmService LlmInteractiontService, profileService profiles.
 		llmService:     llmService,
 		profileService: profileService,
 		chatRepository: chatRepository,
+		logger:         logger,
 	}
 }
 
 // HandleChatStreamConnect creates an SSE connection setup for HTMX
 func (h *ChatHandlers) HandleChatStreamConnect(c *gin.Context) {
-	logger.Log.Info("Chat stream connect request received",
+	h.logger.Info("Chat stream connect request received",
 		zap.String("ip", c.ClientIP()),
 		zap.String("user", middleware.GetUserIDFromContext(c)),
 	)
@@ -80,7 +84,7 @@ func (h *ChatHandlers) HandleChatStreamConnect(c *gin.Context) {
 			// Check for existing recent sessions for this user and query combination
 			sessionsResp, err := h.chatRepository.GetUserChatSessions(c.Request.Context(), userID, 1, 5) // Get recent 5 sessions
 			if err != nil {
-				logger.Log.Warn("Failed to get user sessions, creating new one", zap.Error(err))
+				h.logger.Warn("Failed to get user sessions, creating new one", zap.Error(err))
 			} else {
 				// Look for a recent session with the same query (within last 10 minutes)
 				cutoffTime := time.Now().Add(-10 * time.Minute)
@@ -91,7 +95,7 @@ func (h *ChatHandlers) HandleChatStreamConnect(c *gin.Context) {
 							lastMsg := session.ConversationHistory[len(session.ConversationHistory)-1]
 							if lastMsg.Content == query && lastMsg.Role == models.RoleUser {
 								sessionID = session.ID.String()
-								logger.Log.Info("Reusing existing session",
+								h.logger.Info("Reusing existing session",
 									zap.String("sessionID", sessionID),
 									zap.String("userID", userIDStr),
 									zap.String("query", query))
@@ -107,7 +111,7 @@ func (h *ChatHandlers) HandleChatStreamConnect(c *gin.Context) {
 	// If no existing session found, create a new one
 	if sessionID == "" {
 		sessionID = uuid.New().String()
-		logger.Log.Info("Creating new session",
+		h.logger.Info("Creating new session",
 			zap.String("sessionID", sessionID),
 			zap.String("userID", userIDStr),
 			zap.String("query", query))
@@ -346,7 +350,7 @@ func (h *ChatHandlers) getDefaultProfileID(ctx context.Context, userID uuid.UUID
 }
 
 func (h *ChatHandlers) SendMessage(c *gin.Context) {
-	logger.Log.Info("Chat message received",
+	h.logger.Info("Chat message received",
 		zap.String("user", middleware.GetUserIDFromContext(c)),
 		zap.String("ip", c.ClientIP()),
 	)
@@ -355,12 +359,12 @@ func (h *ChatHandlers) SendMessage(c *gin.Context) {
 	sessionID := c.PostForm("session_id")
 
 	if message == "" {
-		logger.Log.Warn("Empty chat message received")
+		h.logger.Warn("Empty chat message received")
 		c.String(http.StatusBadRequest, `<div class="text-red-500">Message cannot be empty</div>`)
 		return
 	}
 
-	logger.Log.Info("Processing chat message",
+	h.logger.Info("Processing chat message",
 		zap.String("message", message),
 		zap.String("sessionID", sessionID),
 		zap.String("user", middleware.GetUserIDFromContext(c)),
@@ -369,7 +373,7 @@ func (h *ChatHandlers) SendMessage(c *gin.Context) {
 	// Get user ID for authenticated users
 	userIDStr := middleware.GetUserIDFromContext(c)
 	if userIDStr == "" || userIDStr == "anonymous" {
-		logger.Log.Warn("Chat message from unauthenticated user")
+		h.logger.Warn("Chat message from unauthenticated user")
 		c.String(http.StatusUnauthorized, `
 			<div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-3 text-sm">
 				<p class="text-yellow-700 dark:text-yellow-300">Please sign in to use the chat feature.</p>
@@ -380,7 +384,7 @@ func (h *ChatHandlers) SendMessage(c *gin.Context) {
 
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
 		c.String(http.StatusBadRequest, `<div class="text-red-500">Invalid user session</div>`)
 		return
 	}
@@ -388,7 +392,7 @@ func (h *ChatHandlers) SendMessage(c *gin.Context) {
 	// Get user's default profile
 	profile, err := h.profileService.GetDefaultSearchProfile(c, userID)
 	if err != nil {
-		logger.Log.Error("Failed to get user profile", zap.Error(err))
+		h.logger.Error("Failed to get user profile", zap.Error(err))
 		c.String(http.StatusInternalServerError, `<div class="text-red-500">Unable to process request</div>`)
 		return
 	}
@@ -409,7 +413,7 @@ func (h *ChatHandlers) SendMessage(c *gin.Context) {
 			eventCh,
 		)
 		if err != nil {
-			logger.Log.Error("Failed to process chat message", zap.Error(err))
+			h.logger.Error("Failed to process chat message", zap.Error(err))
 			eventCh <- models.StreamEvent{
 				Type:      models.EventTypeError,
 				Message:   "Failed to process request",
@@ -444,21 +448,21 @@ func (h *ChatHandlers) SendMessage(c *gin.Context) {
 		</div>
 	`, response, time.Now().Format("15:04"), message, sessionID))
 
-	logger.Log.Info("Chat message processed successfully",
+	h.logger.Info("Chat message processed successfully",
 		zap.String("user", middleware.GetUserIDFromContext(c)),
 	)
 }
 
 // HandleSearch processes search requests from the landing page and redirects to appropriate domain
 func (h *ChatHandlers) HandleSearch(c *gin.Context) {
-	logger.Log.Info("Search request received",
+	h.logger.Info("Search request received",
 		zap.String("ip", c.ClientIP()),
 		zap.String("user_agent", c.GetHeader("User-Agent")),
 	)
 
 	query := c.PostForm("search-input")
 	if query == "" {
-		logger.Log.Warn("Empty search query received")
+		h.logger.Warn("Empty search query received")
 		c.String(http.StatusBadRequest, `
 			<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4 mb-4">
 				<div class="flex items-center gap-2">
@@ -472,7 +476,7 @@ func (h *ChatHandlers) HandleSearch(c *gin.Context) {
 		return
 	}
 
-	logger.Log.Info("Processing search query",
+	h.logger.Info("Processing search query",
 		zap.String("query", query),
 		zap.String("ip", c.ClientIP()),
 	)
@@ -481,7 +485,7 @@ func (h *ChatHandlers) HandleSearch(c *gin.Context) {
 	domainDetector := &models.DomainDetector{}
 	domain := domainDetector.DetectDomain(context.Background(), query)
 
-	logger.Log.Info("Domain detected",
+	h.logger.Info("Domain detected",
 		zap.String("query", query),
 		zap.String("detected_domain", string(domain)),
 	)
@@ -536,7 +540,7 @@ func (h *ChatHandlers) callLLMStreamingServiceWithData(query, userID string) (ma
 			eventCh,
 		)
 		if err != nil {
-			logger.Log.Error("Internal LLM service error", zap.Error(err))
+			h.logger.Error("Internal LLM service error", zap.Error(err))
 		}
 	}()
 
@@ -618,14 +622,14 @@ func (h *ChatHandlers) mapDomainToURLLegacy(domain string) string {
 
 // HandleDiscover processes discovery requests from the dashboard and integrates with LLM streaming
 func (h *ChatHandlers) HandleDiscover(c *gin.Context) {
-	logger.Log.Info("Discover request received",
+	h.logger.Info("Discover request received",
 		zap.String("ip", c.ClientIP()),
 		zap.String("user_agent", c.GetHeader("User-Agent")),
 	)
 
 	query := c.PostForm("dashboard-search")
 	if query == "" {
-		logger.Log.Warn("Empty discover query received")
+		h.logger.Warn("Empty discover query received")
 		c.String(http.StatusBadRequest, `
 			<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4 mb-4">
 				<div class="flex items-center gap-2">
@@ -639,7 +643,7 @@ func (h *ChatHandlers) HandleDiscover(c *gin.Context) {
 		return
 	}
 
-	logger.Log.Info("Processing discover query",
+	h.logger.Info("Processing discover query",
 		zap.String("query", query),
 		zap.String("ip", c.ClientIP()),
 	)
@@ -647,7 +651,7 @@ func (h *ChatHandlers) HandleDiscover(c *gin.Context) {
 	// Get user ID from middleware context
 	userID := middleware.GetUserIDFromContext(c)
 	if userID == "" {
-		logger.Log.Error("User ID not found in context")
+		h.logger.Error("User ID not found in context")
 		c.String(http.StatusUnauthorized, "Authentication required")
 		return
 	}
@@ -655,7 +659,7 @@ func (h *ChatHandlers) HandleDiscover(c *gin.Context) {
 	// Call LLM service and get streaming data
 	llmData, redirectURL, err := h.callLLMStreamingServiceWithData(query, userID)
 	if err != nil {
-		logger.Log.Warn("LLM service unavailable, using fallback classification", zap.Error(err))
+		h.logger.Warn("LLM service unavailable, using fallback classification", zap.Error(err))
 		// Fallback to local intent classification
 		intent := h.classifyIntent(query)
 		redirectURL = h.getRedirectURL(intent)
@@ -668,7 +672,7 @@ func (h *ChatHandlers) HandleDiscover(c *gin.Context) {
 	// Store LLM data in session for the destination page
 	sessionKey := fmt.Sprintf("llm_data_%s", userID)
 	// In a real app, you'd use Redis or similar. For now, we'll pass data via different means
-	logger.Log.Info("LLM data received",
+	h.logger.Info("LLM data received",
 		zap.String("query", query),
 		zap.String("redirect_url", redirectURL),
 		zap.Bool("has_data", llmData != nil))
@@ -828,7 +832,7 @@ func (h *ChatHandlers) generateDiscoveryResponseByURL(query, redirectURL string)
 
 // ProcessUnifiedChatMessageStream handles unified chat message streaming - equivalent to your old REST API method
 func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
-	logger.Log.Info("Unified chat message stream request received",
+	h.logger.Info("Unified chat message stream request received",
 		zap.String("ip", c.ClientIP()),
 		zap.String("user", middleware.GetUserIDFromContext(c)),
 	)
@@ -850,7 +854,7 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 	}
 
 	if message == "" {
-		logger.Log.Warn("Empty message for chat stream")
+		h.logger.Warn("Empty message for chat stream")
 		c.String(http.StatusBadRequest, "Message parameter is required")
 		return
 	}
@@ -860,7 +864,7 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 	fmt.Printf("userIDStr: %s\n", userIDStr)
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
 		c.String(http.StatusBadRequest, "Invalid user ID")
 		return
 	}
@@ -876,7 +880,7 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 		// Use the provided profile ID
 		parsedProfileID, err := uuid.Parse(profileIDStr)
 		if err != nil {
-			logger.Log.Error("Invalid profile ID provided", zap.String("profileID", profileIDStr), zap.Error(err))
+			h.logger.Error("Invalid profile ID provided", zap.String("profileID", profileIDStr), zap.Error(err))
 			c.String(http.StatusBadRequest, "Invalid profile ID")
 			return
 		}
@@ -884,7 +888,7 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 		// Verify the profile belongs to this user
 		profile, err := h.profileService.GetSearchProfile(c, userID, parsedProfileID)
 		if err != nil {
-			logger.Log.Error("Profile not found or doesn't belong to user",
+			h.logger.Error("Profile not found or doesn't belong to user",
 				zap.String("userID", userID.String()),
 				zap.String("profileID", profileIDStr),
 				zap.Error(err))
@@ -904,7 +908,7 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 		// Use default profile
 		profile, err := h.profileService.GetDefaultSearchProfile(c, userID)
 		if err != nil {
-			logger.Log.Error("Failed to get default profile", zap.Error(err))
+			h.logger.Error("Failed to get default profile", zap.Error(err))
 
 			// Provide specific error messages
 			if errors.Is(err, models.ErrNotFound) {
@@ -929,7 +933,7 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 	// Set up flusher for real-time streaming
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
-		logger.Log.Error("Response writer does not support flushing")
+		h.logger.Error("Response writer does not support flushing")
 		c.String(http.StatusInternalServerError, "Streaming not supported")
 		return
 	}
@@ -940,7 +944,7 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 	// Process the request in a goroutine
 	go func() {
 		// Don't close eventCh here - let the service handle it
-		logger.Log.Info("Processing authenticated user request",
+		h.logger.Info("Processing authenticated user request",
 			zap.String("userID", userID.String()),
 			zap.String("profileID", profileID.String()),
 			zap.String("message", message))
@@ -956,7 +960,7 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 			eventCh,
 		)
 		if err != nil {
-			logger.Log.Error("Failed to process authenticated chat stream", zap.Error(err))
+			h.logger.Error("Failed to process authenticated chat stream", zap.Error(err))
 			eventCh <- models.StreamEvent{
 				Type:      models.EventTypeError,
 				Message:   "Failed to process request",
@@ -972,13 +976,13 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 		select {
 		case event, ok := <-eventCh:
 			if !ok {
-				logger.Log.Info("Event channel closed, ending stream")
+				h.logger.Info("Event channel closed, ending stream")
 				return
 			}
 
 			eventData, err := json.Marshal(event)
 			if err != nil {
-				logger.Log.Error("Failed to marshal event", zap.Error(err))
+				h.logger.Error("Failed to marshal event", zap.Error(err))
 				continue
 			}
 
@@ -989,14 +993,14 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 			//filePath := "events.json" // Change to "events.txt" for text format
 			//f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			//if err != nil {
-			//	logger.Log.Error("Failed to open file", zap.Error(err), zap.String("file", filePath))
+			//	h.logger.Error("Failed to open file", zap.Error(err), zap.String("file", filePath))
 			//	continue
 			//}
 			//defer f.Close()
 
 			// For JSON: Write eventData with a newline for separation
 			//if _, err := f.Write(append(eventData, '\n')); err != nil {
-			//	logger.Log.Error("Failed to write to file", zap.Error(err), zap.String("file", filePath))
+			//	h.logger.Error("Failed to write to file", zap.Error(err), zap.String("file", filePath))
 			//	continue
 			//}
 
@@ -1005,7 +1009,7 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 
 			// End stream on complete or error
 			if event.Type == models.EventTypeComplete || event.Type == models.EventTypeError {
-				logger.Log.Info("Stream completed", zap.String("eventType", event.Type))
+				h.logger.Info("Stream completed", zap.String("eventType", event.Type))
 
 				// Send a final SSE close message to help HTMX understand the connection is intentionally closed
 				fmt.Fprintf(c.Writer, "data: {\"type\":\"sse-close\"}\n\n")
@@ -1015,7 +1019,7 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 			}
 
 		case <-c.Request.Context().Done():
-			logger.Log.Info("Client disconnected")
+			h.logger.Info("Client disconnected")
 			return
 		}
 	}
@@ -1023,7 +1027,7 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 
 // HandleChatStream handles SSE streaming for chat messages in itinerary modification
 func (h *ChatHandlers) HandleChatStream(c *gin.Context) {
-	logger.Log.Info("Chat stream request received",
+	h.logger.Info("Chat stream request received",
 		zap.String("ip", c.ClientIP()),
 		zap.String("user", middleware.GetUserIDFromContext(c)),
 	)
@@ -1037,7 +1041,7 @@ func (h *ChatHandlers) HandleChatStream(c *gin.Context) {
 	sessionID := c.Query("session_id")
 
 	if message == "" {
-		logger.Log.Warn("Empty message for chat stream")
+		h.logger.Warn("Empty message for chat stream")
 		c.String(http.StatusBadRequest, "Message parameter is required (use 'message' or 'dashboard-search')")
 		return
 	}
@@ -1045,14 +1049,14 @@ func (h *ChatHandlers) HandleChatStream(c *gin.Context) {
 	// Get user ID for authenticated users
 	userIDStr := middleware.GetUserIDFromContext(c)
 	if userIDStr == "" || userIDStr == "anonymous" {
-		logger.Log.Warn("Chat stream from unauthenticated user")
+		h.logger.Warn("Chat stream from unauthenticated user")
 		c.String(http.StatusUnauthorized, "Authentication required")
 		return
 	}
 
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
 		c.String(http.StatusBadRequest, "Invalid user ID")
 		return
 	}
@@ -1060,7 +1064,7 @@ func (h *ChatHandlers) HandleChatStream(c *gin.Context) {
 	// Get user's default profile
 	profile, err := h.profileService.GetDefaultSearchProfile(c, userID)
 	if err != nil {
-		logger.Log.Error("Failed to get user profile", zap.Error(err))
+		h.logger.Error("Failed to get user profile", zap.Error(err))
 		c.String(http.StatusInternalServerError, "Unable to retrieve user profile")
 		return
 	}
@@ -1076,7 +1080,7 @@ func (h *ChatHandlers) HandleChatStream(c *gin.Context) {
 	// Set up flusher for real-time streaming
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
-		logger.Log.Error("Response writer does not support flushing")
+		h.logger.Error("Response writer does not support flushing")
 		c.String(http.StatusInternalServerError, "Streaming not supported")
 		return
 	}
@@ -1086,7 +1090,7 @@ func (h *ChatHandlers) HandleChatStream(c *gin.Context) {
 
 	// Process the request in a goroutine
 	go func() {
-		logger.Log.Info("Processing chat stream request",
+		h.logger.Info("Processing chat stream request",
 			zap.String("userID", userID.String()),
 			zap.String("profileID", profile.ID.String()),
 			zap.String("message", message),
@@ -1103,7 +1107,7 @@ func (h *ChatHandlers) HandleChatStream(c *gin.Context) {
 			eventCh,
 		)
 		if err != nil {
-			logger.Log.Error("Failed to process chat stream", zap.Error(err))
+			h.logger.Error("Failed to process chat stream", zap.Error(err))
 			eventCh <- models.StreamEvent{
 				Type:      models.EventTypeError,
 				Message:   "Failed to process request",
@@ -1119,13 +1123,13 @@ func (h *ChatHandlers) HandleChatStream(c *gin.Context) {
 		select {
 		case event, ok := <-eventCh:
 			if !ok {
-				logger.Log.Info("Chat stream channel closed, ending stream")
+				h.logger.Info("Chat stream channel closed, ending stream")
 				return
 			}
 
 			eventData, err := json.Marshal(event)
 			if err != nil {
-				logger.Log.Error("Failed to marshal chat event", zap.Error(err))
+				h.logger.Error("Failed to marshal chat event", zap.Error(err))
 				continue
 			}
 
@@ -1137,7 +1141,7 @@ func (h *ChatHandlers) HandleChatStream(c *gin.Context) {
 
 			// End stream on complete or error
 			if event.Type == models.EventTypeComplete || event.Type == models.EventTypeError {
-				logger.Log.Info("Chat stream completed", zap.String("eventType", event.Type))
+				h.logger.Info("Chat stream completed", zap.String("eventType", event.Type))
 
 				// Send a final SSE close message
 				fmt.Fprintf(c.Writer, "data: {\"type\":\"sse-close\"}\n\n")
@@ -1147,7 +1151,7 @@ func (h *ChatHandlers) HandleChatStream(c *gin.Context) {
 			}
 
 		case <-c.Request.Context().Done():
-			logger.Log.Info("Chat stream client disconnected")
+			h.logger.Info("Chat stream client disconnected")
 			return
 		}
 	}
@@ -1155,14 +1159,14 @@ func (h *ChatHandlers) HandleChatStream(c *gin.Context) {
 
 // HandleItineraryStream handles SSE streaming for itinerary queries using app service
 func (h *ChatHandlers) HandleItineraryStream(c *gin.Context) {
-	logger.Log.Info("Itinerary stream request received",
+	h.logger.Info("Itinerary stream request received",
 		zap.String("ip", c.ClientIP()),
 		zap.String("user", middleware.GetUserIDFromContext(c)),
 	)
 
 	message := c.Query("message")
 	if message == "" {
-		logger.Log.Warn("Empty message for itinerary stream")
+		h.logger.Warn("Empty message for itinerary stream")
 		c.String(http.StatusBadRequest, "Message parameter is required")
 		return
 	}
@@ -1254,7 +1258,7 @@ func (h *ChatHandlers) HandleItineraryStream(c *gin.Context) {
 		case event, ok := <-eventCh:
 			if !ok {
 				// Channel closed, streaming complete
-				logger.Log.Info("Itinerary stream completed",
+				h.logger.Info("Itinerary stream completed",
 					zap.String("message", message),
 					zap.String("user", userIDStr),
 				)
@@ -1264,7 +1268,7 @@ func (h *ChatHandlers) HandleItineraryStream(c *gin.Context) {
 			// Convert event to JSON and send via SSE
 			eventData, err := json.Marshal(event)
 			if err != nil {
-				logger.Log.Error("Failed to marshal event", zap.Error(err))
+				h.logger.Error("Failed to marshal event", zap.Error(err))
 				continue
 			}
 
@@ -1276,7 +1280,7 @@ func (h *ChatHandlers) HandleItineraryStream(c *gin.Context) {
 
 		case <-c.Request.Context().Done():
 			// Client disconnected
-			logger.Log.Info("Client disconnected from itinerary stream")
+			h.logger.Info("Client disconnected from itinerary stream")
 			return
 		}
 	}
@@ -1284,7 +1288,7 @@ func (h *ChatHandlers) HandleItineraryStream(c *gin.Context) {
 
 // ContinueChatSession handles continuing an existing chat session with HTMX SSE
 func (h *ChatHandlers) ContinueChatSession(c *gin.Context) {
-	logger.Log.Info("Continue chat session request received",
+	h.logger.Info("Continue chat session request received",
 		zap.String("ip", c.ClientIP()),
 		zap.String("user", middleware.GetUserIDFromContext(c)),
 	)
@@ -1293,7 +1297,7 @@ func (h *ChatHandlers) ContinueChatSession(c *gin.Context) {
 	sessionIDStr := c.Param("sessionID")
 	sessionID, err := uuid.Parse(sessionIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid session ID", zap.String("sessionID", sessionIDStr), zap.Error(err))
+		h.logger.Error("Invalid session ID", zap.String("sessionID", sessionIDStr), zap.Error(err))
 		c.HTML(http.StatusBadRequest, "", `<div class="text-red-500 text-sm p-4">Invalid session ID</div>`)
 		return
 	}
@@ -1308,7 +1312,7 @@ func (h *ChatHandlers) ContinueChatSession(c *gin.Context) {
 	contentType := c.GetHeader("Content-Type")
 	if strings.Contains(contentType, "application/json") {
 		if err := c.ShouldBindJSON(&req); err != nil {
-			logger.Log.Error("Failed to decode request body", zap.Error(err))
+			h.logger.Error("Failed to decode request body", zap.Error(err))
 			c.HTML(http.StatusBadRequest, "", `<div class="text-red-500 text-sm p-4">Invalid request body</div>`)
 			return
 		}
@@ -1318,12 +1322,12 @@ func (h *ChatHandlers) ContinueChatSession(c *gin.Context) {
 	}
 
 	if req.Message == "" {
-		logger.Log.Error("Message is required")
+		h.logger.Error("Message is required")
 		c.HTML(http.StatusBadRequest, "", `<div class="text-red-500 text-sm p-4">Message is required</div>`)
 		return
 	}
 
-	logger.Log.Info("Processing continue chat session request",
+	h.logger.Info("Processing continue chat session request",
 		zap.String("sessionID", sessionID.String()),
 		zap.String("message", req.Message),
 	)
@@ -1339,7 +1343,7 @@ func (h *ChatHandlers) ContinueChatSession(c *gin.Context) {
 	// Get flusher
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
-		logger.Log.Error("Response writer does not support flushing")
+		h.logger.Error("Response writer does not support flushing")
 		c.HTML(http.StatusInternalServerError, "", `<div class="text-red-500 text-sm p-4">Streaming not supported</div>`)
 		return
 	}
@@ -1359,7 +1363,7 @@ func (h *ChatHandlers) ContinueChatSession(c *gin.Context) {
 			eventCh,
 		)
 		if err != nil {
-			logger.Log.Error("Failed to continue session", zap.Error(err))
+			h.logger.Error("Failed to continue session", zap.Error(err))
 			// Send error event
 			select {
 			case eventCh <- models.StreamEvent{
@@ -1380,13 +1384,13 @@ func (h *ChatHandlers) ContinueChatSession(c *gin.Context) {
 		select {
 		case event, ok := <-eventCh:
 			if !ok {
-				logger.Log.Info("Event channel closed, ending stream")
+				h.logger.Info("Event channel closed, ending stream")
 				return
 			}
 
 			eventData, err := json.Marshal(event)
 			if err != nil {
-				logger.Log.Error("Failed to marshal event", zap.Error(err))
+				h.logger.Error("Failed to marshal event", zap.Error(err))
 				continue
 			}
 
@@ -1397,13 +1401,13 @@ func (h *ChatHandlers) ContinueChatSession(c *gin.Context) {
 			flusher.Flush()
 
 			if event.Type == models.EventTypeComplete || event.Type == models.EventTypeError {
-				logger.Log.Info("Stream completed", zap.String("eventType", event.Type))
+				h.logger.Info("Stream completed", zap.String("eventType", event.Type))
 				return
 			}
 
 		case <-c.Request.Context().Done():
 			// Client disconnected
-			logger.Log.Info("Client disconnected from continue session stream")
+			h.logger.Info("Client disconnected from continue session stream")
 			return
 		}
 	}

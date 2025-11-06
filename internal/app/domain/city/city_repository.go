@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log/slog"
+	"go.uber.org/zap"
 	"strings"
 
 	"github.com/google/uuid"
@@ -36,11 +36,11 @@ type Repository interface {
 }
 
 type RepositoryImpl struct {
-	logger *slog.Logger
+	logger *zap.Logger
 	pgpool *pgxpool.Pool
 }
 
-func NewCityRepository(pgxpool *pgxpool.Pool, logger *slog.Logger) *RepositoryImpl {
+func NewCityRepository(pgxpool *pgxpool.Pool, logger *zap.Logger) *RepositoryImpl {
 	return &RepositoryImpl{
 		logger: logger,
 		pgpool: pgxpool,
@@ -204,7 +204,7 @@ func (r *RepositoryImpl) GetCityIDByName(ctx context.Context, cityName string) (
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetCityIDByName"))
+	l := r.logger.With(zap.String("method", "GetCityIDByName"))
 
 	query := `
         SELECT id
@@ -217,21 +217,21 @@ func (r *RepositoryImpl) GetCityIDByName(ctx context.Context, cityName string) (
 	err := r.pgpool.QueryRow(ctx, query, cityName).Scan(&cityID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			l.WarnContext(ctx, "City not found", slog.String("city_name", cityName))
+			l.Warn( "City not found", zap.String("city_name", cityName))
 			span.SetStatus(codes.Error, "City not found")
 			return uuid.Nil, fmt.Errorf("city not found: %s", cityName)
 		}
-		l.ErrorContext(ctx, "Failed to get city ID by name",
-			slog.Any("error", err),
-			slog.String("city_name", cityName))
+		l.Error( "Failed to get city ID by name",
+			zap.Any("error", err),
+			zap.String("city_name", cityName))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Database query failed")
 		return uuid.Nil, fmt.Errorf("failed to get city ID by name '%s': %w", cityName, err)
 	}
 
-	l.InfoContext(ctx, "City ID retrieved successfully",
-		slog.String("city_name", cityName),
-		slog.String("city_id", cityID.String()))
+	l.Info( "City ID retrieved successfully",
+		zap.String("city_name", cityName),
+		zap.String("city_id", cityID.String()))
 	span.SetAttributes(
 		attribute.String("city.name", cityName),
 		attribute.String("city.id", cityID.String()),
@@ -249,7 +249,7 @@ func (r *RepositoryImpl) FindSimilarCities(ctx context.Context, queryEmbedding [
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "FindSimilarCities"))
+	l := r.logger.With(zap.String("method", "FindSimilarCities"))
 
 	// Convert []float32 to pgvector format string
 	embeddingStr := fmt.Sprintf("[%v]", strings.Join(func() []string {
@@ -276,14 +276,14 @@ func (r *RepositoryImpl) FindSimilarCities(ctx context.Context, queryEmbedding [
         LIMIT $2
     `
 
-	l.DebugContext(ctx, "Executing city similarity search query",
-		slog.String("query", query),
-		slog.Int("embedding_dim", len(queryEmbedding)),
-		slog.Int("limit", limit))
+	l.Debug( "Executing city similarity search query",
+		zap.String("query", query),
+		zap.Int("embedding_dim", len(queryEmbedding)),
+		zap.Int("limit", limit))
 
 	rows, err := r.pgpool.Query(ctx, query, embeddingStr, limit)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query similar cities", slog.Any("error", err))
+		l.Error( "Failed to query similar cities", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Database query failed")
 		return nil, fmt.Errorf("failed to search similar cities: %w", err)
@@ -307,7 +307,7 @@ func (r *RepositoryImpl) FindSimilarCities(ctx context.Context, queryEmbedding [
 			&similarityScore,
 		)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to scan similar city row", slog.Any("error", err))
+			l.Error( "Failed to scan similar city row", zap.Any("error", err))
 			span.RecordError(err)
 			return nil, fmt.Errorf("failed to scan similar city row: %w", err)
 		}
@@ -323,12 +323,12 @@ func (r *RepositoryImpl) FindSimilarCities(ctx context.Context, queryEmbedding [
 	}
 
 	if err = rows.Err(); err != nil {
-		l.ErrorContext(ctx, "Error iterating similar city rows", slog.Any("error", err))
+		l.Error( "Error iterating similar city rows", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("error iterating similar city rows: %w", err)
 	}
 
-	l.InfoContext(ctx, "Similar cities found", slog.Int("count", len(cities)))
+	l.Info( "Similar cities found", zap.Int("count", len(cities)))
 	span.SetAttributes(attribute.Int("results.count", len(cities)))
 	span.SetStatus(codes.Ok, "Similar cities found")
 
@@ -343,7 +343,7 @@ func (r *RepositoryImpl) UpdateCityEmbedding(ctx context.Context, cityID uuid.UU
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "UpdateCityEmbedding"))
+	l := r.logger.With(zap.String("method", "UpdateCityEmbedding"))
 
 	// Convert []float32 to pgvector format string
 	embeddingStr := fmt.Sprintf("[%v]", strings.Join(func() []string {
@@ -362,9 +362,9 @@ func (r *RepositoryImpl) UpdateCityEmbedding(ctx context.Context, cityID uuid.UU
 
 	result, err := r.pgpool.Exec(ctx, query, embeddingStr, cityID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to update city embedding",
-			slog.Any("error", err),
-			slog.String("city_id", cityID.String()))
+		l.Error( "Failed to update city embedding",
+			zap.Any("error", err),
+			zap.String("city_id", cityID.String()))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Database update failed")
 		return fmt.Errorf("failed to update city embedding: %w", err)
@@ -372,15 +372,15 @@ func (r *RepositoryImpl) UpdateCityEmbedding(ctx context.Context, cityID uuid.UU
 
 	if result.RowsAffected() == 0 {
 		err := fmt.Errorf("no city found with ID %s", cityID.String())
-		l.WarnContext(ctx, "No city found for embedding update", slog.String("city_id", cityID.String()))
+		l.Warn( "No city found for embedding update", zap.String("city_id", cityID.String()))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "City not found")
 		return err
 	}
 
-	l.InfoContext(ctx, "City embedding updated successfully",
-		slog.String("city_id", cityID.String()),
-		slog.Int("embedding_dimension", len(embedding)))
+	l.Info( "City embedding updated successfully",
+		zap.String("city_id", cityID.String()),
+		zap.Int("embedding_dimension", len(embedding)))
 	span.SetAttributes(
 		attribute.String("city.id", cityID.String()),
 		attribute.Int("embedding.dimension", len(embedding)),
@@ -397,7 +397,7 @@ func (r *RepositoryImpl) GetCitiesWithoutEmbeddings(ctx context.Context, limit i
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetCitiesWithoutEmbeddings"))
+	l := r.logger.With(zap.String("method", "GetCitiesWithoutEmbeddings"))
 
 	query := `
         SELECT 
@@ -416,7 +416,7 @@ func (r *RepositoryImpl) GetCitiesWithoutEmbeddings(ctx context.Context, limit i
 
 	rows, err := r.pgpool.Query(ctx, query, limit)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query cities without embeddings", slog.Any("error", err))
+		l.Error( "Failed to query cities without embeddings", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Database query failed")
 		return nil, fmt.Errorf("failed to query cities without embeddings: %w", err)
@@ -438,7 +438,7 @@ func (r *RepositoryImpl) GetCitiesWithoutEmbeddings(ctx context.Context, limit i
 			&lon,
 		)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to scan city without embedding row", slog.Any("error", err))
+			l.Error( "Failed to scan city without embedding row", zap.Any("error", err))
 			span.RecordError(err)
 			return nil, fmt.Errorf("failed to scan city without embedding row: %w", err)
 		}
@@ -454,12 +454,12 @@ func (r *RepositoryImpl) GetCitiesWithoutEmbeddings(ctx context.Context, limit i
 	}
 
 	if err = rows.Err(); err != nil {
-		l.ErrorContext(ctx, "Error iterating city without embedding rows", slog.Any("error", err))
+		l.Error( "Error iterating city without embedding rows", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("error iterating city without embedding rows: %w", err)
 	}
 
-	l.InfoContext(ctx, "Cities without embeddings found", slog.Int("count", len(cities)))
+	l.Info( "Cities without embeddings found", zap.Int("count", len(cities)))
 	span.SetAttributes(attribute.Int("results.count", len(cities)))
 	span.SetStatus(codes.Ok, "Cities without embeddings retrieved")
 
@@ -471,7 +471,7 @@ func (r *RepositoryImpl) GetAllCities(ctx context.Context) ([]models.CityDetail,
 	ctx, span := otel.Tracer("CityRepository").Start(ctx, "GetAllCities")
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetAllCities"))
+	l := r.logger.With(zap.String("method", "GetAllCities"))
 
 	query := `
         SELECT 
@@ -488,7 +488,7 @@ func (r *RepositoryImpl) GetAllCities(ctx context.Context) ([]models.CityDetail,
 
 	rows, err := r.pgpool.Query(ctx, query)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query all cities", slog.Any("error", err))
+		l.Error( "Failed to query all cities", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Database query failed")
 		return nil, fmt.Errorf("failed to query all cities: %w", err)
@@ -510,7 +510,7 @@ func (r *RepositoryImpl) GetAllCities(ctx context.Context) ([]models.CityDetail,
 			&lon,
 		)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to scan city row", slog.Any("error", err))
+			l.Error( "Failed to scan city row", zap.Any("error", err))
 			span.RecordError(err)
 			return nil, fmt.Errorf("failed to scan city row: %w", err)
 		}
@@ -526,12 +526,12 @@ func (r *RepositoryImpl) GetAllCities(ctx context.Context) ([]models.CityDetail,
 	}
 
 	if err = rows.Err(); err != nil {
-		l.ErrorContext(ctx, "Error iterating city rows", slog.Any("error", err))
+		l.Error( "Error iterating city rows", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("error iterating city rows: %w", err)
 	}
 
-	l.InfoContext(ctx, "All cities retrieved", slog.Int("count", len(cities)))
+	l.Info( "All cities retrieved", zap.Int("count", len(cities)))
 	span.SetAttributes(attribute.Int("results.count", len(cities)))
 	span.SetStatus(codes.Ok, "All cities retrieved")
 
@@ -548,9 +548,9 @@ func (r *RepositoryImpl) GetCity(ctx context.Context, lat, lon float64) (uuid.UU
 	defer span.End()
 
 	// Log the request
-	r.logger.DebugContext(ctx, "Determining city ID for coordinates",
-		slog.Float64("lat", lat),
-		slog.Float64("lon", lon))
+	r.logger.Debug( "Determining city ID for coordinates",
+		zap.Float64("lat", lat),
+		zap.Float64("lon", lon))
 
 	// Create a POINT geometry from longitude and latitude
 	point := fmt.Sprintf("POINT(%f %f)", lon, lat)
@@ -568,20 +568,20 @@ func (r *RepositoryImpl) GetCity(ctx context.Context, lat, lon float64) (uuid.UU
 	err := r.pgpool.QueryRow(ctx, query, point).Scan(&cityID, &cityName)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			r.logger.WarnContext(ctx, "No city found for the given coordinates")
+			r.logger.Warn( "No city found for the given coordinates")
 			span.SetStatus(codes.Error, "No city found")
 			return uuid.Nil, "", fmt.Errorf("no city found for coordinates (%f, %f)", lat, lon)
 		}
-		r.logger.ErrorContext(ctx, "Failed to determine city ID", slog.Any("error", err))
+		r.logger.Error( "Failed to determine city ID", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Database query failed")
 		return uuid.Nil, "", fmt.Errorf("failed to determine city ID: %w", err)
 	}
 
 	// Log success and set tracing attributes
-	r.logger.InfoContext(ctx, "City determined",
-		slog.String("city_id", cityID.String()),
-		slog.String("city_name", cityName))
+	r.logger.Info( "City determined",
+		zap.String("city_id", cityID.String()),
+		zap.String("city_name", cityName))
 	span.SetAttributes(
 		attribute.String("city.id", cityID.String()),
 		attribute.String("city.name", cityName),

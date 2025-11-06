@@ -3,7 +3,8 @@ package profiles
 import (
 	"context"
 	"fmt"
-	"log/slog"
+
+	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -37,13 +38,13 @@ type Service interface {
 
 // ServiceImpl provides the implementation for UserService.
 type ServiceImpl struct {
-	logger   *slog.Logger
+	logger   *zap.Logger
 	prefRepo Repository
 	intRepo  interests.Repository
 	tagRepo  tags.Repository
 }
 
-func NewUserProfilesService(prefRepo Repository, intRepo interests.Repository, tagRepo tags.Repository, logger *slog.Logger) *ServiceImpl {
+func NewUserProfilesService(prefRepo Repository, intRepo interests.Repository, tagRepo tags.Repository, logger *zap.Logger) *ServiceImpl {
 	return &ServiceImpl{
 		prefRepo: prefRepo,
 		intRepo:  intRepo,
@@ -59,18 +60,18 @@ func (s *ServiceImpl) GetSearchProfiles(ctx context.Context, userID uuid.UUID) (
 	))
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "GetSearchProfiles"), slog.String("userID", userID.String()))
-	l.DebugContext(ctx, "Fetching user preference profiles")
+	l := s.logger.With(zap.String("method", "GetSearchProfiles"), zap.String("userID", userID.String()))
+	l.Debug("Fetching user preference profiles")
 
 	profiles, err := s.prefRepo.GetSearchProfiles(ctx, userID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to fetch user preference profiles", slog.Any("error", err))
+		l.Error("Failed to fetch user preference profiles", zap.Error(err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to fetch user preference profiles")
 		return nil, fmt.Errorf("error fetching user preference profiles: %w", err)
 	}
 
-	l.InfoContext(ctx, "User preference profiles fetched successfully", slog.Int("count", len(profiles)))
+	l.Info("User preference profiles fetched successfully", zap.Int("count", len(profiles)))
 	span.SetStatus(codes.Ok, "User preference profiles fetched successfully")
 	return profiles, nil
 }
@@ -82,18 +83,18 @@ func (s *ServiceImpl) GetSearchProfile(ctx context.Context, userID, profileID uu
 	))
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "GetSearchProfile"), slog.String("profileID", profileID.String()))
-	l.DebugContext(ctx, "Fetching user preference profile")
+	l := s.logger.With(zap.String("method", "GetSearchProfile"), zap.String("profileID", profileID.String()))
+	l.Debug("Fetching user preference profile")
 
 	profile, err := s.prefRepo.GetSearchProfile(ctx, userID, profileID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to fetch user preference profile", slog.Any("error", err))
+		l.Error("Failed to fetch user preference profile", zap.Error(err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to fetch user preference profile")
 		return nil, fmt.Errorf("error fetching user preference profile: %w", err)
 	}
 
-	l.InfoContext(ctx, "User preference profile fetched successfully")
+	l.Info("User preference profile fetched successfully")
 	span.SetStatus(codes.Ok, "User preference profile fetched successfully")
 	return profile, nil
 }
@@ -105,18 +106,18 @@ func (s *ServiceImpl) GetDefaultSearchProfile(ctx context.Context, userID uuid.U
 	))
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "GetDefaultSearchProfile"), slog.String("userID", userID.String()))
-	l.DebugContext(ctx, "Fetching default user preference profile")
+	l := s.logger.With(zap.String("method", "GetDefaultSearchProfile"), zap.String("userID", userID.String()))
+	l.Debug("Fetching default user preference profile")
 
 	profile, err := s.prefRepo.GetDefaultSearchProfile(ctx, userID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to fetch default user preference profile", slog.Any("error", err))
+		l.Error("Failed to fetch default user preference profile", zap.Error(err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to fetch default user preference profile")
 		return nil, fmt.Errorf("error fetching default user preference profile: %w", err)
 	}
 
-	l.InfoContext(ctx, "Default user preference profile fetched successfully")
+	l.Info("Default user preference profile fetched successfully")
 	span.SetStatus(codes.Ok, "Default user preference profile fetched successfully")
 	return profile, nil
 }
@@ -127,8 +128,8 @@ func (s *ServiceImpl) CreateSearchProfileCC(ctx context.Context, userID uuid.UUI
 	ctx, span := otel.Tracer("PreferenceService").Start(ctx, "CreateSearchProfile")
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "CreateSearchProfile"), slog.String("userID", userID.String()), slog.String("profileName", params.ProfileName))
-	l.DebugContext(ctx, "Attempting to create profile and link associations")
+	l := s.logger.With(zap.String("method", "CreateSearchProfile"), zap.String("userID", userID.String()), zap.String("profileName", params.ProfileName))
+	l.Debug("Attempting to create profile and link associations")
 
 	// --- 1. Validate input further if needed (e.g., check if profile name is empty) ---
 	if params.ProfileName == "" {
@@ -137,14 +138,14 @@ func (s *ServiceImpl) CreateSearchProfileCC(ctx context.Context, userID uuid.UUI
 
 	tx, err := s.prefRepo.(*ProfileRepository).pgpool.Begin(ctx)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to begin transaction", slog.Any("error", err))
+		l.Error("Failed to begin transaction", zap.Error(err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Transaction begin failed")
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
-			s.logger.ErrorContext(ctx, "transaction rollback failed", slog.Any("error", err))
+			s.logger.Error("transaction rollback failed", zap.Error(err))
 		}
 	}()
 
@@ -153,14 +154,14 @@ func (s *ServiceImpl) CreateSearchProfileCC(ctx context.Context, userID uuid.UUI
 	// and return the core profile data. It should NOT handle tags/interests.
 	createdProfileCore, err := s.prefRepo.CreateSearchProfile(ctx, userID, params)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to create base profile in repo", slog.Any("error", err))
+		l.Error("Failed to create base profile in repo", zap.Error(err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Repo failed creating profile")
 		// Map repo errors (like ErrConflict) if applicable
 		return nil, fmt.Errorf("failed to create profile core: %w", err)
 	}
 	profileID := createdProfileCore.ID
-	l.InfoContext(ctx, "Base profile created successfully", slog.String("profileID", profileID.String()))
+	l.Info("Base profile created successfully", zap.String("profileID", profileID.String()))
 
 	// --- 3. Link Interests and Avoid Tags Concurrently ---
 	g, childCtx := errgroup.WithContext(ctx)
@@ -169,12 +170,12 @@ func (s *ServiceImpl) CreateSearchProfileCC(ctx context.Context, userID uuid.UUI
 	if len(params.Interests) > 0 {
 		interestIDs := params.Interests // Capture loop variable
 		g.Go(func() error {
-			l.DebugContext(childCtx, "Linking interests to profile", slog.Int("count", len(interestIDs)), slog.String("profileID", profileID.String()))
+			l.Debug("Linking interests to profile", zap.Int("count", len(interestIDs)), zap.String("profileID", profileID.String()))
 			for _, interestID := range interestIDs {
 				linkErr := s.intRepo.AddInterestToProfile(childCtx, profileID, interestID)
 				if linkErr != nil {
 					// Log the specific error but potentially continue linking others
-					l.ErrorContext(childCtx, "Failed to link interest to profile", slog.String("interestID", interestID.String()), slog.Any("error", linkErr))
+					l.Error("Failed to link interest to profile", zap.String("interestID", interestID.String()), zap.Error(linkErr))
 					return fmt.Errorf("failed linking interest %s: %w", interestID, linkErr) // Causes errgroup to cancel
 				}
 			}
@@ -186,11 +187,11 @@ func (s *ServiceImpl) CreateSearchProfileCC(ctx context.Context, userID uuid.UUI
 	if len(params.Tags) > 0 {
 		tagIDs := params.Tags // Capture loop variable
 		g.Go(func() error {
-			l.DebugContext(childCtx, "Linking avoid tags to profile", slog.Int("count", len(tagIDs)), slog.String("profileID", profileID.String()))
+			l.Debug("Linking avoid tags to profile", zap.Int("count", len(tagIDs)), zap.String("profileID", profileID.String()))
 			for _, tagID := range tagIDs {
 				linkErr := s.tagRepo.LinkPersonalTagToProfile(childCtx, userID, profileID, tagID)
 				if linkErr != nil {
-					l.ErrorContext(childCtx, "Failed to link avoid tag to profile", slog.String("tagID", tagID.String()), slog.Any("error", linkErr))
+					l.Error("Failed to link avoid tag to profile", zap.String("tagID", tagID.String()), zap.Error(linkErr))
 					return fmt.Errorf("failed linking avoid tag %s: %w", tagID, linkErr) // Causes errgroup to cancel
 				}
 			}
@@ -200,7 +201,7 @@ func (s *ServiceImpl) CreateSearchProfileCC(ctx context.Context, userID uuid.UUI
 
 	// Wait for linking operations
 	if err := g.Wait(); err != nil {
-		l.ErrorContext(ctx, "Error occurred during interest/tag association", slog.Any("error", err))
+		l.Error("Error occurred during interest/tag association", zap.Error(err))
 		// Profile was created, but associations might be incomplete.
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed associating items")
@@ -220,24 +221,24 @@ func (s *ServiceImpl) CreateSearchProfileCC(ctx context.Context, userID uuid.UUI
 	gResp.Go(func() error {
 		var fetchErr error
 		fetchedInterests, fetchErr = s.intRepo.GetAllInterests(respCtx)
-		l.DebugContext(respCtx, "Fetched interests for response", slog.Int("count", len(fetchedInterests)), slog.Any("error", fetchErr)) // Log count and error
-		return fetchErr                                                                                                                  // Return error if fetching fails
+		l.Debug("Fetched interests for response", zap.Int("count", len(fetchedInterests)), zap.Error(fetchErr)) // Log count and error
+		return fetchErr                                                                                         // Return error if fetching fails
 	})
 
 	gResp.Go(func() error {
 		var fetchErr error
 		fetchedTags, fetchErr = s.tagRepo.GetAll(respCtx, userID)
-		l.DebugContext(respCtx, "Fetched tags for response", slog.Int("count", len(fetchedTags)), slog.Any("error", fetchErr)) // Log count and error
+		l.Debug("Fetched tags for response", zap.Int("count", len(fetchedTags)), zap.Error(fetchErr)) // Log count and error
 		return fetchErr
 	})
 
 	if err = gResp.Wait(); err != nil {
-		l.ErrorContext(ctx, "Error occurred fetching associated data for response", slog.Any("error", err))
+		l.Error("Error occurred fetching associated data for response", zap.Error(err))
 		return createdProfileCore, nil
 	}
 
 	if err = tx.Commit(ctx); err != nil {
-		l.ErrorContext(ctx, "Failed to commit transaction", slog.Any("error", err))
+		l.Error("Failed to commit transaction", zap.Error(err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Transaction commit failed")
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
@@ -266,7 +267,7 @@ func (s *ServiceImpl) CreateSearchProfileCC(ctx context.Context, userID uuid.UUI
 		Tags:                 fetchedTags,
 	}
 
-	l.InfoContext(ctx, "Successfully created profile and processed associations")
+	l.Info("Successfully created profile and processed associations")
 	span.SetStatus(codes.Ok, "Profile created with associations")
 	return fullResponse, nil
 }
@@ -296,18 +297,18 @@ func (s *ServiceImpl) DeleteSearchProfile(ctx context.Context, userID, profileID
 	))
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "DeleteSearchProfile"), slog.String("profileID", profileID.String()))
-	l.DebugContext(ctx, "Deleting user preference profile")
+	l := s.logger.With(zap.String("method", "DeleteSearchProfile"), zap.String("profileID", profileID.String()))
+	l.Debug("Deleting user preference profile")
 
 	err := s.prefRepo.DeleteSearchProfile(ctx, userID, profileID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to delete user preference profile", slog.Any("error", err))
+		l.Error("Failed to delete user preference profile", zap.Error(err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to delete user preference profile")
 		return fmt.Errorf("error deleting user preference profile: %w", err)
 	}
 
-	l.InfoContext(ctx, "User preference profile deleted successfully")
+	l.Info("User preference profile deleted successfully")
 	span.SetStatus(codes.Ok, "User preference profile deleted successfully")
 	return nil
 }
@@ -319,18 +320,18 @@ func (s *ServiceImpl) SetDefaultSearchProfile(ctx context.Context, userID, profi
 	))
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "SetDefaultSearchProfile"), slog.String("profileID", profileID.String()))
-	l.DebugContext(ctx, "Setting profile as default")
+	l := s.logger.With(zap.String("method", "SetDefaultSearchProfile"), zap.String("profileID", profileID.String()))
+	l.Debug("Setting profile as default")
 
 	err := s.prefRepo.SetDefaultSearchProfile(ctx, userID, profileID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to set default user preference profile", slog.Any("error", err))
+		l.Error("Failed to set default user preference profile", zap.Error(err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to set default user preference profile")
 		return fmt.Errorf("error setting default user preference profile: %w", err)
 	}
 
-	l.InfoContext(ctx, "User preference profile set as default successfully")
+	l.Info("User preference profile set as default successfully")
 	span.SetStatus(codes.Ok, "User preference profile set as default successfully")
 	return nil
 }
@@ -342,17 +343,17 @@ func (s *ServiceImpl) UpdateSearchProfile(ctx context.Context, userID, profileID
 	))
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "SetDefaultSearchProfile"), slog.String("profileID", profileID.String()))
-	l.DebugContext(ctx, "Setting profile as default")
+	l := s.logger.With(zap.String("method", "SetDefaultSearchProfile"), zap.String("profileID", profileID.String()))
+	l.Debug("Setting profile as default")
 
 	if err := s.prefRepo.UpdateSearchProfile(ctx, userID, profileID, params); err != nil {
-		l.ErrorContext(ctx, "Failed to set default user preference profile", slog.Any("error", err))
+		l.Error("Failed to set default user preference profile", zap.Error(err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to set default user preference profile")
 		return fmt.Errorf("error setting default user preference profile: %w", err)
 	}
 
-	l.InfoContext(ctx, "User search profile updated successfully")
+	l.Info("User search profile updated successfully")
 	span.SetStatus(codes.Ok, "User preference profile updated successfully")
 	return nil
 }

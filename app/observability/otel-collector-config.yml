@@ -1,0 +1,44 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch: {} # Batches data before sending to exporters. Good for performance.
+
+exporters:
+  # This exporter makes metrics available for Prometheus to scrape
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: "myapp"
+
+  # --- FOR THE FUTURE ---
+  # This is how you would add Tempo (traces)
+  # otlp/tempo:
+  #   endpoint: "tempo:4317"
+  #   tls:
+  #     insecure: true
+
+  # This is how you would add Loki (logs)
+  # loki:
+  #   endpoint: "loki:3100/loki/api/v1/push"
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheus]
+
+    # --- FOR THE FUTURE ---
+    # traces:
+    #   receivers: [otlp]
+    #   processors: [batch]
+    #   exporters: [otlp/tempo]
+    # logs:
+    #   receivers: [otlp]
+    #   processors: [batch]
+    #   exporters: [loki]

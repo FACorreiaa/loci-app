@@ -2,8 +2,8 @@ package results
 
 import (
 	"fmt"
-	"github.com/FACorreiaa/go-templui/internal/app/components/chat"
-	"github.com/FACorreiaa/go-templui/internal/app/domain/components"
+	chat "github.com/FACorreiaa/go-templui/internal/app/components/chat"
+	"github.com/FACorreiaa/go-templui/internal/app/components"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"strings"
 	"time"
@@ -94,7 +94,7 @@ templ ItineraryResults(cityData models.GeneralCityData, generalPOIs []models.POI
 							Continue Session
 						</button>
 						<button
-							hx-post={ "/bookmarks/add/" + itinerary.ItineraryID }
+							hx-post={ "/bookmarks/add/" + itinerary.ItineraryID.String() }
 							hx-target="this"
 							hx-swap="outerHTML"
 							class="p-2 text-muted-foreground hover:text-blue-500 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
@@ -179,7 +179,7 @@ templ ItineraryResults(cityData models.GeneralCityData, generalPOIs []models.POI
 						<span class="font-medium">Continue Session</span>
 					</button>
 					<button
-						hx-post={ "/bookmarks/add/" + itinerary.ItineraryID }
+						hx-post={ "/bookmarks/add/" + itinerary.ItineraryID.String() }
 						hx-target="this"
 						hx-swap="outerHTML"
 						class="w-full flex items-center gap-3 px-3 py-2 text-left text-gray-900 dark:text-white hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
@@ -1217,7 +1217,7 @@ script ItineraryStateScript() {
             handleItemAdded(eventData) {
                 console.log('Adding item to itinerary:', eventData);
 
-                // Get the itinerary list container
+                // Get the itinerary lists container
                 const container = document.getElementById('curated-itinerary-list');
                 if (!container) {
                     console.warn('Itinerary list container not found');
@@ -1230,7 +1230,7 @@ script ItineraryStateScript() {
                 const newElement = tempDiv.firstElementChild;
 
                 if (newElement) {
-                    // Append the new POI card to the list
+                    // Append the new POI card to the lists
                     container.appendChild(newElement);
 
                     // Add marker to map if coordinates are valid
@@ -1810,7 +1810,7 @@ templ CuratedItineraryCard(poi models.POIDetailedInfo, order int) {
 	</div>
 }
 
-// AllPOICard for the "All Points of Interest" section (list view)
+// AllPOICard for the "All Points of Interest" section (lists view)
 templ AllPOICard(poi models.POIDetailedInfo) {
 	<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
 		<div class="flex items-start justify-between mb-3">

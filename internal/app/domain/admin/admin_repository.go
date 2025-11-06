@@ -21,9 +21,9 @@ type AdminRepo interface {
 	ReactivateUser(ctx context.Context, userID uuid.UUID) error
 	// GetAllInterests retrieves all available interests for selection in the UI.
 	GetAllInterests(ctx context.Context) ([]models.Interest, error)
-	// GetUserPreferences retrieves the list of interests associated with a user.
+	// GetUserPreferences retrieves the lists of interests associated with a user.
 	GetUserPreferences(ctx context.Context, userID uuid.UUID) ([]models.Interest, error)
-	// SetUserPreferences atomically replaces a user's current interests with the provided list of interest IDs.
+	// SetUserPreferences atomically replaces a user's current interests with the provided lists of interest IDs.
 	SetUserPreferences(ctx context.Context, userID uuid.UUID, interestIDs []uuid.UUID) error
 
 	// --- Other Potential Methods ---

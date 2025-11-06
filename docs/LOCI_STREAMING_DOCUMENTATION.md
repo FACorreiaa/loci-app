@@ -83,10 +83,10 @@ import (
 
 type StreamingChatHandlers struct {
     chatService      LlmInteractionService
-    logger           *slog.Logger
+    logger           *zap.Logger
 }
 
-func NewStreamingChatHandlers(chatService LlmInteractionService, logger *slog.Logger) *StreamingChatHandlers {
+func NewStreamingChatHandlers(chatService LlmInteractionService, logger *zap.Logger) *StreamingChatHandlers {
     return &StreamingChatHandlers{
         chatService: chatService,
         logger:      logger,
@@ -102,13 +102,13 @@ func (h *StreamingChatHandlers) StartChatMessageStream(c *gin.Context) {
     defer span.End()
 
     l := h.logger.With("handler", "StartChatMessageStream")
-    l.DebugContext(ctx, "Processing unified chat message with streaming")
+    l.Debug("Processing unified chat message with streaming")
 
     // Parse profile ID from URL parameters
     profileIDStr := c.Param("profileID")
     profileID, err := uuid.Parse(profileIDStr)
     if err != nil {
-        l.ErrorContext(ctx, "Invalid profile ID", "profileID", profileIDStr, "error", err)
+        l.Error("Invalid profile ID", "profileID", profileIDStr,zap.Error(err))
         span.RecordError(err)
         span.SetStatus(codes.Error, "Invalid profile ID")
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
@@ -118,13 +118,13 @@ func (h *StreamingChatHandlers) StartChatMessageStream(c *gin.Context) {
     // Get user ID from middleware context
     userIDStr := middleware.GetUserIDFromContext(c)
     if userIDStr == "" || userIDStr == "anonymous" {
-        l.ErrorContext(ctx, "User ID not found in context")
+        l.Error("User ID not found in context")
         c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
         return
     }
     userID, err := uuid.Parse(userIDStr)
     if err != nil {
-        l.ErrorContext(ctx, "Invalid user ID format", "error", err)
+        l.Error("Invalid user ID format",zap.Error(err))
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID format"})
         return
     }
@@ -138,7 +138,7 @@ func (h *StreamingChatHandlers) StartChatMessageStream(c *gin.Context) {
     }
 
     if err := c.ShouldBindJSON(&req); err != nil {
-        l.ErrorContext(ctx, "Failed to decode request body", "error", err)
+        l.Error("Failed to decode request body",zap.Error(err))
         span.RecordError(err)
         span.SetStatus(codes.Error, "Invalid request body")
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
@@ -147,7 +147,7 @@ func (h *StreamingChatHandlers) StartChatMessageStream(c *gin.Context) {
 
     // Validate required fields
     if req.Message == "" {
-        l.ErrorContext(ctx, "Missing required fields", "message", req.Message)
+        l.Error("Missing required fields", "message", req.Message)
         span.SetStatus(codes.Error, "Missing required fields")
         c.JSON(http.StatusBadRequest, gin.H{"error": "message is required"})
         return
@@ -186,7 +186,7 @@ func (h *StreamingChatHandlers) StartChatMessageStream(c *gin.Context) {
             }
         }()
 
-        l.InfoContext(ctx, "Starting chat message stream",
+        l.Info("Starting chat message stream",
             "userID", userID.String(),
             "profileID", profileID.String(),
             "cityName", req.CityName,
@@ -196,7 +196,7 @@ func (h *StreamingChatHandlers) StartChatMessageStream(c *gin.Context) {
             ctx, userID, profileID, req.CityName, req.Message, req.UserLocation, eventCh,
         )
         if err != nil {
-            l.ErrorContext(ctx, "Failed to process unified chat message stream", "error", err)
+            l.Error("Failed to process unified chat message stream",zap.Error(err))
             span.RecordError(err)
 
             // Send error event if context is still active
@@ -216,7 +216,7 @@ func (h *StreamingChatHandlers) StartChatMessageStream(c *gin.Context) {
     // Set up flusher for real-time streaming
     flusher, ok := c.Writer.(http.Flusher)
     if !ok {
-        l.ErrorContext(ctx, "Response writer does not support flushing")
+        l.Error("Response writer does not support flushing")
         span.SetStatus(codes.Error, "Streaming not supported")
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Streaming not supported"})
         return
@@ -231,14 +231,14 @@ func (h *StreamingChatHandlers) StartChatMessageStream(c *gin.Context) {
         select {
         case event, ok := <-eventCh:
             if !ok {
-                l.InfoContext(ctx, "Event channel closed, ending stream")
+                l.Info("Event channel closed, ending stream")
                 span.SetStatus(codes.Ok, "Stream completed")
                 return
             }
 
             eventData, err := json.Marshal(event)
             if err != nil {
-                l.ErrorContext(ctx, "Failed to marshal event", "error", err)
+                l.Error("Failed to marshal event",zap.Error(err))
                 span.RecordError(err)
                 continue
             }
@@ -249,13 +249,13 @@ func (h *StreamingChatHandlers) StartChatMessageStream(c *gin.Context) {
 
             // End stream on final events
             if event.IsFinal || event.Type == models.EventTypeComplete || event.Type == models.EventTypeError {
-                l.InfoContext(ctx, "Stream completed", "eventType", event.Type)
+                l.Info("Stream completed", "eventType", event.Type)
                 span.SetStatus(codes.Ok, "Stream completed")
                 return
             }
 
         case <-c.Request.Context().Done():
-            l.InfoContext(ctx, "Client disconnected")
+            l.Info("Client disconnected")
             span.SetStatus(codes.Ok, "Client disconnected")
             return
         }
@@ -311,7 +311,7 @@ func SetupStreamingRoutes(r *gin.Engine, chatHandlers *handlers.StreamingChatHan
 ### 1. Templ Template with SSE Setup
 
 ```go
-package chat
+package llmChat
 
 import (
     "github.com/FACorreiaa/go-templui/app/lib/models"

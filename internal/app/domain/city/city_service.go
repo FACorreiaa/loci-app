@@ -3,7 +3,7 @@ package city
 import (
 	"context"
 	"fmt"
-	"log/slog"
+	"go.uber.org/zap"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -17,11 +17,11 @@ type Service interface {
 }
 
 type ServiceImpl struct {
-	logger *slog.Logger
+	logger *zap.Logger
 	repo   Repository
 }
 
-func NewCityService(repo Repository, logger *slog.Logger) *ServiceImpl {
+func NewCityService(repo Repository, logger *zap.Logger) *ServiceImpl {
 	return &ServiceImpl{
 		logger: logger,
 		repo:   repo,
@@ -33,19 +33,19 @@ func (s *ServiceImpl) GetAllCities(ctx context.Context) ([]models.CityDetail, er
 	ctx, span := otel.Tracer("CityService").Start(ctx, "GetAllCities")
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "GetAllCities"))
+	l := s.logger.With(zap.String("method", "GetAllCities"))
 
-	l.InfoContext(ctx, "Retrieving all cities from database")
+	l.Info( "Retrieving all cities from database")
 
 	cities, err := s.repo.GetAllCities(ctx)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to retrieve cities from repository", slog.Any("error", err))
+		l.Error( "Failed to retrieve cities from repository", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Repository operation failed")
 		return nil, fmt.Errorf("failed to retrieve cities: %w", err)
 	}
 
-	l.InfoContext(ctx, "Successfully retrieved cities", slog.Int("count", len(cities)))
+	l.Info( "Successfully retrieved cities", zap.Int("count", len(cities)))
 	span.SetAttributes(attribute.Int("cities.count", len(cities)))
 	span.SetStatus(codes.Ok, "Cities retrieved successfully")
 

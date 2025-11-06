@@ -13,7 +13,7 @@ import (
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 )
 
-// POIResultsList displays the list of points of interest with filtering and sorting
+// POIResultsList displays the lists of points of interest with filtering and sorting
 func POIResultsList(pois []models.POIDetailedInfo) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context

@@ -18,6 +18,6 @@ func DebugPrintEvents(logger *zap.SugaredLogger, eventData []byte) {
 	if err := json.Indent(&prettyJSON, eventData, "", "  "); err == nil {
 		logger.Info("Debug pretty-printed event JSON", "event", prettyJSON.String())
 	} else {
-		logger.Warn("Failed to pretty-print event as JSON", "error", err)
+		logger.Warn("Failed to pretty-print event as JSON", zap.Error(err))
 	}
 }

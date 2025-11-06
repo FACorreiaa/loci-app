@@ -12,7 +12,7 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"github.com/FACorreiaa/go-templui/internal/app/components/icon"
-	"github.com/FACorreiaa/go-templui/internal/app/utils"
+	"github.com/FACorreiaa/go-templui/internal/utils"
 )
 
 type Props struct {

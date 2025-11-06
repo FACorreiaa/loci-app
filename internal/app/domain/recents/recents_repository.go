@@ -3,9 +3,10 @@ package recents
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"strings"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -30,10 +31,10 @@ type Repository interface {
 
 type RepositoryImpl struct {
 	pgpool *pgxpool.Pool
-	logger *slog.Logger
+	logger *zap.Logger
 }
 
-func NewRepository(pgpool *pgxpool.Pool, logger *slog.Logger) *RepositoryImpl {
+func NewRepository(pgpool *pgxpool.Pool, logger *zap.Logger) *RepositoryImpl {
 	return &RepositoryImpl{
 		pgpool: pgpool,
 		logger: logger,
@@ -52,7 +53,7 @@ func (r *RepositoryImpl) GetUserRecentInteractions(ctx context.Context, userID u
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetUserRecentInteractions"))
+	l := r.logger.With(zap.String("method", "GetUserRecentInteractions"))
 
 	// Build WHERE clause with filters
 	whereConditions := []string{"user_id = $1", "city_name != ''", "city_name IS NOT NULL"}
@@ -145,13 +146,13 @@ func (r *RepositoryImpl) GetUserRecentInteractions(ctx context.Context, userID u
     `, subquery, orderBy, argIndex, argIndex+1)
 
 	args = append(args, limit, (page-1)*limit)
-	l.InfoContext(ctx, "Executing query",
-		slog.String("query", query),
-		slog.Any("params", args))
+	l.Info("Executing query",
+		zap.String("query", query),
+		zap.Any("params", args))
 
 	rows, err := r.pgpool.Query(ctx, query, args...)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query recent interactions", slog.Any("error", err))
+		l.Error("Failed to query recent interactions", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Database query failed")
 		return nil, fmt.Errorf("failed to query recent interactions: %w", err)
@@ -169,15 +170,15 @@ func (r *RepositoryImpl) GetUserRecentInteractions(ctx context.Context, userID u
 
 		err := rows.Scan(&cityName, &lastActivity, &interactionCount, &sessionID, &title, &poiCount)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to scan city row", slog.Any("error", err))
+			l.Error("Failed to scan city row", zap.Any("error", err))
 			continue
 		}
 
 		interactions, err := r.getCityInteractions(ctx, userID, cityName)
 		if err != nil {
-			l.WarnContext(ctx, "Failed to get interactions for city",
-				slog.String("city", cityName),
-				slog.Any("error", err))
+			l.Warn("Failed to get interactions for city",
+				zap.String("city", cityName),
+				zap.Any("error", err))
 			continue
 		}
 
@@ -195,7 +196,7 @@ func (r *RepositoryImpl) GetUserRecentInteractions(ctx context.Context, userID u
 	}
 
 	if err := rows.Err(); err != nil {
-		l.ErrorContext(ctx, "Error iterating rows", slog.Any("error", err))
+		l.Error("Error iterating rows", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
@@ -226,14 +227,14 @@ func (r *RepositoryImpl) GetUserRecentInteractions(ctx context.Context, userID u
 	var total int
 	err = r.pgpool.QueryRow(ctx, countWrapperQuery, countArgs...).Scan(&total)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query total recent interactions count", slog.Any("error", err))
+		l.Error("Failed to query total recent interactions count", zap.Any("error", err))
 		// Handle the error - you could return an error or default to 0
 		return nil, fmt.Errorf("failed to get total count: %w", err)
 	}
 
-	l.InfoContext(ctx, "Successfully retrieved recent interactions",
-		slog.Int("cities_count", total),
-		slog.String("user_id", userID.String()))
+	l.Info("Successfully retrieved recent interactions",
+		zap.Int("cities_count", total),
+		zap.String("user_id", userID.String()))
 
 	span.SetAttributes(attribute.Int("results.cities", total))
 	span.SetStatus(codes.Ok, "Recent interactions retrieved")
@@ -309,7 +310,7 @@ func (r *RepositoryImpl) getCityInteractions(ctx context.Context, userID uuid.UU
 			&interaction.Domain,
 		)
 		if err != nil {
-			r.logger.WarnContext(ctx, "Failed to scan interaction row", slog.Any("error", err))
+			r.logger.Warn("Failed to scan interaction row", zap.Any("error", err))
 			continue
 		}
 
@@ -332,7 +333,7 @@ func (r *RepositoryImpl) GetCityPOIsByInteraction(ctx context.Context, userID uu
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetCityPOIsByInteraction"))
+	l := r.logger.With(zap.String("method", "GetCityPOIsByInteraction"))
 
 	query := `
 		SELECT DISTINCT 
@@ -359,7 +360,7 @@ func (r *RepositoryImpl) GetCityPOIsByInteraction(ctx context.Context, userID uu
 
 	rows, err := r.pgpool.Query(ctx, query, userID, cityName)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query city POIs", slog.Any("error", err))
+		l.Error("Failed to query city POIs", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Database query failed")
 		return nil, fmt.Errorf("failed to query city POIs: %w", err)
@@ -390,7 +391,7 @@ func (r *RepositoryImpl) GetCityPOIsByInteraction(ctx context.Context, userID uu
 			&poi.CreatedAt,
 		)
 		if err != nil {
-			l.WarnContext(ctx, "Failed to scan POI row", slog.Any("error", err))
+			l.Warn("Failed to scan POI row", zap.Any("error", err))
 			continue
 		}
 
@@ -423,14 +424,14 @@ func (r *RepositoryImpl) GetCityPOIsByInteraction(ctx context.Context, userID uu
 	}
 
 	if err := rows.Err(); err != nil {
-		l.ErrorContext(ctx, "Error iterating POI rows", slog.Any("error", err))
+		l.Error("Error iterating POI rows", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("error iterating POI rows: %w", err)
 	}
 
-	l.InfoContext(ctx, "Successfully retrieved city POIs",
-		slog.String("city_name", cityName),
-		slog.Int("poi_count", len(pois)))
+	l.Info("Successfully retrieved city POIs",
+		zap.String("city_name", cityName),
+		zap.Int("poi_count", len(pois)))
 
 	span.SetAttributes(attribute.Int("results.pois", len(pois)))
 	span.SetStatus(codes.Ok, "City POIs retrieved")
@@ -446,7 +447,7 @@ func (r *RepositoryImpl) GetCityHotelsByInteraction(ctx context.Context, userID 
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetCityHotelsByInteraction"))
+	l := r.logger.With(zap.String("method", "GetCityHotelsByInteraction"))
 
 	query := `
 		SELECT DISTINCT 
@@ -472,7 +473,7 @@ func (r *RepositoryImpl) GetCityHotelsByInteraction(ctx context.Context, userID 
 
 	rows, err := r.pgpool.Query(ctx, query, userID, cityName)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query city hotels", slog.Any("error", err))
+		l.Error("Failed to query city hotels", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Database query failed")
 		return nil, fmt.Errorf("failed to query city hotels: %w", err)
@@ -502,7 +503,7 @@ func (r *RepositoryImpl) GetCityHotelsByInteraction(ctx context.Context, userID 
 			&hotel.LlmInteractionID,
 		)
 		if err != nil {
-			l.WarnContext(ctx, "Failed to scan hotel row", slog.Any("error", err))
+			l.Warn("Failed to scan hotel row", zap.Any("error", err))
 			continue
 		}
 
@@ -533,14 +534,14 @@ func (r *RepositoryImpl) GetCityHotelsByInteraction(ctx context.Context, userID 
 	}
 
 	if err := rows.Err(); err != nil {
-		l.ErrorContext(ctx, "Error iterating hotel rows", slog.Any("error", err))
+		l.Error("Error iterating hotel rows", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("error iterating hotel rows: %w", err)
 	}
 
-	l.InfoContext(ctx, "Successfully retrieved city hotels",
-		slog.String("city_name", cityName),
-		slog.Int("hotel_count", len(hotels)))
+	l.Info("Successfully retrieved city hotels",
+		zap.String("city_name", cityName),
+		zap.Int("hotel_count", len(hotels)))
 
 	span.SetAttributes(attribute.Int("results.hotels", len(hotels)))
 	span.SetStatus(codes.Ok, "City hotels retrieved")
@@ -556,7 +557,7 @@ func (r *RepositoryImpl) GetCityRestaurantsByInteraction(ctx context.Context, us
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetCityRestaurantsByInteraction"))
+	l := r.logger.With(zap.String("method", "GetCityRestaurantsByInteraction"))
 
 	query := `
 		SELECT DISTINCT 
@@ -583,7 +584,7 @@ func (r *RepositoryImpl) GetCityRestaurantsByInteraction(ctx context.Context, us
 
 	rows, err := r.pgpool.Query(ctx, query, userID, cityName)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query city restaurants", slog.Any("error", err))
+		l.Error("Failed to query city restaurants", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Database query failed")
 		return nil, fmt.Errorf("failed to query city restaurants: %w", err)
@@ -615,7 +616,7 @@ func (r *RepositoryImpl) GetCityRestaurantsByInteraction(ctx context.Context, us
 			&restaurant.LlmInteractionID,
 		)
 		if err != nil {
-			l.WarnContext(ctx, "Failed to scan restaurant row", slog.Any("error", err))
+			l.Warn("Failed to scan restaurant row", zap.Any("error", err))
 			continue
 		}
 
@@ -639,14 +640,14 @@ func (r *RepositoryImpl) GetCityRestaurantsByInteraction(ctx context.Context, us
 	}
 
 	if err := rows.Err(); err != nil {
-		l.ErrorContext(ctx, "Error iterating restaurant rows", slog.Any("error", err))
+		l.Error("Error iterating restaurant rows", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("error iterating restaurant rows: %w", err)
 	}
 
-	l.InfoContext(ctx, "Successfully retrieved city restaurants",
-		slog.String("city_name", cityName),
-		slog.Int("restaurant_count", len(restaurants)))
+	l.Info("Successfully retrieved city restaurants",
+		zap.String("city_name", cityName),
+		zap.Int("restaurant_count", len(restaurants)))
 
 	span.SetAttributes(attribute.Int("results.restaurants", len(restaurants)))
 	span.SetStatus(codes.Ok, "City restaurants retrieved")
@@ -662,7 +663,7 @@ func (r *RepositoryImpl) GetCityItinerariesByInteraction(ctx context.Context, us
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetCityItinerariesByInteraction"))
+	l := r.logger.With(zap.String("method", "GetCityItinerariesByInteraction"))
 
 	query := `
 		SELECT DISTINCT 
@@ -690,7 +691,7 @@ func (r *RepositoryImpl) GetCityItinerariesByInteraction(ctx context.Context, us
 
 	rows, err := r.pgpool.Query(ctx, query, userID, cityName)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query city itineraries", slog.Any("error", err))
+		l.Error("Failed to query city itineraries", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Database query failed")
 		return nil, fmt.Errorf("failed to query city itineraries: %w", err)
@@ -718,7 +719,7 @@ func (r *RepositoryImpl) GetCityItinerariesByInteraction(ctx context.Context, us
 			&itinerary.UpdatedAt,
 		)
 		if err != nil {
-			l.WarnContext(ctx, "Failed to scan itinerary row", slog.Any("error", err))
+			l.Warn("Failed to scan itinerary row", zap.Any("error", err))
 			continue
 		}
 
@@ -726,14 +727,14 @@ func (r *RepositoryImpl) GetCityItinerariesByInteraction(ctx context.Context, us
 	}
 
 	if err := rows.Err(); err != nil {
-		l.ErrorContext(ctx, "Error iterating itinerary rows", slog.Any("error", err))
+		l.Error("Error iterating itinerary rows", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("error iterating itinerary rows: %w", err)
 	}
 
-	l.InfoContext(ctx, "Successfully retrieved city itineraries",
-		slog.String("city_name", cityName),
-		slog.Int("itinerary_count", len(itineraries)))
+	l.Info("Successfully retrieved city itineraries",
+		zap.String("city_name", cityName),
+		zap.Int("itinerary_count", len(itineraries)))
 
 	span.SetAttributes(attribute.Int("results.itineraries", len(itineraries)))
 	span.SetStatus(codes.Ok, "City itineraries retrieved")
@@ -749,7 +750,7 @@ func (r *RepositoryImpl) GetCityFavorites(ctx context.Context, userID uuid.UUID,
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetCityFavorites"))
+	l := r.logger.With(zap.String("method", "GetCityFavorites"))
 
 	// Query both regular POI favorites and LLM POI favorites
 	query := `
@@ -804,7 +805,7 @@ func (r *RepositoryImpl) GetCityFavorites(ctx context.Context, userID uuid.UUID,
 
 	rows, err := r.pgpool.Query(ctx, query, userID, cityName)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query city favorites", slog.Any("error", err))
+		l.Error("Failed to query city favorites", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Database query failed")
 		return nil, fmt.Errorf("failed to query city favorites: %w", err)
@@ -835,7 +836,7 @@ func (r *RepositoryImpl) GetCityFavorites(ctx context.Context, userID uuid.UUID,
 			&poi.CreatedAt,
 		)
 		if err != nil {
-			l.WarnContext(ctx, "Failed to scan favorite POI row", slog.Any("error", err))
+			l.Warn("Failed to scan favorite POI row", zap.Any("error", err))
 			continue
 		}
 
@@ -868,14 +869,14 @@ func (r *RepositoryImpl) GetCityFavorites(ctx context.Context, userID uuid.UUID,
 	}
 
 	if err := rows.Err(); err != nil {
-		l.ErrorContext(ctx, "Error iterating favorite POI rows", slog.Any("error", err))
+		l.Error("Error iterating favorite POI rows", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("error iterating favorite POI rows: %w", err)
 	}
 
-	l.InfoContext(ctx, "Successfully retrieved city favorites",
-		slog.String("city_name", cityName),
-		slog.Int("favorite_count", len(pois)))
+	l.Info("Successfully retrieved city favorites",
+		zap.String("city_name", cityName),
+		zap.Int("favorite_count", len(pois)))
 
 	span.SetAttributes(attribute.Int("results.favorites", len(pois)))
 	span.SetStatus(codes.Ok, "City favorites retrieved")

@@ -1310,7 +1310,7 @@ type CountService interface {
 	Get(ctx context.Context, sessionID string) (counts services.Counts, err error)
 }
 
-func New(log *slog.Logger, cs CountService) *DefaultHandler {
+func New(log *zap.Logger, cs CountService) *DefaultHandler {
 	return &DefaultHandler{
 		Log:          log,
 		CountService: cs,
@@ -1318,7 +1318,7 @@ func New(log *slog.Logger, cs CountService) *DefaultHandler {
 }
 
 type DefaultHandler struct {
-	Log          *slog.Logger
+	Log          *zap.Logger
 	CountService CountService
 }
 ```
@@ -1351,7 +1351,7 @@ func (h *DefaultHandler) Get(w http.ResponseWriter, r *http.Request) {
 	var err error
 	props.Counts, err = h.CountService.Get(r.Context(), session.ID(r))
 	if err != nil {
-		h.Log.Error("failed to get counts", slog.Any("error", err))
+		h.Log.Error("failed to get counts", zap.Any("error", err))
 		http.Error(w, "failed to get counts", http.StatusInternalServerError)
 		return
 	}
@@ -1372,7 +1372,7 @@ func (h *DefaultHandler) Post(w http.ResponseWriter, r *http.Request) {
 
 	counts, err := h.CountService.Increment(r.Context(), it, session.ID(r))
 	if err != nil {
-		h.Log.Error("failed to increment", slog.Any("error", err))
+		h.Log.Error("failed to increment", zap.Any("error", err))
 		http.Error(w, "failed to increment", http.StatusInternalServerError)
 		return
 	}
@@ -1475,10 +1475,10 @@ import (
 )
 
 func main() {
-	log := slog.New(slog.NewJSONHandler(os.Stderr))
+	log := zap.New(zap.NewJSONHandler(os.Stderr))
 	s, err := db.NewCountStore(os.Getenv("TABLE_NAME"), os.Getenv("AWS_REGION"))
 	if err != nil {
-		log.Error("failed to create store", slog.Any("error", err))
+		log.Error("failed to create store", zap.Any("error", err))
 		os.Exit(1)
 	}
 	cs := services.NewCount(log, s)
@@ -2254,7 +2254,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
   if id := r.PathValue("id"); id != "" {
     contact, ok, err := h.DB.Get(r.Context(), id)
     if err != nil {
-      h.Log.Error("Failed to get contact", slog.String("id", id), slog.Any("error", err))
+      h.Log.Error("Failed to get contact", zap.String("id", id), zap.Any("error", err))
       http.Error(w, err.Error(), http.StatusInternalServerError)
       return
     }
@@ -2290,7 +2290,7 @@ func (h *Handler) Post(w http.ResponseWriter, r *http.Request) {
   dec.IgnoreUnknownKeys(true)
   err = dec.Decode(&model, r.PostForm)
   if err != nil {
-    h.Log.Warn("Failed to decode form", slog.Any("error", err))
+    h.Log.Warn("Failed to decode form", zap.Any("error", err))
     http.Error(w, err.Error(), http.StatusBadRequest)
     return
   }
@@ -2308,13 +2308,13 @@ func (h *Handler) Post(w http.ResponseWriter, r *http.Request) {
   }
   contact := db.NewContact(id, model.Name, model.Email)
   if err = h.DB.Save(r.Context(), contact); err != nil {
-    h.Log.Error("Failed to save contact", slog.String("id", id), slog.Any("error", err))
+    h.Log.Error("Failed to save contact", zap.String("id", id), zap.Any("error", err))
     model.Error = "Failed to save the contact. Please try again."
     h.DisplayForm(w, r, model)
     return
   }
 
-  // Redirect back to the contact list.
+  // Redirect back to the contact lists.
   http.Redirect(w, r, "/contacts", http.StatusSeeOther)
 }
 ```
@@ -2342,10 +2342,10 @@ var dbURI = "file:data.db?mode=rwc"
 var addr = "localhost:8080"
 
 func main() {
-  log := slog.Default()
+  log := zap.Default()
   ctx := context.Background()
   if err := run(ctx, log); err != nil {
-    log.Error("Failed to run server", slog.Any("error", err))
+    log.Error("Failed to run server", zap.Any("error", err))
     os.Exit(1)
   }
 }
@@ -2356,12 +2356,12 @@ The `run` function first initializes the database connection.
 ```go title="main.go"
 pool, err := sqlitex.NewPool(dbURI, sqlitex.PoolOptions{})
 if err != nil {
-    log.Error("Failed to open database", slog.Any("error", err))
+    log.Error("Failed to open database", zap.Any("error", err))
     return err
 }
 store := sqlitekv.New(pool)
 if err := store.Init(ctx); err != nil {
-    log.Error("Failed to initialize store", slog.Any("error", err))
+    log.Error("Failed to initialize store", zap.Any("error", err))
     return err
 }
 db := db.New(store)
@@ -2396,7 +2396,7 @@ mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("st
 Finally, the server is started on the specified address and port.
 
 ```go title="main.go"
-log.Info("Starting server", slog.String("address", addr))
+log.Info("Starting server", zap.String("address", addr))
 return http.ListenAndServe(addr, mux)
 ```
 
@@ -2409,7 +2409,7 @@ The handler collects the list of contacts from the database, and passes it to th
 It's common practice to create a constructor function for the handler, and to define methods on the handler struct for each HTTP method that the handler supports to separate behaviour.
 
 ```go title="routes/contacts/handler.go"
-func NewHandler(log *slog.Logger, db *db.DB) http.Handler {
+func NewHandler(log *zap.Logger, db *db.DB) http.Handler {
   return &Handler{
     Log: log,
     DB:  db,
@@ -2417,7 +2417,7 @@ func NewHandler(log *slog.Logger, db *db.DB) http.Handler {
 }
 
 type Handler struct {
-  Log *slog.Logger
+  Log *zap.Logger
   DB  *db.DB
 }
 
@@ -2437,7 +2437,7 @@ The `Get` method retrieves the list of contacts from the database and passes it 
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
   contacts, err := h.DB.List(r.Context())
   if err != nil {
-    h.Log.Error("Failed to list contacts", slog.Any("error", err))
+    h.Log.Error("Failed to lists contacts", zap.Any("error", err))
     http.Error(w, err.Error(), http.StatusInternalServerError)
     return
   }
@@ -2542,7 +2542,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
     // Get the existing contact from the database and populate the form.
     contact, ok, err := h.DB.Get(r.Context(), id)
     if err != nil {
-      h.Log.Error("Failed to get contact", slog.String("id", id), slog.Any("error", err))
+      h.Log.Error("Failed to get contact", zap.String("id", id), zap.Any("error", err))
       http.Error(w, err.Error(), http.StatusInternalServerError)
       return err
     }
@@ -2586,7 +2586,7 @@ func (h *Handler) Post(w http.ResponseWriter, r *http.Request) {
   dec.IgnoreUnknownKeys(true)
   err = dec.Decode(&model, r.PostForm)
   if err != nil {
-    h.Log.Warn("Failed to decode form", slog.Any("error", err))
+    h.Log.Warn("Failed to decode form", zap.Any("error", err))
     http.Error(w, err.Error(), http.StatusBadRequest)
     return
   }
@@ -2604,13 +2604,13 @@ func (h *Handler) Post(w http.ResponseWriter, r *http.Request) {
   }
   contact := db.NewContact(id, model.Name, model.Email)
   if err = h.DB.Save(r.Context(), contact); err != nil {
-    h.Log.Error("Failed to save contact", slog.String("id", id), slog.Any("error", err))
+    h.Log.Error("Failed to save contact", zap.String("id", id), zap.Any("error", err))
     model.Error = "Failed to save the contact. Please try again."
     h.DisplayForm(w, r, model)
     return
   }
 
-  // Redirect back to the contact list.
+  // Redirect back to the contact lists.
   http.Redirect(w, r, "/contacts", http.StatusSeeOther)
 }
 ```
@@ -2739,7 +2739,7 @@ After the user confirms the deletion, the contact is removed from the database a
 
 ```go title=./routes/contactsdelete/handler.go
 type Handler struct {
-  Log *slog.Logger
+  Log *zap.Logger
   DB  *db.DB
 }
 
@@ -2774,7 +2774,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
   // Get the existing contact from the database.
   contact, ok, err := h.DB.Get(r.Context(), id)
   if err != nil {
-    h.Log.Error("Failed to get contact", slog.String("id", id), slog.Any("error", err))
+    h.Log.Error("Failed to get contact", zap.String("id", id), zap.Any("error", err))
     http.Error(w, err.Error(), http.StatusInternalServerError)
     return
   }
@@ -2799,12 +2799,12 @@ func (h *Handler) Post(w http.ResponseWriter, r *http.Request) {
   // Delete the contact from the database.
   err := h.DB.Delete(r.Context(), id)
   if err != nil {
-    h.Log.Error("Failed to delete contact", slog.String("id", id), slog.Any("error", err))
+    h.Log.Error("Failed to delete contact", zap.String("id", id), zap.Any("error", err))
     http.Error(w, err.Error(), http.StatusInternalServerError)
     return
   }
 
-  // Redirect back to the contact list.
+  // Redirect back to the contact lists.
   http.Redirect(w, r, "/contacts", http.StatusSeeOther)
 }
 ```
@@ -6157,10 +6157,10 @@ import (
 
 func main() {
 	// Create common.
-	log := slog.New(slog.NewJSONHandler(os.Stderr))
+	log := zap.New(zap.NewJSONHandler(os.Stderr))
 	s, err := db.NewCountStore(os.Getenv("TABLE_NAME"), os.Getenv("AWS_REGION"))
 	if err != nil {
-		log.Error("failed to create store", slog.Any("error", err))
+		log.Error("failed to create store", zap.Any("error", err))
 		os.Exit(1)
 	}
 	cs := services.NewCount(log, s)

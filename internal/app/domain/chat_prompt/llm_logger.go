@@ -5,10 +5,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strings"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
@@ -22,12 +23,12 @@ import (
 
 // LLMLogger handles comprehensive logging of LLM interactions with async support
 type LLMLogger struct {
-	logger *slog.Logger
+	logger *zap.Logger
 	repo   llmlogging.Repository
 }
 
 // NewLLMLogger creates a new LLM logger instance
-func NewLLMLogger(logger *slog.Logger, repo llmlogging.Repository) *LLMLogger {
+func NewLLMLogger(logger *zap.Logger, repo llmlogging.Repository) *LLMLogger {
 	return &LLMLogger{
 		logger: logger,
 		repo:   repo,
@@ -103,10 +104,10 @@ func (l *LLMLogger) LogInteractionAsync(
 
 	go func() {
 		if err := l.logInteraction(asyncCtx, config, response, latencyMs); err != nil {
-			l.logger.ErrorContext(asyncCtx, "Failed to log LLM interaction asynchronously",
-				slog.String("intent", config.Intent),
-				slog.String("session_id", config.SessionID.String()),
-				slog.Any("error", err))
+			l.logger.Error("Failed to log LLM interaction asynchronously",
+				zap.String("intent", config.Intent),
+				zap.String("session_id", config.SessionID.String()),
+				zap.Any("error", err))
 		}
 	}()
 }
@@ -207,13 +208,13 @@ func (l *LLMLogger) logInteraction(
 	}
 
 	span.SetAttributes(attribute.String("interaction_id", savedID.String()))
-	l.logger.InfoContext(ctx, "LLM interaction logged successfully",
-		slog.String("interaction_id", savedID.String()),
-		slog.String("intent", config.Intent),
-		slog.Int("prompt_tokens", response.PromptTokens),
-		slog.Int("completion_tokens", response.CompletionTokens),
-		slog.Float64("cost_usd", cost),
-		slog.Int64("latency_ms", latencyMs))
+	l.logger.Info("LLM interaction logged successfully",
+		zap.String("interaction_id", savedID.String()),
+		zap.String("intent", config.Intent),
+		zap.Int("prompt_tokens", response.PromptTokens),
+		zap.Int("completion_tokens", response.CompletionTokens),
+		zap.Float64("cost_usd", cost),
+		zap.Int64("latency_ms", latencyMs))
 
 	return nil
 }

@@ -426,8 +426,8 @@ func TestEnhancedAuthHandlers_LoginHandler(t *testing.T) {
 1. **Enable Debug Logging**:
    ```go
    logger.Log.Debug("Authentication attempt", 
-       slog.String("email", email),
-       slog.String("ip", r.RemoteAddr))
+       zap.String("email", email),
+       zap.String("ip", r.RemoteAddr))
    ```
 
 2. **HTMX Debug Mode**:

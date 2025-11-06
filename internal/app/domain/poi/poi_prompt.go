@@ -11,7 +11,7 @@ func getRestaurantsNearbyPrompt(userLocation models.UserLocation) string {
 		userLocation.SearchRadiusKm = 5.0
 	}
 	return fmt.Sprintf(`
-        Generate a list of up to 10 restaurants within %.2f km of coordinates %.2f, %.2f.
+        Generate a lists of up to 10 restaurants within %.2f km of coordinates %.2f, %.2f.
         Include a variety of restaurant categories to provide diverse options.
         The result must be in JSON format:
         {
@@ -30,7 +30,7 @@ func getRestaurantsNearbyPrompt(userLocation models.UserLocation) string {
 
 func getHotelsNeabyPrompt(userLocation models.UserLocation) string {
 	return fmt.Sprintf(`
-        Generate a list of maximum 10 hotels nearby the coordinates %0.2f , %0.2f.
+        Generate a lists of maximum 10 hotels nearby the coordinates %0.2f , %0.2f.
         the hotels can be around %0.2f km radius from the user's location or if nothing provided, use the default radius of 5km.
         The hotels should be relevant to the user's interest.
         The result should be in the following JSON format:
@@ -53,7 +53,7 @@ func getActivitiesNearbyPrompt(userLocation models.UserLocation) string {
 		userLocation.SearchRadiusKm = 5.0
 	}
 	return fmt.Sprintf(`
-        Generate a list of up to 10 open air activities people can do within %.2f km of coordinates %.2f, %.2f.
+        Generate a lists of up to 10 open air activities people can do within %.2f km of coordinates %.2f, %.2f.
         Include a variety of restaurant categories to provide diverse options.
         The result must be in JSON format:
         {
@@ -75,7 +75,7 @@ func getAttractionsNeabyPrompt(userLocation models.UserLocation) string {
 		userLocation.SearchRadiusKm = 5.0
 	}
 	return fmt.Sprintf(`
-        Generate a list of up to 10 attractions people can do within %.2f km of coordinates %.2f, %.2f.
+        Generate a lists of up to 10 attractions people can do within %.2f km of coordinates %.2f, %.2f.
         Include a variety of restaurant categories to provide diverse options.
         The result must be in JSON format:
         {
@@ -94,7 +94,7 @@ func getAttractionsNeabyPrompt(userLocation models.UserLocation) string {
 
 func getGeneralPOIByDistance(lat, lon, distance float64) string {
 	return fmt.Sprintf(`
-            Generate a list of points of interest that people usually see no matter. Could be points of interest, bars, restaurants, hotels, activities, etc.
+            Generate a lists of points of interest that people usually see no matter. Could be points of interest, bars, restaurants, hotels, activities, etc.
             The user location is at latitude %0.2f and longitude %0.2f.
             Only include points of interest that are within %0.2f kilometers from the user's location.
             Return the response STRICTLY as a JSON object with:

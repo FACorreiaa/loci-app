@@ -10,17 +10,18 @@ import (
 
 	"github.com/FACorreiaa/go-templui/internal/app/domain/poi"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
-	"github.com/FACorreiaa/go-templui/internal/pkg/logger"
 	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 )
 
 type BookmarksHandlers struct {
 	poiService poi.Service
+	logger     *zap.Logger
 }
 
-func NewBookmarksHandlers(poiService poi.Service) *BookmarksHandlers {
+func NewBookmarksHandlers(poiService poi.Service, logger *zap.Logger) *BookmarksHandlers {
 	return &BookmarksHandlers{
 		poiService: poiService,
+		logger:     logger,
 	}
 }
 
@@ -53,19 +54,19 @@ func (h *BookmarksHandlers) AddBookmark(c *gin.Context) {
 
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid user ID", zap.String("user_id", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("user_id", userIDStr), zap.Error(err))
 		c.HTML(http.StatusBadRequest, "", `<div class="text-red-500 text-sm">Invalid user ID</div>`)
 		return
 	}
 
 	itineraryID, err := uuid.Parse(id)
 	if err != nil {
-		logger.Log.Error("Invalid itinerary ID", zap.String("itinerary_id", id), zap.Error(err))
+		h.logger.Error("Invalid itinerary ID", zap.String("itinerary_id", id), zap.Error(err))
 		c.HTML(http.StatusBadRequest, "", `<div class="text-red-500 text-sm">Invalid itinerary ID</div>`)
 		return
 	}
 
-	logger.Log.Info("Adding itinerary to bookmarks",
+	h.logger.Info("Adding itinerary to bookmarks",
 		zap.String("itinerary_id", id),
 		zap.String("user_id", userIDStr),
 	)
@@ -73,7 +74,7 @@ func (h *BookmarksHandlers) AddBookmark(c *gin.Context) {
 	// Add to database
 	_, err = h.poiService.AddItineraryToBookmarks(c.Request.Context(), userID, itineraryID)
 	if err != nil {
-		logger.Log.Error("Failed to add to bookmarks", zap.Error(err))
+		h.logger.Error("Failed to add to bookmarks", zap.Error(err))
 		c.HTML(http.StatusInternalServerError, "", `<div class="text-red-500 text-sm">Failed to add to bookmarks</div>`)
 		return
 	}
@@ -93,7 +94,7 @@ func (h *BookmarksHandlers) AddBookmark(c *gin.Context) {
 		</button>
 	`)
 
-	logger.Log.Info("Successfully added to bookmarks",
+	h.logger.Info("Successfully added to bookmarks",
 		zap.String("itinerary_id", id),
 		zap.String("user_id", userIDStr),
 	)
@@ -110,19 +111,19 @@ func (h *BookmarksHandlers) RemoveBookmark(c *gin.Context) {
 
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid user ID", zap.String("user_id", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("user_id", userIDStr), zap.Error(err))
 		c.HTML(http.StatusBadRequest, "", `<div class="text-red-500 text-sm">Invalid user ID</div>`)
 		return
 	}
 
 	itineraryID, err := uuid.Parse(id)
 	if err != nil {
-		logger.Log.Error("Invalid itinerary ID", zap.String("itinerary_id", id), zap.Error(err))
+		h.logger.Error("Invalid itinerary ID", zap.String("itinerary_id", id), zap.Error(err))
 		c.HTML(http.StatusBadRequest, "", `<div class="text-red-500 text-sm">Invalid itinerary ID</div>`)
 		return
 	}
 
-	logger.Log.Info("Removing itinerary from bookmarks",
+	h.logger.Info("Removing itinerary from bookmarks",
 		zap.String("itinerary_id", id),
 		zap.String("user_id", userIDStr),
 	)
@@ -130,7 +131,7 @@ func (h *BookmarksHandlers) RemoveBookmark(c *gin.Context) {
 	// Remove from database
 	err = h.poiService.RemoveItineraryFromBookmarks(c.Request.Context(), userID, itineraryID)
 	if err != nil {
-		logger.Log.Error("Failed to remove from bookmarks", zap.Error(err))
+		h.logger.Error("Failed to remove from bookmarks", zap.Error(err))
 		c.HTML(http.StatusInternalServerError, "", `<div class="text-red-500 text-sm">Failed to remove from bookmarks</div>`)
 		return
 	}
@@ -150,13 +151,13 @@ func (h *BookmarksHandlers) RemoveBookmark(c *gin.Context) {
 		</button>
 	`)
 
-	logger.Log.Info("Successfully removed from bookmarks",
+	h.logger.Info("Successfully removed from bookmarks",
 		zap.String("itinerary_id", id),
 		zap.String("user_id", userIDStr),
 	)
 }
 
-// ListBookmarks displays the bookmarks list page with search, filter, and pagination
+// ListBookmarks displays the bookmarks lists page with search, filter, and pagination
 func (h *BookmarksHandlers) ListBookmarks(c *gin.Context) {
 	userIDStr := middleware.GetUserIDFromContext(c)
 	if userIDStr == "" || userIDStr == "anonymous" {
@@ -166,7 +167,7 @@ func (h *BookmarksHandlers) ListBookmarks(c *gin.Context) {
 
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		logger.Log.Error("Invalid user ID", zap.String("user_id", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("user_id", userIDStr), zap.Error(err))
 		c.HTML(http.StatusBadRequest, "", `<div class="text-red-500">Invalid user ID</div>`)
 		return
 	}
@@ -203,7 +204,7 @@ func (h *BookmarksHandlers) ListBookmarks(c *gin.Context) {
 	// Get filtered bookmarks
 	itineraries, total, err := h.poiService.GetBookmarksFiltered(c.Request.Context(), filter)
 	if err != nil {
-		logger.Log.Error("Failed to get bookmarks", zap.Error(err))
+		h.logger.Error("Failed to get bookmarks", zap.Error(err))
 		c.HTML(http.StatusInternalServerError, "", `<div class="text-red-500">Failed to load bookmarks</div>`)
 		return
 	}
@@ -223,7 +224,7 @@ func (h *BookmarksHandlers) ListBookmarks(c *gin.Context) {
 		SortOrder:   sortOrder,
 	}
 
-	// Render the bookmarks list page using templ
+	// Render the bookmarks lists page using templ
 	c.Writer.Header().Set("Content-Type", "text/html; charset=utf-8")
 	BookmarksPage(data).Render(c.Request.Context(), c.Writer)
 }

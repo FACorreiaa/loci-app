@@ -6,10 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"regexp"
 	"strings"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -63,11 +64,11 @@ type Repository interface {
 }
 
 type RepositoryImpl struct {
-	logger *slog.Logger
+	logger *zap.Logger
 	pgpool *pgxpool.Pool
 }
 
-func NewRepositoryImpl(pgxpool *pgxpool.Pool, logger *slog.Logger) *RepositoryImpl {
+func NewRepositoryImpl(pgxpool *pgxpool.Pool, logger *zap.Logger) *RepositoryImpl {
 	return &RepositoryImpl{
 		logger: logger,
 		pgpool: pgxpool,
@@ -100,7 +101,10 @@ func (r *RepositoryImpl) SaveInteraction(ctx context.Context, interaction models
 		}
 		if err != nil {
 			if rbErr := tx.Rollback(ctx); rbErr != nil {
-				r.logger.ErrorContext(ctx, "Transaction rollback failed after error", "original_error", err, "rollback_error", rbErr)
+				r.logger.Error("Transaction rollback failed after error",
+					zap.Error(rbErr),
+					zap.Error(err),
+				)
 				span.RecordError(fmt.Errorf("transaction rollback failed: %v (original error: %w)", rbErr, err))
 			}
 		}
@@ -135,7 +139,10 @@ func (r *RepositoryImpl) SaveInteraction(ctx context.Context, interaction models
 		err = tx.QueryRow(ctx, cityQuery, interaction.CityName).Scan(&cityID)
 		if err != nil {
 			if err == pgx.ErrNoRows {
-				r.logger.WarnContext(ctx, "City not found in database, itinerary creation will be skipped", "city_name", interaction.CityName, "interaction_id", interactionID.String())
+				r.logger.Warn("City not found in database, itinerary creation will be skipped",
+					zap.String("city_name", interaction.CityName),
+					zap.String("user_id", interaction.UserID.String()),
+				)
 				span.AddEvent("City not found in database", trace.WithAttributes(attribute.String("city.name", interaction.CityName)))
 				// err is pgx.ErrNoRows, so cityID remains uuid.Nil, processing continues correctly. Clear err.
 				err = nil
@@ -148,7 +155,10 @@ func (r *RepositoryImpl) SaveInteraction(ctx context.Context, interaction models
 			span.SetAttributes(attribute.String("city.id", cityID.String()))
 		}
 	} else {
-		r.logger.InfoContext(ctx, "interaction.CityName is empty, cannot determine city_id. Itinerary creation will be skipped.", "interaction_id", interactionID.String())
+		r.logger.Info("interaction.CityName is empty, cannot determine city_id. Itinerary creation will be skipped.",
+			zap.String("city_name", interaction.CityName),
+			zap.String("user_id", interaction.UserID.String()),
+			zap.String("id", interactionID.String()))
 		span.AddEvent("interaction.CityName is empty")
 	}
 
@@ -178,7 +188,7 @@ func (r *RepositoryImpl) SaveInteraction(ctx context.Context, interaction models
 			strings.Contains(interaction.Prompt, "Unified Chat - Domain: accommodation") ||
 			strings.Contains(interaction.Prompt, "Unified Chat - Domain: activities") {
 			// Skip POI parsing for domain-specific responses that don't contain POIs
-			r.logger.DebugContext(ctx, "Skipping POI parsing for domain-specific response", "interaction_id", interactionID.String())
+			r.logger.Debug("Skipping POI parsing for domain-specific response", zap.String("interaction_id", interactionID.String()))
 			span.AddEvent("Skipped POI parsing for domain-specific response")
 		} else {
 			pois, err = parsePOIsFromResponse(interaction.ResponseText, r.logger)
@@ -218,7 +228,7 @@ func (r *RepositoryImpl) SaveInteraction(ctx context.Context, interaction models
 					if execErr != nil {
 						err = fmt.Errorf("failed to insert itinerary_poi in batch (operation %d of %d for itinerary %s): %w", i+1, poiBatch.Len(), itineraryID.String(), execErr)
 						if closeErr := br.Close(); closeErr != nil {
-							r.logger.ErrorContext(ctx, "Failed to close batch for itinerary_pois after an exec error", "close_error", closeErr, "original_batch_error", err)
+							r.logger.Error("Failed to close batch for itinerary_pois after an exec error", zap.NamedError("close_error", closeErr), zap.NamedError("original_batch_error", err))
 						}
 						span.RecordError(err)
 						span.SetStatus(codes.Error, "Failed to insert itinerary_poi in batch")
@@ -236,10 +246,10 @@ func (r *RepositoryImpl) SaveInteraction(ctx context.Context, interaction models
 		}
 	} else {
 		if cityID != uuid.Nil {
-			r.logger.WarnContext(ctx, "ItineraryID is Nil despite valid CityID, indicating itinerary insert/update issue.", "city_id", cityID.String(), "interaction_id", interactionID.String())
+			r.logger.Warn("ItineraryID is Nil despite valid CityID, indicating itinerary insert/update issue.", zap.String("city_id", cityID.String()), zap.String("interaction_id", interactionID.String()))
 			span.AddEvent("ItineraryID is Nil despite valid CityID.")
 		} else {
-			r.logger.InfoContext(ctx, "Skipping itinerary_pois: itineraryID is Nil (likely city not found or CityName empty).", "interaction_id", interactionID.String())
+			r.logger.Info("Skipping itinerary_pois: itineraryID is Nil (likely city not found or CityName empty).", zap.String("interaction_id", interactionID.String()))
 			span.AddEvent("Skipping itinerary_pois: itineraryID is Nil.")
 		}
 	}
@@ -268,26 +278,26 @@ func (r *RepositoryImpl) SaveLlmSuggestedPOIsBatch(ctx context.Context, pois []m
 	))
 	defer span.End()
 
-	r.logger.InfoContext(ctx, "SaveLlmSuggestedPOIsBatch - About to save batch",
-		slog.String("llm_interaction_id", llmInteractionID.String()),
-		slog.String("user_id", userID.String()),
-		slog.String("city_id", cityID.String()),
-		slog.Int("poi_count", len(pois)))
+	r.logger.Info("SaveLlmSuggestedPOIsBatch - About to save batch",
+		zap.String("llm_interaction_id", llmInteractionID.String()),
+		zap.String("user_id", userID.String()),
+		zap.String("city_id", cityID.String()),
+		zap.Int("poi_count", len(pois)))
 
 	// Verify the llm_interaction_id exists before trying to insert POIs
 	var exists bool
 	checkQuery := `SELECT EXISTS(SELECT 1 FROM llm_interactions WHERE id = $1)`
 	err := r.pgpool.QueryRow(ctx, checkQuery, llmInteractionID).Scan(&exists)
 	if err != nil {
-		r.logger.ErrorContext(ctx, "Failed to check if llm_interaction exists", slog.Any("error", err))
+		r.logger.Error("Failed to check if llm_interaction exists", zap.Any("error", err))
 		return fmt.Errorf("failed to check if llm_interaction exists: %w", err)
 	}
 	if !exists {
-		r.logger.ErrorContext(ctx, "llm_interaction_id does not exist in database",
-			slog.String("llm_interaction_id", llmInteractionID.String()))
+		r.logger.Error("llm_interaction_id does not exist in database",
+			zap.String("llm_interaction_id", llmInteractionID.String()))
 		return fmt.Errorf("llm_interaction_id %s does not exist in database", llmInteractionID.String())
 	}
-	r.logger.InfoContext(ctx, "llm_interaction_id exists, proceeding with POI batch insert")
+	r.logger.Info("llm_interaction_id exists, proceeding with POI batch insert")
 
 	batch := &pgx.Batch{}
 	query := `
@@ -425,7 +435,7 @@ func (r *RepositoryImpl) AddChatToBookmark(ctx context.Context, itinerary *model
 	}
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
-			r.logger.ErrorContext(ctx, "transaction rollback failed", slog.Any("error", err))
+			r.logger.Error("transaction rollback failed", zap.Any("error", err))
 		}
 	}()
 
@@ -462,17 +472,17 @@ func (r *RepositoryImpl) AddChatToBookmark(ctx context.Context, itinerary *model
 	}
 
 	// Debug: Log what was saved for debugging bookmark removal issues
-	r.logger.InfoContext(ctx, "Successfully saved bookmark to database",
-		slog.String("saved_itinerary_id", savedItineraryID.String()),
-		slog.String("user_id", itinerary.UserID.String()),
-		slog.String("title", itinerary.Title),
-		slog.String("session_id", func() string {
+	r.logger.Info("Successfully saved bookmark to database",
+		zap.String("saved_itinerary_id", savedItineraryID.String()),
+		zap.String("user_id", itinerary.UserID.String()),
+		zap.String("title", itinerary.Title),
+		zap.String("session_id", func() string {
 			if itinerary.SessionID.Valid {
 				return uuid.UUID(itinerary.SessionID.Bytes).String()
 			}
 			return "null"
 		}()),
-		slog.String("source_llm_interaction_id", func() string {
+		zap.String("source_llm_interaction_id", func() string {
 			if itinerary.SourceLlmInteractionID.Valid {
 				return uuid.UUID(itinerary.SourceLlmInteractionID.Bytes).String()
 			}
@@ -643,7 +653,7 @@ func (r *RepositoryImpl) RemoveChatFromBookmark(ctx context.Context, userID, iti
 	}
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
-			r.logger.ErrorContext(ctx, "transaction rollback failed", slog.Any("error", err))
+			r.logger.Error("transaction rollback failed", zap.Any("error", err))
 		}
 	}()
 
@@ -660,14 +670,14 @@ func (r *RepositoryImpl) RemoveChatFromBookmark(ctx context.Context, userID, iti
 
 	//if tag.RowsAffected() == 0 {
 	//	// Debug: List all itineraries for this user to help with debugging
-	//	r.logger.InfoContext(ctx, "Attempting to remove non-existent itinerary, debugging available itineraries",
-	//		slog.String("requested_itinerary_id", itineraryID.String()),
-	//		slog.String("user_id", userID.String()))
+	//	r.logger.Info("Attempting to remove non-existent itinerary, debugging available itineraries",
+	//		zap.String("requested_itinerary_id", itineraryID.String()),
+	//		zap.String("user_id", userID.String()))
 	//
 	//	debugQuery := `SELECT id, title, session_id, source_llm_interaction_id, created_at FROM user_saved_itineraries WHERE user_id = $1 ORDER BY created_at DESC LIMIT 10`
 	//	rows, debugErr := r.pgpool.Query(ctx, debugQuery, userID)
 	//	if debugErr != nil {
-	//		r.logger.ErrorContext(ctx, "Failed to execute debug query", slog.Any("error", debugErr))
+	//		r.logger.Error("Failed to execute debug query", zap.Any("error", debugErr))
 	//	} else {
 	//		defer rows.Close()
 	//		count := 0
@@ -679,31 +689,31 @@ func (r *RepositoryImpl) RemoveChatFromBookmark(ctx context.Context, userID, iti
 	//
 	//			if scanErr := rows.Scan(&id, &title, &sessionIDStr, &sourceIDStr, &createdAt); scanErr == nil {
 	//				count++
-	//				r.logger.InfoContext(ctx, "Found existing itinerary",
-	//					slog.Int("index", count),
-	//					slog.String("id", id.String()),
-	//					slog.String("title", title),
-	//					slog.String("session_id", func() string {
+	//				r.logger.Info("Found existing itinerary",
+	//					zap.Int("index", count),
+	//					zap.String("id", id.String()),
+	//					zap.String("title", title),
+	//					zap.String("session_id", func() string {
 	//						if sessionIDStr.Valid {
 	//							return sessionIDStr.String
 	//						}
 	//						return "null"
 	//					}()),
-	//					slog.String("source_llm_interaction_id", func() string {
+	//					zap.String("source_llm_interaction_id", func() string {
 	//						if sourceIDStr.Valid {
 	//							return sourceIDStr.String
 	//						}
 	//						return "null"
 	//					}()),
-	//					slog.Time("created_at", createdAt))
+	//					zap.Time("created_at", createdAt))
 	//			} else {
-	//				r.logger.WarnContext(ctx, "Failed to scan debug row", slog.Any("error", scanErr))
+	//				r.logger.Warn("Failed to scan debug row", zap.Any("error", scanErr))
 	//			}
 	//		}
 	//		if count == 0 {
-	//			r.logger.InfoContext(ctx, "No itineraries found for user")
+	//			r.logger.Info("No itineraries found for user")
 	//		} else {
-	//			r.logger.InfoContext(ctx, "Debug query completed", slog.Int("total_found", count))
+	//			r.logger.Info("Debug query completed", zap.Int("total_found", count))
 	//		}
 	//	}
 	//
@@ -712,23 +722,23 @@ func (r *RepositoryImpl) RemoveChatFromBookmark(ctx context.Context, userID, iti
 	//	checkQuery := `SELECT EXISTS(SELECT 1 FROM user_saved_itineraries WHERE id = $1)`
 	//	checkErr := r.pgpool.QueryRow(ctx, checkQuery, itineraryID).Scan(&existsForOtherUser)
 	//	if checkErr != nil {
-	//		r.logger.ErrorContext(ctx, "Failed to check if itinerary exists for other user", slog.Any("error", checkErr))
+	//		r.logger.Error("Failed to check if itinerary exists for other user", zap.Any("error", checkErr))
 	//	}
 	//
 	//	if existsForOtherUser {
 	//		err := fmt.Errorf("itinerary with ID %s exists but belongs to a different user (attempted by user %s)", itineraryID, userID)
-	//		r.logger.WarnContext(ctx, "Attempted to delete itinerary belonging to different user",
-	//			slog.String("itineraryID", itineraryID.String()),
-	//			slog.String("userID", userID.String()))
+	//		r.logger.Warn("Attempted to delete itinerary belonging to different user",
+	//			zap.String("itineraryID", itineraryID.String()),
+	//			zap.String("userID", userID.String()))
 	//		span.RecordError(err)
 	//		span.SetStatus(codes.Error, "Itinerary belongs to different user")
 	//		return err
 	//	} else {
 	//		// Itinerary doesn't exist - this is actually OK for idempotent DELETE operations
 	//		// The desired outcome (itinerary not existing) is achieved
-	//		r.logger.InfoContext(ctx, "Attempted to delete non-existent itinerary - treating as successful (idempotent)",
-	//			slog.String("itineraryID", itineraryID.String()),
-	//			slog.String("userID", userID.String()))
+	//		r.logger.Info("Attempted to delete non-existent itinerary - treating as successful (idempotent)",
+	//			zap.String("itineraryID", itineraryID.String()),
+	//			zap.String("userID", userID.String()))
 	//		span.SetStatus(codes.Ok, "Itinerary already deleted (idempotent operation)")
 	//		return nil
 	//	}
@@ -840,12 +850,12 @@ func (r *RepositoryImpl) GetBookmarkedItineraries(ctx context.Context, userID uu
 func (r *RepositoryImpl) CreateSession(ctx context.Context, session models.ChatSession) error {
 	tx, err := r.pgpool.Begin(ctx)
 	if err != nil {
-		r.logger.ErrorContext(ctx, "Failed to begin transaction for session creation", slog.Any("error", err))
+		r.logger.Error("Failed to begin transaction for session creation", zap.Any("error", err))
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
-			r.logger.ErrorContext(ctx, "transaction rollback failed", slog.Any("error", err))
+			r.logger.Error("transaction rollback failed", zap.Any("error", err))
 		}
 	}()
 
@@ -857,17 +867,17 @@ func (r *RepositoryImpl) CreateSession(ctx context.Context, session models.ChatS
     `
 	itineraryJSON, err := json.Marshal(session.CurrentItinerary)
 	if err != nil {
-		r.logger.ErrorContext(ctx, "Failed to marshal itinerary", slog.Any("error", err))
+		r.logger.Error("Failed to marshal itinerary", zap.Any("error", err))
 		return fmt.Errorf("failed to marshal itinerary: %w", err)
 	}
 	historyJSON, err := json.Marshal(session.ConversationHistory)
 	if err != nil {
-		r.logger.ErrorContext(ctx, "Failed to marshal history", slog.Any("error", err))
+		r.logger.Error("Failed to marshal history", zap.Any("error", err))
 		return fmt.Errorf("failed to marshal history: %w", err)
 	}
 	contextJSON, err := json.Marshal(session.SessionContext)
 	if err != nil {
-		r.logger.ErrorContext(ctx, "Failed to marshal context", slog.Any("error", err))
+		r.logger.Error("Failed to marshal context", zap.Any("error", err))
 		return fmt.Errorf("failed to marshal context: %w", err)
 	}
 
@@ -880,12 +890,12 @@ func (r *RepositoryImpl) CreateSession(ctx context.Context, session models.ChatS
 	_, err = tx.Exec(ctx, query, session.ID, session.UserID, session.ProfileID, session.CityName,
 		itineraryJSON, historyJSON, contextJSON, session.CreatedAt, session.UpdatedAt, session.ExpiresAt, session.Status, searchType)
 	if err != nil {
-		r.logger.ErrorContext(ctx, "Failed to create session", slog.Any("error", err))
+		r.logger.Error("Failed to create session", zap.Any("error", err))
 		return fmt.Errorf("failed to create session: %w", err)
 	}
 
 	if err = tx.Commit(ctx); err != nil {
-		r.logger.ErrorContext(ctx, "Failed to commit session creation transaction", slog.Any("error", err))
+		r.logger.Error("Failed to commit session creation transaction", zap.Any("error", err))
 		return fmt.Errorf("failed to commit session creation: %w", err)
 	}
 
@@ -909,7 +919,7 @@ func (r *RepositoryImpl) GetSession(ctx context.Context, sessionID uuid.UUID) (*
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("session %s not found", sessionID)
 		}
-		r.logger.ErrorContext(ctx, "Failed to get session", slog.Any("error", err))
+		r.logger.Error("Failed to get session", zap.Any("error", err))
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 
@@ -940,10 +950,10 @@ func (r *RepositoryImpl) GetUserChatSessions(ctx context.Context, userID uuid.UU
 	))
 	defer span.End()
 
-	r.logger.InfoContext(ctx, "Getting paginated user chat sessions",
-		slog.String("user_id", userID.String()),
-		slog.Int("page", page),
-		slog.Int("limit", limit))
+	r.logger.Info("Getting paginated user chat sessions",
+		zap.String("user_id", userID.String()),
+		zap.Int("page", page),
+		zap.Int("limit", limit))
 
 	// Calculate offset
 	offset := (page - 1) * limit
@@ -1023,7 +1033,7 @@ func (r *RepositoryImpl) GetUserChatSessions(ctx context.Context, userID uuid.UU
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to get total count")
-		r.logger.ErrorContext(ctx, "Failed to get total chat sessions count", slog.Any("error", err))
+		r.logger.Error("Failed to get total chat sessions count", zap.Any("error", err))
 		return nil, fmt.Errorf("failed to get total count: %w", err)
 	}
 
@@ -1032,7 +1042,7 @@ func (r *RepositoryImpl) GetUserChatSessions(ctx context.Context, userID uuid.UU
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to query LLM interactions")
-		r.logger.ErrorContext(ctx, "Failed to get user chat sessions from LLM interactions", slog.Any("error", err), slog.String("user_id", userID.String()))
+		r.logger.Error("Failed to get user chat sessions from LLM interactions", zap.Any("error", err), zap.String("user_id", userID.String()))
 		return nil, fmt.Errorf("failed to get user chat sessions: %w", err)
 	}
 	defer rows.Close()
@@ -1055,13 +1065,13 @@ func (r *RepositoryImpl) GetUserChatSessions(ctx context.Context, userID uuid.UU
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to scan LLM interaction row")
-			r.logger.ErrorContext(ctx, "Failed to scan LLM interaction row", slog.Any("error", err))
+			r.logger.Error("Failed to scan LLM interaction row", zap.Any("error", err))
 			return nil, fmt.Errorf("failed to scan LLM interaction row: %w", err)
 		}
 
 		var interactions []map[string]interface{}
 		if err := json.Unmarshal([]byte(interactionsJSON), &interactions); err != nil {
-			r.logger.WarnContext(ctx, "Failed to parse interactions JSON", slog.Any("error", err))
+			r.logger.Warn("Failed to parse interactions JSON", zap.Any("error", err))
 			continue
 		}
 
@@ -1172,7 +1182,7 @@ func (r *RepositoryImpl) GetUserChatSessions(ctx context.Context, userID uuid.UU
 	if err = rows.Err(); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Error iterating through LLM interaction rows")
-		r.logger.ErrorContext(ctx, "Error iterating through LLM interaction rows", slog.Any("error", err))
+		r.logger.Error("Error iterating through LLM interaction rows", zap.Any("error", err))
 		return nil, fmt.Errorf("error iterating through LLM interaction rows: %w", err)
 	}
 
@@ -1187,13 +1197,13 @@ func (r *RepositoryImpl) GetUserChatSessions(ctx context.Context, userID uuid.UU
 		HasMore:  hasMore,
 	}
 
-	r.logger.InfoContext(ctx, "Successfully retrieved paginated chat sessions",
-		slog.String("user_id", userID.String()),
-		slog.Int("sessions_count", len(sessions)),
-		slog.Int("total", total),
-		slog.Int("page", page),
-		slog.Int("limit", limit),
-		slog.Bool("has_more", hasMore))
+	r.logger.Info("Successfully retrieved paginated chat sessions",
+		zap.String("user_id", userID.String()),
+		zap.Int("sessions_count", len(sessions)),
+		zap.Int("total", total),
+		zap.Int("page", page),
+		zap.Int("limit", limit),
+		zap.Bool("has_more", hasMore))
 
 	span.SetAttributes(
 		attribute.Int("sessions.count", len(sessions)),
@@ -1315,7 +1325,7 @@ func formatResponseForDisplay(response, cityName string) string {
 
 // Format itinerary response to readable text
 func formatItineraryResponse(response models.AiCityResponse, cityName string) string {
-	// Determine which POI list to use and total count
+	// Determine which POI lists to use and total count
 	var totalPOIs int
 	var firstPOIName string
 
@@ -1459,24 +1469,24 @@ func (r *RepositoryImpl) UpdateSession(ctx context.Context, session models.ChatS
     `
 	itineraryJSON, err := json.Marshal(session.CurrentItinerary)
 	if err != nil {
-		r.logger.ErrorContext(ctx, "Failed to marshal itinerary", slog.Any("error", err))
+		r.logger.Error("Failed to marshal itinerary", zap.Any("error", err))
 		return fmt.Errorf("failed to marshal itinerary: %w", err)
 	}
 	historyJSON, err := json.Marshal(session.ConversationHistory)
 	if err != nil {
-		r.logger.ErrorContext(ctx, "Failed to marshal history", slog.Any("error", err))
+		r.logger.Error("Failed to marshal history", zap.Any("error", err))
 		return fmt.Errorf("failed to marshal history: %w", err)
 	}
 	contextJSON, err := json.Marshal(session.SessionContext)
 	if err != nil {
-		r.logger.ErrorContext(ctx, "Failed to marshal context", slog.Any("error", err))
+		r.logger.Error("Failed to marshal context", zap.Any("error", err))
 		return fmt.Errorf("failed to marshal context: %w", err)
 	}
 
 	_, err = r.pgpool.Exec(ctx, query, session.ID, itineraryJSON, historyJSON, contextJSON,
 		session.UpdatedAt, session.ExpiresAt, session.Status)
 	if err != nil {
-		r.logger.ErrorContext(ctx, "Failed to update session", slog.Any("error", err))
+		r.logger.Error("Failed to update session", zap.Any("error", err))
 		return fmt.Errorf("failed to update session: %w", err)
 	}
 	return nil
@@ -1513,7 +1523,7 @@ func (r *RepositoryImpl) SaveSinglePOI(ctx context.Context, poi models.POIDetail
 	}
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
-			r.logger.ErrorContext(ctx, "transaction rollback failed", slog.Any("error", err))
+			r.logger.Error("transaction rollback failed", zap.Any("error", err))
 		}
 	}()
 
@@ -1551,7 +1561,7 @@ func (r *RepositoryImpl) SaveSinglePOI(ctx context.Context, poi models.POIDetail
 	).Scan(&returnedID)
 
 	if err != nil {
-		r.logger.ErrorContext(ctx, "Failed to insert llm_suggested_poi", slog.Any("error", err), slog.String("query", query), slog.String("name", poi.Name))
+		r.logger.Error("Failed to insert llm_suggested_poi", zap.Any("error", err), zap.String("query", query), zap.String("name", poi.Name))
 		span.RecordError(err)
 		return uuid.Nil, fmt.Errorf("failed to save llm_suggested_poi: %w", err)
 	}
@@ -1561,7 +1571,7 @@ func (r *RepositoryImpl) SaveSinglePOI(ctx context.Context, poi models.POIDetail
 		return uuid.Nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	r.logger.Info("LLM Suggested POI saved successfully", slog.String("id", returnedID.String()))
+	r.logger.Info("LLM Suggested POI saved successfully", zap.String("id", returnedID.String()))
 	return returnedID, nil
 }
 
@@ -1659,21 +1669,21 @@ func (r *RepositoryImpl) GetPOIsBySessionSortedByDistance(ctx context.Context, _
 // 	// SessionIDInsideData string `json:"session_id,omitempty"`
 // }
 
-func parsePOIsFromResponse(responseText string, logger *slog.Logger) ([]models.POIDetailedInfo, error) {
+func parsePOIsFromResponse(responseText string, logger *zap.Logger) ([]models.POIDetailedInfo, error) {
 	cleanedResponse := cleanJSONResponse(responseText)
 
 	// Debug logging to see the actual cleaned response
 	logger.Debug("parsePOIsFromResponse: Cleaned response debug",
-		"originalLength", len(responseText),
-		"cleanedLength", len(cleanedResponse),
-		"cleanedPreview", cleanedResponse[:min(500, len(cleanedResponse))],
-		"cleanedSuffix", func() string {
+		zap.Int("originalLength", len(responseText)),
+		zap.Int("cleanedLength", len(cleanedResponse)),
+		zap.String("cleanedPreview", cleanedResponse[:min(500, len(cleanedResponse))]),
+		zap.String("cleanedSuffix", func() string {
 			start := len(cleanedResponse) - 200
 			if start < 0 {
 				start = 0
 			}
 			return cleanedResponse[start:]
-		}())
+		}()))
 
 	// Check if this looks like an itinerary response instead of a POI response
 	if strings.Contains(cleanedResponse, "itinerary_name") {
@@ -1696,36 +1706,36 @@ func parsePOIsFromResponse(responseText string, logger *slog.Logger) ([]models.P
 			allPOIs = append(allPOIs, unifiedResponse.Data.AIItineraryResponse.PointsOfInterest...)
 		}
 		if len(allPOIs) > 0 {
-			logger.Debug("parsePOIsFromResponse: Parsed as unified chat response", "poiCount", len(allPOIs))
+			logger.Debug("parsePOIsFromResponse: Parsed as unified chat response", zap.Int("poiCount", len(allPOIs)))
 			return allPOIs, nil
 		}
 	} else if err != nil {
-		logger.Debug("parsePOIsFromResponse: Failed to parse as unified response", "error", err.Error())
+		logger.Debug("parsePOIsFromResponse: Failed to parse as unified response", zap.Error(err))
 	}
 
 	// Second, try to parse as a full AiCityResponse (for legacy responses)
 	var parsedResponse models.AiCityResponse
 	err = json.Unmarshal([]byte(cleanedResponse), &parsedResponse)
 	if err == nil && parsedResponse.PointsOfInterest != nil {
-		logger.Debug("parsePOIsFromResponse: Parsed as AiCityResponse", "poiCount", len(parsedResponse.PointsOfInterest))
+		logger.Debug("parsePOIsFromResponse: Parsed as AiCityResponse", zap.Int("poiCount", len(parsedResponse.PointsOfInterest)))
 		return parsedResponse.PointsOfInterest, nil
 	} else if err != nil {
-		logger.Debug("parsePOIsFromResponse: Failed to parse as AiCityResponse", "error", err.Error())
+		logger.Debug("parsePOIsFromResponse: Failed to parse as AiCityResponse", zap.Error(err))
 	}
 
 	// Third, try to parse as a single POI (for individual POI additions)
 	var singlePOI models.POIDetailedInfo
 	err = json.Unmarshal([]byte(cleanedResponse), &singlePOI)
 	if err == nil && singlePOI.Name != "" {
-		logger.Debug("parsePOIsFromResponse: Parsed as single POI", "poiName", singlePOI.Name)
+		logger.Debug("parsePOIsFromResponse: Parsed as single POI", zap.String("poiName", singlePOI.Name))
 		return []models.POIDetailedInfo{singlePOI}, nil
 	}
 
 	// If all fail, log the error and return empty
 	logger.Warn("parsePOIsFromResponse: Could not parse response as unified chat, AiCityResponse, or single POI",
-		"error", err,
-		"cleanedResponseLength", len(cleanedResponse),
-		"responsePreview", cleanedResponse[:min(200, len(cleanedResponse))])
+		zap.Error(err),
+		zap.Int("cleanedResponseLength", len(cleanedResponse)),
+		zap.String("responsePreview", cleanedResponse[:min(200, len(cleanedResponse))]))
 	return []models.POIDetailedInfo{}, nil
 }
 
@@ -1747,11 +1757,15 @@ func (r *RepositoryImpl) GetOrCreatePOI(ctx context.Context, tx pgx.Tx, POIDetai
 			POIDetailedInfo.DescriptionPOI, // Assumes models.POIDetailedInfo has DescriptionPOI from JSON
 		).Scan(&poiDBID)
 		if err != nil {
-			r.logger.ErrorContext(ctx, "GetOrCreatePOI: Failed to insert new POI", "error", err, "poi_name", POIDetailedInfo.Name)
+			r.logger.Error("GetOrCreatePOI: Failed to insert new POI",
+				zap.Error(err),
+				zap.String("name", POIDetailedInfo.Name),
+			)
 			return uuid.Nil, fmt.Errorf("GetOrCreatePOI: failed to insert new POI '%s': %w", POIDetailedInfo.Name, err)
 		}
 	} else if err != nil {
-		r.logger.ErrorContext(ctx, "GetOrCreatePOI: Failed to query existing POI", "error", err, "poi_name", POIDetailedInfo.Name)
+		r.logger.Error("GetOrCreatePOI: Failed to query existing POI", zap.Error(err),
+			zap.String("name", POIDetailedInfo.Name))
 		return uuid.Nil, fmt.Errorf("GetOrCreatePOI: failed to query existing POI '%s': %w", POIDetailedInfo.Name, err)
 	}
 	return poiDBID, nil
@@ -1810,7 +1824,7 @@ func (r *RepositoryImpl) SaveItineraryPOIs(ctx context.Context, itineraryID uuid
 // 		}
 // 		if err != nil {
 // 			if rbErr := tx.Rollback(ctx); rbErr != nil {
-// 				r.logger.ErrorContext(ctx, "Transaction rollback failed", slog.Any("error", rbErr))
+// 				r.logger.Error("Transaction rollback failed", zap.Any("error", rbErr))
 // 			}
 // 		}
 // 	}()
@@ -2130,7 +2144,7 @@ func (r *RepositoryImpl) GetRecentChatSessions(ctx context.Context, userID uuid.
 
 	rows, err := r.pgpool.Query(ctx, query, userID, limit)
 	if err != nil {
-		r.logger.ErrorContext(ctx, "Failed to query recent chat sessions", slog.Any("error", err))
+		r.logger.Error("Failed to query recent chat sessions", zap.Any("error", err))
 		return nil, fmt.Errorf("failed to query recent chat sessions: %w", err)
 	}
 	defer rows.Close()
@@ -2142,14 +2156,14 @@ func (r *RepositoryImpl) GetRecentChatSessions(ctx context.Context, userID uuid.
 		err := rows.Scan(&session.ID, &session.UserID, &session.ProfileID, &session.CityName,
 			&historyJSON, &session.CreatedAt, &session.UpdatedAt, &session.SearchType)
 		if err != nil {
-			r.logger.WarnContext(ctx, "Failed to scan session row", slog.Any("error", err))
+			r.logger.Warn("Failed to scan session row", zap.Any("error", err))
 			continue
 		}
 
 		// Parse conversation history JSON
 		if len(historyJSON) > 0 {
 			if err := json.Unmarshal(historyJSON, &session.ConversationHistory); err != nil {
-				r.logger.WarnContext(ctx, "Failed to parse conversation history", slog.Any("error", err))
+				r.logger.Warn("Failed to parse conversation history", zap.Any("error", err))
 				session.ConversationHistory = []models.ConversationMessage{}
 			}
 		}
@@ -2172,9 +2186,9 @@ func (r *RepositoryImpl) GetRecentChatSessionsByType(ctx context.Context, userID
 
 	rows, err := r.pgpool.Query(ctx, query, userID, searchType, limit)
 	if err != nil {
-		r.logger.ErrorContext(ctx, "Failed to query recent chat sessions by type",
-			slog.Any("error", err),
-			slog.String("search_type", string(searchType)))
+		r.logger.Error("Failed to query recent chat sessions by type",
+			zap.Any("error", err),
+			zap.String("search_type", string(searchType)))
 		return nil, fmt.Errorf("failed to query recent chat sessions by type: %w", err)
 	}
 	defer rows.Close()
@@ -2186,14 +2200,14 @@ func (r *RepositoryImpl) GetRecentChatSessionsByType(ctx context.Context, userID
 		err := rows.Scan(&session.ID, &session.UserID, &session.ProfileID, &session.CityName,
 			&historyJSON, &session.CreatedAt, &session.UpdatedAt, &session.SearchType)
 		if err != nil {
-			r.logger.WarnContext(ctx, "Failed to scan session row", slog.Any("error", err))
+			r.logger.Warn("Failed to scan session row", zap.Any("error", err))
 			continue
 		}
 
 		// Parse conversation history JSON
 		if len(historyJSON) > 0 {
 			if err := json.Unmarshal(historyJSON, &session.ConversationHistory); err != nil {
-				r.logger.WarnContext(ctx, "Failed to parse conversation history", slog.Any("error", err))
+				r.logger.Warn("Failed to parse conversation history", zap.Any("error", err))
 				session.ConversationHistory = []models.ConversationMessage{}
 			}
 		}
@@ -2201,10 +2215,10 @@ func (r *RepositoryImpl) GetRecentChatSessionsByType(ctx context.Context, userID
 		sessions = append(sessions, session)
 	}
 
-	r.logger.InfoContext(ctx, "Retrieved chat sessions by type",
-		slog.String("user_id", userID.String()),
-		slog.String("search_type", string(searchType)),
-		slog.Int("count", len(sessions)))
+	r.logger.Info("Retrieved chat sessions by type",
+		zap.String("user_id", userID.String()),
+		zap.String("search_type", string(searchType)),
+		zap.Int("count", len(sessions)))
 
 	return sessions, nil
 }
@@ -2241,7 +2255,7 @@ func (r *RepositoryImpl) GetTrendingDiscoveries(ctx context.Context, limit int) 
 
 	rows, err := r.pgpool.Query(ctx, query, limit)
 	if err != nil {
-		r.logger.ErrorContext(ctx, "Failed to query trending discoveries", slog.Any("error", err))
+		r.logger.Error("Failed to query trending discoveries", zap.Any("error", err))
 		return nil, fmt.Errorf("failed to query trending discoveries: %w", err)
 	}
 	defer rows.Close()
@@ -2251,13 +2265,13 @@ func (r *RepositoryImpl) GetTrendingDiscoveries(ctx context.Context, limit int) 
 		var discovery models.TrendingDiscovery
 		err := rows.Scan(&discovery.CityName, &discovery.SearchCount, &discovery.Emoji, &discovery.FirstMessage)
 		if err != nil {
-			r.logger.WarnContext(ctx, "Failed to scan trending discovery row", slog.Any("error", err))
+			r.logger.Warn("Failed to scan trending discovery row", zap.Any("error", err))
 			continue
 		}
 		discoveries = append(discoveries, discovery)
 	}
 
-	r.logger.InfoContext(ctx, "Retrieved trending discoveries", slog.Int("count", len(discoveries)))
+	r.logger.Info("Retrieved trending discoveries", zap.Int("count", len(discoveries)))
 	return discoveries, nil
 }
 
@@ -2278,7 +2292,7 @@ func (r *RepositoryImpl) GetFeaturedCollections(ctx context.Context, limit int) 
 		{
 			ID:          uuid.New(),
 			Title:       "Asian Night Markets",
-			Description:       "Street food and night life",
+			Description: "Street food and night life",
 			Emoji:       "🏮",
 			ItemCount:   15,
 			Category:    "markets",
@@ -2308,6 +2322,6 @@ func (r *RepositoryImpl) GetFeaturedCollections(ctx context.Context, limit int) 
 		collections = collections[:limit]
 	}
 
-	r.logger.InfoContext(ctx, "Retrieved featured collections", slog.Int("count", len(collections)))
+	r.logger.Info("Retrieved featured collections", zap.Int("count", len(collections)))
 	return collections, nil
 }

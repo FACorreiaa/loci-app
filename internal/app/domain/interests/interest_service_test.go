@@ -3,7 +3,7 @@ package interests
 import (
 	"context"
 	"errors"
-	"log/slog"
+	"go.uber.org/zap"
 	"testing"
 	"time"
 
@@ -112,11 +112,10 @@ func TestCreateInterest(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup - create fresh mock and service for each test
 			mockRepo := new(MockinterestsRepo)
-			logger := slog.Default()
-			service := NewinterestsService(mockRepo, logger)
-
-			// Setup mock
-			expectedInterest := tc.setupMock(mockRepo)
+			logger := zap.NewNop()			service := NewinterestsService(mockRepo, logger)
+			
+						// Setup mock
+						expectedInterest := tc.setupMock(mockRepo)
 
 			// Call the method
 			interest, err := service.CreateInterest(ctx, name, &description, isActive, userID)
@@ -169,7 +168,7 @@ func TestRemoveinterests(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup - create fresh mock and service for each test
 			mockRepo := new(MockinterestsRepo)
-			logger := slog.Default()
+			logger := zap.NewNop()
 			service := NewinterestsService(mockRepo, logger)
 
 			// Setup mock
@@ -243,12 +242,11 @@ func TestGetAllInterests(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup - create fresh mock and service for each test
 			mockRepo := new(MockinterestsRepo)
-			logger := slog.Default()
-			service := NewinterestsService(mockRepo, logger)
-
-			// Setup mock
-			expectedInterests := tc.setupMock(mockRepo)
-
+			            logger := zap.NewNop()
+			            service := NewinterestsService(mockRepo, logger)
+			
+			            // Setup mock
+			            expectedInterests := tc.setupMock(mockRepo)
 			// Call the method
 			interests, err := service.GetAllInterests(ctx)
 
@@ -308,7 +306,7 @@ func TestUpdateinterests(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup - create fresh mock and service for each test
 			mockRepo := new(MockinterestsRepo)
-			logger := slog.Default()
+			logger := zap.NewNop()
 			service := NewinterestsService(mockRepo, logger)
 
 			// Setup mock

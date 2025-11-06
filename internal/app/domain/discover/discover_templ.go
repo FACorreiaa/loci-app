@@ -681,25 +681,6 @@ func RecentDiscoveryCard(session models.ChatSession) templ.Component {
 	})
 }
 
-type DiscoverResult struct {
-	ID           string
-	Name         string
-	Latitude     float64
-	Longitude    float64
-	Category     string
-	Description  string
-	Address      string
-	Website      *string
-	PhoneNumber  *string
-	OpeningHours *string
-	PriceLevel   string
-	Rating       float64
-	Tags         []string
-	Images       []string
-	CuisineType  *string
-	StarRating   *string
-}
-
 func DiscoverSearchResults(results []DiscoverResult, query, location string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -734,7 +715,7 @@ func DiscoverSearchResults(results []DiscoverResult, query, location string) tem
 			var templ_7745c5c3_Var33 string
 			templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d Results for \"%s\" in %s", len(results), query, location))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 372, Col: 79}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 353, Col: 79}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 			if templ_7745c5c3_Err != nil {
@@ -787,7 +768,7 @@ func DiscoverResultCard(result DiscoverResult) templ.Component {
 		var templ_7745c5c3_Var35 string
 		templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(getCategoryEmoji(result.Category))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 388, Col: 63}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 369, Col: 63}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 		if templ_7745c5c3_Err != nil {
@@ -822,7 +803,7 @@ func DiscoverResultCard(result DiscoverResult) templ.Component {
 		var templ_7745c5c3_Var38 string
 		templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(result.Category)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 391, Col: 24}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 372, Col: 24}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 		if templ_7745c5c3_Err != nil {
@@ -835,7 +816,7 @@ func DiscoverResultCard(result DiscoverResult) templ.Component {
 		var templ_7745c5c3_Var39 string
 		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.1f", result.Rating))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 397, Col: 77}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 378, Col: 77}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 		if templ_7745c5c3_Err != nil {
@@ -848,7 +829,7 @@ func DiscoverResultCard(result DiscoverResult) templ.Component {
 		var templ_7745c5c3_Var40 string
 		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs("/favorites/add/" + result.ID + "?isLLM=true")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 402, Col: 60}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 383, Col: 60}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 		if templ_7745c5c3_Err != nil {
@@ -861,7 +842,7 @@ func DiscoverResultCard(result DiscoverResult) templ.Component {
 		var templ_7745c5c3_Var41 string
 		templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(result.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 414, Col: 116}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 395, Col: 116}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 		if templ_7745c5c3_Err != nil {
@@ -874,7 +855,7 @@ func DiscoverResultCard(result DiscoverResult) templ.Component {
 		var templ_7745c5c3_Var42 string
 		templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(result.Address)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 420, Col: 21}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 401, Col: 21}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
 		if templ_7745c5c3_Err != nil {
@@ -887,7 +868,7 @@ func DiscoverResultCard(result DiscoverResult) templ.Component {
 		var templ_7745c5c3_Var43 string
 		templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(result.Description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 422, Col: 78}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 403, Col: 78}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
 		if templ_7745c5c3_Err != nil {
@@ -910,7 +891,7 @@ func DiscoverResultCard(result DiscoverResult) templ.Component {
 				var templ_7745c5c3_Var44 string
 				templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(tag)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 426, Col: 119}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 407, Col: 119}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 				if templ_7745c5c3_Err != nil {
@@ -938,7 +919,7 @@ func DiscoverResultCard(result DiscoverResult) templ.Component {
 			var templ_7745c5c3_Var45 string
 			templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(result.PriceLevel)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 434, Col: 86}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 415, Col: 86}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
 			if templ_7745c5c3_Err != nil {
@@ -961,7 +942,7 @@ func DiscoverResultCard(result DiscoverResult) templ.Component {
 			var templ_7745c5c3_Var46 templ.SafeURL
 			templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(*result.Website))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 439, Col: 42}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 420, Col: 42}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
 			if templ_7745c5c3_Err != nil {
@@ -980,7 +961,7 @@ func DiscoverResultCard(result DiscoverResult) templ.Component {
 			var templ_7745c5c3_Var47 templ.SafeURL
 			templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("tel:" + *result.PhoneNumber))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 444, Col: 55}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover.templ`, Line: 425, Col: 55}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
 			if templ_7745c5c3_Err != nil {

@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"strings"
+
+	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 
@@ -119,42 +120,42 @@ func (l *ServiceImpl) ProcessAndSaveUnifiedResponse(
 	llmInteractionID uuid.UUID,
 	userLocation *models.UserLocation,
 ) {
-	l.logger.InfoContext(ctx, "Processing unified response for POI extraction",
-		slog.String("city_id", cityID.String()),
-		slog.Int("response_parts", len(responses)))
+	l.logger.Info("Processing unified response for POI extraction",
+		zap.String("city_id", cityID.String()),
+		zap.Int("response_parts", len(responses)))
 
 	// Process general POIs if available
 	if poisContent, ok := responses["general_pois"]; ok && poisContent.Len() > 0 {
-		l.logger.InfoContext(ctx, "Processing general POIs from unified response",
-			slog.Int("content_length", poisContent.Len()))
+		l.logger.Info("Processing general POIs from unified response",
+			zap.Int("content_length", poisContent.Len()))
 		l.handleGeneralPoisFromResponse(ctx, poisContent.String(), cityID)
 	}
 
 	// Process itinerary POIs if available
 	if itineraryContent, ok := responses["itinerary"]; ok && itineraryContent.Len() > 0 {
-		l.logger.InfoContext(ctx, "Processing itinerary POIs from unified response",
-			slog.Int("content_length", itineraryContent.Len()))
+		l.logger.Info("Processing itinerary POIs from unified response",
+			zap.Int("content_length", itineraryContent.Len()))
 		l.handleItineraryFromResponse(ctx, itineraryContent.String(), userID, profileID, cityID, llmInteractionID, userLocation)
 	}
 
 	// Process activities POIs if available (for DomainActivities)
 	if activitiesContent, ok := responses["activities"]; ok && activitiesContent.Len() > 0 {
-		l.logger.InfoContext(ctx, "Processing activities POIs from unified response",
-			slog.Int("content_length", activitiesContent.Len()))
+		l.logger.Info("Processing activities POIs from unified response",
+			zap.Int("content_length", activitiesContent.Len()))
 		l.handleGeneralPoisFromResponse(ctx, activitiesContent.String(), cityID)
 	}
 
 	// Process hotel POIs if available (for DomainAccommodation)
 	if hotelsContent, ok := responses["hotels"]; ok && hotelsContent.Len() > 0 {
-		l.logger.InfoContext(ctx, "Processing hotels from unified response",
-			slog.Int("content_length", hotelsContent.Len()))
+		l.logger.Info("Processing hotels from unified response",
+			zap.Int("content_length", hotelsContent.Len()))
 		l.handleHotelsFromResponse(ctx, hotelsContent.String(), cityID, userID, llmInteractionID)
 	}
 
 	// Process restaurant POIs if available (for DomainDining)
 	if restaurantsContent, ok := responses["restaurants"]; ok && restaurantsContent.Len() > 0 {
-		l.logger.InfoContext(ctx, "Processing restaurants from unified response",
-			slog.Int("content_length", restaurantsContent.Len()))
+		l.logger.Info("Processing restaurants from unified response",
+			zap.Int("content_length", restaurantsContent.Len()))
 		l.handleRestaurantsFromResponse(ctx, restaurantsContent.String(), cityID, userID, llmInteractionID)
 	}
 }
@@ -166,42 +167,42 @@ func (l *ServiceImpl) ProcessAndSaveUnifiedResponseFree(
 	llmInteractionID uuid.UUID,
 	userLocation *models.UserLocation,
 ) {
-	l.logger.InfoContext(ctx, "Processing unified response for POI extraction",
-		slog.String("city_id", cityID.String()),
-		slog.Int("response_parts", len(responses)))
+	l.logger.Info("Processing unified response for POI extraction",
+		zap.String("city_id", cityID.String()),
+		zap.Int("response_parts", len(responses)))
 
 	// Process general POIs if available
 	if poisContent, ok := responses["general_pois"]; ok && poisContent.Len() > 0 {
-		l.logger.InfoContext(ctx, "Processing general POIs from unified response",
-			slog.Int("content_length", poisContent.Len()))
+		l.logger.Info("Processing general POIs from unified response",
+			zap.Int("content_length", poisContent.Len()))
 		l.handleGeneralPoisFromResponse(ctx, poisContent.String(), cityID)
 	}
 
 	// Process itinerary POIs if available
 	if itineraryContent, ok := responses["itinerary"]; ok && itineraryContent.Len() > 0 {
-		l.logger.InfoContext(ctx, "Processing itinerary POIs from unified response",
-			slog.Int("content_length", itineraryContent.Len()))
+		l.logger.Info("Processing itinerary POIs from unified response",
+			zap.Int("content_length", itineraryContent.Len()))
 		l.handleItineraryFromResponse(ctx, itineraryContent.String(), uuid.Nil, uuid.Nil, cityID, llmInteractionID, userLocation)
 	}
 
 	// Process activities POIs if available (for DomainActivities)
 	if activitiesContent, ok := responses["activities"]; ok && activitiesContent.Len() > 0 {
-		l.logger.InfoContext(ctx, "Processing activities POIs from unified response",
-			slog.Int("content_length", activitiesContent.Len()))
+		l.logger.Info("Processing activities POIs from unified response",
+			zap.Int("content_length", activitiesContent.Len()))
 		l.handleGeneralPoisFromResponse(ctx, activitiesContent.String(), cityID)
 	}
 
 	// Process hotel POIs if available (for DomainAccommodation)
 	if hotelsContent, ok := responses["hotels"]; ok && hotelsContent.Len() > 0 {
-		l.logger.InfoContext(ctx, "Processing hotels from unified response",
-			slog.Int("content_length", hotelsContent.Len()))
+		l.logger.Info("Processing hotels from unified response",
+			zap.Int("content_length", hotelsContent.Len()))
 		l.handleHotelsFromResponse(ctx, hotelsContent.String(), cityID, uuid.Nil, llmInteractionID)
 	}
 
 	// Process restaurant POIs if available (for DomainDining)
 	if restaurantsContent, ok := responses["restaurants"]; ok && restaurantsContent.Len() > 0 {
-		l.logger.InfoContext(ctx, "Processing restaurants from unified response",
-			slog.Int("content_length", restaurantsContent.Len()))
+		l.logger.Info("Processing restaurants from unified response",
+			zap.Int("content_length", restaurantsContent.Len()))
 		l.handleRestaurantsFromResponse(ctx, restaurantsContent.String(), cityID, uuid.Nil, llmInteractionID)
 	}
 }
@@ -211,7 +212,7 @@ func (l *ServiceImpl) handleGeneralPoisFromResponse(ctx context.Context, content
 		PointsOfInterest []models.POIDetailedInfo `json:"points_of_interest"`
 	}
 	if err := json.Unmarshal([]byte(cleanJSONResponse(content)), &poiData); err != nil {
-		l.logger.ErrorContext(ctx, "Failed to parse general POIs from unified response", slog.Any("error", err))
+		l.logger.Error("Failed to parse general POIs from unified response", zap.Any("error", err))
 		return
 	}
 
@@ -231,14 +232,14 @@ func (l *ServiceImpl) handleItineraryFromResponse(
 		PointsOfInterest   []models.POIDetailedInfo `json:"points_of_interest"`
 	}
 	if err := json.Unmarshal([]byte(cleanJSONResponse(content)), &itineraryData); err != nil {
-		l.logger.ErrorContext(ctx, "Failed to parse itinerary from unified response", slog.Any("error", err))
+		l.logger.Error("Failed to parse itinerary from unified response", zap.Any("error", err))
 		return
 	}
 
 	// Save the itinerary and its POIs
 	_, err := l.HandlePersonalisedPOIs(ctx, itineraryData.PointsOfInterest, cityID, userLocation, llmInteractionID, userID, profileID)
 	if err != nil {
-		l.logger.ErrorContext(ctx, "Failed to save personalised POIs from unified response", slog.Any("error", err))
+		l.logger.Error("Failed to save personalised POIs from unified response", zap.Any("error", err))
 	}
 }
 
@@ -247,7 +248,7 @@ func (l *ServiceImpl) handleHotelsFromResponse(ctx context.Context, content stri
 		Hotels []models.HotelDetailedInfo `json:"hotels"`
 	}
 	if err := json.Unmarshal([]byte(cleanJSONResponse(content)), &hotelData); err != nil {
-		l.logger.ErrorContext(ctx, "Failed to parse hotels from unified response", slog.Any("error", err))
+		l.logger.Error("Failed to parse hotels from unified response", zap.Any("error", err))
 		return
 	}
 
@@ -255,12 +256,12 @@ func (l *ServiceImpl) handleHotelsFromResponse(ctx context.Context, content stri
 	for _, hotel := range hotelData.Hotels {
 		hotel.LlmInteractionID = llmInteractionID
 		if _, err := l.poiRepo.SaveHotelDetails(ctx, hotel, cityID); err != nil {
-			l.logger.WarnContext(ctx, "Failed to save hotel from unified response",
-				slog.String("hotel_name", hotel.Name), slog.Any("error", err))
+			l.logger.Warn("Failed to save hotel from unified response",
+				zap.String("hotel_name", hotel.Name), zap.Any("error", err))
 		}
 	}
-	l.logger.InfoContext(ctx, "Saved hotels from unified response",
-		slog.Int("hotel_count", len(hotelData.Hotels)))
+	l.logger.Info("Saved hotels from unified response",
+		zap.Int("hotel_count", len(hotelData.Hotels)))
 }
 
 func (l *ServiceImpl) handleRestaurantsFromResponse(ctx context.Context, content string, cityID, _, llmInteractionID uuid.UUID) {
@@ -268,7 +269,7 @@ func (l *ServiceImpl) handleRestaurantsFromResponse(ctx context.Context, content
 		Restaurants []models.RestaurantDetailedInfo `json:"restaurants"`
 	}
 	if err := json.Unmarshal([]byte(cleanJSONResponse(content)), &restaurantData); err != nil {
-		l.logger.ErrorContext(ctx, "Failed to parse restaurants from unified response", slog.Any("error", err))
+		l.logger.Error("Failed to parse restaurants from unified response", zap.Any("error", err))
 		return
 	}
 
@@ -276,10 +277,10 @@ func (l *ServiceImpl) handleRestaurantsFromResponse(ctx context.Context, content
 	for _, restaurant := range restaurantData.Restaurants {
 		restaurant.LlmInteractionID = llmInteractionID
 		if _, err := l.poiRepo.SaveRestaurantDetails(ctx, restaurant, cityID); err != nil {
-			l.logger.WarnContext(ctx, "Failed to save restaurant from unified response",
-				slog.String("restaurant_name", restaurant.Name), slog.Any("error", err))
+			l.logger.Warn("Failed to save restaurant from unified response",
+				zap.String("restaurant_name", restaurant.Name), zap.Any("error", err))
 		}
 	}
-	l.logger.InfoContext(ctx, "Saved restaurants from unified response",
-		slog.Int("restaurant_count", len(restaurantData.Restaurants)))
+	l.logger.Info("Saved restaurants from unified response",
+		zap.Int("restaurant_count", len(restaurantData.Restaurants)))
 }

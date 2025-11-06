@@ -1,0 +1,24 @@
+global:
+  scrape_interval: 15s
+
+rule_files:
+  - "/etc/prometheus/alert.rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        # The target for Alertmanager, which will also be a Docker service.
+        - targets: ["alertmanager:9093"]
+
+scrape_configs:
+  - job_name: "loci-app"
+    # Prometheus will use Docker's internal DNS to find the container
+    # named 'my-app' on the shared network and connect to its port 8090.
+    static_configs:
+      #- targets: ["host.docker.internal:8090"]
+      - targets: [ "otel-collector:8889" ]
+  # Other service discovery options for more complex environments:
+  # - Kubernetes: kubernetes_sd_configs
+  # - AWS EC2: ec2_sd_configs
+  # - DNS records: dns_sd_configs```
+

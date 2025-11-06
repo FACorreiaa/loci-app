@@ -36,7 +36,7 @@ The central coordinator that manages services and handles message routing.
 ```go
 type Broker struct {
     config      *config.Config
-    logger      *slog.Logger
+    logger      *zap.Logger
     db          *pgxpool.Pool
     registry    *prometheus.Registry
     services    map[ServiceType]Service
@@ -79,7 +79,7 @@ Each service has a wrapper that implements the broker's Service interface:
 ```go
 type AuthServiceImpl struct {
     service *authDomain.Service  // The actual gRPC service
-    logger  *slog.Logger
+    logger  *zap.Logger
 }
 
 func (s *AuthServiceImpl) Start(ctx context.Context) error {
@@ -262,7 +262,7 @@ const (
 ```go
 type ProfileServiceImpl struct {
     service *profileDomain.Service
-    logger  *slog.Logger
+    logger  *zap.Logger
 }
 
 func (s *ProfileServiceImpl) Type() ServiceType {

@@ -2,7 +2,7 @@ package results
 
 import (
 	"fmt"
-	"github.com/FACorreiaa/go-templui/internal/app/components/chat"
+	llmChat "github.com/FACorreiaa/go-templui/internal/app/components/chat"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"strings"
 )
@@ -228,7 +228,7 @@ templ ActivitiesResults(cityData models.GeneralCityData, activities []models.POI
 		</div>
 		<!-- Chat Panel for continuing conversation -->
 		if sessionID != "" {
-			@chat.ChatPanel(chat.ChatPanelProps{
+			@llmChat.ChatPanel(llmChat.ChatPanelProps{
 				SessionID:     sessionID,
 				CityName:      cityData.City,
 				Domain:        "activities",
@@ -409,7 +409,7 @@ templ ActivitiesResults(cityData models.GeneralCityData, activities []models.POI
 	</script>
 }
 
-// ActivityListCard for the list view section
+// ActivityListCard for the lists view section
 templ ActivityListCard(activity models.POIDetailedInfo, index int) {
 	<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow relative">
 		<!-- Index Badge -->

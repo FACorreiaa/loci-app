@@ -5,8 +5,8 @@ package poi
 import (
 	"context"
 	"database/sql"
+	"go.uber.org/zap"
 	"log"
-	"log/slog"
 	"os"
 	"testing"
 	"time"
@@ -68,7 +68,7 @@ func TestMain(m *testing.M) {
 	// log.Println("Running database migrations for integration tests...")
 	// runMigrations(testDB) // Implement this function if you have programmatic migrations
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	logger := zap.New(zap.NewTextHandler(os.Stdout, &zap.HandlerOptions{Level: zap.LevelDebug}))
 	// Use your actual PostgresPOIRepository implementation
 	realRepo := NewPostgresPOIRepository(testDB, logger) // Assuming this constructor exists
 	testService = NewPOIServiceImpl(realRepo, logger)
@@ -183,7 +183,7 @@ func TestPOIServiceImpl_GetPOIsByCityID_Integration(t *testing.T) {
 		pois, err := testService.GetPOIsByCityID(ctx, cityID1)
 		require.NoError(t, err)
 		require.Len(t, pois, 2)
-		// Check if poi1 and poi2 are in the list (order might not be guaranteed)
+		// Check if poi1 and poi2 are in the lists (order might not be guaranteed)
 		foundPoi1 := false
 		foundPoi2 := false
 		for _, p := range pois {

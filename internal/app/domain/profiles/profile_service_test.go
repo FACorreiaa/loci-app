@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
+	"go.uber.org/zap"
 	"os"
 	"testing"
 
@@ -179,7 +179,7 @@ func (m *MocktagsRepo) GetTagByName(ctx context.Context, name string) (*models.T
 
 // Helper
 func setupprofilessServiceTest() (*ServiceImpl, *MockprofilessRepo, *MockinterestsRepo, *MocktagsRepo) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError})) // Use LevelError to reduce noise
+	logger := zap.New(zap.NewTextHandler(os.Stdout, &zap.HandlerOptions{Level: zap.LevelError})) // Use LevelError to reduce noise
 	mockPrefRepo := new(MockprofilessRepo)
 	mockIntRepo := new(MockinterestsRepo)
 	mockTagRepo := new(MocktagsRepo)

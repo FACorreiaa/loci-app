@@ -4,8 +4,8 @@ package city
 
 import (
 	"context"
+	"go.uber.org/zap"
 	"log"
-	"log/slog"
 	"os"
 	"testing"
 
@@ -48,7 +48,7 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Unable to ping test database for city tests: %v\n", err)
 	}
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	logger := zap.New(zap.NewTextHandler(os.Stdout, &zap.HandlerOptions{Level: zap.LevelDebug}))
 	testCityRepo = NewCityRepository(testCityDB, logger)
 
 	exitCode := m.Run()

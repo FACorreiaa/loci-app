@@ -9,9 +9,9 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
+	"github.com/FACorreiaa/go-templui/internal/app/components"
 	b "github.com/FACorreiaa/go-templui/internal/app/components/button"
 	t "github.com/FACorreiaa/go-templui/internal/app/components/textarea"
-	"github.com/FACorreiaa/go-templui/internal/app/components"
 )
 
 func LoggedInDashboard() templ.Component {

@@ -68,7 +68,7 @@ Connection string: postgres://postgres:<password>@loci-db.internal:5432
 ### 3. Check cluster status
 
 ```bash
-flyctl postgres list
+flyctl postgres lists
 flyctl status -a loci-db
 ```
 
@@ -184,7 +184,7 @@ This automatically creates a `DATABASE_URL` secret in your app.
 ### 2. Verify the secret was created
 
 ```bash
-flyctl secrets list -a <your-app-name>
+flyctl secrets lists -a <your-app-name>
 ```
 
 You should see:
@@ -415,11 +415,11 @@ flyctl postgres connect -a loci-db
 
 ```bash
 # Check if database is attached
-flyctl postgres list
-flyctl postgres users list -a loci-db
+flyctl postgres lists
+flyctl postgres users lists -a loci-db
 
 # Verify DATABASE_URL secret
-flyctl secrets list -a <your-app-name>
+flyctl secrets lists -a <your-app-name>
 
 # Test connection from app machine
 flyctl ssh console -a <your-app-name>
@@ -480,19 +480,19 @@ flyctl secrets set DB_PASSWORD=new_secure_password -a <your-app-name>
 
 ```bash
 # Postgres Management
-flyctl postgres list                          # List all Postgres apps
+flyctl postgres lists                          # List all Postgres apps
 flyctl postgres connect -a <db-name>         # Connect via psql
-flyctl postgres db list -a <db-name>         # List databases
-flyctl postgres users list -a <db-name>      # List users
+flyctl postgres db lists -a <db-name>         # List databases
+flyctl postgres users lists -a <db-name>      # List users
 
 # App Management
-flyctl apps list                             # List all apps
+flyctl apps lists                             # List all apps
 flyctl status -a <app-name>                  # App status
 flyctl logs -a <app-name>                    # View logs
 flyctl ssh console -a <app-name>             # SSH into app
 
 # Secrets Management
-flyctl secrets list -a <app-name>            # List secrets
+flyctl secrets lists -a <app-name>            # List secrets
 flyctl secrets set KEY=value -a <app-name>   # Set secret
 flyctl secrets unset KEY -a <app-name>       # Remove secret
 

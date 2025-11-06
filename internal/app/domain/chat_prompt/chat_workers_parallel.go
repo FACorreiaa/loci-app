@@ -24,6 +24,13 @@ type ParallelWorkerConfig struct {
 	ChunkSize  int
 }
 
+// poiResult holds the result of POI generation for a city
+type poiResult struct {
+	cityName string
+	pois     []models.POIDetailedInfo
+	err      error
+}
+
 // NewParallelWorkerConfig creates a default parallel worker configuration
 func NewParallelWorkerConfig() *ParallelWorkerConfig {
 	return &ParallelWorkerConfig{
@@ -195,12 +202,6 @@ func (l *ServiceImpl) GenerateGeneralPOIParallel(ctx context.Context,
 	span.SetAttributes(attribute.Int("workers.count", numWorkers))
 
 	// Create channels for work distribution and result collection
-	type poiResult struct {
-		cityName string
-		pois     []models.POIDetailedInfo
-		err      error
-	}
-
 	workCh := make(chan string, len(cityNames))
 	resultCh := make(chan poiResult, len(cityNames))
 
@@ -246,11 +247,7 @@ func (l *ServiceImpl) GenerateGeneralPOIParallel(ctx context.Context,
 
 // processGeneralPOI is the worker function for parallel general POI generation
 func (l *ServiceImpl) processGeneralPOI(ctx context.Context, cityName string,
-	config *genai.GenerateContentConfig, resultCh chan<- struct {
-		cityName string
-		pois     []models.POIDetailedInfo
-		err      error
-	}, workerID int) {
+	config *genai.GenerateContentConfig, resultCh chan<- poiResult, workerID int) {
 
 	ctx, span := otel.Tracer("LlmInteractionService").Start(ctx, "processGeneralPOI", trace.WithAttributes(
 		attribute.String("city.name", cityName),

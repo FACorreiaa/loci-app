@@ -20,9 +20,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	llmchat "github.com/FACorreiaa/go-templui/internal/pkg/domain/chat_prompt"
-	"github.com/FACorreiaa/go-templui/internal/pkg/domain/profiles"
-
 	"github.com/FACorreiaa/go-templui/internal/app/domain/activities"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/hotels"
 	profiles2 "github.com/FACorreiaa/go-templui/internal/app/domain/profiles"

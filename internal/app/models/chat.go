@@ -38,7 +38,7 @@ type LlmInteraction struct {
 	ProfileID uuid.UUID `json:"profile_id" db:"profile_id"`
 
 	// Context
-	CityName string `json:"city_name,omitempty" db:"city_name"` // The city context for this interaction
+	CityName string     `json:"city_name,omitempty" db:"city_name"` // The city context for this interaction
 	CityID   *uuid.UUID `json:"city_id,omitempty" db:"city_id"`
 
 	// Request/Response data
@@ -50,7 +50,7 @@ type LlmInteraction struct {
 
 	// Model information
 	ModelUsed string `json:"model_name" db:"model_name"`
-	ModelName string `json:"model" db:"-"`      // Duplicate field for compatibility
+	ModelName string `json:"model" db:"-"`           // Duplicate field for compatibility
 	Provider  string `json:"provider" db:"provider"` // e.g., 'google', 'openai', 'anthropic'
 
 	// Token usage
@@ -95,8 +95,8 @@ type LlmInteraction struct {
 	UserAgent  string `json:"user_agent,omitempty" db:"user_agent"`
 
 	// Privacy
-	PromptHash     string `json:"prompt_hash,omitempty" db:"prompt_hash"`         // SHA256 hash for anonymized tracking
-	IsPIIRedacted  bool   `json:"is_pii_redacted" db:"is_pii_redacted"`
+	PromptHash    string `json:"prompt_hash,omitempty" db:"prompt_hash"` // SHA256 hash for anonymized tracking
+	IsPIIRedacted bool   `json:"is_pii_redacted" db:"is_pii_redacted"`
 
 	// Streaming metadata
 	IsStreaming       bool `json:"is_streaming" db:"is_streaming"`
@@ -115,6 +115,7 @@ type LlmInteraction struct {
 }
 
 type AIItineraryResponse struct {
+	ItineraryID        uuid.UUID         `json:"itinerary_id" db:"itinerary_id"`
 	ItineraryName      string            `json:"itinerary_name"`
 	OverallDescription string            `json:"overall_description"`
 	GeneralCityData    GeneralCityData   `json:"general_pois"`

@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"strings"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -49,11 +50,11 @@ type UserRepo interface {
 }
 
 type PostgresUserRepo struct {
-	logger *slog.Logger
+	logger *zap.Logger
 	pgpool *pgxpool.Pool
 }
 
-func NewPostgresUserRepo(pgxpool *pgxpool.Pool, logger *slog.Logger) *PostgresUserRepo {
+func NewPostgresUserRepo(pgxpool *pgxpool.Pool, logger *zap.Logger) *PostgresUserRepo {
 	return &PostgresUserRepo{
 		logger: logger,
 		pgpool: pgxpool,
@@ -162,8 +163,8 @@ func (r *PostgresUserRepo) UpdateProfile(ctx context.Context, userID uuid.UUID, 
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "UpdateProfile"), slog.String("userID", userID.String()))
-	l.DebugContext(ctx, "Updating user profile", slog.Any("params", params)) // Log incoming params
+	l := r.logger.With(zap.String("method", "UpdateProfile"), zap.String("userID", userID.String()))
+	l.Debug( "Updating user profile", zap.Any("params", params)) // Log incoming params
 
 	// Use squirrel or build query dynamically
 	var setClauses []string
@@ -258,7 +259,7 @@ func (r *PostgresUserRepo) UpdateProfile(ctx context.Context, userID uuid.UUID, 
 
 	// If no fields were provided to update, return early (or error?)
 	if len(setClauses) == 0 {
-		l.WarnContext(ctx, "UpdateProfile called with no fields to update")
+		l.Warn( "UpdateProfile called with no fields to update")
 		span.SetStatus(codes.Ok, "No update fields provided") // Not an error, just no-op
 		return nil                                            // Or return specific error models.ErrBadRequest("no update fields provided")
 	}
@@ -277,13 +278,13 @@ func (r *PostgresUserRepo) UpdateProfile(ctx context.Context, userID uuid.UUID, 
 		argID,                          // The placeholder for userID
 	)
 
-	l.DebugContext(ctx, "Executing dynamic update query", slog.String("query", query), slog.Int("arg_count", len(args)))
+	l.Debug( "Executing dynamic update query", zap.String("query", query), zap.Int("arg_count", len(args)))
 
 	// Execute the dynamic query
 	tag, err := r.pgpool.Exec(ctx, query, args...)
 	if err != nil {
 		// Add specific error checking (e.g., unique constraint violations on email/username if updated)
-		l.ErrorContext(ctx, "Failed to execute update profile query", slog.Any("error", err))
+		l.Error( "Failed to execute update profile query", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB UPDATE failed")
 		return fmt.Errorf("database error updating profile: %w", err)
@@ -291,7 +292,7 @@ func (r *PostgresUserRepo) UpdateProfile(ctx context.Context, userID uuid.UUID, 
 
 	// Check if the user existed and was updated
 	if tag.RowsAffected() == 0 {
-		l.WarnContext(ctx, "User not found or no update occurred", slog.Int64("rows_affected", tag.RowsAffected()))
+		l.Warn( "User not found or no update occurred", zap.Int64("rows_affected", tag.RowsAffected()))
 		span.SetStatus(codes.Error, "User not found or no change")
 		// Check if user exists to differentiate "not found" vs "no effective change"
 		var exists bool
@@ -305,7 +306,7 @@ func (r *PostgresUserRepo) UpdateProfile(ctx context.Context, userID uuid.UUID, 
 		return fmt.Errorf("user not found or update failed: %w", models.ErrNotFound)
 	}
 
-	l.InfoContext(ctx, "User profile updated successfully")
+	l.Info( "User profile updated successfully")
 	span.SetStatus(codes.Ok, "Profile updated")
 	return nil
 }
@@ -320,8 +321,8 @@ func (r *PostgresUserRepo) UpdateLastLogin(ctx context.Context, userID uuid.UUID
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "UpdateLastLogin"), slog.String("userID", userID.String()))
-	l.DebugContext(ctx, "Updating user last login timestamp")
+	l := r.logger.With(zap.String("method", "UpdateLastLogin"), zap.String("userID", userID.String()))
+	l.Debug( "Updating user last login timestamp")
 
 	query := `
         UPDATE users 
@@ -331,7 +332,7 @@ func (r *PostgresUserRepo) UpdateLastLogin(ctx context.Context, userID uuid.UUID
 	now := time.Now()
 	tag, err := r.pgpool.Exec(ctx, query, now, userID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to update user last login timestamp", slog.Any("error", err))
+		l.Error( "Failed to update user last login timestamp", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB UPDATE failed")
 		return fmt.Errorf("database error updating last login: %w", err)
@@ -339,13 +340,13 @@ func (r *PostgresUserRepo) UpdateLastLogin(ctx context.Context, userID uuid.UUID
 
 	if tag.RowsAffected() == 0 {
 		err := fmt.Errorf("user not found: %w", models.ErrNotFound)
-		l.WarnContext(ctx, "Attempted to update last login for non-existent user")
+		l.Warn( "Attempted to update last login for non-existent user")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "User not found")
 		return err
 	}
 
-	l.InfoContext(ctx, "User last login timestamp updated successfully")
+	l.Info( "User last login timestamp updated successfully")
 	span.SetStatus(codes.Ok, "Last login updated")
 	return nil
 }
@@ -360,8 +361,8 @@ func (r *PostgresUserRepo) MarkEmailAsVerified(ctx context.Context, userID uuid.
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "MarkEmailAsVerified"), slog.String("userID", userID.String()))
-	l.DebugContext(ctx, "Marking user email as verified")
+	l := r.logger.With(zap.String("method", "MarkEmailAsVerified"), zap.String("userID", userID.String()))
+	l.Debug( "Marking user email as verified")
 
 	query := `
         UPDATE users 
@@ -371,7 +372,7 @@ func (r *PostgresUserRepo) MarkEmailAsVerified(ctx context.Context, userID uuid.
 	now := time.Now()
 	tag, err := r.pgpool.Exec(ctx, query, now, userID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to mark user email as verified", slog.Any("error", err))
+		l.Error( "Failed to mark user email as verified", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB UPDATE failed")
 		return fmt.Errorf("database error marking email as verified: %w", err)
@@ -382,7 +383,7 @@ func (r *PostgresUserRepo) MarkEmailAsVerified(ctx context.Context, userID uuid.
 		var exists bool
 		err := r.pgpool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)", userID).Scan(&exists)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to check if user exists", slog.Any("error", err))
+			l.Error( "Failed to check if user exists", zap.Any("error", err))
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "DB query failed")
 			return fmt.Errorf("database error checking user existence: %w", err)
@@ -390,19 +391,19 @@ func (r *PostgresUserRepo) MarkEmailAsVerified(ctx context.Context, userID uuid.
 
 		if !exists {
 			err := fmt.Errorf("user not found: %w", models.ErrNotFound)
-			l.WarnContext(ctx, "Attempted to mark email as verified for non-existent user")
+			l.Warn( "Attempted to mark email as verified for non-existent user")
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "User not found")
 			return err
 		}
 
 		// User exists but email is already verified
-		l.InfoContext(ctx, "User email already verified")
+		l.Info( "User email already verified")
 		span.SetStatus(codes.Ok, "Email already verified")
 		return nil
 	}
 
-	l.InfoContext(ctx, "User email marked as verified successfully")
+	l.Info( "User email marked as verified successfully")
 	span.SetStatus(codes.Ok, "Email verified")
 	return nil
 }
@@ -417,13 +418,13 @@ func (r *PostgresUserRepo) DeactivateUser(ctx context.Context, userID uuid.UUID)
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "DeactivateUser"), slog.String("userID", userID.String()))
-	l.DebugContext(ctx, "Deactivating user")
+	l := r.logger.With(zap.String("method", "DeactivateUser"), zap.String("userID", userID.String()))
+	l.Debug("Deactivating user")
 
 	// Begin a transaction
 	tx, err := r.pgpool.Begin(ctx)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to begin transaction", slog.Any("error", err))
+		l.Error( "Failed to begin transaction", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB transaction failed")
 		return fmt.Errorf("database error beginning transaction: %w", err)
@@ -435,17 +436,17 @@ func (r *PostgresUserRepo) DeactivateUser(ctx context.Context, userID uuid.UUID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-				l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", rollbackErr))
+				l.Error( "Failed to rollback transaction", zap.Any("error", rollbackErr))
 			}
-			l.WarnContext(ctx, "Attempted to deactivate non-existent user")
+			l.Warn( "Attempted to deactivate non-existent user")
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "User not found")
 			return fmt.Errorf("user not found: %w", models.ErrNotFound)
 		}
 		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-			l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", rollbackErr))
+			l.Error( "Failed to rollback transaction", zap.Any("error", rollbackErr))
 		}
-		l.ErrorContext(ctx, "Failed to check user active status", slog.Any("error", err))
+		l.Error( "Failed to check user active status", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB query failed")
 		return fmt.Errorf("database error checking user status: %w", err)
@@ -453,9 +454,9 @@ func (r *PostgresUserRepo) DeactivateUser(ctx context.Context, userID uuid.UUID)
 
 	if !isActive {
 		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-			l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", rollbackErr))
+			l.Error( "Failed to rollback transaction", zap.Any("error", rollbackErr))
 		}
-		l.InfoContext(ctx, "User is already inactive")
+		l.Info( "User is already inactive")
 		span.SetStatus(codes.Ok, "User already inactive")
 		return nil
 	}
@@ -464,9 +465,9 @@ func (r *PostgresUserRepo) DeactivateUser(ctx context.Context, userID uuid.UUID)
 	_, err = tx.Exec(ctx, "UPDATE users SET is_active = FALSE, updated_at = $1 WHERE id = $2", time.Now(), userID)
 	if err != nil {
 		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-			l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", rollbackErr))
+			l.Error( "Failed to rollback transaction", zap.Any("error", rollbackErr))
 		}
-		l.ErrorContext(ctx, "Failed to deactivate user", slog.Any("error", err))
+		l.Error( "Failed to deactivate user", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB UPDATE failed")
 		return fmt.Errorf("database error deactivating user: %w", err)
@@ -476,9 +477,9 @@ func (r *PostgresUserRepo) DeactivateUser(ctx context.Context, userID uuid.UUID)
 	_, err = tx.Exec(ctx, "UPDATE refresh_tokens SET revoked_at = $1 WHERE user_id = $2 AND revoked_at IS NULL", time.Now(), userID)
 	if err != nil {
 		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-			l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", rollbackErr))
+			l.Error( "Failed to rollback transaction", zap.Any("error", rollbackErr))
 		}
-		l.ErrorContext(ctx, "Failed to invalidate refresh tokens", slog.Any("error", err))
+		l.Error( "Failed to invalidate refresh tokens", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB UPDATE failed")
 		return fmt.Errorf("database error invalidating refresh tokens: %w", err)
@@ -488,9 +489,9 @@ func (r *PostgresUserRepo) DeactivateUser(ctx context.Context, userID uuid.UUID)
 	_, err = tx.Exec(ctx, "UPDATE sessions SET invalidated_at = $1 WHERE user_id = $2 AND invalidated_at IS NULL", time.Now(), userID)
 	if err != nil {
 		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-			l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", rollbackErr))
+			l.Error( "Failed to rollback transaction", zap.Any("error", rollbackErr))
 		}
-		l.ErrorContext(ctx, "Failed to invalidate sessions", slog.Any("error", err))
+		l.Error( "Failed to invalidate sessions", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB UPDATE failed")
 		return fmt.Errorf("database error invalidating sessions: %w", err)
@@ -499,13 +500,13 @@ func (r *PostgresUserRepo) DeactivateUser(ctx context.Context, userID uuid.UUID)
 	// Commit the transaction
 	err = tx.Commit(ctx)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to commit transaction", slog.Any("error", err))
+		l.Error( "Failed to commit transaction", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB transaction commit failed")
 		return fmt.Errorf("database error committing transaction: %w", err)
 	}
 
-	l.InfoContext(ctx, "User deactivated successfully")
+	l.Info( "User deactivated successfully")
 	span.SetStatus(codes.Ok, "User deactivated")
 	return nil
 }
@@ -520,27 +521,27 @@ func (r *PostgresUserRepo) ReactivateUser(ctx context.Context, userID uuid.UUID)
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "ReactivateUser"), slog.String("userID", userID.String()))
-	l.DebugContext(ctx, "Reactivating user")
+	l := r.logger.With(zap.String("method", "ReactivateUser"), zap.String("userID", userID.String()))
+	l.Debug( "Reactivating user")
 
 	// Check if the user exists and is inactive
 	var isActive bool
 	err := r.pgpool.QueryRow(ctx, "SELECT is_active FROM users WHERE id = $1", userID).Scan(&isActive)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			l.WarnContext(ctx, "Attempted to reactivate non-existent user")
+			l.Warn( "Attempted to reactivate non-existent user")
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "User not found")
 			return fmt.Errorf("user not found: %w", models.ErrNotFound)
 		}
-		l.ErrorContext(ctx, "Failed to check user active status", slog.Any("error", err))
+		l.Error( "Failed to check user active status", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB query failed")
 		return fmt.Errorf("database error checking user status: %w", err)
 	}
 
 	if isActive {
-		l.InfoContext(ctx, "User is already active")
+		l.Info( "User is already active")
 		span.SetStatus(codes.Ok, "User already active")
 		return nil
 	}
@@ -548,13 +549,13 @@ func (r *PostgresUserRepo) ReactivateUser(ctx context.Context, userID uuid.UUID)
 	// Reactivate the user
 	_, err = r.pgpool.Exec(ctx, "UPDATE users SET is_active = TRUE, updated_at = $1 WHERE id = $2", time.Now(), userID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to reactivate user", slog.Any("error", err))
+		l.Error( "Failed to reactivate user", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB UPDATE failed")
 		return fmt.Errorf("database error reactivating user: %w", err)
 	}
 
-	l.InfoContext(ctx, "User reactivated successfully")
+	l.Info( "User reactivated successfully")
 	span.SetStatus(codes.Ok, "User reactivated")
 	return nil
 }

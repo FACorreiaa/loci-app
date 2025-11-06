@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/FACorreiaa/go-templui/internal/app/domain/streaming"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
@@ -24,7 +25,7 @@ import (
 type UnifiedStreamingHandlers struct {
 	llmService       LlmInteractiontService
 	itineraryService *services.ItineraryService
-	logger           *slog.Logger
+	logger           *zap.Logger
 	streamManager    *streamingpkg.StreamManager
 }
 
@@ -32,7 +33,7 @@ type UnifiedStreamingHandlers struct {
 func NewUnifiedStreamingHandlers(
 	llmService LlmInteractiontService,
 	itineraryService *services.ItineraryService,
-	logger *slog.Logger,
+	logger *zap.Logger,
 ) *UnifiedStreamingHandlers {
 	return &UnifiedStreamingHandlers{
 		llmService:       llmService,
@@ -54,7 +55,7 @@ func (h *UnifiedStreamingHandlers) HandleGenerateStream(c *gin.Context) {
 	// Parse the streaming request
 	var req streamingpkg.StreamRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.ErrorContext(ctx, "Failed to parse streaming request", slog.Any("error", err))
+		h.logger.Error("Failed to parse streaming request", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Invalid request")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
@@ -65,10 +66,10 @@ func (h *UnifiedStreamingHandlers) HandleGenerateStream(c *gin.Context) {
 	sessionID := uuid.New().String()
 	req.SessionID = sessionID
 
-	h.logger.InfoContext(ctx, "Starting unified streaming request",
-		slog.String("sessionId", sessionID),
-		slog.String("requestType", string(req.RequestType)),
-		slog.String("query", req.Query))
+	h.logger.Info("Starting unified streaming request",
+		zap.String("sessionId", sessionID),
+		zap.String("requestType", string(req.RequestType)),
+		zap.String("query", req.Query))
 
 	// Start the streaming process in background
 	go h.processStreamingRequest(ctx, req)
@@ -89,13 +90,13 @@ func (h *UnifiedStreamingHandlers) HandleStreamEvents(c *gin.Context) {
 	)
 	defer span.End()
 
-	l := h.logger.With(slog.String("sessionId", sessionID))
-	l.InfoContext(ctx, "Client connected to streaming endpoint")
+	l := h.logger.With(zap.String("sessionId", sessionID))
+	l.Info("Client connected to streaming endpoint")
 
 	// Get the streaming channel
 	eventCh, found := h.streamManager.GetStream(sessionID)
 	if !found {
-		l.WarnContext(ctx, "No streaming session found")
+		l.Warn("No streaming session found")
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -110,7 +111,7 @@ func (h *UnifiedStreamingHandlers) HandleStreamEvents(c *gin.Context) {
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		l.ErrorContext(ctx, "Streaming not supported")
+		l.Error("Streaming not supported")
 		span.SetStatus(codes.Error, "Streaming not supported")
 		return
 	}
@@ -120,14 +121,14 @@ func (h *UnifiedStreamingHandlers) HandleStreamEvents(c *gin.Context) {
 		select {
 		case event, ok := <-eventCh:
 			if !ok {
-				l.InfoContext(ctx, "Event channel closed, ending stream")
+				l.Info("Event channel closed, ending stream")
 				return
 			}
 
 			// Render the appropriate component based on event type and request type
 			htmlContent, err := h.renderEventAsHTML(ctx, event)
 			if err != nil {
-				l.ErrorContext(ctx, "Failed to render event as HTML", slog.Any("error", err))
+				l.Error("Failed to render event as HTML", zap.Any("error", err))
 				continue
 			}
 
@@ -141,12 +142,12 @@ func (h *UnifiedStreamingHandlers) HandleStreamEvents(c *gin.Context) {
 
 			// End stream if this is a final event
 			if event.IsFinal {
-				l.InfoContext(ctx, "Stream completed", slog.String("eventType", event.Type))
+				l.Info("Stream completed", zap.String("eventType", event.Type))
 				return
 			}
 
 		case <-c.Request.Context().Done():
-			l.InfoContext(ctx, "Client disconnected")
+			l.Info("Client disconnected")
 			return
 		}
 	}
@@ -154,7 +155,7 @@ func (h *UnifiedStreamingHandlers) HandleStreamEvents(c *gin.Context) {
 
 // processStreamingRequest handles the actual streaming logic in background
 func (h *UnifiedStreamingHandlers) processStreamingRequest(ctx context.Context, req streamingpkg.StreamRequest) {
-	l := h.logger.With(slog.String("sessionId", req.SessionID))
+	l := h.logger.With(zap.String("sessionId", req.SessionID))
 
 	// Create the streaming channel
 	eventCh := h.streamManager.CreateStream(req.SessionID, req.RequestType)
@@ -181,7 +182,7 @@ func (h *UnifiedStreamingHandlers) processStreamingRequest(ctx context.Context, 
 		return
 	}
 
-	l.InfoContext(ctx, "Streaming request completed")
+	l.Info("Streaming request completed")
 }
 
 // processItineraryRequest handles itinerary-specific streaming
@@ -196,7 +197,7 @@ func (h *UnifiedStreamingHandlers) processItineraryRequest(ctx context.Context, 
 			ctx, req.CityName, req.Query, req.UserLocation, legacyEventCh,
 		)
 		if err != nil {
-			h.logger.ErrorContext(ctx, "LLM service error", slog.Any("error", err))
+			h.logger.Error("LLM service error", zap.Any("error", err))
 		}
 	}()
 
@@ -232,7 +233,7 @@ func (h *UnifiedStreamingHandlers) processHotelsRequest(ctx context.Context, req
 			ctx, req.CityName, req.Query+" hotels accommodation", req.UserLocation, legacyEventCh,
 		)
 		if err != nil {
-			h.logger.ErrorContext(ctx, "Hotel service error", slog.Any("error", err))
+			h.logger.Error("Hotel service error", zap.Any("error", err))
 		}
 	}()
 
@@ -262,7 +263,7 @@ func (h *UnifiedStreamingHandlers) processRestaurantsRequest(ctx context.Context
 			ctx, req.CityName, req.Query+" restaurants dining food", req.UserLocation, legacyEventCh,
 		)
 		if err != nil {
-			h.logger.ErrorContext(ctx, "Restaurant service error", slog.Any("error", err))
+			h.logger.Error("Restaurant service error", zap.Any("error", err))
 		}
 	}()
 
@@ -292,7 +293,7 @@ func (h *UnifiedStreamingHandlers) processActivitiesRequest(ctx context.Context,
 			ctx, req.CityName, req.Query+" activities attractions things to do", req.UserLocation, legacyEventCh,
 		)
 		if err != nil {
-			h.logger.ErrorContext(ctx, "Activities service error", slog.Any("error", err))
+			h.logger.Error("Activities service error", zap.Any("error", err))
 		}
 	}()
 
@@ -406,7 +407,7 @@ func (h *UnifiedStreamingHandlers) renderPOIsByType(ctx context.Context, pois []
 				Render(context.Context, *bytes.Buffer) error
 			}); ok {
 				if err := renderable.Render(ctx, &buffer); err != nil {
-					h.logger.ErrorContext(ctx, "Failed to render POI component", slog.Any("error", err))
+					h.logger.Error("Failed to render POI component", zap.Any("error", err))
 					continue
 				}
 				htmlParts = append(htmlParts, buffer.String())

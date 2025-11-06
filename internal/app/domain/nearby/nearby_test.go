@@ -7,12 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"log/slog"
+	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
-	"github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 )
 
@@ -80,7 +79,7 @@ func setupTestServer(t *testing.T) (*httptest.Server, *MockLocationRepository) {
 	gin.SetMode(gin.TestMode)
 
 	mockRepo := NewMockLocationRepository()
-	logger := slog.Default()
+	logger := zap.Default()
 
 	// Create a minimal chat service (we won't actually use AI in tests)
 	chatService := &llmchat.ServiceImpl{}

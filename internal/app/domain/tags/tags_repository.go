@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
+	"go.uber.org/zap"
 	"time"
 
 	"github.com/google/uuid"
@@ -50,11 +50,11 @@ type Repository interface {
 }
 
 type RepositoryImpl struct {
-	logger *slog.Logger
+	logger *zap.Logger
 	pgpool *pgxpool.Pool
 }
 
-func NewRepositoryImpl(pgxpool *pgxpool.Pool, logger *slog.Logger) *RepositoryImpl {
+func NewRepositoryImpl(pgxpool *pgxpool.Pool, logger *zap.Logger) *RepositoryImpl {
 	return &RepositoryImpl{
 		logger: logger,
 		pgpool: pgxpool,
@@ -69,8 +69,8 @@ func (r *RepositoryImpl) GetAll(ctx context.Context, userID uuid.UUID) ([]*model
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetAllGlobalTags"))
-	l.DebugContext(ctx, "Fetching all active global tags")
+	l := r.logger.With(zap.String("method", "GetAllGlobalTags"))
+	l.Debug( "Fetching all active global tags")
 
 	query := `
         SELECT
@@ -102,7 +102,7 @@ func (r *RepositoryImpl) GetAll(ctx context.Context, userID uuid.UUID) ([]*model
 
 	rows, err := r.pgpool.Query(ctx, query, userID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query global tags", slog.Any("error", err))
+		l.Error( "Failed to query global tags", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB query failed")
 		return nil, fmt.Errorf("database error fetching global tags: %w", err)
@@ -122,7 +122,7 @@ func (r *RepositoryImpl) GetAll(ctx context.Context, userID uuid.UUID) ([]*model
 			&t.CreatedAt,
 		)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to scan global tag row", slog.Any("error", err))
+			l.Error( "Failed to scan global tag row", zap.Any("error", err))
 			span.RecordError(err)
 			return nil, fmt.Errorf("database error scanning global tag: %w", err)
 		}
@@ -130,12 +130,12 @@ func (r *RepositoryImpl) GetAll(ctx context.Context, userID uuid.UUID) ([]*model
 	}
 
 	if err = rows.Err(); err != nil {
-		l.ErrorContext(ctx, "Error iterating global tag rows", slog.Any("error", err))
+		l.Error( "Error iterating global tag rows", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("database error reading global tags: %w", err)
 	}
 
-	l.DebugContext(ctx, "Fetched all active global tags successfully", slog.Int("count", len(tags)))
+	l.Debug( "Fetched all active global tags successfully", zap.Int("count", len(tags)))
 	span.SetStatus(codes.Ok, "Global tags fetched")
 	return tags, nil
 }
@@ -150,8 +150,8 @@ func (r *RepositoryImpl) Get(ctx context.Context, userID, tagID uuid.UUID) (*mod
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetUserAvoidTags"), slog.String("userID", userID.String()))
-	l.DebugContext(ctx, "Fetching user avoid tags")
+	l := r.logger.With(zap.String("method", "GetUserAvoidTags"), zap.String("userID", userID.String()))
+	l.Debug( "Fetching user avoid tags")
 
 	query := `
     SELECT id, name, description, tag_type, source, created_at
@@ -190,12 +190,12 @@ func (r *RepositoryImpl) Get(ctx context.Context, userID, tagID uuid.UUID) (*mod
 		&tag.CreatedAt,
 	)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query user avoid tags", slog.Any("error", err))
+		l.Error( "Failed to query user avoid tags", zap.Any("error", err))
 		span.SetStatus(codes.Error, "DB query failed")
 		return nil, fmt.Errorf("database error fetching avoid tags: %w", err)
 	}
 
-	l.DebugContext(ctx, "Fetched user avoid tags successfully")
+	l.Debug( "Fetched user avoid tags successfully")
 	span.SetStatus(codes.Ok, "Avoid tags fetched")
 	return &tag, nil
 }
@@ -218,17 +218,17 @@ func (r *RepositoryImpl) Create(ctx context.Context, userID uuid.UUID, params mo
 	}
 	defer func() {
 		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-			r.logger.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", rollbackErr))
+			r.logger.Error( "Failed to rollback transaction", zap.Any("error", rollbackErr))
 		}
 	}() // Rollback if commit is not successful
 
 	l := r.logger.With(
-		slog.String("method", "CreatePersonalTag"),
-		slog.String("userID", userID.String()),
-		slog.String("tagName", params.Name),
-		slog.String("tagType", params.TagType),
+		zap.String("method", "CreatePersonalTag"),
+		zap.String("userID", userID.String()),
+		zap.String("tagName", params.Name),
+		zap.String("tagType", params.TagType),
 	)
-	l.DebugContext(ctx, "Creating user personal tag")
+	l.Debug( "Creating user personal tag")
 
 	newTagID := uuid.New()
 	now := time.Now()
@@ -254,7 +254,7 @@ func (r *RepositoryImpl) Create(ctx context.Context, userID uuid.UUID, params mo
 	if err != nil {
 		span.RecordError(err)
 
-		l.ErrorContext(ctx, "Failed to insert user personal tag", slog.Any("error", err))
+		l.Error( "Failed to insert user personal tag", zap.Any("error", err))
 		span.SetStatus(codes.Error, "DB INSERT failed")
 		return nil, fmt.Errorf("database error creating personal tag: %w", err)
 	}
@@ -266,7 +266,7 @@ func (r *RepositoryImpl) Create(ctx context.Context, userID uuid.UUID, params mo
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	l.InfoContext(ctx, "User personal tag created successfully", slog.String("tagID", tag.ID.String()))
+	l.Info( "User personal tag created successfully", zap.String("tagID", tag.ID.String()))
 	span.SetStatus(codes.Ok, "Personal tag created")
 	return tag, nil
 }
@@ -288,18 +288,18 @@ func (r *RepositoryImpl) Update(ctx context.Context, userID, tagsID uuid.UUID, p
 	}
 	defer func() {
 		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-			r.logger.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", rollbackErr))
+			r.logger.Error( "Failed to rollback transaction", zap.Any("error", rollbackErr))
 		}
 	}()
 
 	l := r.logger.With(
-		slog.String("method", "UpdatePersonalTag"),
-		slog.String("userID", userID.String()),
-		slog.String("tagID", tagsID.String()),
-		slog.String("newName", params.Name),
-		slog.String("newTagType", params.TagType),
+		zap.String("method", "UpdatePersonalTag"),
+		zap.String("userID", userID.String()),
+		zap.String("tagID", tagsID.String()),
+		zap.String("newName", params.Name),
+		zap.String("newTagType", params.TagType),
 	)
-	l.DebugContext(ctx, "Updating user personal tag")
+	l.Debug( "Updating user personal tag")
 
 	query := `
         UPDATE user_personal_tags
@@ -311,13 +311,13 @@ func (r *RepositoryImpl) Update(ctx context.Context, userID, tagsID uuid.UUID, p
 	cmdTag, err := tx.Exec(ctx, query, params.Name, params.TagType, params.Active, now, tagsID, userID)
 	if err != nil {
 		span.RecordError(err)
-		l.ErrorContext(ctx, "Failed to update user personal tag", slog.Any("error", err))
+		l.Error( "Failed to update user personal tag", zap.Any("error", err))
 		span.SetStatus(codes.Error, "DB UPDATE failed")
 		return fmt.Errorf("database error updating personal tag: %w", err)
 	}
 
 	if cmdTag.RowsAffected() == 0 {
-		l.WarnContext(ctx, "Attempted to update non-existent or unauthorized personal tag")
+		l.Warn( "Attempted to update non-existent or unauthorized personal tag")
 		span.SetStatus(codes.Error, "Tag not found or not owned by user")
 		// It didn't exist OR didn't belong to the user, return NotFound
 		return fmt.Errorf("personal tag not found or not owned by user: %w", models.ErrNotFound)
@@ -330,7 +330,7 @@ func (r *RepositoryImpl) Update(ctx context.Context, userID, tagsID uuid.UUID, p
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	l.InfoContext(ctx, "User personal tag updated successfully")
+	l.Info( "User personal tag updated successfully")
 	span.SetStatus(codes.Ok, "Personal tag updated")
 	return nil
 }
@@ -354,12 +354,12 @@ func (r *RepositoryImpl) Delete(ctx context.Context, userID uuid.UUID, tagID uui
 	}
 	defer func() {
 		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-			r.logger.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", rollbackErr))
+			r.logger.Error( "Failed to rollback transaction", zap.Any("error", rollbackErr))
 		}
 	}()
 
-	l := r.logger.With(slog.String("method", "DeletePersonalTag"), slog.String("userID", userID.String()), slog.String("tagID", tagID.String()))
-	l.DebugContext(ctx, "Deleting user personal tag")
+	l := r.logger.With(zap.String("method", "DeletePersonalTag"), zap.String("userID", userID.String()), zap.String("tagID", tagID.String()))
+	l.Debug( "Deleting user personal tag")
 
 	query := `
         DELETE FROM user_personal_tags
@@ -368,14 +368,14 @@ func (r *RepositoryImpl) Delete(ctx context.Context, userID uuid.UUID, tagID uui
 	cmdTag, err := tx.Exec(ctx, query, tagID, userID)
 	if err != nil {
 		// Note: DELETE typically won't cause unique or foreign key violations unless triggers exist.
-		l.ErrorContext(ctx, "Failed to delete user personal tag", slog.Any("error", err))
+		l.Error( "Failed to delete user personal tag", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB DELETE failed")
 		return fmt.Errorf("database error deleting personal tag: %w", err)
 	}
 
 	if cmdTag.RowsAffected() == 0 {
-		l.WarnContext(ctx, "Attempted to delete non-existent or unauthorized personal tag")
+		l.Warn( "Attempted to delete non-existent or unauthorized personal tag")
 		span.SetStatus(codes.Error, "Tag not found or not owned by user")
 		// It didn't exist OR didn't belong to the user
 		return fmt.Errorf("personal tag not found or not owned by user: %w", models.ErrNotFound)
@@ -388,7 +388,7 @@ func (r *RepositoryImpl) Delete(ctx context.Context, userID uuid.UUID, tagID uui
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	l.InfoContext(ctx, "User personal tag deleted successfully")
+	l.Info( "User personal tag deleted successfully")
 	span.SetStatus(codes.Ok, "Personal tag deleted")
 	return nil
 }
@@ -403,8 +403,8 @@ func (r *RepositoryImpl) GetTagByName(ctx context.Context, name string) (*models
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetTagByName"), slog.String("name", name))
-	l.DebugContext(ctx, "Fetching tag by name")
+	l := r.logger.With(zap.String("method", "GetTagByName"), zap.String("name", name))
+	l.Debug( "Fetching tag by name")
 
 	query := `
         SELECT id, name, description, tag_type, created_at
@@ -421,17 +421,17 @@ func (r *RepositoryImpl) GetTagByName(ctx context.Context, name string) (*models
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			l.WarnContext(ctx, "Tag not found", slog.String("name", name))
+			l.Warn( "Tag not found", zap.String("name", name))
 			span.SetStatus(codes.Error, "Tag not found")
 			return nil, models.ErrNotFound
 		}
-		l.ErrorContext(ctx, "Failed to fetch tag by name", slog.Any("error", err))
+		l.Error( "Failed to fetch tag by name", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB query failed")
 		return nil, fmt.Errorf("database error fetching tag: %w", err)
 	}
 
-	l.DebugContext(ctx, "Fetched tag by name successfully", slog.String("tagID", tag.ID.String()))
+	l.Debug( "Fetched tag by name successfully", zap.String("tagID", tag.ID.String()))
 	span.SetStatus(codes.Ok, "Tag fetched")
 	return &tag, nil
 }
@@ -447,15 +447,15 @@ func (r *RepositoryImpl) LinkPersonalTagToProfile(ctx context.Context, userID, p
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "AddTagToProfile"), slog.String("profileID", profileID.String()), slog.String("tagID", tagID.String()))
-	l.DebugContext(ctx, "Linking tag to profile")
+	l := r.logger.With(zap.String("method", "AddTagToProfile"), zap.String("profileID", profileID.String()), zap.String("tagID", tagID.String()))
+	l.Debug( "Linking tag to profile")
 
 	query := `UPDATE user_personal_tags
               SET profile_id = $1, updated_at = NOW()
               WHERE id = $2 AND user_id = $3` // Ensure ownership
 	tag, err := r.pgpool.Exec(ctx, query, profileID, tagID, userID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to link tag to profile", slog.Any("error", err))
+		l.Error( "Failed to link tag to profile", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB INSERT failed")
 		return fmt.Errorf("database error linking tag to profile: %w", err)
@@ -465,7 +465,7 @@ func (r *RepositoryImpl) LinkPersonalTagToProfile(ctx context.Context, userID, p
 		return fmt.Errorf("personal tag %s not found for user %s: %w", tagID, userID, models.ErrNotFound)
 	}
 
-	l.DebugContext(ctx, "Tag linked to profile successfully")
+	l.Debug( "Tag linked to profile successfully")
 	span.SetStatus(codes.Ok, "Tag linked")
 	return nil
 }
@@ -480,8 +480,8 @@ func (r *RepositoryImpl) GetTagsForProfile(ctx context.Context, profileID uuid.U
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetTagsForProfile"), slog.String("profileID", profileID.String()))
-	l.DebugContext(ctx, "Fetching tags for profile")
+	l := r.logger.With(zap.String("method", "GetTagsForProfile"), zap.String("profileID", profileID.String()))
+	l.Debug( "Fetching tags for profile")
 
 	query := `
         SELECT g.id, g.name, g.tag_type, g.description, g.created_at
@@ -491,7 +491,7 @@ func (r *RepositoryImpl) GetTagsForProfile(ctx context.Context, profileID uuid.U
 
 	rows, err := r.pgpool.Query(ctx, query, profileID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query tags for profile", slog.Any("error", err))
+		l.Error( "Failed to query tags for profile", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB query failed")
 		return nil, fmt.Errorf("database error fetching tags for profile: %w", err)
@@ -510,7 +510,7 @@ func (r *RepositoryImpl) GetTagsForProfile(ctx context.Context, profileID uuid.U
 			&tag.UpdatedAt,
 		)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to scan tag row", slog.Any("error", err))
+			l.Error( "Failed to scan tag row", zap.Any("error", err))
 			span.RecordError(err)
 			return nil, fmt.Errorf("database error scanning tag: %w", err)
 		}
@@ -518,12 +518,12 @@ func (r *RepositoryImpl) GetTagsForProfile(ctx context.Context, profileID uuid.U
 	}
 
 	if err = rows.Err(); err != nil {
-		l.ErrorContext(ctx, "Error iterating tag rows", slog.Any("error", err))
+		l.Error( "Error iterating tag rows", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("database error reading tags: %w", err)
 	}
 
-	l.DebugContext(ctx, "Fetched tags for profile successfully", slog.Int("count", len(tags)))
+	l.Debug( "Fetched tags for profile successfully", zap.Int("count", len(tags)))
 	span.SetStatus(codes.Ok, "Tags fetched")
 	return tags, nil
 }

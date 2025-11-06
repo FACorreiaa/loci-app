@@ -3,7 +3,7 @@ package tags
 import (
 	"context"
 	"fmt"
-	"log/slog"
+	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
@@ -28,12 +28,12 @@ type tagsService interface {
 
 // tagsServiceImpl provides the implementation for UserService.
 type tagsServiceImpl struct {
-	logger *slog.Logger
+	logger *zap.Logger
 	repo   Repository
 }
 
 // NewtagsService creates a new user service instance.
-func NewtagsService(repo Repository, logger *slog.Logger) *tagsServiceImpl {
+func NewtagsService(repo Repository, logger *zap.Logger) *tagsServiceImpl {
 	return &tagsServiceImpl{
 		logger: logger,
 		repo:   repo,
@@ -45,18 +45,18 @@ func (s *tagsServiceImpl) GetTags(ctx context.Context, userID uuid.UUID) ([]*mod
 	ctx, span := otel.Tracer("UserService").Start(ctx, "GetAllGlobalTags")
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "GetAllGlobalTags"))
-	l.DebugContext(ctx, "Fetching all global tags")
+	l := s.logger.With(zap.String("method", "GetAllGlobalTags"))
+	l.Debug( "Fetching all global tags")
 
 	tags, err := s.repo.GetAll(ctx, userID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to fetch all global tags", slog.Any("error", err))
+		l.Error( "Failed to fetch all global tags", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to fetch all global tags")
 		return nil, fmt.Errorf("error fetching all global tags: %w", err)
 	}
 
-	l.InfoContext(ctx, "All global tags fetched successfully", slog.Int("count", len(tags)))
+	l.Info( "All global tags fetched successfully", zap.Int("count", len(tags)))
 	span.SetStatus(codes.Ok, "All global tags fetched successfully")
 	return tags, nil
 }
@@ -68,18 +68,18 @@ func (s *tagsServiceImpl) GetTag(ctx context.Context, userID, tagID uuid.UUID) (
 	))
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "GetUserAvoidTags"), slog.String("userID", userID.String()))
-	l.DebugContext(ctx, "Fetching user avoid tags")
+	l := s.logger.With(zap.String("method", "GetUserAvoidTags"), zap.String("userID", userID.String()))
+	l.Debug( "Fetching user avoid tags")
 
 	tag, err := s.repo.Get(ctx, userID, tagID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to fetch user avoid tags", slog.Any("error", err))
+		l.Error( "Failed to fetch user avoid tags", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to fetch user avoid tags")
 		return nil, fmt.Errorf("error fetching user avoid tags: %w", err)
 	}
 
-	l.InfoContext(ctx, "User avoid tags fetched successfully")
+	l.Info( "User avoid tags fetched successfully")
 	span.SetStatus(codes.Ok, "User avoid tags fetched successfully")
 	return tag, nil
 }
@@ -91,18 +91,18 @@ func (s *tagsServiceImpl) CreateTag(ctx context.Context, userID uuid.UUID, param
 	))
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "AddUserTag"), slog.String("userID", userID.String()))
-	l.DebugContext(ctx, "Adding user avoid tag")
+	l := s.logger.With(zap.String("method", "AddUserTag"), zap.String("userID", userID.String()))
+	l.Debug( "Adding user avoid tag")
 
 	tag, err := s.repo.Create(ctx, userID, params)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to add user avoid tag", slog.Any("error", err))
+		l.Error( "Failed to add user avoid tag", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to add user avoid tag")
 		return nil, fmt.Errorf("error adding user avoid tag: %w", err)
 	}
 
-	l.InfoContext(ctx, "User avoid tag added successfully")
+	l.Info( "User avoid tag added successfully")
 	span.SetStatus(codes.Ok, "User avoid tag added successfully")
 	return tag, nil
 }
@@ -115,18 +115,18 @@ func (s *tagsServiceImpl) DeleteTag(ctx context.Context, userID uuid.UUID, tagID
 	))
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "RemoveUserAvoidTag"), slog.String("userID", userID.String()), slog.String("tagID", tagID.String()))
-	l.DebugContext(ctx, "Removing user avoid tag")
+	l := s.logger.With(zap.String("method", "RemoveUserAvoidTag"), zap.String("userID", userID.String()), zap.String("tagID", tagID.String()))
+	l.Debug( "Removing user avoid tag")
 
 	err := s.repo.Delete(ctx, userID, tagID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to remove user avoid tag", slog.Any("error", err))
+		l.Error( "Failed to remove user avoid tag", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to remove user avoid tag")
 		return fmt.Errorf("error removing user avoid tag: %w", err)
 	}
 
-	l.InfoContext(ctx, "User avoid tag removed successfully")
+	l.Info( "User avoid tag removed successfully")
 	span.SetStatus(codes.Ok, "User avoid tag removed successfully")
 	return nil
 }
@@ -138,18 +138,18 @@ func (s *tagsServiceImpl) Update(ctx context.Context, userID uuid.UUID, tagID uu
 	))
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "UpdateUserAvoidTag"), slog.String("userID", userID.String()), slog.String("tagID", tagID.String()))
-	l.DebugContext(ctx, "Updating user avoid tag")
+	l := s.logger.With(zap.String("method", "UpdateUserAvoidTag"), zap.String("userID", userID.String()), zap.String("tagID", tagID.String()))
+	l.Debug( "Updating user avoid tag")
 
 	err := s.repo.Update(ctx, userID, tagID, params)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to update user avoid tag", slog.Any("error", err))
+		l.Error( "Failed to update user avoid tag", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to update user avoid tag")
 		return fmt.Errorf("error updating user avoid tag: %w", err)
 	}
 
-	l.InfoContext(ctx, "User avoid tag updated successfully")
+	l.Info( "User avoid tag updated successfully")
 	span.SetStatus(codes.Ok, "User avoid tag updated successfully")
 	return nil
 }

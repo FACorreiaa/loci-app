@@ -3,9 +3,10 @@ package poi
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"os"
 	"testing"
+
+	"go.uber.org/zap"
 
 	generativeAI "github.com/FACorreiaa/go-genai-sdk/lib"
 	"github.com/google/uuid"
@@ -391,7 +392,7 @@ func (m *MockPOIRepository) RemoveLLMPoiFromFavouriteByName(ctx context.Context,
 
 // Helper to setup service with mock repository
 func setupPOIServiceTest() (*ServiceImpl, *MockPOIRepository, *MockCityRepository) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})) // or io.Discard
+	logger := zap.New(zap.NewTextHandler(os.Stdout, &zap.HandlerOptions{Level: zap.LevelDebug})) // or io.Discard
 	mockRepo := new(MockPOIRepository)
 	mockCityRepo := new(MockCityRepository)
 	mockLLMRepo := new(MockLLMRepository)
@@ -430,7 +431,7 @@ func TestPOIServiceImpl_AddPoiToFavourites(t *testing.T) {
 func TestMain(m *testing.M) {
 	// Load .env file for tests
 	if err := godotenv.Load(); err != nil {
-		slog.Error("Error loading .env file in tests", "error", err)
+		zap.Error("Error loading .env file in tests", zap.Error(err))
 	}
 
 	// Run tests

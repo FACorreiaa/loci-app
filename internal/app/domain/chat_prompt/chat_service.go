@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 	"github.com/patrickmn/go-cache"
@@ -82,7 +83,7 @@ type IntentClassifier interface {
 
 // ServiceImpl provides the implementation for LlmInteractiontService.
 type ServiceImpl struct {
-	logger             *slog.Logger
+	logger             *zap.Logger
 	interestRepo       interests.Repository
 	searchProfileRepo  profiles2.Repository
 	searchProfileSvc   profiles2.Service // Add service for enhanced methods
@@ -109,7 +110,7 @@ func NewLlmInteractiontService(interestRepo interests.Repository,
 	llmInteractionRepo Repository,
 	cityRepo city.Repository,
 	poiRepo poi.Repository,
-	logger *slog.Logger) *ServiceImpl {
+	logger *zap.Logger) *ServiceImpl {
 	ctx := context.Background()
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	aiClient, err := generativeAI.NewLLMChatClient(ctx, apiKey)
@@ -118,9 +119,14 @@ func NewLlmInteractiontService(interestRepo interests.Repository,
 	}
 
 	// Initialize embedding service
-	embeddingService, err := generativeAI.NewEmbeddingService(ctx, logger)
+	// Create a standard log.Logger that writes to zap.Logger
+	stdLogger := zap.NewStdLog(logger)
+	// Create an slog.Logger from the standard log.Logger
+	slogLogger := slog.New(slog.NewTextHandler(stdLogger.Writer(), nil))
+
+	embeddingService, err := generativeAI.NewEmbeddingService(ctx, slogLogger)
 	if err != nil {
-		log.Fatalf("Failed to create embedding service: %v", err) // Terminate if initialization fails
+		log.Fatalf("Failed to create embedding service: %v", err)
 	}
 
 	// Initialize RAG service
@@ -171,7 +177,7 @@ func (l *ServiceImpl) getPersonalizedPOIWithSemanticContext(interestNames []stri
 	prompt += `Include:
         1. An itinerary name that reflects both user interests and semantic context.
         2. An overall description highlighting semantic relevance.
-        3. A list of points of interest with name, category, coordinates, and detailed description.
+        3. A lists of points of interest with name, category, coordinates, and detailed description.
         Max points of interest allowed by tokens.
 
         **PRIORITIZATION:**
@@ -306,13 +312,13 @@ func (l *ServiceImpl) HandleGeneralPOIs(ctx context.Context, pois []models.POIDe
 	for _, p := range pois {
 		existingPoi, err := l.poiRepo.FindPoiByNameAndCity(ctx, p.Name, cityID)
 		if err != nil {
-			l.logger.WarnContext(ctx, "Failed to check POI existence", slog.String("poi_name", p.Name), slog.Any("error", err))
+			l.logger.Warn("Failed to check POI existence", zap.String("poi_name", p.Name), zap.Any("error", err))
 			continue
 		}
 		if existingPoi == nil {
 			_, err = l.poiRepo.SavePoi(ctx, p, cityID)
 			if err != nil {
-				l.logger.WarnContext(ctx, "Failed to save POI", slog.String("poi_name", p.Name), slog.Any("error", err))
+				l.logger.Warn("Failed to save POI", zap.String("poi_name", p.Name), zap.Any("error", err))
 			}
 		}
 	}
@@ -325,8 +331,8 @@ func (l *ServiceImpl) HandlePersonalisedPOIs(ctx context.Context, pois []models.
 
 	// Check if cityID is valid, if not, skip itinerary creation to avoid foreign key constraint errors
 	if cityID == uuid.Nil || cityID.String() == "00000000-0000-0000-0000-000000000000" {
-		l.logger.WarnContext(ctx, "Skipping itinerary creation due to invalid cityID",
-			slog.String("cityID", cityID.String()))
+		l.logger.Warn("Skipping itinerary creation due to invalid cityID",
+			zap.String("cityID", cityID.String()))
 		return pois, nil // Return POIs without sorting/saving to avoid database errors
 	}
 
@@ -337,10 +343,10 @@ func (l *ServiceImpl) HandlePersonalisedPOIs(ctx context.Context, pois []models.
 
 	itineraryID, err := l.poiRepo.SaveItinerary(ctx, userID, cityID)
 	if err != nil {
-		l.logger.ErrorContext(ctx, "Failed to save itinerary, skipping itinerary creation",
-			slog.Any("error", err),
-			slog.String("cityID", cityID.String()),
-			slog.String("userID", userID.String()))
+		l.logger.Error("Failed to save itinerary, skipping itinerary creation",
+			zap.Any("error", err),
+			zap.String("cityID", cityID.String()),
+			zap.String("userID", userID.String()))
 		// Don't return error, just skip itinerary creation and continue with POI processing
 		return pois, nil
 	}
@@ -351,7 +357,7 @@ func (l *ServiceImpl) HandlePersonalisedPOIs(ctx context.Context, pois []models.
 
 	sortedPois, err := l.llmInteractionRepo.GetLlmSuggestedPOIsByInteractionSortedByDistance(ctx, llmInteractionID, cityID, *userLocation)
 	if err != nil {
-		l.logger.ErrorContext(ctx, "Failed to fetch sorted POIs", slog.Any("error", err))
+		l.logger.Error("Failed to fetch sorted POIs", zap.Any("error", err))
 		return pois, nil // Return unsorted POIs
 	}
 	return sortedPois, nil
@@ -496,10 +502,10 @@ func (l *ServiceImpl) SaveItenerary(ctx context.Context, userID uuid.UUID, req m
 	))
 	defer span.End()
 
-	l.logger.InfoContext(ctx, "Attempting to bookmark interaction",
-		slog.String("userID", userID.String()),
-		slog.String("llmInteractionID", llmInteractionIDStr),
-		slog.String("title", req.Title))
+	l.logger.Info("Attempting to bookmark interaction",
+		zap.String("userID", userID.String()),
+		zap.String("llmInteractionID", llmInteractionIDStr),
+		zap.String("title", req.Title))
 
 	var sourceInteractionID pgtype.UUID
 	if req.LlmInteractionID != nil {
@@ -508,29 +514,29 @@ func (l *ServiceImpl) SaveItenerary(ctx context.Context, userID uuid.UUID, req m
 			Bytes: *req.LlmInteractionID,
 			Valid: true,
 		}
-		l.logger.InfoContext(ctx, "Using provided LlmInteractionID for bookmark",
-			slog.String("llmInteractionID", req.LlmInteractionID.String()))
+		l.logger.Info("Using provided LlmInteractionID for bookmark",
+			zap.String("llmInteractionID", req.LlmInteractionID.String()))
 	} else if req.SessionID != nil {
 		// If SessionID is provided, try to find the latest LLM interaction in that session
 		// But always store the session ID for tracking purposes
 		latestInteraction, err := l.llmInteractionRepo.GetLatestInteractionBySessionID(ctx, *req.SessionID)
 		if err != nil || latestInteraction == nil {
-			l.logger.InfoContext(ctx, "No interaction found for session, storing session ID without interaction reference",
-				slog.String("sessionID", req.SessionID.String()),
-				slog.Any("findError", err))
+			l.logger.Info("No interaction found for session, storing session ID without interaction reference",
+				zap.String("sessionID", req.SessionID.String()),
+				zap.Any("findError", err))
 			sourceInteractionID = pgtype.UUID{Valid: false} // Set to NULL for interaction reference
 		} else {
 			sourceInteractionID = pgtype.UUID{
 				Bytes: latestInteraction.ID,
 				Valid: true,
 			}
-			l.logger.InfoContext(ctx, "Found latest interaction for session",
-				slog.String("sessionID", req.SessionID.String()),
-				slog.String("interactionID", latestInteraction.ID.String()))
+			l.logger.Info("Found latest interaction for session",
+				zap.String("sessionID", req.SessionID.String()),
+				zap.String("interactionID", latestInteraction.ID.String()))
 		}
 	} else {
 		sourceInteractionID = pgtype.UUID{Valid: false} // Explicitly invalid for NULL
-		l.logger.InfoContext(ctx, "No LlmInteractionID or SessionID provided, bookmark will have no source reference")
+		l.logger.Info("No LlmInteractionID or SessionID provided, bookmark will have no source reference")
 	}
 
 	// Prepare primaryCityID - handle both PrimaryCityID and PrimaryCityName
@@ -547,7 +553,7 @@ func (l *ServiceImpl) SaveItenerary(ctx context.Context, userID uuid.UUID, req m
 		// Look up or create city by name
 		city, err := l.cityRepo.FindCityByNameAndCountry(ctx, req.PrimaryCityName, "")
 		if err != nil {
-			l.logger.ErrorContext(ctx, "Failed to find city", slog.Any("error", err))
+			l.logger.Error("Failed to find city", zap.Any("error", err))
 			span.RecordError(err)
 			return uuid.Nil, fmt.Errorf("failed to find city: %w", err)
 		}
@@ -561,7 +567,7 @@ func (l *ServiceImpl) SaveItenerary(ctx context.Context, userID uuid.UUID, req m
 			}
 			cityID, err := l.cityRepo.SaveCity(ctx, cityDetail)
 			if err != nil {
-				l.logger.ErrorContext(ctx, "Failed to save city", slog.Any("error", err))
+				l.logger.Error("Failed to save city", zap.Any("error", err))
 				span.RecordError(err)
 				return uuid.Nil, fmt.Errorf("failed to save city: %w", err)
 			}
@@ -569,13 +575,13 @@ func (l *ServiceImpl) SaveItenerary(ctx context.Context, userID uuid.UUID, req m
 				Bytes: cityID,
 				Valid: true,
 			}
-			l.logger.InfoContext(ctx, "Created new city", slog.String("cityName", req.PrimaryCityName), slog.String("cityID", cityID.String()))
+			l.logger.Info("Created new city", zap.String("cityName", req.PrimaryCityName), zap.String("cityID", cityID.String()))
 		} else {
 			primaryCityID = pgtype.UUID{
 				Bytes: city.ID,
 				Valid: true,
 			}
-			l.logger.InfoContext(ctx, "Found existing city", slog.String("cityName", req.PrimaryCityName), slog.String("cityID", city.ID.String()))
+			l.logger.Info("Found existing city", zap.String("cityName", req.PrimaryCityName), zap.String("cityID", city.ID.String()))
 		}
 	} else {
 		primaryCityID = pgtype.UUID{Valid: false}
@@ -587,7 +593,7 @@ func (l *ServiceImpl) SaveItenerary(ctx context.Context, userID uuid.UUID, req m
 	if req.LlmInteractionID != nil {
 		originalInteraction, err = l.llmInteractionRepo.GetInteractionByID(ctx, *req.LlmInteractionID)
 		if err != nil || originalInteraction == nil {
-			l.logger.ErrorContext(ctx, "Failed to fetch original LLM interaction", slog.Any("error", err))
+			l.logger.Error("Failed to fetch original LLM interaction", zap.Any("error", err))
 			span.RecordError(err)
 			return uuid.Nil, fmt.Errorf("could not retrieve original interaction: %w", err)
 		}
@@ -647,9 +653,9 @@ func (l *ServiceImpl) SaveItenerary(ctx context.Context, userID uuid.UUID, req m
 	// because it has a unique constraint on (user_id, city_id) that prevents
 	// multiple itineraries per city. Bookmarks should only use user_saved_itineraries.
 
-	l.logger.InfoContext(ctx, "Successfully saved bookmark to user_saved_itineraries",
-		slog.String("savedID", savedID.String()),
-		slog.String("title", req.Title))
+	l.logger.Info("Successfully saved bookmark to user_saved_itineraries",
+		zap.String("savedID", savedID.String()),
+		zap.String("title", req.Title))
 
 	span.SetAttributes(attribute.String("saved_itinerary.id", savedID.String()))
 	span.SetStatus(codes.Ok, "Bookmark saved successfully")
@@ -664,10 +670,10 @@ func (l *ServiceImpl) GetBookmarkedItineraries(ctx context.Context, userID uuid.
 	))
 	defer span.End()
 
-	l.logger.InfoContext(ctx, "Retrieving bookmarked itineraries",
-		slog.String("userID", userID.String()),
-		slog.Int("page", page),
-		slog.Int("limit", limit))
+	l.logger.Info("Retrieving bookmarked itineraries",
+		zap.String("userID", userID.String()),
+		zap.Int("page", page),
+		zap.Int("limit", limit))
 
 	response, err := l.llmInteractionRepo.GetBookmarkedItineraries(ctx, userID, page, limit)
 	if err != nil {
@@ -676,11 +682,11 @@ func (l *ServiceImpl) GetBookmarkedItineraries(ctx context.Context, userID uuid.
 		return nil, fmt.Errorf("failed to retrieve bookmarked itineraries: %w", err)
 	}
 
-	l.logger.InfoContext(ctx, "Successfully retrieved bookmarked itineraries",
-		slog.String("userID", userID.String()),
-		slog.Int("totalRecords", response.TotalRecords),
-		slog.Int("page", response.Page),
-		slog.Int("pageSize", response.PageSize))
+	l.logger.Info("Successfully retrieved bookmarked itineraries",
+		zap.String("userID", userID.String()),
+		zap.Int("totalRecords", response.TotalRecords),
+		zap.Int("page", response.Page),
+		zap.Int("pageSize", response.PageSize))
 
 	span.SetAttributes(
 		attribute.Int("total_records", response.TotalRecords),
@@ -697,17 +703,17 @@ func (l *ServiceImpl) RemoveItenerary(ctx context.Context, userID, itineraryID u
 	))
 	defer span.End()
 
-	l.logger.InfoContext(ctx, "Attempting to remove chat from bookmark",
-		slog.String("itineraryID", itineraryID.String()))
+	l.logger.Info("Attempting to remove chat from bookmark",
+		zap.String("itineraryID", itineraryID.String()))
 
 	if err := l.llmInteractionRepo.RemoveChatFromBookmark(ctx, userID, itineraryID); err != nil {
-		l.logger.ErrorContext(ctx, "Failed to remove chat from bookmark", slog.Any("error", err))
+		l.logger.Error("Failed to remove chat from bookmark", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to remove chat from bookmark")
 		return fmt.Errorf("failed to remove chat from bookmark: %w", err)
 	}
 
-	l.logger.InfoContext(ctx, "Successfully removed chat from bookmark", slog.String("itineraryID", itineraryID.String()))
+	l.logger.Info("Successfully removed chat from bookmark", zap.String("itineraryID", itineraryID.String()))
 	span.SetStatus(codes.Ok, "Itinerary removed successfully")
 	return nil
 }
@@ -721,25 +727,25 @@ func (l *ServiceImpl) GetUserChatSessions(ctx context.Context, userID uuid.UUID,
 	))
 	defer span.End()
 
-	l.logger.InfoContext(ctx, "Retrieving paginated chat sessions for user",
-		slog.String("userID", userID.String()),
-		slog.Int("page", page),
-		slog.Int("limit", limit))
+	l.logger.Info("Retrieving paginated chat sessions for user",
+		zap.String("userID", userID.String()),
+		zap.Int("page", page),
+		zap.Int("limit", limit))
 
 	response, err := l.llmInteractionRepo.GetUserChatSessions(ctx, userID, page, limit)
 	if err != nil {
-		l.logger.ErrorContext(ctx, "Failed to get user chat sessions", slog.Any("error", err))
+		l.logger.Error("Failed to get user chat sessions", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to get user chat sessions")
 		return nil, fmt.Errorf("failed to get user chat sessions: %w", err)
 	}
 
-	l.logger.InfoContext(ctx, "Successfully retrieved paginated chat sessions",
-		slog.String("userID", userID.String()),
-		slog.Int("sessionCount", len(response.Sessions)),
-		slog.Int("total", response.Total),
-		slog.Int("page", response.Page),
-		slog.Int("limit", response.Limit))
+	l.logger.Info("Successfully retrieved paginated chat sessions",
+		zap.String("userID", userID.String()),
+		zap.Int("sessionCount", len(response.Sessions)),
+		zap.Int("total", response.Total),
+		zap.Int("page", response.Page),
+		zap.Int("limit", response.Limit))
 	span.SetAttributes(
 		attribute.Int("sessions.count", len(response.Sessions)),
 		attribute.Int("sessions.total", response.Total),
@@ -757,23 +763,23 @@ func (l *ServiceImpl) GetRecentDiscoveries(ctx context.Context, userID uuid.UUID
 	))
 	defer span.End()
 
-	l.logger.InfoContext(ctx, "Retrieving recent discoveries for user",
-		slog.String("userID", userID.String()),
-		slog.Int("limit", limit))
+	l.logger.Info("Retrieving recent discoveries for user",
+		zap.String("userID", userID.String()),
+		zap.Int("limit", limit))
 
 	// TODO: Replace this with proper discoveries table
 	// For now, query chat_sessions directly as a workaround
 	sessions, err := l.llmInteractionRepo.GetRecentChatSessionsByType(ctx, userID, models.SearchTypeDiscover, limit)
 	if err != nil {
-		l.logger.ErrorContext(ctx, "Failed to get recent chat sessions", slog.Any("error", err))
+		l.logger.Error("Failed to get recent chat sessions", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to get recent chat sessions")
 		return nil, fmt.Errorf("failed to get recent chat sessions: %w", err)
 	}
 
-	l.logger.InfoContext(ctx, "Successfully retrieved recent discoveries",
-		slog.String("userID", userID.String()),
-		slog.Int("discoveryCount", len(sessions)))
+	l.logger.Info("Successfully retrieved recent discoveries",
+		zap.String("userID", userID.String()),
+		zap.Int("discoveryCount", len(sessions)))
 	span.SetAttributes(
 		attribute.Int("discoveries.count", len(sessions)),
 	)
@@ -795,17 +801,17 @@ func (l *ServiceImpl) GetTrendingDiscoveries(ctx context.Context, limit int) ([]
 	))
 	defer span.End()
 
-	l.logger.InfoContext(ctx, "Retrieving trending discoveries", slog.Int("limit", limit))
+	l.logger.Info("Retrieving trending discoveries", zap.Int("limit", limit))
 
 	discoveries, err := l.llmInteractionRepo.GetTrendingDiscoveries(ctx, limit)
 	if err != nil {
-		l.logger.ErrorContext(ctx, "Failed to get trending discoveries", slog.Any("error", err))
+		l.logger.Error("Failed to get trending discoveries", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to get trending discoveries")
 		return nil, fmt.Errorf("failed to get trending discoveries: %w", err)
 	}
 
-	l.logger.InfoContext(ctx, "Successfully retrieved trending discoveries", slog.Int("count", len(discoveries)))
+	l.logger.Info("Successfully retrieved trending discoveries", zap.Int("count", len(discoveries)))
 	span.SetAttributes(attribute.Int("discoveries.count", len(discoveries)))
 	span.SetStatus(codes.Ok, "Trending discoveries retrieved successfully")
 	return discoveries, nil
@@ -818,17 +824,17 @@ func (l *ServiceImpl) GetFeaturedCollections(ctx context.Context, limit int) ([]
 	))
 	defer span.End()
 
-	l.logger.InfoContext(ctx, "Retrieving featured collections", slog.Int("limit", limit))
+	l.logger.Info("Retrieving featured collections", zap.Int("limit", limit))
 
 	collections, err := l.llmInteractionRepo.GetFeaturedCollections(ctx, limit)
 	if err != nil {
-		l.logger.ErrorContext(ctx, "Failed to get featured collections", slog.Any("error", err))
+		l.logger.Error("Failed to get featured collections", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to get featured collections")
 		return nil, fmt.Errorf("failed to get featured collections: %w", err)
 	}
 
-	l.logger.InfoContext(ctx, "Successfully retrieved featured collections", slog.Int("count", len(collections)))
+	l.logger.Info("Successfully retrieved featured collections", zap.Int("count", len(collections)))
 	span.SetAttributes(attribute.Int("collections.count", len(collections)))
 	span.SetStatus(codes.Ok, "Featured collections retrieved successfully")
 	return collections, nil
@@ -942,8 +948,8 @@ func (l *ServiceImpl) GetPOIDetailedInfosResponse(ctx context.Context, userID uu
 	))
 	defer span.End()
 
-	l.logger.DebugContext(ctx, "Starting POI details generation",
-		slog.String("city", city), slog.Float64("latitude", lat), slog.Float64("longitude", lon), slog.String("userID", userID.String()))
+	l.logger.Debug("Starting POI details generation",
+		zap.String("city", city), zap.Float64("latitude", lat), zap.Float64("longitude", lon), zap.String("userID", userID.String()))
 
 	// Generate cache key
 	cacheKey := generatePOICacheKey(city, lat, lon, 0.0, userID)
@@ -952,7 +958,7 @@ func (l *ServiceImpl) GetPOIDetailedInfosResponse(ctx context.Context, userID uu
 	// Check cache
 	if cached, found := l.cache.Get(cacheKey); found {
 		if p, ok := cached.(*models.POIDetailedInfo); ok {
-			l.logger.InfoContext(ctx, "Cache hit for POI details", slog.String("cache_key", cacheKey))
+			l.logger.Info("Cache hit for POI details", zap.String("cache_key", cacheKey))
 			span.AddEvent("Cache hit")
 			span.SetStatus(codes.Ok, "POI details served from cache")
 			return p, nil
@@ -962,12 +968,12 @@ func (l *ServiceImpl) GetPOIDetailedInfosResponse(ctx context.Context, userID uu
 	// Find city ID
 	cityData, err := l.cityRepo.FindCityByNameAndCountry(ctx, city, "") // Adjust country if needed
 	if err != nil {
-		l.logger.ErrorContext(ctx, "Failed to find city", slog.Any("error", err))
+		l.logger.Error("Failed to find city", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("failed to find city: %w", err)
 	}
 	if cityData == nil {
-		l.logger.WarnContext(ctx, "City not found", slog.String("city", city))
+		l.logger.Warn("City not found", zap.String("city", city))
 		span.SetStatus(codes.Error, "City not found")
 		return nil, fmt.Errorf("city %s not found", city)
 	}
@@ -975,21 +981,21 @@ func (l *ServiceImpl) GetPOIDetailedInfosResponse(ctx context.Context, userID uu
 
 	p, err := l.poiRepo.FindPOIDetails(ctx, cityID, lat, lon, 100.0) // 100m tolerance
 	if err != nil {
-		l.logger.ErrorContext(ctx, "Failed to query POI details from database", slog.Any("error", err))
+		l.logger.Error("Failed to query POI details from database", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("failed to query POI details: %w", err)
 	}
 	if p != nil {
 		p.City = city
 		l.cache.Set(cacheKey, p, cache.DefaultExpiration)
-		l.logger.InfoContext(ctx, "Database hit for POI details", slog.String("cache_key", cacheKey))
+		l.logger.Info("Database hit for POI details", zap.String("cache_key", cacheKey))
 		span.AddEvent("Database hit")
 		span.SetStatus(codes.Ok, "POI details served from database")
 		return p, nil
 	}
 
 	// Cache and database miss: fetch from Gemini API
-	l.logger.DebugContext(ctx, "Cache and database miss, fetching POI details from AI", slog.String("cache_key", cacheKey))
+	l.logger.Debug("Cache and database miss, fetching POI details from AI", zap.String("cache_key", cacheKey))
 	span.AddEvent("Cache and database miss")
 
 	resultCh := make(chan models.POIDetailedInfo, 1)
@@ -1007,12 +1013,12 @@ func (l *ServiceImpl) GetPOIDetailedInfosResponse(ctx context.Context, userID uu
 	var poiResult *models.POIDetailedInfo
 	res, ok := <-resultCh
 	if !ok {
-		l.logger.WarnContext(ctx, "No response received for POI details (channel closed)")
+		l.logger.Warn("No response received for POI details (channel closed)")
 		span.SetStatus(codes.Error, "No response received")
 		return nil, fmt.Errorf("no response received for POI details")
 	}
 	if res.Err != nil {
-		l.logger.ErrorContext(ctx, "Error generating POI details", slog.Any("error", res.Err))
+		l.logger.Error("Error generating POI details", zap.Any("error", res.Err))
 		span.RecordError(res.Err)
 		span.SetStatus(codes.Error, "Failed to generate POI details")
 		return nil, res.Err
@@ -1022,14 +1028,14 @@ func (l *ServiceImpl) GetPOIDetailedInfosResponse(ctx context.Context, userID uu
 	// Save to database
 	_, err = l.poiRepo.SavePoi(ctx, *poiResult, cityID)
 	if err != nil {
-		l.logger.WarnContext(ctx, "Failed to save POI details to database", slog.Any("error", err))
+		l.logger.Warn("Failed to save POI details to database", zap.Any("error", err))
 		span.RecordError(err)
 		// Continue despite error to avoid blocking user
 	}
 
 	// Store in cache
 	l.cache.Set(cacheKey, poiResult, cache.DefaultExpiration)
-	l.logger.DebugContext(ctx, "Stored POI details in cache", slog.String("cache_key", cacheKey))
+	l.logger.Debug("Stored POI details in cache", zap.String("cache_key", cacheKey))
 	span.AddEvent("Stored in cache")
 
 	span.SetStatus(codes.Ok, "POI details generated and cached successfully")
@@ -1063,7 +1069,7 @@ func (l *ServiceImpl) generatePOIData(ctx context.Context, poiName, cityName str
 	}
 	savedLlmInteractionID, err := l.llmInteractionRepo.SaveInteraction(ctx, interaction)
 	if err != nil {
-		l.logger.ErrorContext(ctx, "Failed to save LLM interaction in generatePOIData", slog.Any("error", err))
+		l.logger.Error("Failed to save LLM interaction in generatePOIData", zap.Any("error", err))
 		// Decide if this is fatal for POI generation. It might be if FK is NOT NULL.
 		return models.POIDetailedInfo{}, fmt.Errorf("failed to save LLM interaction: %w", err)
 	}
@@ -1072,10 +1078,10 @@ func (l *ServiceImpl) generatePOIData(ctx context.Context, poiName, cityName str
 	cleanResponse := cleanJSONResponse(response)
 	var poiData models.POIDetailedInfo
 	if err := json.Unmarshal([]byte(cleanResponse), &poiData); err != nil || poiData.Name == "" {
-		l.logger.WarnContext(ctx, "LLM returned invalid or empty POI data",
-			slog.String("poiName", poiName),
-			slog.String("llmResponse", response),
-			slog.Any("unmarshalError", err))
+		l.logger.Warn("LLM returned invalid or empty POI data",
+			zap.String("poiName", poiName),
+			zap.String("llmResponse", response),
+			zap.Any("unmarshalError", err))
 		span.AddEvent("Invalid LLM response")
 		poiData = models.POIDetailedInfo{
 			ID:             uuid.New(),
@@ -1096,32 +1102,32 @@ func (l *ServiceImpl) generatePOIData(ctx context.Context, poiName, cityName str
 	if userLocation != nil && userLocation.UserLat != 0 && userLocation.UserLon != 0 && poiData.Latitude != 0 && poiData.Longitude != 0 {
 		distance, err := l.poiRepo.CalculateDistancePostGIS(ctx, userLocation.UserLat, userLocation.UserLon, poiData.Latitude, poiData.Longitude)
 		if err != nil {
-			l.logger.WarnContext(ctx, "Failed to calculate distance", slog.Any("error", err))
+			l.logger.Warn("Failed to calculate distance", zap.Any("error", err))
 			span.RecordError(err)
 			poiData.Distance = 0
 		} else {
 			poiData.Distance = distance
 			span.SetAttributes(attribute.Float64("p.distance_meters", distance))
-			l.logger.DebugContext(ctx, "Calculated distance for POI",
-				slog.String("poiName", poiName),
-				slog.Float64("distance_meters", distance))
+			l.logger.Debug("Calculated distance for POI",
+				zap.String("poiName", poiName),
+				zap.Float64("distance_meters", distance))
 		}
 	} else {
 		poiData.Distance = 0
 		span.AddEvent("Distance not calculated due to missing location data")
-		l.logger.WarnContext(ctx, "Cannot calculate distance",
-			slog.Bool("userLocationAvailable", userLocation != nil),
-			slog.Float64("userLat", userLocation.UserLat),
-			slog.Float64("userLon", userLocation.UserLon),
-			slog.Float64("poiLatitude", poiData.Latitude),
-			slog.Float64("poiLongitude", poiData.Longitude))
+		l.logger.Warn("Cannot calculate distance",
+			zap.Bool("userLocationAvailable", userLocation != nil),
+			zap.Float64("userLat", userLocation.UserLat),
+			zap.Float64("userLon", userLocation.UserLon),
+			zap.Float64("poiLatitude", poiData.Latitude),
+			zap.Float64("poiLongitude", poiData.Longitude))
 	}
 
 	// Save POI to database
 	llmInteractionID := uuid.New()
 	_, err = l.llmInteractionRepo.SaveSinglePOI(ctx, poiData, userID, cityID, savedLlmInteractionID)
 	if err != nil {
-		l.logger.WarnContext(ctx, "Failed to save POI to database", slog.Any("error", err))
+		l.logger.Warn("Failed to save POI to database", zap.Any("error", err))
 		span.RecordError(err)
 	}
 
@@ -1144,12 +1150,12 @@ func (l *ServiceImpl) generatePOIData(ctx context.Context, poiName, cityName str
 //	))
 //	defer span.End()
 //
-//	l.logger.DebugContext(ctx, "Enhancing POI recommendations with semantic search",
-//		slog.String("message", userMessage),
-//		slog.String("city_id", cityID.String()))
+//	l.logger.Debug("Enhancing POI recommendations with semantic search",
+//		zap.String("message", userMessage),
+//		zap.String("city_id", cityID.String()))
 //
 //	if l.embeddingService == nil {
-//		l.logger.WarnContext(ctx, "Embedding service not available, falling back to traditional search")
+//		l.logger.Warn("Embedding service not available, falling back to traditional search")
 //		span.AddEvent("Embedding service not available")
 //		return []models.POIDetailedInfo{}, nil
 //	}
@@ -1162,9 +1168,9 @@ func (l *ServiceImpl) generatePOIData(ctx context.Context, poiName, cityName str
 //
 //	queryEmbedding, err := l.embeddingService.GenerateQueryEmbedding(ctx, searchQuery)
 //	if err != nil {
-//		l.logger.ErrorContext(ctx, "Failed to generate query embedding",
-//			slog.Any("error", err),
-//			slog.String("query", searchQuery))
+//		l.logger.Error("Failed to generate query embedding",
+//			zap.Any("error", err),
+//			zap.String("query", searchQuery))
 //		span.RecordError(err)
 //		span.SetStatus(codes.Error, "Failed to generate query embedding")
 //		return []models.POIDetailedInfo{}, fmt.Errorf("failed to generate query embedding: %w", err)
@@ -1173,15 +1179,15 @@ func (l *ServiceImpl) generatePOIData(ctx context.Context, poiName, cityName str
 //	// Search for similar POIs in the city
 //	similarPOIs, err := l.poiRepo.FindSimilarPOIsByCity(ctx, queryEmbedding, cityID, limit)
 //	if err != nil {
-//		l.logger.ErrorContext(ctx, "Failed to find similar POIs", slog.Any("error", err))
+//		l.logger.Error("Failed to find similar POIs", zap.Any("error", err))
 //		span.RecordError(err)
 //		span.SetStatus(codes.Error, "Failed to find similar POIs")
 //		return []models.POIDetailedInfo{}, fmt.Errorf("failed to find similar POIs: %w", err)
 //	}
 //
-//	l.logger.InfoContext(ctx, "Found semantically similar POIs",
-//		slog.Int("count", len(similarPOIs)),
-//		slog.String("city_id", cityID.String()))
+//	l.logger.Info("Found semantically similar POIs",
+//		zap.Int("count", len(similarPOIs)),
+//		zap.String("city_id", cityID.String()))
 //	span.SetAttributes(
 //		attribute.Int("similar_pois.count", len(similarPOIs)),
 //		attribute.String("search.query", searchQuery),
@@ -1201,14 +1207,14 @@ func (l *ServiceImpl) generateSemanticPOIRecommendations(ctx context.Context, us
 	))
 	defer span.End()
 
-	l.logger.DebugContext(ctx, "Generating semantic POI recommendations",
-		slog.String("message", userMessage),
-		slog.String("city_id", cityID.String()),
-		slog.Float64("semantic_weight", semanticWeight))
+	l.logger.Debug("Generating semantic POI recommendations",
+		zap.String("message", userMessage),
+		zap.String("city_id", cityID.String()),
+		zap.Float64("semantic_weight", semanticWeight))
 
 	if l.embeddingService == nil {
 		err := fmt.Errorf("embedding service not available")
-		l.logger.ErrorContext(ctx, "Embedding service not available", slog.Any("error", err))
+		l.logger.Error("Embedding service not available", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Embedding service not available")
 		return nil, err
@@ -1217,7 +1223,7 @@ func (l *ServiceImpl) generateSemanticPOIRecommendations(ctx context.Context, us
 	// Generate embedding for user message
 	queryEmbedding, err := l.embeddingService.GenerateQueryEmbedding(ctx, userMessage)
 	if err != nil {
-		l.logger.ErrorContext(ctx, "Failed to generate query embedding", slog.Any("error", err))
+		l.logger.Error("Failed to generate query embedding", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to generate query embedding")
 		return nil, fmt.Errorf("failed to generate query embedding: %w", err)
@@ -1237,13 +1243,13 @@ func (l *ServiceImpl) generateSemanticPOIRecommendations(ctx context.Context, us
 
 		hybridPOIs, err := l.poiRepo.SearchPOIsHybrid(ctx, filter, queryEmbedding, semanticWeight)
 		if err != nil {
-			l.logger.ErrorContext(ctx, "Failed to perform hybrid search", slog.Any("error", err))
+			l.logger.Error("Failed to perform hybrid search", zap.Any("error", err))
 			span.RecordError(err)
 			// Fall back to semantic-only search
 		} else {
 			pois = hybridPOIs
-			l.logger.InfoContext(ctx, "Used hybrid search for POI recommendations",
-				slog.Int("poi_count", len(pois)))
+			l.logger.Info("Used hybrid search for POI recommendations",
+				zap.Int("poi_count", len(pois)))
 			span.AddEvent("Used hybrid search")
 		}
 	}
@@ -1252,14 +1258,14 @@ func (l *ServiceImpl) generateSemanticPOIRecommendations(ctx context.Context, us
 	if len(pois) == 0 {
 		semanticPOIs, err := l.poiRepo.FindSimilarPOIsByCity(ctx, queryEmbedding, cityID, 10)
 		if err != nil {
-			l.logger.ErrorContext(ctx, "Failed to find similar POIs", slog.Any("error", err))
+			l.logger.Error("Failed to find similar POIs", zap.Any("error", err))
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to find similar POIs")
 			return nil, fmt.Errorf("failed to find similar POIs: %w", err)
 		}
 		pois = semanticPOIs
-		l.logger.InfoContext(ctx, "Used semantic-only search for POI recommendations",
-			slog.Int("poi_count", len(pois)))
+		l.logger.Info("Used semantic-only search for POI recommendations",
+			zap.Int("poi_count", len(pois)))
 		span.AddEvent("Used semantic-only search")
 	}
 
@@ -1272,26 +1278,26 @@ func (l *ServiceImpl) generateSemanticPOIRecommendations(ctx context.Context, us
 		// Generate embedding for this POI if it doesn't have one
 		embedding, err := l.embeddingService.GeneratePOIEmbedding(ctx, p.Name, p.DescriptionPOI, p.Category)
 		if err != nil {
-			l.logger.WarnContext(ctx, "Failed to generate embedding for POI",
-				slog.Any("error", err),
-				slog.String("poi_name", p.Name))
+			l.logger.Warn("Failed to generate embedding for POI",
+				zap.Any("error", err),
+				zap.String("poi_name", p.Name))
 			continue
 		}
 
 		// Update POI with embedding
 		err = l.poiRepo.UpdatePOIEmbedding(ctx, p.ID, embedding)
 		if err != nil {
-			l.logger.WarnContext(ctx, "Failed to update POI embedding",
-				slog.Any("error", err),
-				slog.String("poi_id", p.ID.String()))
+			l.logger.Warn("Failed to update POI embedding",
+				zap.Any("error", err),
+				zap.String("poi_id", p.ID.String()))
 		}
 
 		pois[i] = p
 	}
 
-	l.logger.InfoContext(ctx, "Generated semantic POI recommendations",
-		slog.String("message", userMessage),
-		slog.Int("recommendations", len(pois)))
+	l.logger.Info("Generated semantic POI recommendations",
+		zap.String("message", userMessage),
+		zap.Int("recommendations", len(pois)))
 	span.SetAttributes(
 		attribute.String("search.query", userMessage),
 		attribute.Int("recommendations.count", len(pois)),
@@ -1317,8 +1323,8 @@ func (l *ServiceImpl) updateCacheAfterModification(ctx context.Context, session 
 
 	cacheKeyBytes, err := json.Marshal(cacheKeyData)
 	if err != nil {
-		l.logger.WarnContext(ctx, "Failed to marshal cache key for modification update",
-			slog.Any("error", err))
+		l.logger.Warn("Failed to marshal cache key for modification update",
+			zap.Any("error", err))
 		return
 	}
 
@@ -1336,10 +1342,10 @@ func (l *ServiceImpl) updateCacheAfterModification(ctx context.Context, session 
 	// Update the cache
 	middleware.CompleteItineraryCache.Set(cacheKey, *completeResponse)
 
-	l.logger.InfoContext(ctx, "Updated cache after itinerary modification",
-		slog.String("session_id", session.ID.String()),
-		slog.String("cache_key", cacheKey),
-		slog.Int("poi_count", len(session.CurrentItinerary.AIItineraryResponse.PointsOfInterest)))
+	l.logger.Info("Updated cache after itinerary modification",
+		zap.String("session_id", session.ID.String()),
+		zap.String("cache_key", cacheKey),
+		zap.Int("poi_count", len(session.CurrentItinerary.AIItineraryResponse.PointsOfInterest)))
 
 	span.SetAttributes(
 		attribute.String("cache.key", cacheKey),
@@ -1372,8 +1378,8 @@ func (l *ServiceImpl) handleSemanticRemovePOI(ctx context.Context, message strin
 				session.CurrentItinerary.AIItineraryResponse.PointsOfInterest[i+1:]...,
 			)
 
-			l.logger.InfoContext(ctx, "Removed POI from itinerary",
-				slog.String("removed_poi", removedName))
+			l.logger.Info("Removed POI from itinerary",
+				zap.String("removed_poi", removedName))
 			span.SetAttributes(attribute.String("removed_poi", removedName))
 
 			// Update cache after removal
@@ -1475,7 +1481,7 @@ func (l *ServiceImpl) sendEvent(ctx context.Context, ch chan<- models.StreamEven
 
 		select {
 		case <-ctx.Done():
-			l.logger.WarnContext(ctx, "Context cancelled, not sending stream event", slog.String("eventType", event.Type))
+			l.logger.Warn("Context cancelled, not sending stream event", zap.String("eventType", event.Type))
 			l.deadLetterCh <- event // Send to dead letter queue
 			return false
 		default:
@@ -1483,11 +1489,11 @@ func (l *ServiceImpl) sendEvent(ctx context.Context, ch chan<- models.StreamEven
 			case ch <- event:
 				return true
 			case <-ctx.Done():
-				l.logger.WarnContext(ctx, "Context cancelled while trying to send stream event", slog.String("eventType", event.Type))
+				l.logger.Warn("Context cancelled while trying to send stream event", zap.String("eventType", event.Type))
 				l.deadLetterCh <- event // Send to dead letter queue
 				return false
 			case <-time.After(2 * time.Second): // Use a reasonable timeout
-				l.logger.WarnContext(ctx, "Dropped stream event due to slow consumer or blocked channel (timeout)", slog.String("eventType", event.Type))
+				l.logger.Warn("Dropped stream event due to slow consumer or blocked channel (timeout)", zap.String("eventType", event.Type))
 				l.deadLetterCh <- event // Send to dead letter queue
 				// Continue to retry after backoff
 			}
@@ -1499,7 +1505,7 @@ func (l *ServiceImpl) sendEvent(ctx context.Context, ch chan<- models.StreamEven
 
 func (l *ServiceImpl) processDeadLetterQueue() {
 	for event := range l.deadLetterCh {
-		l.logger.ErrorContext(context.Background(), "Unprocessed event sent to dead letter queue", slog.Any("event", event))
+		l.logger.Error("Unprocessed event sent to dead letter queue", zap.Any("event", event))
 
 	}
 }
@@ -1510,7 +1516,7 @@ func getPersonalizedPOI(interestNames []string, cityName, tagsPromptPart, userPr
         Generate a personalized trip itinerary for %s, tailored to user interests [%s]. Include:
         1. An itinerary name.
         2. An overall description.
-        3. A list of points of interest with name, category, coordinates, and detailed description.
+        3. A lists of points of interest with name, category, coordinates, and detailed description.
 		Max points of interest allowed by tokens.
         Format the response in JSON with the following structure:
         {
@@ -1550,7 +1556,7 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 	))
 	defer span.End()
 
-	l.logger.DebugContext(ctx, "Continuing streamed chat session", slog.String("sessionID", sessionID.String()), slog.String("message", message))
+	l.logger.Debug("Continuing streamed chat session", zap.String("sessionID", sessionID.String()), zap.String("message", message))
 
 	// --- 1. Fetch Session & Basic Validation ---
 	session, err := l.llmInteractionRepo.GetSession(ctx, sessionID)
@@ -1589,7 +1595,7 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 		ID: uuid.New(), Role: models.RoleUser, Content: message, Timestamp: time.Now(), MessageType: models.TypeModificationRequest,
 	}
 	if err := l.llmInteractionRepo.AddMessageToSession(ctx, sessionID, userMessage); err != nil {
-		l.logger.WarnContext(ctx, "Failed to persist user message, continuing with in-memory history", slog.Any("error", err))
+		l.logger.Warn("Failed to persist user message, continuing with in-memory history", zap.Any("error", err))
 		span.RecordError(err, trace.WithAttributes(attribute.String("warning", "User message DB save failed")))
 	}
 	session.ConversationHistory = append(session.ConversationHistory, userMessage)
@@ -1601,7 +1607,7 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 		l.sendEvent(ctx, eventCh, models.StreamEvent{Type: models.EventTypeError, Error: err.Error(), IsFinal: true}, 3)
 		return err
 	}
-	l.logger.InfoContext(ctx, "Intent classified", slog.String("intent", string(intent)))
+	l.logger.Info("Intent classified", zap.String("intent", string(intent)))
 	l.sendEvent(ctx, eventCh, models.StreamEvent{Type: "intent_classified", Data: map[string]string{"intent": string(intent)}}, 3)
 
 	// --- 5. Enhance with Semantic POI Recommendations ---
@@ -1612,14 +1618,14 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 
 	semanticPOIs, err := l.generateSemanticPOIRecommendations(ctx, message, cityID, session.UserID, userLocation, 0.6)
 	if err != nil {
-		l.logger.WarnContext(ctx, "Failed to generate semantic POI recommendations for streaming session", slog.Any("error", err))
+		l.logger.Warn("Failed to generate semantic POI recommendations for streaming session", zap.Any("error", err))
 		l.sendEvent(ctx, eventCh, models.StreamEvent{
 			Type: models.EventTypeProgress,
 			Data: map[string]interface{}{"status": "semantic_context_failed", "progress": 22},
 		}, 3)
 	} else {
-		l.logger.InfoContext(ctx, "Generated semantic POI recommendations for streaming session",
-			slog.Int("semantic_recommendations", len(semanticPOIs)))
+		l.logger.Info("Generated semantic POI recommendations for streaming session",
+			zap.Int("semantic_recommendations", len(semanticPOIs)))
 		l.sendEvent(ctx, eventCh, models.StreamEvent{
 			Type: "semantic_context_generated",
 			Data: map[string]interface{}{
@@ -1694,7 +1700,7 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 				if strings.Contains(strings.ToLower(p.Name), oldPOI) {
 					newPOI, err := l.generatePOIData(ctx, newPOIName, session.SessionContext.CityName, userLocation, session.UserID, cityID)
 					if err != nil {
-						l.logger.ErrorContext(ctx, "Failed to generate POI data", slog.Any("error", err))
+						l.logger.Error("Failed to generate POI data", zap.Any("error", err))
 						span.RecordError(err)
 						finalResponseMessage = fmt.Sprintf("Could not replace %s with %s due to an error.", oldPOI, newPOIName)
 					} else {
@@ -1720,7 +1726,7 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 			if p.ID == uuid.Nil {
 				dbPoiID, saveErr := l.llmInteractionRepo.SaveSinglePOI(ctx, p, session.UserID, cityID, p.LlmInteractionID)
 				if saveErr != nil {
-					l.logger.WarnContext(ctx, "Failed to save new POI", slog.String("name", p.Name), slog.Any("error", saveErr))
+					l.logger.Warn("Failed to save new POI", zap.String("name", p.Name), zap.Any("error", saveErr))
 					continue
 				}
 				session.CurrentItinerary.AIItineraryResponse.PointsOfInterest[i].ID = dbPoiID
@@ -1730,12 +1736,12 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 		if (intent == models.IntentAddPOI || intent == models.IntentModifyItinerary) && userLocation != nil && userLocation.UserLat != 0 && userLocation.UserLon != 0 {
 			sortedPOIs, err := l.llmInteractionRepo.GetPOIsBySessionSortedByDistance(ctx, sessionID, cityID, *userLocation)
 			if err != nil {
-				l.logger.WarnContext(ctx, "Failed to sort POIs by distance", slog.Any("error", err))
+				l.logger.Warn("Failed to sort POIs by distance", zap.Any("error", err))
 				span.RecordError(err)
 			} else {
 				session.CurrentItinerary.AIItineraryResponse.PointsOfInterest = sortedPOIs
-				l.logger.InfoContext(ctx, "POIs sorted by distance",
-					slog.Int("poi_count", len(sortedPOIs)))
+				l.logger.Info("POIs sorted by distance",
+					zap.Int("poi_count", len(sortedPOIs)))
 				span.SetAttributes(attribute.Int("sorted_pois.count", len(sortedPOIs)))
 			}
 		}
@@ -1746,7 +1752,7 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 		ID: uuid.New(), Role: models.RoleAssistant, Content: finalResponseMessage, Timestamp: time.Now(), MessageType: assistantMessageType,
 	}
 	if err := l.llmInteractionRepo.AddMessageToSession(ctx, sessionID, assistantMessage); err != nil {
-		l.logger.WarnContext(ctx, "Failed to save assistant message", slog.Any("error", err))
+		l.logger.Warn("Failed to save assistant message", zap.Any("error", err))
 	}
 	session.ConversationHistory = append(session.ConversationHistory, assistantMessage)
 
@@ -1769,10 +1775,10 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 
 	// Cache the itinerary data for immediate access
 	if session.CurrentItinerary != nil && session.CurrentItinerary.AIItineraryResponse.ItineraryName != "" {
-		l.logger.InfoContext(ctx, "Caching itinerary data",
-			slog.String("sessionID", sessionID.String()),
-			slog.String("itineraryName", session.CurrentItinerary.AIItineraryResponse.ItineraryName),
-			slog.Int("poisCount", len(session.CurrentItinerary.AIItineraryResponse.PointsOfInterest)))
+		l.logger.Info("Caching itinerary data",
+			zap.String("sessionID", sessionID.String()),
+			zap.String("itineraryName", session.CurrentItinerary.AIItineraryResponse.ItineraryName),
+			zap.Int("poisCount", len(session.CurrentItinerary.AIItineraryResponse.PointsOfInterest)))
 		middleware.ItineraryCache.Set(sessionID.String(), session.CurrentItinerary.AIItineraryResponse)
 	}
 
@@ -1791,7 +1797,7 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 		},
 	}, 3)
 
-	l.logger.InfoContext(ctx, "Streamed session continued", slog.String("sessionID", sessionID.String()), slog.String("intent", string(intent)))
+	l.logger.Info("Streamed session continued", zap.String("sessionID", sessionID.String()), zap.String("intent", string(intent)))
 	return nil
 }
 
@@ -1899,7 +1905,7 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 //	cleanJSON := cleanJSONResponse(fullText)
 //	var poiData models.POIDetailedInfo
 //	if err := json.Unmarshal([]byte(cleanJSON), &poiData); err != nil || poiData.Name == "" {
-//		l.logger.WarnContext(ctx, "Invalid POI data from LLM", slog.String("response", fullText), slog.Any("error", err))
+//		l.logger.Warn("Invalid POI data from LLM", zap.String("response", fullText), zap.Any("error", err))
 //		poiData = models.POIDetailedInfo{
 //			ID:             uuid.New(),
 //			Name:           poiName,
@@ -1916,7 +1922,7 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 //	// Save POI to database
 //	dbPoiID, err := l.llmInteractionRepo.SaveSinglePOI(ctx, poiData, userID, cityID, llmInteractionID)
 //	if err != nil {
-//		l.logger.WarnContext(ctx, "Failed to save POI to database", slog.Any("error", err))
+//		l.logger.Warn("Failed to save POI to database", zap.Any("error", err))
 //		span.RecordError(err)
 //		l.sendEvent(ctx, eventCh, models.StreamEvent{
 //			Type:      models.EventTypeError,
@@ -1932,7 +1938,7 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 //	if userLocation != nil && userLocation.UserLat != 0 && userLocation.UserLon != 0 && poiData.Latitude != 0 && poiData.Longitude != 0 {
 //		distance, err := l.poiRepo.CalculateDistancePostGIS(ctx, userLocation.UserLat, userLocation.UserLon, poiData.Latitude, poiData.Longitude)
 //		if err != nil {
-//			l.logger.WarnContext(ctx, "Failed to calculate distance", slog.Any("error", err))
+//			l.logger.Warn("Failed to calculate distance", zap.Any("error", err))
 //			span.RecordError(err)
 //		} else {
 //			poiData.Distance = distance
@@ -2054,7 +2060,7 @@ func (l *ServiceImpl) generatePOIDataStream(
 	cleanJSON := cleanJSONResponse(fullText)
 	var poiData models.POIDetailedInfo
 	if err := json.Unmarshal([]byte(cleanJSON), &poiData); err != nil || poiData.Name == "" {
-		l.logger.WarnContext(ctx, "Invalid POI data from LLM", slog.String("response", fullText), slog.Any("error", err))
+		l.logger.Warn("Invalid POI data from LLM", zap.String("response", fullText), zap.Any("error", err))
 		poiData = models.POIDetailedInfo{
 			ID:             uuid.New(),
 			Name:           poiName,
@@ -2071,7 +2077,7 @@ func (l *ServiceImpl) generatePOIDataStream(
 	// Save POI to database
 	dbPoiID, err := l.llmInteractionRepo.SaveSinglePOI(ctx, poiData, userID, cityID, llmInteractionID)
 	if err != nil {
-		l.logger.WarnContext(ctx, "Failed to save POI to database", slog.Any("error", err))
+		l.logger.Warn("Failed to save POI to database", zap.Any("error", err))
 		span.RecordError(err)
 		l.sendEvent(ctx, eventCh, models.StreamEvent{
 			Type:      models.EventTypeError,
@@ -2087,7 +2093,7 @@ func (l *ServiceImpl) generatePOIDataStream(
 	if userLocation != nil && userLocation.UserLat != 0 && userLocation.UserLon != 0 && poiData.Latitude != 0 && poiData.Longitude != 0 {
 		distance, err := l.poiRepo.CalculateDistancePostGIS(ctx, userLocation.UserLat, userLocation.UserLon, poiData.Latitude, poiData.Longitude)
 		if err != nil {
-			l.logger.WarnContext(ctx, "Failed to calculate distance", slog.Any("error", err))
+			l.logger.Warn("Failed to calculate distance", zap.Any("error", err))
 			span.RecordError(err)
 		} else {
 			poiData.Distance = distance
@@ -2118,7 +2124,7 @@ func (l *ServiceImpl) saveCityInteraction(ctx context.Context, interaction model
 	interactionID, err := l.llmInteractionRepo.SaveInteraction(ctx, interaction)
 	if err != nil {
 		span.RecordError(err)
-		l.logger.WarnContext(ctx, "Failed to save LLM interaction", slog.Any("error", err))
+		l.logger.Warn("Failed to save LLM interaction", zap.Any("error", err))
 		return uuid.Nil, fmt.Errorf("failed to save interaction: %w", err)
 	}
 
@@ -2162,7 +2168,7 @@ func (l *ServiceImpl) handleSemanticAddPOIStreamed(ctx context.Context, message 
 				// Render HTML fragment for the new POI
 				htmlFragment, renderErr := l.RenderItemHTML(ctx, "itinerary", semanticPOI, newIndex+1)
 				if renderErr != nil {
-					l.logger.WarnContext(ctx, "Failed to render POI HTML", slog.Any("error", renderErr))
+					l.logger.Warn("Failed to render POI HTML", zap.Any("error", renderErr))
 				}
 
 				// Send item_added event with HTML
@@ -2182,8 +2188,8 @@ func (l *ServiceImpl) handleSemanticAddPOIStreamed(ctx context.Context, message 
 					Message: fmt.Sprintf("Added %s to your itinerary", semanticPOI.Name),
 				}, 3)
 
-				l.logger.InfoContext(ctx, "Added semantic POI to streaming itinerary",
-					slog.String("poi_name", semanticPOI.Name))
+				l.logger.Info("Added semantic POI to streaming itinerary",
+					zap.String("poi_name", semanticPOI.Name))
 				span.SetAttributes(attribute.String("added_poi", semanticPOI.Name))
 
 				// Update cache with modified itinerary
@@ -2254,7 +2260,7 @@ func (l *ServiceImpl) handleSemanticAddPOIStreamed(ctx context.Context, message 
 
 	newPOI, err := l.generatePOIDataStream(ctx, poiName, session.SessionContext.CityName, userLocation, session.UserID, cityID, eventCh)
 	if err != nil {
-		l.logger.ErrorContext(ctx, "Failed to generate POI data for streaming", slog.Any("error", err))
+		l.logger.Error("Failed to generate POI data for streaming", zap.Any("error", err))
 		span.RecordError(err)
 		return "", fmt.Errorf("failed to generate POI data: %w", err)
 	}
@@ -2363,7 +2369,7 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 	}
 	cacheKeyBytes, err := json.Marshal(cacheKeyData)
 	if err != nil {
-		l.logger.ErrorContext(ctx, "Failed to marshal cache key data", slog.Any("error", err))
+		l.logger.Error("Failed to marshal cache key data", zap.Any("error", err))
 		// Use a fallback cache key
 		cacheKeyBytes = []byte(fmt.Sprintf("fallback_%s_%s", cleanedMessage, cityName))
 	}
@@ -2524,7 +2530,7 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 		}
 		closeOnce.Do(func() {
 			close(eventCh) // Close the channel only once
-			l.logger.InfoContext(ctx, "Event channel closed by completion goroutine")
+			l.logger.Info("Event channel closed by completion goroutine")
 		})
 	}()
 
@@ -2557,16 +2563,16 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 			if parsedCityData, parseErr := l.parseCityDataFromResponse(asyncCtx, cityDataContent); parseErr == nil && parsedCityData != nil {
 				// Save city data to the cities table
 				if savedCityID, handleErr := l.HandleCityData(asyncCtx, *parsedCityData); handleErr != nil {
-					l.logger.WarnContext(asyncCtx, "Failed to save city data during unified stream processing",
-						slog.String("city", cityName), slog.Any("error", handleErr))
+					l.logger.Warn("Failed to save city data during unified stream processing",
+						zap.String("city", cityName), zap.Any("error", handleErr))
 				} else {
-					l.logger.InfoContext(asyncCtx, "Successfully saved city data during unified stream processing",
-						slog.String("city", cityName))
+					l.logger.Info("Successfully saved city data during unified stream processing",
+						zap.String("city", cityName))
 					cityID = savedCityID
 				}
 			} else if parseErr != nil {
-				l.logger.WarnContext(asyncCtx, "Failed to parse city data from unified stream response",
-					slog.String("city", cityName), slog.Any("error", parseErr))
+				l.logger.Warn("Failed to parse city data from unified stream response",
+					zap.String("city", cityName), zap.Any("error", parseErr))
 			}
 		}
 
@@ -2575,8 +2581,8 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 			if existingCity, err := l.cityRepo.FindCityByNameAndCountry(asyncCtx, cityName, ""); err == nil && existingCity != nil {
 				cityID = existingCity.ID
 			} else {
-				l.logger.WarnContext(asyncCtx, "Could not find or save city data, skipping POI processing",
-					slog.String("city", cityName))
+				l.logger.Warn("Could not find or save city data, skipping POI processing",
+					zap.String("city", cityName))
 				return
 			}
 		}
@@ -2596,13 +2602,13 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 		}
 		savedInteractionID, err := l.llmInteractionRepo.SaveInteraction(asyncCtx, interaction)
 		if err != nil {
-			l.logger.ErrorContext(asyncCtx, "Failed to save stream interaction", slog.Any("error", err))
+			l.logger.Error("Failed to save stream interaction", zap.Any("error", err))
 			return
 		}
 
-		l.logger.InfoContext(asyncCtx, "Stream interaction saved successfully",
-			slog.String("saved_interaction_id", savedInteractionID.String()),
-			slog.String("original_session_id", sessionID.String()))
+		l.logger.Info("Stream interaction saved successfully",
+			zap.String("saved_interaction_id", savedInteractionID.String()),
+			zap.String("original_session_id", sessionID.String()))
 
 		// Always try to process and save POI data regardless of domain
 		// since responses may contain POI data in different formats
@@ -2677,7 +2683,7 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStreamFree(ctx context.Context, c
 		}
 		cacheKeyBytes, err := json.Marshal(cacheKeyData)
 		if err != nil {
-			l.logger.ErrorContext(ctx, "Failed to marshal cache key data", slog.Any("error", err))
+			l.logger.Error("Failed to marshal cache key data", zap.Any("error", err))
 			// Use a fallback cache key
 			cacheKeyBytes = []byte(fmt.Sprintf("fallback_%s_%s", cleanedMessage, cityName))
 		}
@@ -2818,7 +2824,7 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStreamFree(ctx context.Context, c
 		}
 		closeOnce.Do(func() {
 			close(eventCh) // Close the channel only once
-			l.logger.InfoContext(ctx, "Event channel closed by completion goroutine")
+			l.logger.Info("Event channel closed by completion goroutine")
 		})
 	}()
 
@@ -2855,16 +2861,16 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStreamFree(ctx context.Context, c
 			if parsedCityData, parseErr := l.parseCityDataFromResponse(asyncCtx, cityDataContent); parseErr == nil && parsedCityData != nil {
 				// Save city data to the cities table
 				if savedCityID, handleErr := l.HandleCityData(asyncCtx, *parsedCityData); handleErr != nil {
-					l.logger.WarnContext(asyncCtx, "Failed to save city data during unified stream processing",
-						slog.String("city", cityName), slog.Any("error", handleErr))
+					l.logger.Warn("Failed to save city data during unified stream processing",
+						zap.String("city", cityName), zap.Any("error", handleErr))
 				} else {
-					l.logger.InfoContext(asyncCtx, "Successfully saved city data during unified stream processing",
-						slog.String("city", cityName))
+					l.logger.Info("Successfully saved city data during unified stream processing",
+						zap.String("city", cityName))
 					cityID = savedCityID
 				}
 			} else if parseErr != nil {
-				l.logger.WarnContext(asyncCtx, "Failed to parse city data from unified stream response",
-					slog.String("city", cityName), slog.Any("error", parseErr))
+				l.logger.Warn("Failed to parse city data from unified stream response",
+					zap.String("city", cityName), zap.Any("error", parseErr))
 			}
 		}
 
@@ -2873,8 +2879,8 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStreamFree(ctx context.Context, c
 			if existingCity, err := l.cityRepo.FindCityByNameAndCountry(asyncCtx, cityName, ""); err == nil && existingCity != nil {
 				cityID = existingCity.ID
 			} else {
-				l.logger.WarnContext(asyncCtx, "Could not find or save city data, skipping POI processing",
-					slog.String("city", cityName))
+				l.logger.Warn("Could not find or save city data, skipping POI processing",
+					zap.String("city", cityName))
 				return
 			}
 		}
@@ -2892,13 +2898,13 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStreamFree(ctx context.Context, c
 		}
 		savedInteractionID, err := l.llmInteractionRepo.SaveInteraction(asyncCtx, interaction)
 		if err != nil {
-			l.logger.ErrorContext(asyncCtx, "Failed to save stream interaction", slog.Any("error", err))
+			l.logger.Error("Failed to save stream interaction", zap.Any("error", err))
 			return
 		}
 
-		l.logger.InfoContext(asyncCtx, "Stream interaction saved successfully (free)",
-			slog.String("saved_interaction_id", savedInteractionID.String()),
-			slog.String("original_session_id", sessionID.String()))
+		l.logger.Info("Stream interaction saved successfully (free)",
+			zap.String("saved_interaction_id", savedInteractionID.String()),
+			zap.String("original_session_id", sessionID.String()))
 
 		// Always try to process and save POI data regardless of domain
 		// since responses may contain POI data in different formats
@@ -3098,14 +3104,14 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 				// Print JSON data for debugging (individual itinerary part)
 				jsonData, err := json.MarshalIndent(itinerary, "", "  ")
 				if err != nil {
-					l.logger.ErrorContext(ctx, "Failed to marshal individual itinerary to JSON", slog.Any("error", err))
+					l.logger.Error("Failed to marshal individual itinerary to JSON", zap.Any("error", err))
 				} else {
-					l.logger.InfoContext(ctx, "Individual itinerary JSON structure", slog.String("json", string(jsonData)))
+					l.logger.Info("Individual itinerary JSON structure", zap.String("json", string(jsonData)))
 				}
 
-				l.logger.InfoContext(ctx, "Caching itinerary data",
-					slog.String("sessionID", sessionID.String()),
-					slog.String("cacheKey", cacheKey))
+				l.logger.Info("Caching itinerary data",
+					zap.String("sessionID", sessionID.String()),
+					zap.String("cacheKey", cacheKey))
 				middleware.ItineraryCache.Set(cacheKey, *itinerary)
 			}
 		}
@@ -3115,22 +3121,22 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 			// Print JSON data for debugging
 			jsonData, err := json.MarshalIndent(completeResponse, "", "  ")
 			if err != nil {
-				l.logger.ErrorContext(ctx, "Failed to marshal completeResponse to JSON", slog.Any("error", err))
+				l.logger.Error("Failed to marshal completeResponse to JSON", zap.Any("error", err))
 			} else {
-				l.logger.InfoContext(ctx, "Complete itinerary JSON structure", slog.String("json", string(jsonData)))
+				l.logger.Info("Complete itinerary JSON structure", zap.String("json", string(jsonData)))
 			}
 
-			l.logger.InfoContext(ctx, "Caching complete itinerary response",
-				slog.String("sessionID", sessionID.String()),
-				slog.String("cacheKey", cacheKey),
-				slog.String("city", completeResponse.GeneralCityData.City),
-				slog.Int("generalPOIs", len(completeResponse.PointsOfInterest)),
-				slog.Int("itineraryPOIs", len(completeResponse.AIItineraryResponse.PointsOfInterest)))
+			l.logger.Info("Caching complete itinerary response",
+				zap.String("sessionID", sessionID.String()),
+				zap.String("cacheKey", cacheKey),
+				zap.String("city", completeResponse.GeneralCityData.City),
+				zap.Int("generalPOIs", len(completeResponse.PointsOfInterest)),
+				zap.Int("itineraryPOIs", len(completeResponse.AIItineraryResponse.PointsOfInterest)))
 			middleware.CompleteItineraryCache.Set(cacheKey, *completeResponse)
 		} else {
-			l.logger.WarnContext(ctx, "Failed to cache complete itinerary response",
-				slog.String("sessionID", sessionID.String()),
-				slog.Any("error", err))
+			l.logger.Warn("Failed to cache complete itinerary response",
+				zap.String("sessionID", sessionID.String()),
+				zap.Any("error", err))
 		}
 	case "restaurants":
 		if restaurantBuilder, exists := responses["restaurants"]; exists && restaurantBuilder != nil {
@@ -3139,27 +3145,27 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 				// Print JSON data for debugging
 				jsonData, err := json.MarshalIndent(restaurants, "", "  ")
 				if err != nil {
-					l.logger.ErrorContext(ctx, "Failed to marshal restaurants to JSON", slog.Any("error", err))
+					l.logger.Error("Failed to marshal restaurants to JSON", zap.Any("error", err))
 				} else {
-					l.logger.InfoContext(ctx, "Restaurants JSON structure", slog.String("json", string(jsonData)))
+					l.logger.Info("Restaurants JSON structure", zap.String("json", string(jsonData)))
 				}
 
-				l.logger.InfoContext(ctx, "Caching restaurant data",
-					slog.String("sessionID", sessionID.String()),
-					slog.String("cacheKey", cacheKey),
-					slog.Int("restaurantsCount", len(restaurants)))
+				l.logger.Info("Caching restaurant data",
+					zap.String("sessionID", sessionID.String()),
+					zap.String("cacheKey", cacheKey),
+					zap.Int("restaurantsCount", len(restaurants)))
 				middleware.RestaurantsCache.Set(cacheKey, restaurants)
 
 				// Also cache to CompleteItineraryCache using cacheKey for reusability
 				if completeResponse, err := l.parseCompleteResponseFromParts(responses, sessionID); err == nil {
 					middleware.CompleteItineraryCache.Set(cacheKey, *completeResponse)
-					l.logger.InfoContext(ctx, "Caching complete response for restaurants",
-						slog.String("sessionID", sessionID.String()),
-						slog.String("cacheKey", cacheKey))
+					l.logger.Info("Caching complete response for restaurants",
+						zap.String("sessionID", sessionID.String()),
+						zap.String("cacheKey", cacheKey))
 				} else {
-					l.logger.WarnContext(ctx, "Failed to parse or cache complete response for restaurants",
-						slog.String("sessionID", sessionID.String()),
-						slog.Any("error", err))
+					l.logger.Warn("Failed to parse or cache complete response for restaurants",
+						zap.String("sessionID", sessionID.String()),
+						zap.Any("error", err))
 				}
 			}
 		}
@@ -3170,27 +3176,27 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 				// Print JSON data for debugging
 				jsonData, err := json.MarshalIndent(activities, "", "  ")
 				if err != nil {
-					l.logger.ErrorContext(ctx, "Failed to marshal activities to JSON", slog.Any("error", err))
+					l.logger.Error("Failed to marshal activities to JSON", zap.Any("error", err))
 				} else {
-					l.logger.InfoContext(ctx, "Activities JSON structure", slog.String("json", string(jsonData)))
+					l.logger.Info("Activities JSON structure", zap.String("json", string(jsonData)))
 				}
 
-				l.logger.InfoContext(ctx, "Caching activity data",
-					slog.String("sessionID", sessionID.String()),
-					slog.String("cacheKey", cacheKey),
-					slog.Int("activitiesCount", len(activities)))
+				l.logger.Info("Caching activity data",
+					zap.String("sessionID", sessionID.String()),
+					zap.String("cacheKey", cacheKey),
+					zap.Int("activitiesCount", len(activities)))
 				middleware.ActivitiesCache.Set(cacheKey, activities)
 
 				// Also cache to CompleteItineraryCache using cacheKey for reusability
 				if completeResponse, err := l.parseCompleteResponseFromParts(responses, sessionID); err == nil {
 					middleware.CompleteItineraryCache.Set(cacheKey, *completeResponse)
-					l.logger.InfoContext(ctx, "Caching complete response for activities",
-						slog.String("sessionID", sessionID.String()),
-						slog.String("cacheKey", cacheKey))
+					l.logger.Info("Caching complete response for activities",
+						zap.String("sessionID", sessionID.String()),
+						zap.String("cacheKey", cacheKey))
 				} else {
-					l.logger.WarnContext(ctx, "Failed to parse or cache complete response for activities",
-						slog.String("sessionID", sessionID.String()),
-						slog.Any("error", err))
+					l.logger.Warn("Failed to parse or cache complete response for activities",
+						zap.String("sessionID", sessionID.String()),
+						zap.Any("error", err))
 				}
 			}
 		}
@@ -3201,27 +3207,27 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 				// Print JSON data for debugging
 				jsonData, err := json.MarshalIndent(hotels, "", "  ")
 				if err != nil {
-					l.logger.ErrorContext(ctx, "Failed to marshal hotels to JSON", slog.Any("error", err))
+					l.logger.Error("Failed to marshal hotels to JSON", zap.Any("error", err))
 				} else {
-					l.logger.InfoContext(ctx, "Hotels JSON structure", slog.String("json", string(jsonData)))
+					l.logger.Info("Hotels JSON structure", zap.String("json", string(jsonData)))
 				}
 
-				l.logger.InfoContext(ctx, "Caching hotel data",
-					slog.String("sessionID", sessionID.String()),
-					slog.String("cacheKey", cacheKey),
-					slog.Int("hotelsCount", len(hotels)))
+				l.logger.Info("Caching hotel data",
+					zap.String("sessionID", sessionID.String()),
+					zap.String("cacheKey", cacheKey),
+					zap.Int("hotelsCount", len(hotels)))
 				middleware.HotelsCache.Set(cacheKey, hotels)
 
 				// Also cache to CompleteItineraryCache using cacheKey for reusability
 				if completeResponse, err := l.parseCompleteResponseFromParts(responses, sessionID); err == nil {
 					middleware.CompleteItineraryCache.Set(cacheKey, *completeResponse)
-					l.logger.InfoContext(ctx, "Caching complete response for hotels",
-						slog.String("sessionID", sessionID.String()),
-						slog.String("cacheKey", cacheKey))
+					l.logger.Info("Caching complete response for hotels",
+						zap.String("sessionID", sessionID.String()),
+						zap.String("cacheKey", cacheKey))
 				} else {
-					l.logger.WarnContext(ctx, "Failed to parse or cache complete response for hotels",
-						slog.String("sessionID", sessionID.String()),
-						slog.Any("error", err))
+					l.logger.Warn("Failed to parse or cache complete response for hotels",
+						zap.String("sessionID", sessionID.String()),
+						zap.Any("error", err))
 				}
 			}
 		}

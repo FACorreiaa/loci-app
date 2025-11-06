@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"log/slog"
+	"go.uber.org/zap"
 	"net/http"
 	"sync"
 	"time"
@@ -13,7 +13,7 @@ import (
 type RateLimiter struct {
 	clients map[string]*ClientLimit
 	mu      sync.RWMutex
-	logger  *slog.Logger
+	logger  *zap.Logger
 
 	// Configuration
 	maxRequests     int           // Maximum requests allowed
@@ -30,7 +30,7 @@ type ClientLimit struct {
 }
 
 // NewRateLimiter creates a new rate limiter
-func NewRateLimiter(logger *slog.Logger, maxRequests int, window time.Duration) *RateLimiter {
+func NewRateLimiter(logger *zap.Logger, maxRequests int, window time.Duration) *RateLimiter {
 	rl := &RateLimiter{
 		clients:         make(map[string]*ClientLimit),
 		logger:          logger,
@@ -114,10 +114,10 @@ func (rl *RateLimiter) Allow(c *gin.Context) bool {
 	// Check if limit is exceeded
 	if len(client.requests) >= rl.maxRequests {
 		rl.logger.Warn("Rate limit exceeded",
-			slog.String("client_id", clientID),
-			slog.Int("requests", len(client.requests)),
-			slog.Int("max_requests", rl.maxRequests),
-			slog.Duration("window", rl.window))
+			zap.String("client_id", clientID),
+			zap.Int("requests", len(client.requests)),
+			zap.Int("max_requests", rl.maxRequests),
+			zap.Duration("window", rl.window))
 		return false
 	}
 
@@ -177,11 +177,11 @@ func WebSocketRateLimitMiddleware(rl *RateLimiter) gin.HandlerFunc {
 type MessageRateLimiter struct {
 	maxMessages int           // Maximum messages per window
 	window      time.Duration // Time window
-	logger      *slog.Logger
+	logger      *zap.Logger
 }
 
 // NewMessageRateLimiter creates a limiter for WebSocket messages
-func NewMessageRateLimiter(logger *slog.Logger, maxMessages int, window time.Duration) *MessageRateLimiter {
+func NewMessageRateLimiter(logger *zap.Logger, maxMessages int, window time.Duration) *MessageRateLimiter {
 	return &MessageRateLimiter{
 		maxMessages: maxMessages,
 		window:      window,
@@ -210,10 +210,10 @@ func (mrl *MessageRateLimiter) AllowMessage(client *ClientLimit, clientID string
 	// Check limit
 	if len(client.requests) >= mrl.maxMessages {
 		mrl.logger.Warn("Message rate limit exceeded",
-			slog.String("client_id", clientID),
-			slog.Int("messages", len(client.requests)),
-			slog.Int("max_messages", mrl.maxMessages),
-			slog.Duration("window", mrl.window))
+			zap.String("client_id", clientID),
+			zap.Int("messages", len(client.requests)),
+			zap.Int("max_messages", mrl.maxMessages),
+			zap.Duration("window", mrl.window))
 		return false
 	}
 

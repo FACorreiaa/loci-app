@@ -3,7 +3,7 @@ package tags
 import (
 	"context"
 	"errors"
-	"log/slog"
+	"go.uber.org/zap"
 	"os"
 	"testing"
 
@@ -77,7 +77,7 @@ func (m *MocktagsRepo) GetTagsForProfile(ctx context.Context, profileID uuid.UUI
 
 // Helper to setup service with mock repository
 func setuptagsServiceTest() (*tagsServiceImpl, *MocktagsRepo) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})) // or io.Discard
+	logger := zap.New(zap.NewTextHandler(os.Stdout, &zap.HandlerOptions{Level: zap.LevelDebug})) // or io.Discard
 	mockRepo := new(MocktagsRepo)
 	service := NewtagsService(mockRepo, logger)
 	return service, mockRepo

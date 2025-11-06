@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
+	"go.uber.org/zap"
 	"strings"
 	"time"
 
@@ -38,11 +38,11 @@ type Repository interface {
 }
 
 type RepositoryImpl struct {
-	logger *slog.Logger
+	logger *zap.Logger
 	pgpool *pgxpool.Pool
 }
 
-func NewRepositoryImpl(pgxpool *pgxpool.Pool, logger *slog.Logger) *RepositoryImpl {
+func NewRepositoryImpl(pgxpool *pgxpool.Pool, logger *zap.Logger) *RepositoryImpl {
 	return &RepositoryImpl{
 		logger: logger,
 		pgpool: pgxpool,
@@ -60,8 +60,8 @@ func (r *RepositoryImpl) CreateInterest(ctx context.Context, name string, descri
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "CreateInterest"), slog.String("name", name))
-	l.DebugContext(ctx, "Creating new global interest")
+	l := r.logger.With(zap.String("method", "CreateInterest"), zap.String("name", name))
+	l.Debug( "Creating new global interest")
 
 	// Input validation basic check
 	if name == "" {
@@ -89,19 +89,19 @@ func (r *RepositoryImpl) CreateInterest(ctx context.Context, name string, descri
 		// Check for unique constraint violation (name already exists)
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // Unique violation
-			l.WarnContext(ctx, "Attempted to create interest with duplicate name", slog.Any("error", err))
+			l.Warn( "Attempted to create interest with duplicate name", zap.Any("error", err))
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Duplicate interest name")
 			return nil, fmt.Errorf("interest with name '%s' already exists: %w", name, models.ErrConflict)
 		}
 		// Handle other potential errors
-		l.ErrorContext(ctx, "Failed to insert new interest", slog.Any("error", err))
+		l.Error( "Failed to insert new interest", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB INSERT failed")
 		return nil, fmt.Errorf("database error creating interest: %w", err)
 	}
 
-	l.InfoContext(ctx, "Global interest created successfully", slog.String("interestID", interest.ID.String()))
+	l.Info( "Global interest created successfully", zap.String("interestID", interest.ID.String()))
 	span.SetAttributes(attribute.String("db.interest.id", interest.ID.String()))
 	span.SetStatus(codes.Ok, "Interest created")
 	return &interest, nil
@@ -118,26 +118,26 @@ func (r *RepositoryImpl) Removeinterests(ctx context.Context, userID uuid.UUID, 
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "Removeinterests"), slog.String("userID", userID.String()), slog.String("interestID", interestID.String()))
-	l.DebugContext(ctx, "Removing user interest")
+	l := r.logger.With(zap.String("method", "Removeinterests"), zap.String("userID", userID.String()), zap.String("interestID", interestID.String()))
+	l.Debug( "Removing user interest")
 
 	query := "DELETE FROM user_custom_interests WHERE user_id = $1 AND id = $2"
 	tag, err := r.pgpool.Exec(ctx, query, userID, interestID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to delete user interest", slog.Any("error", err))
+		l.Error( "Failed to delete user interest", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB DELETE failed")
 		return fmt.Errorf("database error removing interest: %w", err)
 	}
 
 	if tag.RowsAffected() == 0 {
-		l.WarnContext(ctx, "Attempted to remove non-existent user interest association")
+		l.Warn( "Attempted to remove non-existent user interest association")
 		// Return an error so the service/HandlerImpl knows the operation didn't change anything
 		span.SetStatus(codes.Error, "Association not found")
 		return fmt.Errorf("interest association not found: %w", models.ErrNotFound)
 	}
 
-	l.InfoContext(ctx, "User interest removed successfully")
+	l.Info( "User interest removed successfully")
 	span.SetStatus(codes.Ok, "Interest removed")
 	return nil
 }
@@ -151,8 +151,8 @@ func (r *RepositoryImpl) GetAllInterests(ctx context.Context) ([]*models.Interes
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetAllInterests"))
-	l.DebugContext(ctx, "Fetching all active interests")
+	l := r.logger.With(zap.String("method", "GetAllInterests"))
+	l.Debug( "Fetching all active interests")
 
 	query := `
         SELECT id, name, description, 
@@ -166,7 +166,7 @@ func (r *RepositoryImpl) GetAllInterests(ctx context.Context) ([]*models.Interes
 
 	rows, err := r.pgpool.Query(ctx, query)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query all interests", slog.Any("error", err))
+		l.Error( "Failed to query all interests", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB query failed")
 		return nil, fmt.Errorf("database error fetching interests: %w", err)
@@ -180,7 +180,7 @@ func (r *RepositoryImpl) GetAllInterests(ctx context.Context) ([]*models.Interes
 			&i.ID, &i.Name, &i.Description, &i.Active, &i.CreatedAt, &i.UpdatedAt, &i.Source,
 		)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to scan interest row", slog.Any("error", err))
+			l.Error( "Failed to scan interest row", zap.Any("error", err))
 			span.RecordError(err)
 			return nil, fmt.Errorf("database error scanning interest: %w", err)
 		}
@@ -188,12 +188,12 @@ func (r *RepositoryImpl) GetAllInterests(ctx context.Context) ([]*models.Interes
 	}
 
 	if err = rows.Err(); err != nil {
-		l.ErrorContext(ctx, "Error iterating interests rows", slog.Any("error", err))
+		l.Error( "Error iterating interests rows", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("database error reading interests: %w", err)
 	}
 
-	l.DebugContext(ctx, "Fetched all active interests successfully", slog.Int("count", len(interests)))
+	l.Debug( "Fetched all active interests successfully", zap.Int("count", len(interests)))
 	span.SetStatus(codes.Ok, "Interests fetched")
 	return interests, nil
 }
@@ -207,8 +207,8 @@ func (r *RepositoryImpl) GetAllInterests(ctx context.Context) ([]*models.Interes
 //	))
 //	defer span.End()
 //
-//	l := r.logger.With(slog.String("method", "GetUserEnhancedInterests"), slog.String("userID", userID.String()))
-//	l.DebugContext(ctx, "Fetching user enhanced interests")
+//	l := r.logger.With(zap.String("method", "GetUserEnhancedInterests"), zap.String("userID", userID.String()))
+//	l.Debug( "Fetching user enhanced interests")
 //
 //	query := `
 //        SELECT i.id, i.name, i.description, i.active, i.created_at, i.updated_at, ui.preference_level
@@ -219,7 +219,7 @@ func (r *RepositoryImpl) GetAllInterests(ctx context.Context) ([]*models.Interes
 //
 //	rows, err := r.pgpool.Query(ctx, query, userID)
 //	if err != nil {
-//		l.ErrorContext(ctx, "Failed to query user enhanced interests", slog.Any("error", err))
+//		l.Error( "Failed to query user enhanced interests", zap.Any("error", err))
 //		span.RecordError(err)
 //		span.SetStatus(codes.Error, "DB query failed")
 //		return nil, fmt.Errorf("database error fetching enhanced interests: %w", err)
@@ -233,7 +233,7 @@ func (r *RepositoryImpl) GetAllInterests(ctx context.Context) ([]*models.Interes
 //			&i.ID, &i.Name, &i.Description, &i.Active, &i.CreatedAt, &i.UpdatedAt, &i.PreferenceLevel,
 //		)
 //		if err != nil {
-//			l.ErrorContext(ctx, "Failed to scan enhanced interest row", slog.Any("error", err))
+//			l.Error( "Failed to scan enhanced interest row", zap.Any("error", err))
 //			span.RecordError(err)
 //			return nil, fmt.Errorf("database error scanning enhanced interest: %w", err)
 //		}
@@ -241,12 +241,12 @@ func (r *RepositoryImpl) GetAllInterests(ctx context.Context) ([]*models.Interes
 //	}
 //
 //	if err = rows.Err(); err != nil {
-//		l.ErrorContext(ctx, "Error iterating enhanced interest rows", slog.Any("error", err))
+//		l.Error( "Error iterating enhanced interest rows", zap.Any("error", err))
 //		span.RecordError(err)
 //		return nil, fmt.Errorf("database error reading enhanced interests: %w", err)
 //	}
 //
-//	l.DebugContext(ctx, "Fetched user enhanced interests successfully", slog.Int("count", len(interests)))
+//	l.Debug( "Fetched user enhanced interests successfully", zap.Int("count", len(interests)))
 //	span.SetStatus(codes.Ok, "Enhanced interests fetched")
 //	return interests, nil
 //}
@@ -262,11 +262,11 @@ func (r *RepositoryImpl) Updateinterests(ctx context.Context, userID uuid.UUID, 
 	defer span.End()
 
 	l := r.logger.With(
-		slog.String("method", "UpdateUserCustomInterest"),
-		slog.String("userID", userID.String()),
-		slog.String("interestID", interestID.String()),
+		zap.String("method", "UpdateUserCustomInterest"),
+		zap.String("userID", userID.String()),
+		zap.String("interestID", interestID.String()),
 	)
-	l.DebugContext(ctx, "Updating user custom interest", slog.Any("params", params))
+	l.Debug( "Updating user custom interest", zap.Any("params", params))
 
 	// Build dynamic query
 	setClauses := []string{}
@@ -302,7 +302,7 @@ func (r *RepositoryImpl) Updateinterests(ctx context.Context, userID uuid.UUID, 
 
 	// If no fields to update, return early
 	if len(setClauses) == 0 {
-		l.InfoContext(ctx, "No fields provided to update custom interest")
+		l.Info( "No fields provided to update custom interest")
 		span.SetStatus(codes.Ok, "No update fields")
 		return nil // Or return models.ErrBadRequest("no fields provided for update")
 	}
@@ -328,7 +328,7 @@ func (r *RepositoryImpl) Updateinterests(ctx context.Context, userID uuid.UUID, 
 		userIDPlaceholder,
 	)
 
-	l.DebugContext(ctx, "Executing dynamic update query", slog.String("query", query))
+	l.Debug( "Executing dynamic update query", zap.String("query", query))
 
 	// Execute query
 	tag, err := r.pgpool.Exec(ctx, query, args...)
@@ -336,13 +336,13 @@ func (r *RepositoryImpl) Updateinterests(ctx context.Context, userID uuid.UUID, 
 		// Check for unique constraint on (user_id, name) if name was updated
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" && params.Name != nil {
-			l.WarnContext(ctx, "Attempted to update custom interest to a duplicate name for this user", slog.Any("error", err))
+			l.Warn( "Attempted to update custom interest to a duplicate name for this user", zap.Any("error", err))
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Duplicate custom interest name")
 			return fmt.Errorf("you already have a custom interest named '%s': %w", *params.Name, models.ErrConflict)
 		}
 		// Handle other potential errors
-		l.ErrorContext(ctx, "Failed to execute update custom interest query", slog.Any("error", err))
+		l.Error( "Failed to execute update custom interest query", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB UPDATE failed")
 		return fmt.Errorf("database error updating custom interest: %w", err)
@@ -350,13 +350,13 @@ func (r *RepositoryImpl) Updateinterests(ctx context.Context, userID uuid.UUID, 
 
 	// Check if the specific interest owned by the user was found and updated
 	if tag.RowsAffected() == 0 {
-		l.WarnContext(ctx, "Custom interest not found for update or user mismatch", slog.Int64("rows_affected", tag.RowsAffected()))
+		l.Warn( "Custom interest not found for update or user mismatch", zap.Int64("rows_affected", tag.RowsAffected()))
 		span.SetStatus(codes.Error, "Custom interest not found or permission denied")
 		// It's crucial to return NotFound here, as the combination wasn't found
 		return fmt.Errorf("custom interest with ID %s not found for user %s: %w", interestID.String(), userID.String(), models.ErrNotFound)
 	}
 
-	l.InfoContext(ctx, "User custom interest updated successfully")
+	l.Info( "User custom interest updated successfully")
 	span.SetStatus(codes.Ok, "Custom interest updated")
 	return nil
 }
@@ -370,8 +370,8 @@ func (r *RepositoryImpl) GetInterest(ctx context.Context, interestID uuid.UUID) 
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetInterest"), slog.String("interestID", interestID.String()))
-	l.DebugContext(ctx, "Fetching interest")
+	l := r.logger.With(zap.String("method", "GetInterest"), zap.String("interestID", interestID.String()))
+	l.Debug( "Fetching interest")
 
 	query := `
 		SELECT id, name, description, active, created_at, updated_at, type FROM (
@@ -412,8 +412,8 @@ func (r *RepositoryImpl) AddInterestToProfile(ctx context.Context, profileID, in
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "AddInterestToProfile"), slog.String("profileID", profileID.String()), slog.String("interestID", interestID.String()))
-	l.DebugContext(ctx, "Linking interest to profile")
+	l := r.logger.With(zap.String("method", "AddInterestToProfile"), zap.String("profileID", profileID.String()), zap.String("interestID", interestID.String()))
+	l.Debug( "Linking interest to profile")
 
 	query := `
         INSERT INTO user_profile_interests (profile_id, interest_id, preference_level)
@@ -422,13 +422,13 @@ func (r *RepositoryImpl) AddInterestToProfile(ctx context.Context, profileID, in
 
 	_, err := r.pgpool.Exec(ctx, query, profileID, interestID, 1) // Default preference_level = 1
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to link interest to profile", slog.Any("error", err))
+		l.Error( "Failed to link interest to profile", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB INSERT failed")
 		return fmt.Errorf("database error linking interest to profile: %w", err)
 	}
 
-	l.DebugContext(ctx, "Interest linked to profile successfully")
+	l.Debug( "Interest linked to profile successfully")
 	span.SetStatus(codes.Ok, "Interest linked")
 	return nil
 }
@@ -443,8 +443,8 @@ func (r *RepositoryImpl) GetInterestsForProfile(ctx context.Context, profileID u
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetInterestsForProfile"), slog.String("profileID", profileID.String()))
-	l.DebugContext(ctx, "Fetching interests for profile")
+	l := r.logger.With(zap.String("method", "GetInterestsForProfile"), zap.String("profileID", profileID.String()))
+	l.Debug( "Fetching interests for profile")
 
 	query := `
         SELECT i.id, i.name, i.description, i.active
@@ -454,7 +454,7 @@ func (r *RepositoryImpl) GetInterestsForProfile(ctx context.Context, profileID u
 
 	rows, err := r.pgpool.Query(ctx, query, profileID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query interests for profile", slog.Any("error", err))
+		l.Error( "Failed to query interests for profile", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB query failed")
 		return nil, fmt.Errorf("database error fetching interests for profile: %w", err)
@@ -471,7 +471,7 @@ func (r *RepositoryImpl) GetInterestsForProfile(ctx context.Context, profileID u
 			&interest.Active,
 		)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to scan interest row", slog.Any("error", err))
+			l.Error( "Failed to scan interest row", zap.Any("error", err))
 			span.RecordError(err)
 			return nil, fmt.Errorf("database error scanning interest: %w", err)
 		}
@@ -479,12 +479,12 @@ func (r *RepositoryImpl) GetInterestsForProfile(ctx context.Context, profileID u
 	}
 
 	if err = rows.Err(); err != nil {
-		l.ErrorContext(ctx, "Error iterating interest rows", slog.Any("error", err))
+		l.Error( "Error iterating interest rows", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("database error reading interests: %w", err)
 	}
 
-	l.DebugContext(ctx, "Fetched interests for profile successfully", slog.Int("count", len(interests)))
+	l.Debug( "Fetched interests for profile successfully", zap.Int("count", len(interests)))
 	span.SetStatus(codes.Ok, "Interests fetched")
 	return interests, nil
 }

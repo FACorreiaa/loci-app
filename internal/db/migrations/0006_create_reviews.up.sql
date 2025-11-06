@@ -27,7 +27,7 @@ CREATE TABLE review_helpfuls (
     review_id UUID NOT NULL REFERENCES reviews (id) ON DELETE CASCADE,
     is_helpful BOOLEAN NOT NULL, -- TRUE for helpful, FALSE for unhelpful
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (user_id, review_id) -- A user can only mark a review as helpful/unhelpful once
+    PRIMARY KEY (user_id, review_id) -- A user can only mark a reviews as helpful/unhelpful once
 );
 
 -- Table for replies to reviews
@@ -57,16 +57,16 @@ CREATE TRIGGER trigger_set_reviews_updated_at
 BEFORE UPDATE ON reviews
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
--- Trigger to update 'updated_at' timestamp for review replies
+-- Trigger to update 'updated_at' timestamp for reviews replies
 CREATE TRIGGER trigger_set_review_replies_updated_at
 BEFORE UPDATE ON review_replies
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
--- Trigger to update POI average rating and rating count when a review is added, updated, or deleted
+-- Trigger to update POI average rating and rating count when a reviews is added, updated, or deleted
 CREATE OR REPLACE FUNCTION update_poi_rating() RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'DELETE' THEN
-        -- Update POI rating when a review is deleted
+        -- Update POI rating when a reviews is deleted
         UPDATE points_of_interest
         SET average_rating = (
             SELECT COALESCE(AVG(rating), 0)
@@ -81,7 +81,7 @@ BEGIN
         WHERE id = OLD.poi_id;
         RETURN OLD;
     ELSE
-        -- Update POI rating when a review is inserted or updated
+        -- Update POI rating when a reviews is inserted or updated
         UPDATE points_of_interest
         SET average_rating = (
             SELECT COALESCE(AVG(rating), 0)

@@ -8,8 +8,6 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/FACorreiaa/go-templui/internal/app/domain/recents"
-
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"github.com/FACorreiaa/go-templui/internal/app/pages"
 	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
@@ -38,7 +36,7 @@ func (h *RecentsHandlers) HandleRecentsPage(c *gin.Context) {
 	userUUID, err := uuid.Parse(userID)
 	if err != nil {
 		h.logger.Error("Invalid user ID", zap.String("user_id", userID), zap.Error(err))
-		c.HTML(http.StatusBadRequest, "", recents.RecentsPage(nil, models.RecentInteractionsFilter{}))
+		c.HTML(http.StatusBadRequest, "", RecentsPage(nil, models.RecentInteractionsFilter{}))
 		return
 	}
 
@@ -73,7 +71,7 @@ func (h *RecentsHandlers) HandleRecentsPage(c *gin.Context) {
 	response, err := h.recentsService.GetUserRecentInteractions(c.Request.Context(), userUUID, page, limit, filterOptions)
 	if err != nil {
 		h.logger.Error("Failed to get recent interactions", zap.String("user_id", userID), zap.Error(err))
-		c.HTML(http.StatusInternalServerError, "", recents.RecentsPage(nil, *filterOptions))
+		c.HTML(http.StatusInternalServerError, "", RecentsPage(nil, *filterOptions))
 		return
 	}
 
@@ -87,7 +85,7 @@ func (h *RecentsHandlers) HandleRecentsPage(c *gin.Context) {
 
 	c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 		Title:   "Recent Activity - Loci",
-		Content: recents.RecentsPage(response, *filterOptions),
+		Content: RecentsPage(response, *filterOptions),
 		Nav: models.Navigation{
 			Items: []models.NavItem{
 				{Name: "Dashboard", URL: "/dashboard"},

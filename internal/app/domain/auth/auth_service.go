@@ -4,7 +4,6 @@ package auth
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -13,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/FACorreiaa/go-templui/internal/app/models"
@@ -45,26 +45,26 @@ type AuthService interface {
 
 // AuthServiceImpl provides the implementation for AuthService.
 type AuthServiceImpl struct {
-	logger *slog.Logger
+	logger *zap.Logger
 	repo   AuthRepo // Use the interface
 	cfg    *config.Config
 }
 
 // NewAuthService creates a new authentication service instance.
-func NewAuthService(repo AuthRepo, cfg *config.Config, logger *slog.Logger) *AuthServiceImpl {
+func NewAuthService(repo AuthRepo, cfg *config.Config, logger *zap.Logger) *AuthServiceImpl {
 	// ... (nil checks and validation as before) ...
 	return &AuthServiceImpl{logger: logger, repo: repo, cfg: cfg}
 }
 
 // Login validates credentials, generates tokens, stores refresh token.
 func (s *AuthServiceImpl) Login(ctx context.Context, email, password string) (string, string, error) {
-	l := s.logger.With(slog.String("method", "Login"), slog.String("email", email))
-	l.DebugContext(ctx, "Attempting login")
+	l := s.logger.With(zap.String("method", "Login"), zap.String("email", email))
+	l.Debug("Attempting login")
 
 	// 1. Fetch user by email (includes hash)
 	user, err := s.repo.GetUserByEmail(ctx, email)
 	if err != nil {
-		l.WarnContext(ctx, "GetUserByEmail failed", slog.Any("error", err))
+		l.Warn("GetUserByEmail failed", zap.String("email", email))
 		// Don't reveal if user exists or password is wrong
 		return "", "", fmt.Errorf("invalid credentials: %w", models.ErrUnauthenticated)
 	}
@@ -72,7 +72,7 @@ func (s *AuthServiceImpl) Login(ctx context.Context, email, password string) (st
 	// 2. Compare submitted password with stored hash
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
-		l.WarnContext(ctx, "Password comparison failed", slog.String("userID", user.ID))
+		l.Warn("Password comparison failed", zap.String("userID", user.ID))
 		return "", "", fmt.Errorf("invalid credentials: %w", models.ErrUnauthenticated)
 	}
 
@@ -84,7 +84,7 @@ func (s *AuthServiceImpl) Login(ctx context.Context, email, password string) (st
 	// 3. Generate Tokens
 	accessToken, refreshToken, err := s.GenerateTokens(ctx, user, sub) // Pass user and sub
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to generate tokens", slog.String("userID", user.ID), slog.Any("error", err))
+		l.Error("Failed to generate tokens", zap.String("userID", user.ID), zap.Error(err))
 		return "", "", fmt.Errorf("app error generating tokens: %w", err)
 	}
 
@@ -93,17 +93,17 @@ func (s *AuthServiceImpl) Login(ctx context.Context, email, password string) (st
 	refreshExpiresAt := time.Now().Add(refreshTTL)
 	err = s.repo.StoreRefreshToken(ctx, user.ID, refreshToken, refreshExpiresAt)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to store refresh token", slog.String("userID", user.ID), slog.Any("error", err))
+		l.Error("Failed to store refresh token", zap.String("userID", user.ID), zap.Error(err))
 		return "", "", fmt.Errorf("app error storing session: %w", err)
 	}
 
-	l.InfoContext(ctx, "Login successful")
+	l.Info("Login successful")
 	return accessToken, refreshToken, nil
 }
 
 func (s *AuthServiceImpl) Register(ctx context.Context, username, email, password, _ string) (string, error) {
-	l := s.logger.With(slog.String("method", "Register"), slog.String("email", email))
-	l.DebugContext(ctx, "Attempting registration")
+	l := s.logger.With(zap.String("method", "Register"), zap.String("email", email))
+	l.Debug("Attempting registration")
 
 	// Get the global tracer
 	tracer := otel.Tracer("MyRESTAPI")
@@ -118,7 +118,7 @@ func (s *AuthServiceImpl) Register(ctx context.Context, username, email, passwor
 	// Hash the password
 	hashedPasswordBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to hash password", slog.Any("error", err))
+		l.Error("Failed to hash password", zap.Error(err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Password hashing failed")
 		return "", fmt.Errorf("could not process password")
@@ -128,33 +128,33 @@ func (s *AuthServiceImpl) Register(ctx context.Context, username, email, passwor
 	// Call repository to store user
 	userID, err := s.repo.Register(ctx, username, email, hashedPassword)
 	if err != nil {
-		l.ErrorContext(ctx, "Repository registration failed", slog.Any("error", err))
+		l.Error("Repository registration failed", zap.Error(err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Repository registration failed")
 		return "", fmt.Errorf("registration failed: %w", err)
 	}
 
-	l.InfoContext(ctx, "Registration successful", slog.String("userID", userID))
+	l.Info("Registration successful", zap.String("userID", userID))
 	span.SetStatus(codes.Ok, "User registered")
 	return userID, nil
 }
 
 // RefreshSession validates refresh token, generates new tokens, rotates refresh token.
 func (s *AuthServiceImpl) RefreshSession(ctx context.Context, refreshToken string) (string, string, error) {
-	l := s.logger.With(slog.String("method", "RefreshSession"))
-	l.DebugContext(ctx, "Attempting token refresh")
+	l := s.logger.With(zap.String("method", "RefreshSession"))
+	l.Debug("Attempting token refresh")
 
 	// 1. Validate refresh token and get User ID
 	userID, err := s.repo.ValidateRefreshTokenAndGetUserID(ctx, refreshToken)
 	if err != nil {
-		l.WarnContext(ctx, "Refresh token validation failed", slog.Any("error", err))
+		l.Warn("Refresh token validation failed", zap.Error(err))
 		return "", "", fmt.Errorf("invalid or expired refresh token: %w", err)
 	}
 
 	// 2. Fetch full user details for new token claims
 	user, err := s.repo.GetUserByID(ctx, userID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to get user details after refresh token validation", slog.String("userID", userID), slog.Any("error", err))
+		l.Error("Failed to get user details after refresh token validation", zap.String("userID", userID), zap.Error(err))
 		// Invalidate the suspicious token?
 		err = s.repo.InvalidateRefreshToken(ctx, refreshToken)
 		if err != nil {
@@ -169,7 +169,7 @@ func (s *AuthServiceImpl) RefreshSession(ctx context.Context, refreshToken strin
 	// 3. Generate NEW tokens
 	newAccessToken, newRefreshToken, err := s.GenerateTokens(ctx, user, sub)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to generate new tokens", slog.String("userID", user.ID), slog.Any("error", err))
+		l.Error("Failed to generate new tokens", zap.String("userID", user.ID), zap.Error(err))
 		return "", "", fmt.Errorf("app error generating tokens: %w", err)
 	}
 
@@ -178,52 +178,52 @@ func (s *AuthServiceImpl) RefreshSession(ctx context.Context, refreshToken strin
 	refreshExpiresAt := time.Now().Add(refreshTTL)
 	err = s.repo.StoreRefreshToken(ctx, user.ID, newRefreshToken, refreshExpiresAt)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to store new refresh token", slog.String("userID", user.ID), slog.Any("error", err))
+		l.Error("Failed to store new refresh token", zap.String("userID", user.ID), zap.Error(err))
 		return "", "", fmt.Errorf("app error storing new session: %w", err)
 	}
 
 	// 5. Invalidate the OLD refresh token (Rotation)
 	err = s.repo.InvalidateRefreshToken(ctx, refreshToken)
 	if err != nil {
-		l.WarnContext(ctx, "Failed to invalidate old refresh token during rotation", slog.String("userID", user.ID), slog.Any("error", err))
+		l.Warn("Failed to invalidate old refresh token during rotation", zap.String("userID", user.ID), zap.Error(err))
 		// Log, but proceed since new tokens were issued
 		return "", "", fmt.Errorf("failed to invalidate old refresh token: %w", err)
 	}
 
-	l.InfoContext(ctx, "Token refresh successful", slog.String("userID", user.ID))
+	l.Info("Token refresh successful", zap.String("userID", user.ID))
 	return newAccessToken, newRefreshToken, nil
 }
 
 // Logout invalidates the provided refresh token.
 func (s *AuthServiceImpl) Logout(ctx context.Context, refreshToken string) error {
-	l := s.logger.With(slog.String("method", "Logout"))
-	l.DebugContext(ctx, "Attempting logout by invalidating refresh token")
+	l := s.logger.With(zap.String("method", "Logout"))
+	l.Debug("Attempting logout by invalidating refresh token")
 	err := s.repo.InvalidateRefreshToken(ctx, refreshToken)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to invalidate refresh token", slog.Any("error", err))
+		l.Error("Failed to invalidate refresh token", zap.Error(err))
 		// Decide if this should be an error back to client
 		return fmt.Errorf("logout failed: %w", err)
 	}
-	l.InfoContext(ctx, "Logout successful (token invalidated)")
+	l.Info("Logout successful (token invalidated)")
 	return nil // Usually succeed logout even if invalidation had minor issues
 }
 
 // UpdatePassword verifies old password, hashes new one, updates, invalidates tokens.
 func (s *AuthServiceImpl) UpdatePassword(ctx context.Context, userID, oldPassword, newPassword string) error {
-	l := s.logger.With(slog.String("method", "UpdatePassword"), slog.String("userID", userID))
-	l.DebugContext(ctx, "Attempting password update")
+	l := s.logger.With(zap.String("method", "UpdatePassword"), zap.String("userID", userID))
+	l.Debug("Attempting password update")
 
 	// 1. Verify old password using the repository method
 	err := s.repo.VerifyPassword(ctx, userID, oldPassword)
 	if err != nil {
-		l.WarnContext(ctx, "Old password verification failed", slog.Any("error", err))
+		l.Warn("Old password verification failed", zap.Error(err))
 		return fmt.Errorf("incorrect old password: %w", models.ErrUnauthenticated)
 	}
 
 	// 2. Hash the *new* password
 	newHashedPasswordBytes, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to hash new password", slog.Any("error", err))
+		l.Error("Failed to hash new password", zap.Error(err))
 		return fmt.Errorf("could not process new password")
 	}
 	newHashedPassword := string(newHashedPasswordBytes)
@@ -231,7 +231,7 @@ func (s *AuthServiceImpl) UpdatePassword(ctx context.Context, userID, oldPasswor
 	// 3. Call repository to update the stored hash
 	err = s.repo.UpdatePassword(ctx, userID, newHashedPassword)
 	if err != nil {
-		l.ErrorContext(ctx, "Repository password update failed", slog.Any("error", err))
+		l.Error("Repository password update failed", zap.Error(err))
 		return fmt.Errorf("failed to update password: %w", err)
 	}
 
@@ -239,54 +239,54 @@ func (s *AuthServiceImpl) UpdatePassword(ctx context.Context, userID, oldPasswor
 	err = s.InvalidateAllUserRefreshTokens(ctx, userID) // Call self to use logging etc.
 	if err != nil {
 		// Log as warning, password update succeeded but token invalidation failed
-		l.WarnContext(ctx, "Failed to invalidate refresh tokens after password update", slog.Any("error", err))
+		l.Warn("Failed to invalidate refresh tokens after password update", zap.Error(err))
 		return err
 	}
 
-	l.InfoContext(ctx, "Password updated successfully")
+	l.Info("Password updated successfully")
 	return nil
 }
 
 // InvalidateAllUserRefreshTokens invalidates all active refresh tokens for a user.
 func (s *AuthServiceImpl) InvalidateAllUserRefreshTokens(ctx context.Context, userID string) error {
-	l := s.logger.With(slog.String("method", "InvalidateAllUserRefreshTokens"), slog.String("userID", userID))
-	l.DebugContext(ctx, "Invalidating all refresh tokens")
+	l := s.logger.With(zap.String("method", "InvalidateAllUserRefreshTokens"), zap.String("userID", userID))
+	l.Debug("Invalidating all refresh tokens")
 	err := s.repo.InvalidateAllUserRefreshTokens(ctx, userID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to invalidate all refresh tokens", slog.Any("error", err))
+		l.Error("Failed to invalidate all refresh tokens", zap.Error(err))
 		return fmt.Errorf("failed to invalidate tokens: %w", err)
 	}
-	l.InfoContext(ctx, "All refresh tokens invalidated")
+	l.Info("All refresh tokens invalidated")
 	return nil
 }
 
 func (s *AuthServiceImpl) GetUserByID(ctx context.Context, userID string) (*models.UserAuth, error) {
-	l := s.logger.With(slog.String("method", "GetUserByID"), slog.String("userID", userID))
-	l.DebugContext(ctx, "Fetching user by ID")
+	l := s.logger.With(zap.String("method", "GetUserByID"), zap.String("userID", userID))
+	l.Debug("Fetching user by ID")
 	user, err := s.repo.GetUserByID(ctx, userID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to fetch user by ID", slog.Any("error", err))
+		l.Error("Failed to fetch user by ID", zap.Error(err))
 		return nil, fmt.Errorf("failed to fetch user: %w", err)
 	}
-	l.InfoContext(ctx, "User fetched successfully")
+	l.Info("User fetched successfully")
 	return user, nil
 }
 
 func (s *AuthServiceImpl) GetUserByEmail(ctx context.Context, email string) (*models.UserAuth, error) {
-	l := s.logger.With(slog.String("method", "GetUserByEmail"), slog.String("email", email))
-	l.DebugContext(ctx, "Fetching user by email")
+	l := s.logger.With(zap.String("method", "GetUserByEmail"), zap.String("email", email))
+	l.Debug("Fetching user by email")
 	user, err := s.repo.GetUserByEmail(ctx, email)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to fetch user by email", slog.Any("error", err))
+		l.Error("Failed to fetch user by email", zap.Error(err))
 		return nil, fmt.Errorf("failed to fetch user: %w", err)
 	}
-	l.InfoContext(ctx, "User fetched successfully")
+	l.Info("User fetched successfully")
 	return user, nil
 }
 
 // --- Internal Helper: generateTokens ---
 func (s *AuthServiceImpl) GenerateTokens(ctx context.Context, user *models.UserAuth, _ *models.Subscription) (accessToken string, refreshToken string, err error) {
-	l := s.logger.With(slog.String("method", "generateTokens"), slog.String("userID", user.ID))
+	l := s.logger.With(zap.String("method", "generateTokens"), zap.String("userID", user.ID))
 
 	// --- Access Token ---
 	accessTTL := s.getAccessTTL()
@@ -312,14 +312,14 @@ func (s *AuthServiceImpl) GenerateTokens(ctx context.Context, user *models.UserA
 	accessTokenJWT := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
 	accessToken, err = accessTokenJWT.SignedString(secretKeyBytes)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to sign access token", slog.Any("error", err))
+		l.Error("Failed to sign access token", zap.Error(err))
 		return "", "", fmt.Errorf("failed to sign access token: %w", err)
 	}
 
 	// --- Refresh Token ---
 	refreshToken = uuid.NewString() // Simple UUID, stored in DB
 
-	l.DebugContext(ctx, "Tokens generated successfully")
+	l.Debug("Tokens generated successfully")
 	return accessToken, refreshToken, nil
 }
 
@@ -383,14 +383,26 @@ func NewDummySubsRepo() models.SubscriptionRepository { return &dummySubsRepo{} 
 
 // --- Token and utility methods implementation ---
 
-func (s *AuthServiceImpl) GenerateToken(userID, email, name string) (string, error) {
+func (s *AuthServiceImpl) GenerateToken(userID, email, username string) (string, error) {
 	jwtService := NewJWTService()
-	return jwtService.GenerateToken(userID, email, name)
+	jwtCfg := JWTConfig{
+		SecretKey:       s.getSecretKey(),
+		TokenExpiration: s.getAccessTTL(),
+		Logger:          s.logger,
+		Optional:        false,
+	}
+	return jwtService.GenerateToken(jwtCfg, userID, email, username)
 }
 
 func (s *AuthServiceImpl) ValidateToken(tokenString string) (*jwt.MapClaims, error) {
 	jwtService := NewJWTService()
-	claims, err := jwtService.ValidateToken(tokenString)
+	jwtCfg := JWTConfig{
+		SecretKey:       s.getSecretKey(),
+		TokenExpiration: s.getAccessTTL(),
+		Logger:          s.logger,
+		Optional:        false,
+	}
+	claims, err := jwtService.ValidateToken(jwtCfg, tokenString)
 	if err != nil {
 		return nil, err
 	}
@@ -399,7 +411,7 @@ func (s *AuthServiceImpl) ValidateToken(tokenString string) (*jwt.MapClaims, err
 	mapClaims := jwt.MapClaims{
 		"user_id": claims.UserID,
 		"email":   claims.Email,
-		"name":    claims.Name,
+		"name":    claims.Username,
 		"exp":     claims.ExpiresAt.Unix(),
 		"iat":     claims.IssuedAt.Unix(),
 		"iss":     claims.Issuer,

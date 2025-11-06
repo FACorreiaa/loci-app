@@ -3,8 +3,9 @@ package llmchat
 import (
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"strings"
+
+	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 
@@ -12,7 +13,7 @@ import (
 )
 
 // parseItineraryFromResponse parses an AIItineraryResponse from a stored LLM response
-func parseItineraryFromResponse(responseText string, logger *slog.Logger) (*models.AIItineraryResponse, error) {
+func parseItineraryFromResponse(responseText string, logger *zap.Logger) (*models.AIItineraryResponse, error) {
 	if responseText == "" {
 		return nil, fmt.Errorf("empty response text")
 	}
@@ -46,7 +47,7 @@ func parseItineraryFromResponse(responseText string, logger *slog.Logger) (*mode
 		return &itineraryResponse, nil
 	}
 
-	logger.Debug("parseItineraryFromResponse: Could not parse response as itinerary", "error", err)
+	logger.Debug("parseItineraryFromResponse: Could not parse response as itinerary", zap.Error(err))
 	return nil, fmt.Errorf("failed to parse itinerary: %w", err)
 }
 
@@ -63,7 +64,7 @@ func (l *ServiceImpl) parseCompleteResponseFromParts(responses map[string]*strin
 			cleanedCityData := cleanJSONResponse(cityDataStr)
 			var cityData models.GeneralCityData
 			if err := json.Unmarshal([]byte(cleanedCityData), &cityData); err != nil {
-				l.logger.Warn("Failed to parse city_data part", slog.Any("error", err))
+				l.logger.Warn("Failed to parse city_data part", zap.Any("error", err))
 			} else {
 				completeResponse.GeneralCityData = cityData
 			}
@@ -82,15 +83,15 @@ func (l *ServiceImpl) parseCompleteResponseFromParts(responses map[string]*strin
 			}
 			if err := json.Unmarshal([]byte(cleanedPOIs), &poisWrapper); err == nil && len(poisWrapper.PointsOfInterest) > 0 {
 				completeResponse.PointsOfInterest = poisWrapper.PointsOfInterest
-				l.logger.Debug("Parsed general_pois as wrapped object", slog.Int("count", len(poisWrapper.PointsOfInterest)))
+				l.logger.Debug("Parsed general_pois as wrapped object", zap.Int("count", len(poisWrapper.PointsOfInterest)))
 			} else {
 				// Fallback: try parsing as direct array
 				var pois []models.POIDetailedInfo
 				if err := json.Unmarshal([]byte(cleanedPOIs), &pois); err != nil {
-					l.logger.Warn("Failed to parse general_pois part", slog.Any("error", err))
+					l.logger.Warn("Failed to parse general_pois part", zap.Any("error", err))
 				} else {
 					completeResponse.PointsOfInterest = pois
-					l.logger.Debug("Parsed general_pois as direct array", slog.Int("count", len(pois)))
+					l.logger.Debug("Parsed general_pois as direct array", zap.Int("count", len(pois)))
 				}
 			}
 		}
@@ -102,7 +103,7 @@ func (l *ServiceImpl) parseCompleteResponseFromParts(responses map[string]*strin
 		if parsedItinerary, err := parseItineraryFromResponse(itineraryStr, l.logger); err == nil && parsedItinerary != nil {
 			completeResponse.AIItineraryResponse = *parsedItinerary
 		} else {
-			l.logger.Warn("Failed to parse itinerary part", slog.Any("error", err))
+			l.logger.Warn("Failed to parse itinerary part", zap.Any("error", err))
 		}
 	}
 
@@ -137,7 +138,7 @@ func (l *ServiceImpl) parseCompleteResponseFromParts(responses map[string]*strin
 			}
 			completeResponse.PointsOfInterest = pois
 		} else {
-			l.logger.Warn("Failed to parse restaurants part", slog.Any("error", err))
+			l.logger.Warn("Failed to parse restaurants part", zap.Any("error", err))
 		}
 	}
 
@@ -169,7 +170,7 @@ func (l *ServiceImpl) parseCompleteResponseFromParts(responses map[string]*strin
 }
 
 // parseRestaurantsFromResponse parses restaurant data from SSE response
-func parseRestaurantsFromResponse(responseText string, _ *slog.Logger) ([]models.RestaurantDetailedInfo, error) {
+func parseRestaurantsFromResponse(responseText string, _ *zap.Logger) ([]models.RestaurantDetailedInfo, error) {
 	if responseText == "" {
 		return nil, fmt.Errorf("empty restaurant response text")
 	}
@@ -202,7 +203,7 @@ func parseRestaurantsFromResponse(responseText string, _ *slog.Logger) ([]models
 }
 
 // parseActivitiesFromResponse parses activity data from SSE response
-func parseActivitiesFromResponse(responseText string, _ *slog.Logger) ([]models.POIDetailedInfo, error) {
+func parseActivitiesFromResponse(responseText string, _ *zap.Logger) ([]models.POIDetailedInfo, error) {
 	if responseText == "" {
 		return nil, fmt.Errorf("empty activities response text")
 	}
@@ -235,7 +236,7 @@ func parseActivitiesFromResponse(responseText string, _ *slog.Logger) ([]models.
 }
 
 // parseHotelsFromResponse parses hotel data from SSE response
-func parseHotelsFromResponse(responseText string, _ *slog.Logger) ([]models.HotelDetailedInfo, error) {
+func parseHotelsFromResponse(responseText string, _ *zap.Logger) ([]models.HotelDetailedInfo, error) {
 	if responseText == "" {
 		return nil, fmt.Errorf("empty hotels response text")
 	}

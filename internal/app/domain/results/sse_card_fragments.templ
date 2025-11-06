@@ -9,7 +9,7 @@ import (
 // These templates render single cards with HTMX OOB swaps for adding/removing items
 
 // SingleRestaurantCard renders a single restaurant card for SSE insertion
-// Use with HTMX hx-swap-oob="beforeend:#results-list" to append to list
+// Use with HTMX hx-swap-oob="beforeend:#results-lists" to append to lists
 templ SingleRestaurantCard(restaurant models.RestaurantDetailedInfo, index int) {
 	<div
 		id={ fmt.Sprintf("restaurant-%d", index) }

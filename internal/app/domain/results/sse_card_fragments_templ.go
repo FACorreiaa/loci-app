@@ -17,7 +17,7 @@ import (
 // These templates render single cards with HTMX OOB swaps for adding/removing items
 
 // SingleRestaurantCard renders a single restaurant card for SSE insertion
-// Use with HTMX hx-swap-oob="beforeend:#results-list" to append to list
+// Use with HTMX hx-swap-oob="beforeend:#results-lists" to append to lists
 func SingleRestaurantCard(restaurant models.RestaurantDetailedInfo, index int) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context

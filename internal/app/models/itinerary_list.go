@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// ItineraryList represents the top-level list containing itineraries
+// ItineraryList represents the top-level lists containing itineraries
 type ItineraryList struct {
 	ID          uuid.UUID
 	UserID      uuid.UUID
@@ -19,7 +19,7 @@ type ItineraryList struct {
 	UpdatedAt   time.Time
 }
 
-// Itinerary represents a single itinerary (a sub-list)
+// Itinerary represents a single itinerary (a sub-lists)
 type Itinerary struct {
 	ID          uuid.UUID
 	Name        string
@@ -59,7 +59,7 @@ type List struct {
 	UpdatedAt    time.Time
 }
 
-// ContentType defines the type of content in a list item
+// ContentType defines the type of content in a lists item
 type ContentType string
 
 const (
@@ -136,15 +136,15 @@ type ListItemWithContent struct {
 
 // ListWithDetailedItems combines a List with its items and their content details
 type ListWithDetailedItems struct {
-	List  List                   `json:"list"`
+	List  List                   `json:"lists"`
 	Items []*ListItemWithContent `json:"items"`
 }
 
 type CreateListRequest struct {
 	Name        string     `json:"name" validate:"required,min=3,max=100"`
 	Description string     `json:"description,omitempty" validate:"max=500"`
-	CityID      *uuid.UUID `json:"city_id,omitempty"` // Optional: if the list/itinerary is city-specific
-	IsItinerary bool       `json:"is_itinerary"`      // True if this top-level list IS an itinerary itself
+	CityID      *uuid.UUID `json:"city_id,omitempty"` // Optional: if the lists/itinerary is city-specific
+	IsItinerary bool       `json:"is_itinerary"`      // True if this top-level lists IS an itinerary itself
 	IsPublic    bool       `json:"is_public"`
 }
 

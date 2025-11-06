@@ -110,7 +110,7 @@ var internalSvgData = map[string]string{
   <line x1="5" x2="9" y1="14" y2="18" />
   <line x1="7" x2="4" y1="17" y2="20" />
   <line x1="3" x2="5" y1="19" y2="21" />`,
-	"list-todo": `<rect x="3" y="5" width="6" height="6" rx="1" />
+	"lists-todo": `<rect x="3" y="5" width="6" height="6" rx="1" />
   <path d="m3 17 2 2 4-4" />
   <path d="M13 6h8" />
   <path d="M13 12h8" />
@@ -321,7 +321,7 @@ var internalSvgData = map[string]string{
   <path d="m8 8 6-6" />
   <path d="m9 7 8 8" />
   <path d="m21 11-8-8" />`,
-	"list-checks": `<path d="m3 17 2 2 4-4" />
+	"lists-checks": `<path d="m3 17 2 2 4-4" />
   <path d="m3 7 2 2 4-4" />
   <path d="M13 6h8" />
   <path d="M13 12h8" />
@@ -499,7 +499,7 @@ var internalSvgData = map[string]string{
   <path d="M14 12a2 2 0 0 0 2-2V8h-2" />`,
 	"navigation": `<polygon points="3 11 22 2 13 21 11 13 3 11" />`,
 	"minus":      `<path d="M5 12h14" />`,
-	"list-check": `<path d="M11 18H3" />
+	"lists-check": `<path d="M11 18H3" />
   <path d="m15 18 2 2 4-4" />
   <path d="M16 12H3" />
   <path d="M16 6H3" />`,
@@ -765,7 +765,7 @@ var internalSvgData = map[string]string{
   <circle cx="18" cy="6" r="3" />
   <path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9" />
   <path d="M12 12v3" />`,
-	"list-x": `<path d="M11 12H3" />
+	"lists-x": `<path d="M11 12H3" />
   <path d="M16 6H3" />
   <path d="M16 18H3" />
   <path d="m19 10-4 4" />
@@ -1036,7 +1036,7 @@ var internalSvgData = map[string]string{
   <circle cx="15" cy="15" r="2" />`,
 	"folder-symlink": `<path d="M2 9V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h7" />
   <path d="m8 16 3-3-3-3" />`,
-	"list": `<path d="M3 12h.01" />
+	"lists": `<path d="M3 12h.01" />
   <path d="M3 18h.01" />
   <path d="M3 6h.01" />
   <path d="M8 12h13" />
@@ -1120,7 +1120,7 @@ var internalSvgData = map[string]string{
   <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
   <path d="m15 11-6 6" />
   <path d="m9 11 6 6" />`,
-	"list-video": `<path d="M12 12H3" />
+	"lists-video": `<path d="M12 12H3" />
   <path d="M16 6H3" />
   <path d="M12 18H3" />
   <path d="m16 12 5 3-5 3v-6Z" />`,
@@ -1171,7 +1171,7 @@ var internalSvgData = map[string]string{
   <path d="M8 14a5 5 0 1 1 8 0" />
   <circle cx="12" cy="11" r="1" />
   <path d="M13 17a1 1 0 1 0-2 0l.5 4.5a.5.5 0 1 0 1 0Z" />`,
-	"clipboard-list": `<rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+	"clipboard-lists": `<rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
   <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
   <path d="M12 11h4" />
   <path d="M12 16h4" />
@@ -2844,7 +2844,7 @@ var internalSvgData = map[string]string{
   <path d="m6 13 8.5 8" />
   <path d="M6 13h3" />
   <path d="M9 13c6.667 0 6.667-10 0-10" />`,
-	"list-music": `<path d="M21 15V6" />
+	"lists-music": `<path d="M21 15V6" />
   <path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
   <path d="M12 12H3" />
   <path d="M16 6H3" />
@@ -3023,7 +3023,7 @@ var internalSvgData = map[string]string{
   <circle cx="12" cy="15" r="1" />
   <circle cx="19" cy="15" r="1" />
   <circle cx="5" cy="15" r="1" />`,
-	"list-plus": `<path d="M11 12H3" />
+	"lists-plus": `<path d="M11 12H3" />
   <path d="M16 6H3" />
   <path d="M16 18H3" />
   <path d="M18 9v6" />
@@ -3571,7 +3571,7 @@ var internalSvgData = map[string]string{
   <path d="M17.5 17.5 16 16.3V14" />
   <circle cx="16" cy="16" r="6" />`,
 	"flag-triangle-left": `<path d="M17 22V2L7 7l10 5" />`,
-	"list-start": `<path d="M16 12H3" />
+	"lists-start": `<path d="M16 12H3" />
   <path d="M16 18H3" />
   <path d="M10 6H3" />
   <path d="M21 18V8a2 2 0 0 0-2-2h-5" />
@@ -3636,7 +3636,7 @@ var internalSvgData = map[string]string{
   <path d="m9 12 2 2 4-4" />`,
 	"clipboard": `<rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
   <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />`,
-	"layout-list": `<rect width="7" height="7" x="3" y="3" rx="1" />
+	"layout-lists": `<rect width="7" height="7" x="3" y="3" rx="1" />
   <rect width="7" height="7" x="3" y="14" rx="1" />
   <path d="M14 4h7" />
   <path d="M14 9h7" />
@@ -4479,7 +4479,7 @@ var internalSvgData = map[string]string{
   <path d="M8 10.1V4" />
   <circle cx="18" cy="18" r="2" />
   <circle cx="7" cy="15" r="5" />`,
-	"list-restart": `<path d="M21 6H3" />
+	"lists-restart": `<path d="M21 6H3" />
   <path d="M7 12H3" />
   <path d="M7 18H3" />
   <path d="M12 18a5 5 0 0 0 9-3 4.5 4.5 0 0 0-4.5-4.5c-1.33 0-2.54.54-3.41 1.41L11 14" />
@@ -4693,7 +4693,7 @@ var internalSvgData = map[string]string{
   <path d="M14 15a2 2 0 0 0-2-2 2 2 0 0 0-2 2" />
   <path d="M2.5 13 5 7c.7-1.3 1.4-2 3-2" />
   <path d="M21.5 13 19 7c-.7-1.3-1.5-2-3-2" />`,
-	"list-filter-plus": `<path d="M10 18h4" />
+	"lists-filter-plus": `<path d="M10 18h4" />
   <path d="M11 6H3" />
   <path d="M15 6h6" />
   <path d="M18 9V3" />
@@ -4973,7 +4973,7 @@ var internalSvgData = map[string]string{
 	"grid-2x2-x": `<path d="M12 3v17a1 1 0 0 1-1 1H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1H3" />
   <path d="m16 16 5 5" />
   <path d="m16 21 5-5" />`,
-	"list-collapse": `<path d="m3 10 2.5-2.5L3 5" />
+	"lists-collapse": `<path d="m3 10 2.5-2.5L3 5" />
   <path d="m3 19 2.5-2.5L3 14" />
   <path d="M10 6h11" />
   <path d="M10 12h11" />
@@ -5418,7 +5418,7 @@ var internalSvgData = map[string]string{
   <path d="M10 11v2" />
   <path d="M8 17h8" />
   <path d="M14 16v2" />`,
-	"list-minus": `<path d="M11 12H3" />
+	"lists-minus": `<path d="M11 12H3" />
   <path d="M16 6H3" />
   <path d="M16 18H3" />
   <path d="M21 12h-6" />`,
@@ -5449,7 +5449,7 @@ var internalSvgData = map[string]string{
 	"hand-helping": `<path d="M11 12h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 14" />
   <path d="m7 18 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9" />
   <path d="m2 13 6 6" />`,
-	"list-filter": `<path d="M3 6h18" />
+	"lists-filter": `<path d="M3 6h18" />
   <path d="M7 12h10" />
   <path d="M10 18h4" />`,
 	"salad": `<path d="M7 21h10" />
@@ -5518,7 +5518,7 @@ var internalSvgData = map[string]string{
 	"circle-arrow-up": `<circle cx="12" cy="12" r="10" />
   <path d="m16 12-4-4-4 4" />
   <path d="M12 16V8" />`,
-	"list-ordered": `<path d="M10 12h11" />
+	"lists-ordered": `<path d="M10 12h11" />
   <path d="M10 18h11" />
   <path d="M10 6h11" />
   <path d="M4 10h2" />
@@ -5902,7 +5902,7 @@ var internalSvgData = map[string]string{
   <path d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5" />
   <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
   <circle cx="9" cy="9" r="2" />`,
-	"list-end": `<path d="M16 12H3" />
+	"lists-end": `<path d="M16 12H3" />
   <path d="M16 6H3" />
   <path d="M10 18H3" />
   <path d="M21 6v10a2 2 0 0 1-2 2h-5" />
@@ -6100,7 +6100,7 @@ var internalSvgData = map[string]string{
   <path d="M21 18H11" />
   <path d="M21 6H11" />
   <path d="m3 8 4 4-4 4" />`,
-	"list-tree": `<path d="M21 12h-8" />
+	"lists-tree": `<path d="M21 12h-8" />
   <path d="M21 6H8" />
   <path d="M21 18h-8" />
   <path d="M3 6v4c0 1.1.9 2 2 2h3" />

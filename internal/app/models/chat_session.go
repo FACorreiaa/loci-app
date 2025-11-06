@@ -144,7 +144,7 @@ type StreamingChatEvent struct {
 	Message          string            `json:"message,omitempty"` // For general messages or errors
 	CityData         *GeneralCityData  `json:"city_data,omitempty"`
 	GeneralPOIs      []POIDetailedInfo `json:"general_pois,omitempty"`
-	PersonalizedPOIs []POIDetailedInfo `json:"personalized_pois,omitempty"` // Could send chunks or final list
+	PersonalizedPOIs []POIDetailedInfo `json:"personalized_pois,omitempty"` // Could send chunks or final lists
 	Itinerary        *AiCityResponse   `json:"itinerary,omitempty"`         // Could be a partial or final one
 	Error            string            `json:"error_message,omitempty"`
 	IsFinal          bool              `json:"is_final,omitempty"` // Indicates the end of a sequence or the whole stream

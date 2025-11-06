@@ -11,7 +11,7 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	"github.com/FACorreiaa/go-templui/internal/app/utils"
+	"github.com/FACorreiaa/go-templui/internal/utils"
 	"strconv"
 )
 

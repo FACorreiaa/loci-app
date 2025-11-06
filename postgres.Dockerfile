@@ -21,6 +21,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Add TimescaleDB repository, install the extension, and clean up.
 # This is now done in a separate, clean layer.
 RUN apt-get update && \
+    # Ensure the target directory for sources.list.d exists (robustness).
+    mkdir -p /etc/apt/sources.list.d && \
     # Use -fsSL flags with curl for better error handling and to follow redirects.
     curl -fsSL https://packagecloud.io/timescale/timescaledb/gpgkey | gpg --dearmor -o /usr/share/keyrings/timescaledb.keyring && \
     echo "deb [signed-by=/usr/share/keyrings/timescaledb.keyring] https://packagecloud.io/timescale/timescaledb/debian/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/timescaledb.list && \

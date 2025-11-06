@@ -47,7 +47,7 @@ ALTER TABLE list_items ADD CONSTRAINT list_items_pkey PRIMARY KEY (list_id, cont
 CREATE OR REPLACE FUNCTION update_list_item_count() RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'DELETE' THEN
-        -- Update list item count when an item is deleted
+        -- Update lists item count when an item is deleted
         UPDATE lists
         SET item_count = (
             SELECT COUNT(*)
@@ -57,7 +57,7 @@ BEGIN
         WHERE id = OLD.list_id;
         RETURN OLD;
     ELSE
-        -- Update list item count when an item is inserted
+        -- Update lists item count when an item is inserted
         UPDATE lists
         SET item_count = (
             SELECT COUNT(*)
@@ -128,4 +128,4 @@ COMMENT ON TABLE list_items IS 'Stores items in lists with support for multiple 
 COMMENT ON COLUMN list_items.item_id IS 'Generic reference to any content type (POI, restaurant, hotel, or itinerary)';
 COMMENT ON COLUMN list_items.content_type IS 'Type of content: poi, restaurant, hotel, or itinerary';
 COMMENT ON COLUMN list_items.source_llm_interaction_id IS 'Reference to the LLM interaction that generated this item (if AI-generated)';
-COMMENT ON COLUMN list_items.item_ai_description IS 'AI-generated description or explanation for why this item was added to the list';
+COMMENT ON COLUMN list_items.item_ai_description IS 'AI-generated description or explanation for why this item was added to the lists';

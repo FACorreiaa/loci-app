@@ -2,7 +2,7 @@ package results
 
 import (
 	"fmt"
-	"github.com/FACorreiaa/go-templui/internal/app/components/chat"
+	llmChat "github.com/FACorreiaa/go-templui/internal/app/components/chat"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"strings"
 )
@@ -228,7 +228,7 @@ templ HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetail
 		</div>
 		<!-- Chat Panel for continuing conversation -->
 		if sessionID != "" {
-			@chat.ChatPanel(chat.ChatPanelProps{
+			@llmChat.ChatPanel(llmChat.ChatPanelProps{
 				SessionID:     sessionID,
 				CityName:      cityData.City,
 				Domain:        "hotels",
@@ -409,7 +409,7 @@ templ HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetail
 	</script>
 }
 
-// HotelListCard for the list view section
+// HotelListCard for the lists view section
 templ HotelListCard(hotel models.HotelDetailedInfo, index int) {
 	<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow relative">
 		<!-- Index Badge -->
@@ -512,12 +512,10 @@ templ HotelListCard(hotel models.HotelDetailedInfo, index int) {
 				}
 			</div>
 			<div class="flex items-center gap-2">
-				<!-- Favorite Button Placeholder -->
-				<button class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-					</svg>
-				</button>
+				<!-- Favorite Button -->
+				<div id={ fmt.Sprintf("hotel-favorite-%s", hotel.ID.String()) }>
+					@HotelFavoriteButton(hotel.ID.String())
+				</div>
 			</div>
 		</div>
 	</div>
@@ -697,4 +695,19 @@ templ getAmenityIcon(amenity string) {
 			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
 		</svg>
 	}
+}
+
+// HotelFavoriteButton renders the favorite button for a hotel
+templ HotelFavoriteButton(hotelID string) {
+	<button
+		hx-post={ "/favorites/hotels/" + hotelID }
+		hx-target="closest div"
+		hx-swap="outerHTML"
+		class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+		title="Add to favorites"
+	>
+		<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+		</svg>
+	</button>
 }

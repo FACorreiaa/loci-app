@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
@@ -19,38 +18,35 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
-	"github.com/FACorreiaa/go-templui/internal/app/domain/discover"
-
-	llmchat2 "github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
+	llmchat "github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/poi"
 
 	generativeAI "github.com/FACorreiaa/go-genai-sdk/lib"
 	genai "google.golang.org/genai"
 
 	"github.com/FACorreiaa/go-templui/internal/app/models"
-	"github.com/FACorreiaa/go-templui/internal/pkg/logger"
 	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 )
 
 type DiscoverHandlers struct {
 	poiRepo    poi.Repository
-	chatRepo   llmchat2.Repository
-	llmService llmchat2.LlmInteractiontService
+	chatRepo   llmchat.Repository
+	llmService llmchat.LlmInteractiontService
 	aiClient   *generativeAI.LLMChatClient
-	logger     *slog.Logger
-	llmLogger  *llmchat2.LLMLogger
+	logger     *zap.Logger
+	llmLogger  *llmchat.LLMLogger
 }
 
-func NewDiscoverHandlers(poiRepo poi.Repository, chatRepo llmchat2.Repository, llmService llmchat2.LlmInteractiontService, logger *slog.Logger) *DiscoverHandlers {
+func NewDiscoverHandlers(poiRepo poi.Repository, chatRepo llmchat.Repository, llmService llmchat.LlmInteractiontService, logger *zap.Logger) *DiscoverHandlers {
 	// Initialize AI client for discover search
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	aiClient, err := generativeAI.NewLLMChatClient(context.Background(), apiKey)
 	if err != nil {
-		logger.Error("Failed to initialize AI client", slog.Any("error", err))
+		logger.Error("Failed to initialize AI client", zap.Any("error", err))
 	}
 
 	// Initialize LLM logger
-	llmLogger := llmchat2.NewLLMLogger(logger, chatRepo)
+	llmLogger := llmchat.NewLLMLogger(logger, chatRepo)
 
 	return &DiscoverHandlers{
 		poiRepo:    poiRepo,
@@ -74,7 +70,7 @@ func (h *DiscoverHandlers) Show(c *gin.Context) templ.Component {
 	if err == nil {
 		trending = trendingData
 	} else {
-		h.logger.Error("Failed to get trending discoveries", slog.Any("error", err))
+		h.logger.Error("Failed to get trending discoveries", zap.Any("error", err))
 	}
 
 	// Get featured collections (public data)
@@ -82,7 +78,7 @@ func (h *DiscoverHandlers) Show(c *gin.Context) templ.Component {
 	if err == nil {
 		featured = featuredData
 	} else {
-		h.logger.Error("Failed to get featured collections", slog.Any("error", err))
+		h.logger.Error("Failed to get featured collections", zap.Any("error", err))
 	}
 
 	// Get user-specific recent discoveries (only for authenticated users)
@@ -94,11 +90,11 @@ func (h *DiscoverHandlers) Show(c *gin.Context) templ.Component {
 			if err == nil && response != nil {
 				recentDiscoveries = response.Sessions
 			} else {
-				h.logger.Error("Failed to get recent discoveries", slog.Any("error", err))
+				h.logger.Error("Failed to get recent discoveries", zap.Any("error", err))
 			}
 		}
 	}
-	return discover.DiscoverPage(recentDiscoveries, trending, featured)
+	return DiscoverPage(recentDiscoveries, trending, featured)
 }
 
 func (h *DiscoverHandlers) ShowDetail(c *gin.Context) templ.Component {
@@ -114,7 +110,7 @@ func (h *DiscoverHandlers) ShowDetail(c *gin.Context) templ.Component {
 
 	sessionUUID, err := uuid.Parse(sessionID)
 	if err != nil {
-		h.logger.Error("Invalid session ID", slog.String("sessionId", sessionID), slog.Any("error", err))
+		h.logger.Error("Invalid session ID", zap.String("sessionId", sessionID), zap.Any("error", err))
 		return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 			_, err := io.WriteString(w, "<div class='text-red-500 text-center py-8'>Invalid session ID</div>")
 			return err
@@ -124,14 +120,14 @@ func (h *DiscoverHandlers) ShowDetail(c *gin.Context) templ.Component {
 	// Get the session details
 	session, err := h.chatRepo.GetSession(c.Request.Context(), sessionUUID)
 	if err != nil {
-		h.logger.Error("Failed to get session", slog.String("sessionId", sessionID), slog.Any("error", err))
+		h.logger.Error("Failed to get session", zap.String("sessionId", sessionID), zap.Any("error", err))
 		return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 			_, err := io.WriteString(w, "<div class='text-red-500 text-center py-8'>Discovery not found</div>")
 			return err
 		})
 	}
 
-	return discover.DiscoveryDetailPage(*session)
+	return DiscoveryDetailPage(*session)
 }
 
 func (h *DiscoverHandlers) Search(c *gin.Context) {
@@ -140,16 +136,16 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 	location := strings.TrimSpace(c.PostForm("location"))
 	user := middleware.GetUserIDFromContext(c)
 
-	logger.Log.Info("Discovery search requested",
+	h.logger.Info("Discovery search requested",
 		zap.String("query", query),
 		zap.String("location", location),
 		zap.String("user", user),
 		zap.String("ip", c.ClientIP()),
 	)
-	h.logger.Info("User from context in Search", slog.String("user", user))
+	h.logger.Info("User from context in Search", zap.String("user", user))
 
 	if query == "" {
-		logger.Log.Warn("Empty search query")
+		h.logger.Warn("Empty search query")
 		c.HTML(http.StatusBadRequest, "", `<div class="text-red-500 text-center py-8">Please enter a search term</div>`)
 		return
 	}
@@ -160,8 +156,8 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 	}
 
 	// Call LLM with discover search prompt
-	prompt := llmchat2.GetDiscoverSearchPrompt(query, location)
-	h.logger.InfoContext(ctx, "Calling LLM for discover search", slog.String("query", query), slog.String("location", location))
+	prompt := llmchat.GetDiscoverSearchPrompt(query, location)
+	h.logger.Info("Calling LLM for discover search", zap.String("query", query), zap.String("location", location))
 
 	// Prepare logging configuration
 	startTime := time.Now()
@@ -175,7 +171,7 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 		}
 	}
 
-	logConfig := llmchat2.LoggingConfig{
+	logConfig := llmchat.LoggingConfig{
 		UserID:      userUUID,
 		SessionID:   sessionID,
 		Intent:      "discover",
@@ -192,7 +188,7 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 	})
 
 	// Prepare LLM response for logging
-	llmResponse := llmchat2.LLMResponse{
+	llmResponse := llmchat.LLMResponse{
 		StatusCode: 200,
 	}
 
@@ -202,7 +198,7 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 		llmResponse.ErrorMessage = err.Error()
 		h.llmLogger.LogInteractionAsync(ctx, logConfig, llmResponse, time.Since(startTime).Milliseconds())
 
-		h.logger.ErrorContext(ctx, "LLM request failed", slog.Any("error", err))
+		h.logger.Error("LLM request failed", zap.Any("error", err))
 		c.HTML(http.StatusInternalServerError, "", `<div class="text-red-500 text-center py-8">Failed to generate search results. Please try again.</div>`)
 		return
 	}
@@ -213,7 +209,7 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 		llmResponse.ErrorMessage = "Empty LLM response"
 		h.llmLogger.LogInteractionAsync(ctx, logConfig, llmResponse, time.Since(startTime).Milliseconds())
 
-		h.logger.ErrorContext(ctx, "Empty LLM response")
+		h.logger.Error("Empty LLM response")
 		c.HTML(http.StatusInternalServerError, "", `<div class="text-red-500 text-center py-8">No results returned. Please try again.</div>`)
 		return
 	}
@@ -258,7 +254,7 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 		llmResponse.ErrorMessage = fmt.Sprintf("Failed to parse JSON: %v", err)
 		h.llmLogger.LogInteractionAsync(ctx, logConfig, llmResponse, time.Since(startTime).Milliseconds())
 
-		h.logger.ErrorContext(ctx, "Failed to parse LLM response", slog.Any("error", err), slog.String("response", responseStr))
+		h.logger.Error("Failed to parse LLM response", zap.Any("error", err), zap.String("response", responseStr))
 		c.HTML(http.StatusInternalServerError, "", `<div class="text-red-500 text-center py-8">Failed to parse search results. Please try again.</div>`)
 		return
 	}
@@ -266,7 +262,7 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 	// Log successful LLM interaction
 	h.llmLogger.LogInteractionAsync(ctx, logConfig, llmResponse, time.Since(startTime).Milliseconds())
 
-	logger.Log.Info("Search completed",
+	h.logger.Info("Search completed",
 		zap.String("query", query),
 		zap.String("location", location),
 		zap.Int("results_count", len(searchResponse.Results)),
@@ -274,11 +270,11 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 	)
 
 	// Convert handler DiscoverResult to templ DiscoverResult and generate UUIDs
-	templResults := make([]discover.DiscoverResult, len(searchResponse.Results))
+	templResults := make([]DiscoverResult, len(searchResponse.Results))
 	for i, result := range searchResponse.Results {
 		// Generate a UUID for this LLM-generated result
 		result.ID = uuid.New().String()
-		templResults[i] = discover.DiscoverResult(result)
+		templResults[i] = result
 	}
 
 	// Save discover search as chat session for authenticated users
@@ -324,23 +320,23 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 			}
 
 			if err := h.chatRepo.CreateSession(ctx, session); err != nil {
-				h.logger.ErrorContext(ctx, "Failed to save discover session", slog.Any("error", err))
+				h.logger.Error("Failed to save discover session", zap.Any("error", err))
 				// Don't fail the request if session saving fails
 			} else {
-				h.logger.InfoContext(ctx, "Discover session saved",
-					slog.String("session_id", sessionID.String()),
-					slog.String("user_id", userID.String()),
-					slog.String("location", location))
+				h.logger.Info("Discover session saved",
+					zap.String("session_id", sessionID.String()),
+					zap.String("user_id", userID.String()),
+					zap.String("location", location))
 			}
 		} else {
-			h.logger.ErrorContext(ctx, "Failed to parse user ID from context", slog.Any("error", err), slog.String("user", user))
+			h.logger.Error("Failed to parse user ID from context", zap.Any("error", err), zap.String("user", user))
 		}
 	} else {
-		h.logger.InfoContext(ctx, "User is anonymous, not saving session")
+		h.logger.Info("User is anonymous, not saving session")
 	}
 
 	// Render results using templ component
-	component := discover.DiscoverSearchResults(templResults, query, location)
+	component := DiscoverSearchResults(templResults, query, location)
 	component.Render(c.Request.Context(), c.Writer)
 }
 
@@ -348,7 +344,7 @@ func (h *DiscoverHandlers) GetCategory(c *gin.Context) {
 	category := c.Param("category")
 	user := middleware.GetUserIDFromContext(c)
 
-	logger.Log.Info("Category search requested",
+	h.logger.Info("Category search requested",
 		zap.String("category", category),
 		zap.String("user", user),
 		zap.String("ip", c.ClientIP()),
@@ -357,7 +353,7 @@ func (h *DiscoverHandlers) GetCategory(c *gin.Context) {
 	// Generate category-specific results
 	results := generateCategoryResults(category)
 
-	logger.Log.Info("Category search completed",
+	h.logger.Info("Category search completed",
 		zap.String("category", category),
 		zap.Int("results_count", len(results)),
 		zap.String("user", user),
@@ -508,11 +504,11 @@ func (h *DiscoverHandlers) GetNearbyPOIs(c *gin.Context) {
 	// Convert km to meters for PostGIS
 	radiusMeters := radiusKm * 1000
 
-	h.logger.InfoContext(ctx, "Nearby POIs requested",
-		slog.Float64("lat", lat),
-		slog.Float64("lon", lon),
-		slog.Float64("radius_km", radiusKm),
-		slog.String("category", category))
+	h.logger.Info("Nearby POIs requested",
+		zap.Float64("lat", lat),
+		zap.Float64("lon", lon),
+		zap.Float64("radius_km", radiusKm),
+		zap.String("category", category))
 
 	// Query database using PostGIS
 	var pois []models.POIDetailedInfo
@@ -525,14 +521,14 @@ func (h *DiscoverHandlers) GetNearbyPOIs(c *gin.Context) {
 	}
 
 	if err != nil {
-		h.logger.ErrorContext(ctx, "Failed to get nearby POIs", slog.Any("error", err))
+		h.logger.Error("Failed to get nearby POIs", zap.Any("error", err))
 		c.HTML(http.StatusInternalServerError, "", `<div class="text-red-500 text-center py-8">Failed to load nearby places</div>`)
 		return
 	}
 
-	h.logger.InfoContext(ctx, "Nearby POIs retrieved",
-		slog.Int("count", len(pois)),
-		slog.Float64("radius_km", radiusKm))
+	h.logger.Info("Nearby POIs retrieved",
+		zap.Int("count", len(pois)),
+		zap.Float64("radius_km", radiusKm))
 
 	// Render results HTML
 	html := h.renderPOIResults(pois, radiusKm)

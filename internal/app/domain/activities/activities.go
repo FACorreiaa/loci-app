@@ -2,7 +2,6 @@ package activities
 
 import (
 	"context"
-	"log/slog"
 	"strings"
 
 	"github.com/a-h/templ"
@@ -10,11 +9,10 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
+	llmchat "github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
 	results2 "github.com/FACorreiaa/go-templui/internal/app/domain/results"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"github.com/FACorreiaa/go-templui/internal/app/services"
-	"github.com/FACorreiaa/go-templui/internal/pkg/logger"
 	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 )
 
@@ -38,7 +36,7 @@ func (h *ActivitiesHandlers) HandleActivitiesPage(c *gin.Context) templ.Componen
 	sessionIDParam := c.Query("sessionId")
 	cacheKey := c.Query("cacheKey")
 
-	logger.Log.Info("Activities page accessed",
+	h.logger.Info("Activities page accessed",
 		zap.String("ip", c.ClientIP()),
 		zap.String("query", query),
 		zap.String("sessionId", sessionIDParam),
@@ -60,21 +58,21 @@ func (h *ActivitiesHandlers) HandleActivitiesPage(c *gin.Context) templ.Componen
 
 // loadActivitiesBySession loads activities using IDENTICAL logic as itinerary
 func (h *ActivitiesHandlers) loadActivitiesBySession(sessionIDParam string, cacheKey string) templ.Component {
-	logger.Log.Info("Attempting to load activities from cache",
+	h.logger.Info("Attempting to load activities from cache",
 		zap.String("sessionID", sessionIDParam),
 		zap.String("cacheKey", cacheKey))
 
 	// Try activities cache first with cacheKey (for reusable cache hits)
 	if cacheKey != "" {
 		if activitiesData, found := middleware.ActivitiesCache.Get(cacheKey); found {
-			logger.Log.Info("Activities found in cache. Rendering results with data.",
+			h.logger.Info("Activities found in cache. Rendering results with data.",
 				zap.Int("activities", len(activitiesData)))
 
 			// Try to get city data from complete cache
 			var cityData models.GeneralCityData
 			if completeData, found := middleware.CompleteItineraryCache.Get(cacheKey); found {
 				cityData = completeData.GeneralCityData
-				logger.Log.Info("City data loaded from complete cache",
+				h.logger.Info("City data loaded from complete cache",
 					zap.String("city", cityData.City))
 			} else {
 				// Fallback: load from database using sessionID
@@ -95,12 +93,12 @@ func (h *ActivitiesHandlers) loadActivitiesBySession(sessionIDParam string, cach
 
 // loadActivitiesFromDatabase loads activities from database when not found in cache
 func (h *ActivitiesHandlers) loadActivitiesFromDatabase(sessionIDParam string) templ.Component {
-	logger.Log.Info("Activities not found in cache, attempting to load from database", zap.String("sessionID", sessionIDParam))
+	h.logger.Info("Activities not found in cache, attempting to load from database", zap.String("sessionID", sessionIDParam))
 
 	// Parse sessionID as UUID
 	sessionID, err := uuid.Parse(sessionIDParam)
 	if err != nil {
-		logger.Log.Warn("Invalid session ID format", zap.String("sessionID", sessionIDParam), zap.Error(err))
+		h.logger.Warn("Invalid session ID format", zap.String("sessionID", sessionIDParam), zap.Error(err))
 		return results2.PageNotFound("Invalid session ID")
 	}
 
@@ -108,7 +106,7 @@ func (h *ActivitiesHandlers) loadActivitiesFromDatabase(sessionIDParam string) t
 	ctx := context.Background()
 	interaction, err := h.chatRepo.GetLatestInteractionBySessionID(ctx, sessionID)
 	if err != nil || interaction == nil {
-		logger.Log.Warn("No interaction found in database for session",
+		h.logger.Warn("No interaction found in database for session",
 			zap.String("sessionID", sessionIDParam),
 			zap.Error(err))
 		// Return empty results instead of PageNotFound - data might still be processing
@@ -118,9 +116,9 @@ func (h *ActivitiesHandlers) loadActivitiesFromDatabase(sessionIDParam string) t
 	}
 
 	// Parse the stored response as complete data
-	completeData, err := h.itineraryService.ParseCompleteItineraryResponse(interaction.ResponseText, slog.Default())
+	completeData, err := h.itineraryService.ParseCompleteItineraryResponse(interaction.ResponseText, h.logger)
 	if err != nil || completeData == nil {
-		logger.Log.Warn("Could not parse complete data from stored response",
+		h.logger.Warn("Could not parse complete data from stored response",
 			zap.String("sessionID", sessionIDParam),
 			zap.Error(err))
 		// Return empty results instead of PageNotFound for parsing errors
@@ -129,7 +127,7 @@ func (h *ActivitiesHandlers) loadActivitiesFromDatabase(sessionIDParam string) t
 		return results2.ActivitiesResults(emptyCityData, emptyActivities, true, true, 5, []string{}, sessionIDParam)
 	}
 
-	logger.Log.Info("Successfully loaded complete data from database for activities",
+	h.logger.Info("Successfully loaded complete data from database for activities",
 		zap.String("sessionID", sessionIDParam),
 		zap.String("city", completeData.GeneralCityData.City),
 		zap.Int("totalPOIs", len(completeData.PointsOfInterest)))
@@ -175,14 +173,14 @@ func (h *ActivitiesHandlers) HandleActivitiesPageSSE(c *gin.Context) templ.Compo
 	sessionIDParam := c.Query("sessionId")
 	cacheKey := c.Query("cacheKey")
 
-	logger.Log.Info("Activities SSE page accessed",
+	h.logger.Info("Activities SSE page accessed",
 		zap.String("ip", c.ClientIP()),
 		zap.String("query", query),
 		zap.String("sessionId", sessionIDParam),
 		zap.String("cacheKey", cacheKey))
 
 	if sessionIDParam == "" {
-		logger.Log.Info("Direct navigation to /activities SSE. Showing default page.")
+		h.logger.Info("Direct navigation to /activities SSE. Showing default page.")
 		return ActivitiesPage()
 	}
 
@@ -194,28 +192,28 @@ func (h *ActivitiesHandlers) HandleActivitiesPageSSE(c *gin.Context) templ.Compo
 func (h *ActivitiesHandlers) loadCityDataFromDatabase(sessionIDParam string) models.GeneralCityData {
 	sessionID, err := uuid.Parse(sessionIDParam)
 	if err != nil {
-		logger.Log.Warn("Invalid session ID format when loading city data", zap.String("sessionID", sessionIDParam), zap.Error(err))
+		h.logger.Warn("Invalid session ID format when loading city data", zap.String("sessionID", sessionIDParam), zap.Error(err))
 		return models.GeneralCityData{}
 	}
 
 	ctx := context.Background()
 	interaction, err := h.chatRepo.GetLatestInteractionBySessionID(ctx, sessionID)
 	if err != nil || interaction == nil {
-		logger.Log.Warn("No interaction found in database for city data",
+		h.logger.Warn("No interaction found in database for city data",
 			zap.String("sessionID", sessionIDParam),
 			zap.Error(err))
 		return models.GeneralCityData{}
 	}
 
-	completeData, err := h.itineraryService.ParseCompleteItineraryResponse(interaction.ResponseText, slog.Default())
+	completeData, err := h.itineraryService.ParseCompleteItineraryResponse(interaction.ResponseText, h.logger)
 	if err != nil || completeData == nil {
-		logger.Log.Warn("Could not parse complete data from stored response for city data",
+		h.logger.Warn("Could not parse complete data from stored response for city data",
 			zap.String("sessionID", sessionIDParam),
 			zap.Error(err))
 		return models.GeneralCityData{}
 	}
 
-	logger.Log.Info("City data loaded from database",
+	h.logger.Info("City data loaded from database",
 		zap.String("sessionID", sessionIDParam),
 		zap.String("city", completeData.GeneralCityData.City),
 		zap.String("country", completeData.GeneralCityData.Country),

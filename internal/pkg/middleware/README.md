@@ -21,13 +21,13 @@ This package provides middleware for protecting WebSocket endpoints with rate li
 
 ```go
 import (
-    "log/slog"
+    "go.uber.org/zap"
     "time"
     "github.com/FACorreiaa/go-templui/app/pkg/middleware"
 )
 
 // Create rate limiter
-logger := slog.Default()
+logger := zap.Default()
 rateLimiter := middleware.NewRateLimiter(
     logger,
     10,              // max 10 connections
@@ -155,7 +155,7 @@ type RateLimiter struct {
 type JWTConfig struct {
     SecretKey       string        // Secret key for signing tokens
     TokenExpiration time.Duration // How long tokens are valid
-    Logger          *slog.Logger  // Logger for auth events
+    Logger          *zap.Logger  // Logger for auth events
     Optional        bool          // Allow unauthenticated access
 }
 ```
@@ -225,7 +225,7 @@ HTTP Status: `401 Unauthorized`
 package main
 
 import (
-    "log/slog"
+    "go.uber.org/zap"
     "os"
     "time"
 
@@ -235,7 +235,7 @@ import (
 
 func main() {
     router := gin.Default()
-    logger := slog.Default()
+    logger := zap.Default()
 
     // JWT Config (from environment)
     jwtConfig := middleware.JWTConfig{

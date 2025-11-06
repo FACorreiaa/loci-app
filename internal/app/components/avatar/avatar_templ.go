@@ -12,7 +12,7 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"fmt"
-	"github.com/FACorreiaa/go-templui/internal/app/utils"
+	"github.com/FACorreiaa/go-templui/internal/utils"
 )
 
 type Size string

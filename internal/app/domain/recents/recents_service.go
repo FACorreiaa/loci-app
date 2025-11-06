@@ -3,7 +3,7 @@ package recents
 import (
 	"context"
 	"fmt"
-	"log/slog"
+	"go.uber.org/zap"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,10 +24,10 @@ type Service interface {
 
 type ServiceImpl struct {
 	repo   Repository
-	logger *slog.Logger
+	logger *zap.Logger
 }
 
-func NewService(repo Repository, logger *slog.Logger) *ServiceImpl {
+func NewService(repo Repository, logger *zap.Logger) *ServiceImpl {
 	return &ServiceImpl{
 		repo:   repo,
 		logger: logger,
@@ -43,7 +43,7 @@ func (s *ServiceImpl) GetUserRecentInteractions(ctx context.Context, userID uuid
 	))
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "GetUserRecentInteractions"))
+	l := s.logger.With(zap.String("method", "GetUserRecentInteractions"))
 
 	// Validate page
 	if page <= 0 {
@@ -58,23 +58,23 @@ func (s *ServiceImpl) GetUserRecentInteractions(ctx context.Context, userID uuid
 		limit = 50
 	}
 
-	l.InfoContext(ctx, "Getting user recent interactions",
-		slog.String("user_id", userID.String()),
-		slog.Int("page", page),
-		slog.Int("limit", limit))
+	l.Info( "Getting user recent interactions",
+		zap.String("user_id", userID.String()),
+		zap.Int("page", page),
+		zap.Int("limit", limit))
 
 	// Get recent interactions from repository
 	response, err := s.repo.GetUserRecentInteractions(ctx, userID, page, limit, filterOptions)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to get recent interactions", slog.Any("error", err))
+		l.Error( "Failed to get recent interactions", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to get recent interactions")
 		return nil, fmt.Errorf("failed to get recent interactions: %w", err)
 	}
 
-	l.InfoContext(ctx, "Successfully retrieved recent interactions",
-		slog.String("user_id", userID.String()),
-		slog.Int("cities_count", len(response.Cities)))
+	l.Info( "Successfully retrieved recent interactions",
+		zap.String("user_id", userID.String()),
+		zap.Int("cities_count", len(response.Cities)))
 
 	span.SetAttributes(attribute.Int("results.cities", len(response.Cities)))
 	span.SetStatus(codes.Ok, "Recent interactions retrieved")
@@ -90,19 +90,19 @@ func (s *ServiceImpl) GetCityDetailsForUser(ctx context.Context, userID uuid.UUI
 	))
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "GetCityDetailsForUser"))
+	l := s.logger.With(zap.String("method", "GetCityDetailsForUser"))
 
 	if cityName == "" {
 		err := fmt.Errorf("city name is required")
-		l.ErrorContext(ctx, "City name is required")
+		l.Error( "City name is required")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "City name is required")
 		return nil, err
 	}
 
-	l.InfoContext(ctx, "Getting city details for user",
-		slog.String("user_id", userID.String()),
-		slog.String("city_name", cityName))
+	l.Info( "Getting city details for user",
+		zap.String("user_id", userID.String()),
+		zap.String("city_name", cityName))
 
 	// Get recent interactions to find the city data
 	defaultFilter := &models.RecentInteractionsFilter{
@@ -111,7 +111,7 @@ func (s *ServiceImpl) GetCityDetailsForUser(ctx context.Context, userID uuid.UUI
 	}
 	recentResponse, err := s.repo.GetUserRecentInteractions(ctx, userID, 1, 50, defaultFilter) // Get more to find the city
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to get recent interactions", slog.Any("error", err))
+		l.Error( "Failed to get recent interactions", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to get recent interactions")
 		return nil, fmt.Errorf("failed to get recent interactions: %w", err)
@@ -128,7 +128,7 @@ func (s *ServiceImpl) GetCityDetailsForUser(ctx context.Context, userID uuid.UUI
 
 	if cityInteractions == nil {
 		err := fmt.Errorf("no interactions found for city: %s", cityName)
-		l.WarnContext(ctx, "No interactions found for city", slog.String("city_name", cityName))
+		l.Warn( "No interactions found for city", zap.String("city_name", cityName))
 		span.SetStatus(codes.Error, "No interactions found")
 		return nil, err
 	}
@@ -139,45 +139,45 @@ func (s *ServiceImpl) GetCityDetailsForUser(ctx context.Context, userID uuid.UUI
 	// Get POIs for the city
 	pois, err := s.repo.GetCityPOIsByInteraction(ctx, userID, cityName)
 	if err != nil {
-		l.WarnContext(ctx, "Failed to get POIs for city",
-			slog.String("city_name", cityName),
-			slog.Any("error", err))
+		l.Warn( "Failed to get POIs for city",
+			zap.String("city_name", cityName),
+			zap.Any("error", err))
 		pois = []models.POIDetailedInfo{} // Set to empty slice if we can't get POIs
 	}
 
 	// Get hotels for the city
 	hotels, err := s.repo.GetCityHotelsByInteraction(ctx, userID, cityName)
 	if err != nil {
-		l.WarnContext(ctx, "Failed to get hotels for city",
-			slog.String("city_name", cityName),
-			slog.Any("error", err))
+		l.Warn( "Failed to get hotels for city",
+			zap.String("city_name", cityName),
+			zap.Any("error", err))
 		hotels = []models.HotelDetailedInfo{} // Set to empty slice if we can't get hotels
 	}
 
 	// Get restaurants for the city
 	restaurants, err := s.repo.GetCityRestaurantsByInteraction(ctx, userID, cityName)
 	if err != nil {
-		l.WarnContext(ctx, "Failed to get restaurants for city",
-			slog.String("city_name", cityName),
-			slog.Any("error", err))
+		l.Warn( "Failed to get restaurants for city",
+			zap.String("city_name", cityName),
+			zap.Any("error", err))
 		restaurants = []models.RestaurantDetailedInfo{} // Set to empty slice if we can't get restaurants
 	}
 
 	// Get saved itineraries for the city
 	itineraries, err := s.repo.GetCityItinerariesByInteraction(ctx, userID, cityName)
 	if err != nil {
-		l.WarnContext(ctx, "Failed to get itineraries for city",
-			slog.String("city_name", cityName),
-			slog.Any("error", err))
+		l.Warn( "Failed to get itineraries for city",
+			zap.String("city_name", cityName),
+			zap.Any("error", err))
 		itineraries = []models.UserSavedItinerary{} // Set to empty slice if we can't get itineraries
 	}
 
 	// Get favorite POIs for the city
 	favorites, err := s.repo.GetCityFavorites(ctx, userID, cityName)
 	if err != nil {
-		l.WarnContext(ctx, "Failed to get favorites for city",
-			slog.String("city_name", cityName),
-			slog.Any("error", err))
+		l.Warn( "Failed to get favorites for city",
+			zap.String("city_name", cityName),
+			zap.Any("error", err))
 		favorites = []models.POIDetailedInfo{} // Set to empty slice if we can't get favorites
 	}
 
@@ -206,15 +206,15 @@ func (s *ServiceImpl) GetCityDetailsForUser(ctx context.Context, userID uuid.UUI
 		//TotalItineraries:  len(itineraries),
 	}
 
-	l.InfoContext(ctx, "Successfully retrieved city details",
-		slog.String("user_id", userID.String()),
-		slog.String("city_name", cityName),
-		slog.Int("interaction_count", len(interactions)),
-		slog.Int("poi_count", len(pois)),
-		slog.Int("hotel_count", len(hotels)),
-		slog.Int("restaurant_count", len(restaurants)),
-		slog.Int("itinerary_count", len(itineraries)),
-		slog.Int("favorite_count", len(favorites)))
+	l.Info( "Successfully retrieved city details",
+		zap.String("user_id", userID.String()),
+		zap.String("city_name", cityName),
+		zap.Int("interaction_count", len(interactions)),
+		zap.Int("poi_count", len(pois)),
+		zap.Int("hotel_count", len(hotels)),
+		zap.Int("restaurant_count", len(restaurants)),
+		zap.Int("itinerary_count", len(itineraries)),
+		zap.Int("favorite_count", len(favorites)))
 
 	span.SetAttributes(
 		attribute.Int("results.interactions", len(interactions)),

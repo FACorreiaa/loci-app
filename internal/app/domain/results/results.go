@@ -10,27 +10,28 @@ import (
 
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"github.com/FACorreiaa/go-templui/internal/pkg/config"
-	"github.com/FACorreiaa/go-templui/internal/pkg/logger"
 	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 )
 
 type ResultsHandlers struct {
 	config *config.Config
+	logger *zap.Logger
 }
 
-func NewResultsHandlers() *ResultsHandlers {
+func NewResultsHandlers(logger *zap.Logger) *ResultsHandlers {
 	cfg, err := config.Load()
 	if err != nil {
 		cfg = &config.Config{}
 	}
 	return &ResultsHandlers{
 		config: cfg,
+		logger: logger,
 	}
 }
 
 // HandleRestaurantSearch processes restaurant search requests and returns results
 func (h *ResultsHandlers) HandleRestaurantSearch(c *gin.Context) {
-	logger.Log.Info("Restaurant search request received",
+	h.logger.Info("Restaurant search request received",
 		zap.String("ip", c.ClientIP()),
 		zap.String("user", middleware.GetUserIDFromContext(c)),
 	)
@@ -40,7 +41,7 @@ func (h *ResultsHandlers) HandleRestaurantSearch(c *gin.Context) {
 	intent := c.PostForm("intent")
 
 	if query == "" && city == "" {
-		logger.Log.Warn("Empty search query received")
+		h.logger.Warn("Empty search query received")
 		c.String(http.StatusBadRequest, `<div class="text-red-500">Please provide a search query.</div>`)
 		return
 	}
@@ -48,7 +49,7 @@ func (h *ResultsHandlers) HandleRestaurantSearch(c *gin.Context) {
 	// Call backend service to get restaurant data
 	restaurants, err := h.fetchRestaurantResults(query, city, intent)
 	if err != nil {
-		logger.Log.Error("Failed to fetch restaurant results", zap.Error(err))
+		h.logger.Error("Failed to fetch restaurant results", zap.Error(err))
 		c.String(http.StatusInternalServerError, `<div class="text-red-500">Failed to load restaurant models.</div>`)
 		return
 	}
@@ -59,7 +60,7 @@ func (h *ResultsHandlers) HandleRestaurantSearch(c *gin.Context) {
 	// Cache the results for later access via direct route
 	middleware.RestaurantsCache.Set(sessionID, restaurants)
 
-	logger.Log.Info("Cached restaurant results",
+	h.logger.Info("Cached restaurant results",
 		zap.String("sessionID", sessionID),
 		zap.Int("count", len(restaurants)))
 
@@ -86,7 +87,7 @@ func (h *ResultsHandlers) HandleRestaurantSearch(c *gin.Context) {
 
 // HandleActivitySearch processes activity search requests and returns results
 func (h *ResultsHandlers) HandleActivitySearch(c *gin.Context) {
-	logger.Log.Info("Activity search request received",
+	h.logger.Info("Activity search request received",
 		zap.String("ip", c.ClientIP()),
 		zap.String("user", middleware.GetUserIDFromContext(c)),
 	)
@@ -96,7 +97,7 @@ func (h *ResultsHandlers) HandleActivitySearch(c *gin.Context) {
 	intent := c.PostForm("intent")
 
 	if query == "" && city == "" {
-		logger.Log.Warn("Empty search query received")
+		h.logger.Warn("Empty search query received")
 		c.String(http.StatusBadRequest, `<div class="text-red-500">Please provide a search query.</div>`)
 		return
 	}
@@ -104,7 +105,7 @@ func (h *ResultsHandlers) HandleActivitySearch(c *gin.Context) {
 	// Call backend service to get activity data
 	activities, err := h.fetchActivityResults(query, city, intent)
 	if err != nil {
-		logger.Log.Error("Failed to fetch activity results", zap.Error(err))
+		h.logger.Error("Failed to fetch activity results", zap.Error(err))
 		c.String(http.StatusInternalServerError, `<div class="text-red-500">Failed to load activity models.</div>`)
 		return
 	}
@@ -115,7 +116,7 @@ func (h *ResultsHandlers) HandleActivitySearch(c *gin.Context) {
 	// Cache the results for later access via direct route
 	middleware.ActivitiesCache.Set(sessionID, activities)
 
-	logger.Log.Info("Cached activity results",
+	h.logger.Info("Cached activity results",
 		zap.String("sessionID", sessionID),
 		zap.Int("count", len(activities)))
 
@@ -137,7 +138,7 @@ func (h *ResultsHandlers) HandleActivitySearch(c *gin.Context) {
 
 // HandleHotelSearch processes hotel search requests and returns results
 func (h *ResultsHandlers) HandleHotelSearch(c *gin.Context) {
-	logger.Log.Info("Hotel search request received",
+	h.logger.Info("Hotel search request received",
 		zap.String("ip", c.ClientIP()),
 		zap.String("user", middleware.GetUserIDFromContext(c)),
 	)
@@ -147,7 +148,7 @@ func (h *ResultsHandlers) HandleHotelSearch(c *gin.Context) {
 	intent := c.PostForm("intent")
 
 	if query == "" && city == "" {
-		logger.Log.Warn("Empty search query received")
+		h.logger.Warn("Empty search query received")
 		c.String(http.StatusBadRequest, `<div class="text-red-500">Please provide a search query.</div>`)
 		return
 	}
@@ -155,7 +156,7 @@ func (h *ResultsHandlers) HandleHotelSearch(c *gin.Context) {
 	// Call backend service to get hotel data
 	hotels, err := h.fetchHotelResults(query, city, intent)
 	if err != nil {
-		logger.Log.Error("Failed to fetch hotel results", zap.Error(err))
+		h.logger.Error("Failed to fetch hotel results", zap.Error(err))
 		c.String(http.StatusInternalServerError, `<div class="text-red-500">Failed to load hotel models.</div>`)
 		return
 	}
@@ -166,7 +167,7 @@ func (h *ResultsHandlers) HandleHotelSearch(c *gin.Context) {
 	// Cache the results for later access via direct route
 	middleware.HotelsCache.Set(sessionID, hotels)
 
-	logger.Log.Info("Cached hotel results",
+	h.logger.Info("Cached hotel results",
 		zap.String("sessionID", sessionID),
 		zap.Int("count", len(hotels)))
 
@@ -193,7 +194,7 @@ func (h *ResultsHandlers) HandleHotelSearch(c *gin.Context) {
 
 // HandleItinerarySearch processes itinerary requests and returns results
 func (h *ResultsHandlers) HandleItinerarySearch(c *gin.Context) {
-	logger.Log.Info("Itinerary search request received",
+	h.logger.Info("Itinerary search request received",
 		zap.String("ip", c.ClientIP()),
 		zap.String("user", middleware.GetUserIDFromContext(c)),
 	)
@@ -203,7 +204,7 @@ func (h *ResultsHandlers) HandleItinerarySearch(c *gin.Context) {
 	intent := c.PostForm("intent")
 
 	if query == "" && city == "" {
-		logger.Log.Warn("Empty search query received")
+		h.logger.Warn("Empty search query received")
 		c.String(http.StatusBadRequest, `<div class="text-red-500">Please provide a search query.</div>`)
 		return
 	}
@@ -211,7 +212,7 @@ func (h *ResultsHandlers) HandleItinerarySearch(c *gin.Context) {
 	// Call backend service to get itinerary data
 	itinerary, err := h.fetchItineraryResults(query, city, intent)
 	if err != nil {
-		logger.Log.Error("Failed to fetch itinerary results", zap.Error(err))
+		h.logger.Error("Failed to fetch itinerary results", zap.Error(err))
 		c.String(http.StatusInternalServerError, `<div class="text-red-500">Failed to load itinerary models.</div>`)
 		return
 	}
@@ -334,7 +335,7 @@ func (h *ResultsHandlers) fetchItineraryResults(query, city, intent string) (mod
 
 // HandleItineraryStreamSearch serves the streaming itinerary results page
 func (h *ResultsHandlers) HandleItineraryStreamSearch(c *gin.Context) {
-	logger.Log.Info("Itinerary stream search request received",
+	h.logger.Info("Itinerary stream search request received",
 		zap.String("ip", c.ClientIP()),
 		zap.String("user", middleware.GetUserIDFromContext(c)),
 	)
@@ -373,7 +374,7 @@ type LLMStreamResponse struct {
 
 func (h *ResultsHandlers) callLLMForRestaurants(_ string, _ map[string]interface{}) ([]models.RestaurantDetailedInfo, error) {
 	// Use mock data directly - no external calls
-	logger.Log.Info("Using mock restaurant data (no external LLM calls)")
+	h.logger.Info("Using mock restaurant data (no external LLM calls)")
 	return h.getMockRestaurants(), nil
 }
 
@@ -412,7 +413,7 @@ func (h *ResultsHandlers) getMockRestaurants() []models.RestaurantDetailedInfo {
 
 func (h *ResultsHandlers) callLLMForActivities(_ string, _ map[string]interface{}) ([]models.POIDetailedInfo, error) {
 	// Use mock data directly - no external calls
-	logger.Log.Info("Using mock activities data (no external LLM calls)")
+	h.logger.Info("Using mock activities data (no external LLM calls)")
 	return h.getMockActivities(), nil
 }
 
@@ -444,7 +445,7 @@ func (h *ResultsHandlers) getMockActivities() []models.POIDetailedInfo {
 
 func (h *ResultsHandlers) callLLMForHotels(_ string, _ map[string]interface{}) ([]models.HotelDetailedInfo, error) {
 	// Use mock data directly - no external calls
-	logger.Log.Info("Using mock hotels data (no external LLM calls)")
+	h.logger.Info("Using mock hotels data (no external LLM calls)")
 	return h.getMockHotels(), nil
 }
 
@@ -476,7 +477,7 @@ func (h *ResultsHandlers) getMockHotels() []models.HotelDetailedInfo {
 
 func (h *ResultsHandlers) callLLMForItinerary(_ string, _ map[string]interface{}) (models.AIItineraryResponse, error) {
 	// Use mock data directly - no external calls
-	logger.Log.Info("Using mock itinerary data (no external LLM calls)")
+	h.logger.Info("Using mock itinerary data (no external LLM calls)")
 	return h.getMockItinerary(), nil
 }
 

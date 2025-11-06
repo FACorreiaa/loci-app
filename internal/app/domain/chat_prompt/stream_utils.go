@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 	"iter"
-	"log/slog"
 	"strings"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 	"google.golang.org/genai"
@@ -16,11 +17,11 @@ import (
 
 // StreamProcessor handles common streaming operations for AI responses
 type StreamProcessor struct {
-	logger *slog.Logger
+	logger *zap.Logger
 }
 
 // NewStreamProcessor creates a new stream processor
-func NewStreamProcessor(logger *slog.Logger) *StreamProcessor {
+func NewStreamProcessor(logger *zap.Logger) *StreamProcessor {
 	return &StreamProcessor{logger: logger}
 }
 
@@ -45,9 +46,9 @@ func (sp *StreamProcessor) TextPartIterator(
 		for resp, err := range iter {
 			// Handle errors in the stream
 			if err != nil {
-				sp.logger.ErrorContext(ctx, "Stream error occurred",
-					slog.String("context", contextName),
-					slog.Any("error", err))
+				sp.logger.Error("Stream error occurred",
+					zap.String("context", contextName),
+					zap.Any("error", err))
 
 				// Send error event if channel is provided
 				if eventCh != nil {
@@ -93,7 +94,7 @@ func (sp *StreamProcessor) StreamWithCallback(
 ) error {
 	for chunk := range iter {
 		if err := callback(chunk); err != nil {
-			sp.logger.ErrorContext(ctx, "Callback error in stream processing", slog.Any("error", err))
+			sp.logger.Error("Callback error in stream processing", zap.Any("error", err))
 			return err
 		}
 	}
@@ -110,7 +111,7 @@ func (sp *StreamProcessor) StreamToChannel(
 	for chunk := range iter {
 		select {
 		case <-ctx.Done():
-			sp.logger.WarnContext(ctx, "Stream cancelled by context")
+			sp.logger.Warn("Stream cancelled by context")
 			return
 		case outCh <- chunk:
 			// Chunk sent successfully
@@ -171,12 +172,12 @@ func (sp *StreamProcessor) sendErrorEvent(
 	// Try to send with timeout to avoid blocking
 	select {
 	case <-ctx.Done():
-		sp.logger.WarnContext(ctx, "Context cancelled before sending error event")
+		sp.logger.Warn("Context cancelled before sending error event")
 		return
 	case eventCh <- event:
 		// Event sent successfully
 	case <-time.After(5 * time.Second):
-		sp.logger.WarnContext(ctx, "Timeout sending error event", slog.String("context", contextName))
+		sp.logger.Warn("Timeout sending error event", zap.String("context", contextName))
 	}
 }
 
@@ -187,7 +188,7 @@ type BufferedStreamProcessor struct {
 }
 
 // NewBufferedStreamProcessor creates a buffered stream processor
-func NewBufferedStreamProcessor(logger *slog.Logger, bufferSize int) *BufferedStreamProcessor {
+func NewBufferedStreamProcessor(logger *zap.Logger, bufferSize int) *BufferedStreamProcessor {
 	return &BufferedStreamProcessor{
 		sp:         NewStreamProcessor(logger),
 		bufferSize: bufferSize,
@@ -209,7 +210,7 @@ func (bsp *BufferedStreamProcessor) ProcessInBatches(
 		// Process when batch is full
 		if len(batch) >= bsp.bufferSize {
 			if err := callback(batch); err != nil {
-				bsp.sp.logger.ErrorContext(ctx, "Batch processing error", slog.Any("error", err))
+				bsp.sp.logger.Error("Batch processing error", zap.Any("error", err))
 				return err
 			}
 			batch = batch[:0] // Clear batch, reuse underlying array
@@ -219,7 +220,7 @@ func (bsp *BufferedStreamProcessor) ProcessInBatches(
 	// Process remaining items
 	if len(batch) > 0 {
 		if err := callback(batch); err != nil {
-			bsp.sp.logger.ErrorContext(ctx, "Final batch processing error", slog.Any("error", err))
+			bsp.sp.logger.Error("Final batch processing error", zap.Any("error", err))
 			return err
 		}
 	}

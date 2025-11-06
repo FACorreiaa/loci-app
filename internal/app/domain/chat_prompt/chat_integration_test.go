@@ -4,8 +4,8 @@ package llmchat
 
 import (
 	"context"
+	"go.uber.org/zap"
 	"log"
-	"log/slog"
 	"os"
 	"testing"
 
@@ -50,7 +50,7 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Unable to ping test database for chat tests: %v\n", err)
 	}
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	logger := zap.New(zap.NewTextHandler(os.Stdout, &zap.HandlerOptions{Level: zap.LevelDebug}))
 
 	// Initialize dependencies
 	testChatRepo = NewPostgresRepository(testChatDB, logger)
@@ -331,7 +331,7 @@ func TestSimpleIntentClassifier_Integration(t *testing.T) {
 	}{
 		{"I want to add a museum to my trip", models.IntentAddPOI},
 		{"Please include the cathedral", models.IntentAddPOI},
-		{"Remove the restaurant from my list", models.IntentRemovePOI},
+		{"Remove the restaurant from my lists", models.IntentRemovePOI},
 		{"Delete this attraction", models.IntentRemovePOI},
 		{"What time does the museum open?", models.IntentAskQuestion},
 		{"Where is the best place to eat?", models.IntentAskQuestion},

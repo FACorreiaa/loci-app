@@ -490,11 +490,11 @@ alertPolicy:
 ```go
 // Enhanced logging in your Go server
 import (
-    "log/slog"
+    "go.uber.org/zap"
     "cloud.google.com/go/logging"
 )
 
-func setupCloudLogging() *slog.Logger {
+func setupCloudLogging() *zap.Logger {
     client, err := logging.NewClient(context.Background(), "your-project-id")
     if err != nil {
         log.Fatal(err)
@@ -502,8 +502,8 @@ func setupCloudLogging() *slog.Logger {
     
     logger := client.Logger("go-ai-poi-server")
     
-    return slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-        Level: slog.LevelInfo,
+    return zap.New(zap.NewJSONHandler(os.Stdout, &zap.HandlerOptions{
+        Level: zap.LevelInfo,
     }))
 }
 ```

@@ -41,7 +41,7 @@
     - Falls back to direct array parsing for backwards compatibility
     - Added debug logging to track which format was used
   - Files modified:
-    - `app/pkg/domain/chat_prompt/chat_parser.go:72-96`
+    - `app/pkg/domain/llmChat/chat_parser.go:72-96`
 
 - [x] **2. Cache System Verification** ✓ COMPLETE
   - Issue: Cache was using sessionID as key, preventing cache reuse for same city + preferences
@@ -63,7 +63,7 @@
       - `activities.go:50, 63, 70, 169` - Added cacheKey query param and cache lookup
   - Result: Cache now properly reuses data for same city + preferences, creates new requests for different preferences
   - Files modified:
-    - `app/pkg/domain/chat_prompt/chat_service.go`
+    - `app/pkg/domain/llmChat/chat_service.go`
     - `app/pkg/handlers/restaurants.go`
     - `app/pkg/handlers/hotels.go`
     - `app/pkg/handlers/activities.go`
@@ -145,9 +145,9 @@
   3. Add token usage monitoring (visibility into costs)
 
   **Files to modify for priority actions:**
-  - `app/pkg/domain/chat_prompt/chat_service.go` - Add max_tokens to configs
+  - `app/pkg/domain/llmChat/chat_service.go` - Add max_tokens to configs
   - `app/pkg/middleware/middleware.go` - Enhance cache with TTL
-  - `app/pkg/domain/chat_prompt/chat_workers.go` - Add token tracking
+  - `app/pkg/domain/llmChat/chat_workers.go` - Add token tracking
 ## Feature Parity with SolidJS Project
 
 - [x] **4. Comparison Analysis Complete** ✓ DONE
@@ -373,7 +373,7 @@
        - Real-time SSE event streaming
        - Conversation history management
        - HTMX-compatible HTML error responses
-   - ✅ **Service layer already implemented** (`app/pkg/domain/chat_prompt/chat_service.go:1398+`)
+   - ✅ **Service layer already implemented** (`app/pkg/domain/llmChat/chat_service.go:1398+`)
      - `ContinueSessionStreamed` method handles:
        - Session validation (checks active status)
        - City data fetching for context
@@ -438,7 +438,7 @@
            - `Domain` - Target domain (restaurants/hotels/activities/itinerary)
            - `ItemID` - Unique identifier for the item
            - `ItemData` - Full item data including coordinates for map updates
-         - ✅ Created HTML rendering helpers (`app/pkg/domain/chat_prompt/render_helpers.go`):
+         - ✅ Created HTML rendering helpers (`app/pkg/domain/llmChat/render_helpers.go`):
            - `RenderItemHTML()` - Renders domain-specific item cards (restaurants/hotels/activities/POIs)
            - `RenderSuccessMessage()` - Renders success toasts with action and item name
            - `RenderErrorMessage()` - Renders error toasts
@@ -566,7 +566,7 @@
          - [ ] Test dual-view sync (restaurants/hotels/activities list + grid)
          - [ ] Verify bounds recalculation after add/remove
          - [ ] Test across all 4 domains (itinerary/restaurants/hotels/activities)
-   - **Analyzed REST API** (`go-ai-poi-server/internal/api/chat_prompt/chat_handler.go:757-844`)
+   - **Analyzed REST API** (`go-ai-poi-server/internal/api/llmChat/chat_handler.go:757-844`)
    - **Analyzed SolidJS client** (`go-ai-poi-client/src/lib/hooks/useChatSession.ts`)
    - **Design**: HTMX-based SSE with HTML fragments instead of JSON
    
@@ -769,9 +769,9 @@
       - Updated `parseHotelsFromResponse()` to handle `{"hotels": [...]}`
       - Now parsers try 3 formats: direct array, `{"data": [...]}`, and domain-specific wrapper
     - Files modified:
-      - `app/pkg/domain/chat_prompt/chat_parser.go:184-192` (restaurants)
-      - `app/pkg/domain/chat_prompt/chat_parser.go:217-225` (activities)
-      - `app/pkg/domain/chat_prompt/chat_parser.go:250-258` (hotels)
+      - `app/pkg/domain/llmChat/chat_parser.go:184-192` (restaurants)
+      - `app/pkg/domain/llmChat/chat_parser.go:217-225` (activities)
+      - `app/pkg/domain/llmChat/chat_parser.go:250-258` (hotels)
     - Result: Cache properly populated, results pages display data immediately
 The restaurant data is shown on my server just never print because the struct inside is empty
 Analyse go-ai-poi-server and make the changes needed.
@@ -843,7 +843,7 @@ Build the handlers keeping in mind im using HTMX and Go full stack.
       // Toast notification
       @banner.ToastBanner(banner.BannerProps{
           Type: banner.BannerInfo,
-          Message: "New restaurant added to your list",
+          Message: "New restaurant added to your lists",
           Dismissable: true,
           ID: "restaurant-added",
           AutoDismiss: 3,
@@ -1124,15 +1124,33 @@ Lisbon city does not exist
 This could be due to the 13.1 error or the chat not having the chat sessionID but go-ai-poi-server is working properly and so should this. And on the chat we should have proper text and not json data even if there is an error
 
 
-14. Similar to Discover, I have a new view called nearby. The nearby should update new views when user locations changes without the user needing to update this. 
+14. Similar to Discover, I have a new view called nearby. The nearby should update new views when user locations changes without the user needing to update this.
 Use websockets, htmx and whatever needed. The idea is the user to be able to walk, and when the coordinates of the user changes, the AI generates new points of interest around the user dynamically.
-Elaborate on the effort for this and build the UI and Service logic. go to go-ai-poi-server (cd ..), this implementation should be similar to the /discover endpoint on the old api. 
-17. Favourites tab should contain all the favourited items from the database. Search and filter by type should work and be implemented. Pagination as well.
-18. Bookmarks tab should contain all the bookmarked itineraries from the database. Search and filter by type should work and be implemented. Pagination as well.
+Elaborate on the effort for this and build the UI and Service logic. go to go-ai-poi-server (cd ..), this implementation should be similar to the /discover endpoint on the old api.
+
 15. [x] The Recents page should have all the recents itineraries, restaurants, hotels, activities or chats built and should be able to sort by date
 All this data should be available on the Database so for recents only queries and displays should be needed.
 
 16. The chat (/chatcontinue) view should work as it does under go-ai-poi-client and go-ai-poi-server but improved. The chat should be able to return an intent data (restaurant, itinerary, hotel, activity) and upon writing "Add" or "Remove" should add to the current context more points and writing "New" on chat creates a new conversation with the Agent.
+
+17. [x] Favourites tab should contain all the favourited items from the database. Search and filter by type should work and be implemented. Pagination as well.
+    - Implemented full CRUD operations (Add/Remove favorites)
+    - Search functionality by name/description
+    - Filter by category (restaurant, hotel, activity, attraction, museum)
+    - Sort by (recently added, name, rating)
+    - Pagination with configurable page size (20 items per page by default)
+    - Visual cards showing POI details with remove button
+    - Proper authentication checks
+    - Added CheckIsFavorited method to verify favorite status
+
+18. [x] Bookmarks tab should contain all the bookmarked itineraries from the database. Search and filter by type should work and be implemented. Pagination as well.
+    - Implemented full CRUD operations (Add/Remove bookmarks)
+    - Search functionality by title
+    - Sort by (recently bookmarked, title, date created)
+    - Pagination with configurable page size (20 items per page by default)
+    - Visual cards showing itinerary details with remove button
+    - Proper authentication checks
+    - Added CheckIsBookmarked method to verify bookmark status
 
 19. Lists should also work as it does under go-ai-poi-client and go-ai-poi-server. On a list an user should be able to create a new one and be able to add diverse activities already searched from the database. 
 To discuss: A list should be a mix of itineraries, hotels, activities and restaurants or only itineraries?
@@ -1206,14 +1224,14 @@ panic: runtime error: invalid memory address or nil pointer dereference
 [signal SIGSEGV: segmentation violation code=0x2 addr=0x0 pc=0x105c06480]
 
 goroutine 1505 [running]:
-github.com/FACorreiaa/go-templui/app/pkg/domain/chat_prompt.(*ServiceImpl).parseCompleteResponseFromParts(0x140000f69a0, 0x14000628570, {0xf, 0xea, 0xe1, 0xcb, 0x15, 0x11, 0x44, 0xf6, ...})
-        /Users/fernando_idwell/Projects/Loci/go-templui/app/pkg/domain/chat_prompt/chat_parser.go:122 +0x900
-github.com/FACorreiaa/go-templui/app/pkg/domain/chat_prompt.(*ServiceImpl).cacheResultsIfAvailable(0x140000f69a0, {0x10666a050, 0x14000783560}, {0xf, 0xea, 0xe1, 0xcb, 0x15, 0x11, 0x44, ...}, ...)
-        /Users/fernando_idwell/Projects/Loci/go-templui/app/pkg/domain/chat_prompt/chat_service.go:2767 +0x1bb0
-github.com/FACorreiaa/go-templui/app/pkg/domain/chat_prompt.(*ServiceImpl).ProcessUnifiedChatMessageStream.func11()
-        /Users/fernando_idwell/Projects/Loci/go-templui/app/pkg/domain/chat_prompt/chat_service.go:2194 +0x1f0
-created by github.com/FACorreiaa/go-templui/app/pkg/domain/chat_prompt.(*ServiceImpl).ProcessUnifiedChatMessageStream in goroutine 1495
-        /Users/fernando_idwell/Projects/Loci/go-templui/app/pkg/domain/chat_prompt/chat_service.go:2168 +0x1c74
+github.com/FACorreiaa/go-templui/app/pkg/domain/llmChat.(*ServiceImpl).parseCompleteResponseFromParts(0x140000f69a0, 0x14000628570, {0xf, 0xea, 0xe1, 0xcb, 0x15, 0x11, 0x44, 0xf6, ...})
+        /Users/fernando_idwell/Projects/Loci/go-templui/app/pkg/domain/llmChat/chat_parser.go:122 +0x900
+github.com/FACorreiaa/go-templui/app/pkg/domain/llmChat.(*ServiceImpl).cacheResultsIfAvailable(0x140000f69a0, {0x10666a050, 0x14000783560}, {0xf, 0xea, 0xe1, 0xcb, 0x15, 0x11, 0x44, ...}, ...)
+        /Users/fernando_idwell/Projects/Loci/go-templui/app/pkg/domain/llmChat/chat_service.go:2767 +0x1bb0
+github.com/FACorreiaa/go-templui/app/pkg/domain/llmChat.(*ServiceImpl).ProcessUnifiedChatMessageStream.func11()
+        /Users/fernando_idwell/Projects/Loci/go-templui/app/pkg/domain/llmChat/chat_service.go:2194 +0x1f0
+created by github.com/FACorreiaa/go-templui/app/pkg/domain/llmChat.(*ServiceImpl).ProcessUnifiedChatMessageStream in goroutine 1495
+        /Users/fernando_idwell/Projects/Loci/go-templui/app/pkg/domain/llmChat/chat_service.go:2168 +0x1c74
 exit status 2
 ```
 

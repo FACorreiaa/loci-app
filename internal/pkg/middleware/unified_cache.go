@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-
-	"github.com/FACorreiaa/go-templui/internal/pkg/logger"
 )
 
 // CacheMetrics tracks cache performance
@@ -27,6 +25,7 @@ type UnifiedCache[T any] struct {
 	ttl     time.Duration
 	name    string // For logging/debugging
 	metrics CacheMetrics
+	logger  *zap.Logger
 }
 
 type cacheEntry[T any] struct {
@@ -35,11 +34,15 @@ type cacheEntry[T any] struct {
 }
 
 // NewUnifiedCache creates a new generic cache with specified TTL and name
-func NewUnifiedCache[T any](ttl time.Duration, name string) *UnifiedCache[T] {
+func NewUnifiedCache[T any](ttl time.Duration, name string, logger *zap.Logger) *UnifiedCache[T] {
+	if logger == nil {
+		logger = zap.NewNop() // Use no-op logger if none provided
+	}
 	c := &UnifiedCache[T]{
-		items: make(map[string]cacheEntry[T]),
-		ttl:   ttl,
-		name:  name,
+		items:  make(map[string]cacheEntry[T]),
+		ttl:    ttl,
+		name:   name,
+		logger: logger,
 	}
 	go c.cleanup()
 	return c
@@ -56,7 +59,7 @@ func (c *UnifiedCache[T]) Set(key string, value T) {
 	}
 	c.metrics.Sets++
 
-	logger.Log.Debug("Cache set",
+	c.logger.Debug("Cache set",
 		zap.String("cache", c.name),
 		zap.String("key", key),
 		zap.Duration("ttl", c.ttl),
@@ -72,7 +75,7 @@ func (c *UnifiedCache[T]) Get(key string) (T, bool) {
 	if !found {
 		c.metrics.Misses++
 		var zero T
-		logger.Log.Debug("Cache miss",
+		c.logger.Debug("Cache miss",
 			zap.String("cache", c.name),
 			zap.String("key", key),
 		)
@@ -83,7 +86,7 @@ func (c *UnifiedCache[T]) Get(key string) (T, bool) {
 	if time.Now().UnixNano() > item.expiration {
 		c.metrics.Misses++
 		var zero T
-		logger.Log.Debug("Cache expired",
+		c.logger.Debug("Cache expired",
 			zap.String("cache", c.name),
 			zap.String("key", key),
 		)
@@ -91,7 +94,7 @@ func (c *UnifiedCache[T]) Get(key string) (T, bool) {
 	}
 
 	c.metrics.Hits++
-	logger.Log.Debug("Cache hit",
+	c.logger.Debug("Cache hit",
 		zap.String("cache", c.name),
 		zap.String("key", key),
 	)
@@ -104,7 +107,7 @@ func (c *UnifiedCache[T]) Delete(key string) {
 	defer c.mu.Unlock()
 
 	delete(c.items, key)
-	logger.Log.Debug("Cache delete",
+	c.logger.Debug("Cache delete",
 		zap.String("cache", c.name),
 		zap.String("key", key),
 	)
@@ -116,7 +119,7 @@ func (c *UnifiedCache[T]) Clear() {
 	defer c.mu.Unlock()
 
 	c.items = make(map[string]cacheEntry[T])
-	logger.Log.Info("Cache cleared",
+	c.logger.Info("Cache cleared",
 		zap.String("cache", c.name),
 	)
 }
@@ -153,7 +156,7 @@ func (c *UnifiedCache[T]) cleanup() {
 		}
 
 		if expiredCount > 0 {
-			logger.Log.Info("Cache cleanup",
+			c.logger.Info("Cache cleanup",
 				zap.String("cache", c.name),
 				zap.Int("expired_items", expiredCount),
 				zap.Int("remaining_items", len(c.items)),
@@ -166,12 +169,17 @@ func (c *UnifiedCache[T]) cleanup() {
 // CacheKeyBuilder helps build consistent cache keys
 type CacheKeyBuilder struct {
 	components []interface{}
+	logger     *zap.Logger
 }
 
 // NewCacheKeyBuilder creates a new cache key builder
-func NewCacheKeyBuilder() *CacheKeyBuilder {
+func NewCacheKeyBuilder(logger *zap.Logger) *CacheKeyBuilder {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
 	return &CacheKeyBuilder{
 		components: make([]interface{}, 0, 8),
+		logger:     logger,
 	}
 }
 
@@ -213,7 +221,7 @@ func (b *CacheKeyBuilder) Build() (string, error) {
 	hash := md5.Sum(jsonBytes)
 	key := hex.EncodeToString(hash[:])
 
-	logger.Log.Debug("Cache key built",
+	b.logger.Debug("Cache key built",
 		zap.String("key", key),
 		zap.String("components", string(jsonBytes)),
 	)
@@ -225,7 +233,7 @@ func (b *CacheKeyBuilder) Build() (string, error) {
 func (b *CacheKeyBuilder) BuildOrDefault() string {
 	key, err := b.Build()
 	if err != nil {
-		logger.Log.Error("Failed to build cache key", zap.Error(err))
+		b.logger.Error("Failed to build cache key", zap.Error(err))
 		return ""
 	}
 	return key

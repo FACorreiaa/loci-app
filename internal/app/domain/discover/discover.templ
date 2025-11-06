@@ -338,25 +338,6 @@ templ RecentDiscoveryCard(session models.ChatSession) {
 	</div>
 }
 
-type DiscoverResult struct {
-	ID           string
-	Name         string
-	Latitude     float64
-	Longitude    float64
-	Category     string
-	Description  string
-	Address      string
-	Website      *string
-	PhoneNumber  *string
-	OpeningHours *string
-	PriceLevel   string
-	Rating       float64
-	Tags         []string
-	Images       []string
-	CuisineType  *string
-	StarRating   *string
-}
-
 templ DiscoverSearchResults(results []DiscoverResult, query, location string) {
 	if len(results) == 0 {
 		<div class="text-center py-12">

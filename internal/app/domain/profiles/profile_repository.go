@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
@@ -44,11 +45,11 @@ type Repository interface {
 }
 
 type ProfileRepository struct {
-	logger *slog.Logger
+	logger *zap.Logger
 	pgpool *pgxpool.Pool
 }
 
-func NewPostgresUserRepo(pgxpool *pgxpool.Pool, logger *slog.Logger) *ProfileRepository {
+func NewPostgresUserRepo(pgxpool *pgxpool.Pool, logger *zap.Logger) *ProfileRepository {
 	return &ProfileRepository{
 		logger: logger,
 		pgpool: pgxpool,
@@ -75,8 +76,8 @@ func (r *ProfileRepository) GetSearchProfiles(ctx context.Context, userID uuid.U
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetUserPreferenceProfiles"), slog.String("userID", userID.String()))
-	l.DebugContext(ctx, "Fetching user preference profiles")
+	l := r.logger.With(zap.String("method", "GetUserPreferenceProfiles"), zap.String("userID", userID.String()))
+	l.Debug("Fetching user preference profiles")
 
 	query := `
         SELECT id, user_id, profile_name, is_default, search_radius_km, preferred_time, 
@@ -89,7 +90,7 @@ func (r *ProfileRepository) GetSearchProfiles(ctx context.Context, userID uuid.U
 
 	rows, err := r.pgpool.Query(ctx, query, userID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query user preference profiles", slog.Any("error", err))
+		l.Error("Failed to query user preference profiles", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB query failed")
 		return nil, fmt.Errorf("database error fetching preference profiles: %w", err)
@@ -106,7 +107,7 @@ func (r *ProfileRepository) GetSearchProfiles(ctx context.Context, userID uuid.U
 			&p.CreatedAt, &p.UpdatedAt,
 		)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to scan preference profile row", slog.Any("error", err))
+			l.Error("Failed to scan preference profile row", zap.Any("error", err))
 			span.RecordError(err)
 			return nil, fmt.Errorf("database error scanning preference profile: %w", err)
 		}
@@ -163,12 +164,12 @@ func (r *ProfileRepository) GetSearchProfiles(ctx context.Context, userID uuid.U
 	}
 
 	if err = rows.Err(); err != nil {
-		l.ErrorContext(ctx, "Error iterating preference profile rows", slog.Any("error", err))
+		l.Error("Error iterating preference profile rows", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("database error reading preference profiles: %w", err)
 	}
 
-	l.DebugContext(ctx, "Fetched user preference profiles successfully", slog.Int("count", len(profiles)))
+	l.Debug("Fetched user preference profiles successfully", zap.Int("count", len(profiles)))
 	span.SetStatus(codes.Ok, "Preference profiles fetched")
 	return profiles, nil
 }
@@ -182,8 +183,8 @@ func (r *ProfileRepository) GetSearchProfile(ctx context.Context, userID, profil
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetUserPreferenceProfile"), slog.String("profileID", profileID.String()))
-	l.DebugContext(ctx, "Fetching user preference profile")
+	l := r.logger.With(zap.String("method", "GetUserPreferenceProfile"), zap.String("profileID", profileID.String()))
+	l.Debug("Fetching user preference profile")
 
 	query := `
         SELECT id, user_id, profile_name, is_default, search_radius_km, preferred_time, 
@@ -201,7 +202,7 @@ func (r *ProfileRepository) GetSearchProfile(ctx context.Context, userID, profil
 		&p.CreatedAt, &p.UpdatedAt,
 	)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query user preference profile", slog.Any("error", err))
+		l.Error("Failed to query user preference profile", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB query failed")
 		return nil, fmt.Errorf("preference profile not found: %w", models.ErrNotFound)
@@ -255,7 +256,7 @@ func (r *ProfileRepository) GetSearchProfile(ctx context.Context, userID, profil
 		}
 	}
 
-	l.DebugContext(ctx, "Fetched user preference profile successfully")
+	l.Debug("Fetched user preference profile successfully")
 	span.SetStatus(codes.Ok, "Preference profile fetched")
 	return &p, nil
 }
@@ -269,8 +270,8 @@ func (r *ProfileRepository) GetDefaultSearchProfile(ctx context.Context, userID 
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetDefaultUserPreferenceProfile"), slog.String("userID", userID.String()))
-	l.DebugContext(ctx, "Fetching default user preference profile")
+	l := r.logger.With(zap.String("method", "GetDefaultUserPreferenceProfile"), zap.String("userID", userID.String()))
+	l.Debug("Fetching default user preference profile")
 
 	query := `
         SELECT id, user_id, profile_name, is_default, search_radius_km, preferred_time, 
@@ -288,7 +289,7 @@ func (r *ProfileRepository) GetDefaultSearchProfile(ctx context.Context, userID 
 		&p.CreatedAt, &p.UpdatedAt,
 	)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query default user preference profile", slog.Any("error", err))
+		l.Error("Failed to query default user preference profile", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB query failed")
 		return nil, fmt.Errorf("default preference profile not found: %w", models.ErrNotFound)
@@ -342,7 +343,7 @@ func (r *ProfileRepository) GetDefaultSearchProfile(ctx context.Context, userID 
 		}
 	}
 
-	l.DebugContext(ctx, "Fetched default user preference profile successfully")
+	l.Debug("Fetched default user preference profile successfully")
 	span.SetStatus(codes.Ok, "Default preference profile fetched")
 	return &p, nil
 }
@@ -362,8 +363,8 @@ func (r *ProfileRepository) CreateSearchProfile(ctx context.Context, userID uuid
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	l := r.logger.With(slog.String("method", "CreateUserPreferenceProfile"), slog.String("userID", userID.String()))
-	l.DebugContext(ctx, "Creating user preference profile", slog.String("profileName", params.ProfileName))
+	l := r.logger.With(zap.String("method", "CreateUserPreferenceProfile"), zap.String("userID", userID.String()))
+	l.Debug("Creating user preference profile", zap.String("profileName", params.ProfileName))
 
 	// Set default values for optional parameters (as before)
 	isDefault := false
@@ -419,7 +420,7 @@ func (r *ProfileRepository) CreateSearchProfile(ctx context.Context, userID uuid
 			if err != nil {
 				return nil, fmt.Errorf("failed to rollback transaction: %w", err)
 			}
-			l.ErrorContext(ctx, "Failed to reset existing default profiles", slog.Any("error", err))
+			l.Error("Failed to reset existing default profiles", zap.Any("error", err))
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to reset defaults")
 			return nil, fmt.Errorf("failed to reset existing default profiles: %w", err)
@@ -456,12 +457,12 @@ func (r *ProfileRepository) CreateSearchProfile(ctx context.Context, userID uuid
 		}
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // Unique violation
-			l.WarnContext(ctx, "Profile name already exists for this user", slog.Any("error", err))
+			l.Warn("Profile name already exists for this user", zap.Any("error", err))
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Profile name conflict")
 			return nil, fmt.Errorf("profile name already exists: %w", models.ErrConflict)
 		}
-		l.ErrorContext(ctx, "Failed to create user preference profile", slog.Any("error", err))
+		l.Error("Failed to create user preference profile", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB INSERT failed")
 		return nil, fmt.Errorf("database error creating preference profile: %w", err)
@@ -475,7 +476,7 @@ func (r *ProfileRepository) CreateSearchProfile(ctx context.Context, userID uuid
 			if err != nil {
 				return nil, fmt.Errorf("failed to rollback transaction: %w", err)
 			}
-			l.ErrorContext(ctx, "Failed to marshal accommodation preferences", slog.Any("error", err))
+			l.Error("Failed to marshal accommodation preferences", zap.Any("error", err))
 			return nil, fmt.Errorf("failed to marshal accommodation preferences: %w", err)
 		}
 		query = `
@@ -484,9 +485,9 @@ func (r *ProfileRepository) CreateSearchProfile(ctx context.Context, userID uuid
 		_, err = tx.Exec(ctx, query, p.ID, accommodationJSON)
 		if err != nil {
 			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-				l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", rollbackErr))
+				l.Error("Failed to rollback transaction", zap.Any("error", rollbackErr))
 			}
-			l.ErrorContext(ctx, "Failed to insert accommodation preferences", slog.Any("error", err))
+			l.Error("Failed to insert accommodation preferences", zap.Any("error", err))
 			return nil, fmt.Errorf("failed to insert accommodation preferences: %w", err)
 		}
 	}
@@ -495,9 +496,9 @@ func (r *ProfileRepository) CreateSearchProfile(ctx context.Context, userID uuid
 		diningJSON, err := json.Marshal(params.DiningPreferences)
 		if err != nil {
 			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-				l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", rollbackErr))
+				l.Error("Failed to rollback transaction", zap.Any("error", rollbackErr))
 			}
-			l.ErrorContext(ctx, "Failed to marshal dining preferences", slog.Any("error", err))
+			l.Error("Failed to marshal dining preferences", zap.Any("error", err))
 			return nil, fmt.Errorf("failed to marshal dining preferences: %w", err)
 		}
 		query = `
@@ -506,9 +507,9 @@ func (r *ProfileRepository) CreateSearchProfile(ctx context.Context, userID uuid
 		_, err = tx.Exec(ctx, query, p.ID, diningJSON)
 		if err != nil {
 			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-				l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", rollbackErr))
+				l.Error("Failed to rollback transaction", zap.Any("error", rollbackErr))
 			}
-			l.ErrorContext(ctx, "Failed to insert dining preferences", slog.Any("error", err))
+			l.Error("Failed to insert dining preferences", zap.Any("error", err))
 			return nil, fmt.Errorf("failed to insert dining preferences: %w", err)
 		}
 	}
@@ -517,9 +518,9 @@ func (r *ProfileRepository) CreateSearchProfile(ctx context.Context, userID uuid
 		activityJSON, err := json.Marshal(params.ActivityPreferences)
 		if err != nil {
 			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-				l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", rollbackErr))
+				l.Error("Failed to rollback transaction", zap.Any("error", rollbackErr))
 			}
-			l.ErrorContext(ctx, "Failed to marshal activity preferences", slog.Any("error", err))
+			l.Error("Failed to marshal activity preferences", zap.Any("error", err))
 			return nil, fmt.Errorf("failed to marshal activity preferences: %w", err)
 		}
 		query = `
@@ -528,9 +529,9 @@ func (r *ProfileRepository) CreateSearchProfile(ctx context.Context, userID uuid
 		_, err = tx.Exec(ctx, query, p.ID, activityJSON)
 		if err != nil {
 			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-				l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", rollbackErr))
+				l.Error("Failed to rollback transaction", zap.Any("error", rollbackErr))
 			}
-			l.ErrorContext(ctx, "Failed to insert activity preferences", slog.Any("error", err))
+			l.Error("Failed to insert activity preferences", zap.Any("error", err))
 			return nil, fmt.Errorf("failed to insert activity preferences: %w", err)
 		}
 	}
@@ -539,9 +540,9 @@ func (r *ProfileRepository) CreateSearchProfile(ctx context.Context, userID uuid
 		itineraryJSON, err := json.Marshal(params.ItineraryPreferences)
 		if err != nil {
 			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-				l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", rollbackErr))
+				l.Error("Failed to rollback transaction", zap.Any("error", rollbackErr))
 			}
-			l.ErrorContext(ctx, "Failed to marshal itinerary preferences", slog.Any("error", err))
+			l.Error("Failed to marshal itinerary preferences", zap.Any("error", err))
 			return nil, fmt.Errorf("failed to marshal itinerary preferences: %w", err)
 		}
 		query = `
@@ -550,9 +551,9 @@ func (r *ProfileRepository) CreateSearchProfile(ctx context.Context, userID uuid
 		_, err = tx.Exec(ctx, query, p.ID, itineraryJSON)
 		if err != nil {
 			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-				l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", rollbackErr))
+				l.Error("Failed to rollback transaction", zap.Any("error", rollbackErr))
 			}
-			l.ErrorContext(ctx, "Failed to insert itinerary preferences", slog.Any("error", err))
+			l.Error("Failed to insert itinerary preferences", zap.Any("error", err))
 			return nil, fmt.Errorf("failed to insert itinerary preferences: %w", err)
 		}
 	}
@@ -561,7 +562,7 @@ func (r *ProfileRepository) CreateSearchProfile(ctx context.Context, userID uuid
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	l.InfoContext(ctx, "User preference profile created successfully", slog.String("profileID", p.ID.String()))
+	l.Info("User preference profile created successfully", zap.String("profileID", p.ID.String()))
 	span.SetStatus(codes.Ok, "Preference profile created")
 	return &p, nil
 }
@@ -576,8 +577,8 @@ func (r *ProfileRepository) UpdateSearchProfile(ctx context.Context, userID, pro
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "UpdateUserPreferenceProfile"), slog.String("profileID", profileID.String()))
-	l.DebugContext(ctx, "Updating user preference profile")
+	l := r.logger.With(zap.String("method", "UpdateUserPreferenceProfile"), zap.String("profileID", profileID.String()))
+	l.Debug("Updating user preference profile")
 
 	// Begin transaction to update profile and domain preferences atomically
 	tx, err := r.pgpool.Begin(ctx)
@@ -647,7 +648,7 @@ func (r *ProfileRepository) UpdateSearchProfile(ctx context.Context, userID, pro
 		query, args, err := updateBuilder.ToSql()
 		if err != nil {
 			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-				l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("rollback_error", rollbackErr))
+				l.Error("Failed to rollback transaction", zap.Any("rollback_error", rollbackErr))
 			}
 			return fmt.Errorf("failed to build update query: %w", err)
 		}
@@ -655,16 +656,16 @@ func (r *ProfileRepository) UpdateSearchProfile(ctx context.Context, userID, pro
 		tag, err := tx.Exec(ctx, query, args...)
 		if err != nil {
 			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-				l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("rollback_error", rollbackErr))
+				l.Error("Failed to rollback transaction", zap.Any("rollback_error", rollbackErr))
 			}
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == "23505" { // Unique violation
-				l.WarnContext(ctx, "Profile name already exists for this user", slog.Any("error", err))
+				l.Warn("Profile name already exists for this user", zap.Any("error", err))
 				span.RecordError(err)
 				span.SetStatus(codes.Error, "Profile name conflict")
 				return fmt.Errorf("profile name already exists: %w", models.ErrConflict)
 			}
-			l.ErrorContext(ctx, "Failed to update user preference profile", slog.Any("error", err))
+			l.Error("Failed to update user preference profile", zap.Any("error", err))
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "DB UPDATE failed")
 			return fmt.Errorf("database error updating preference profile: %w", err)
@@ -672,10 +673,10 @@ func (r *ProfileRepository) UpdateSearchProfile(ctx context.Context, userID, pro
 
 		if tag.RowsAffected() == 0 {
 			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-				l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("rollback_error", rollbackErr))
+				l.Error("Failed to rollback transaction", zap.Any("rollback_error", rollbackErr))
 			}
 			err := fmt.Errorf("preference profile not found: %w", models.ErrNotFound)
-			l.WarnContext(ctx, "Attempted to update non-existent preference profile")
+			l.Warn("Attempted to update non-existent preference profile")
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Profile not found")
 			return err
@@ -686,9 +687,9 @@ func (r *ProfileRepository) UpdateSearchProfile(ctx context.Context, userID, pro
 	if params.AccommodationPreferences != nil {
 		if err := r.updateAccommodationPreferencesInTx(ctx, tx, profileID, params.AccommodationPreferences); err != nil {
 			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-				l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("rollback_error", rollbackErr))
+				l.Error("Failed to rollback transaction", zap.Any("rollback_error", rollbackErr))
 			}
-			l.ErrorContext(ctx, "Failed to update accommodation preferences", slog.Any("error", err))
+			l.Error("Failed to update accommodation preferences", zap.Any("error", err))
 			return fmt.Errorf("failed to update accommodation preferences: %w", err)
 		}
 	}
@@ -696,9 +697,9 @@ func (r *ProfileRepository) UpdateSearchProfile(ctx context.Context, userID, pro
 	if params.DiningPreferences != nil {
 		if err := r.updateDiningPreferencesInTx(ctx, tx, profileID, params.DiningPreferences); err != nil {
 			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-				l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("rollback_error", rollbackErr))
+				l.Error("Failed to rollback transaction", zap.Any("rollback_error", rollbackErr))
 			}
-			l.ErrorContext(ctx, "Failed to update dining preferences", slog.Any("error", err))
+			l.Error("Failed to update dining preferences", zap.Any("error", err))
 			return fmt.Errorf("failed to update dining preferences: %w", err)
 		}
 	}
@@ -706,9 +707,9 @@ func (r *ProfileRepository) UpdateSearchProfile(ctx context.Context, userID, pro
 	if params.ActivityPreferences != nil {
 		if err := r.updateActivityPreferencesInTx(ctx, tx, profileID, params.ActivityPreferences); err != nil {
 			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-				l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("rollback_error", rollbackErr))
+				l.Error("Failed to rollback transaction", zap.Any("rollback_error", rollbackErr))
 			}
-			l.ErrorContext(ctx, "Failed to update activity preferences", slog.Any("error", err))
+			l.Error("Failed to update activity preferences", zap.Any("error", err))
 			return fmt.Errorf("failed to update activity preferences: %w", err)
 		}
 	}
@@ -716,9 +717,9 @@ func (r *ProfileRepository) UpdateSearchProfile(ctx context.Context, userID, pro
 	if params.ItineraryPreferences != nil {
 		if err := r.updateItineraryPreferencesInTx(ctx, tx, profileID, params.ItineraryPreferences); err != nil {
 			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-				l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("rollback_error", rollbackErr))
+				l.Error("Failed to rollback transaction", zap.Any("rollback_error", rollbackErr))
 			}
-			l.ErrorContext(ctx, "Failed to update itinerary preferences", slog.Any("error", err))
+			l.Error("Failed to update itinerary preferences", zap.Any("error", err))
 			return fmt.Errorf("failed to update itinerary preferences: %w", err)
 		}
 	}
@@ -728,7 +729,7 @@ func (r *ProfileRepository) UpdateSearchProfile(ctx context.Context, userID, pro
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	l.InfoContext(ctx, "User preference profile and domain preferences updated successfully")
+	l.Info("User preference profile and domain preferences updated successfully")
 	span.SetStatus(codes.Ok, "Preference profile updated")
 	return nil
 }
@@ -743,8 +744,8 @@ func (r *ProfileRepository) DeleteSearchProfile(ctx context.Context, userID, pro
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "DeleteUserPreferenceProfile"), slog.String("profileID", profileID.String()))
-	l.DebugContext(ctx, "Deleting user preference profile")
+	l := r.logger.With(zap.String("method", "DeleteUserPreferenceProfile"), zap.String("profileID", profileID.String()))
+	l.Debug("Deleting user preference profile")
 
 	// First check if this is the default profile
 	var isDefault bool
@@ -752,12 +753,12 @@ func (r *ProfileRepository) DeleteSearchProfile(ctx context.Context, userID, pro
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			err := fmt.Errorf("preference profile not found: %w", models.ErrNotFound)
-			l.WarnContext(ctx, "Attempted to delete non-existent preference profile")
+			l.Warn("Attempted to delete non-existent preference profile")
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Profile not found")
 			return err
 		}
-		l.ErrorContext(ctx, "Failed to check if profile is default", slog.Any("error", err))
+		l.Error("Failed to check if profile is default", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB query failed")
 		return fmt.Errorf("database error checking profile: %w", err)
@@ -765,7 +766,7 @@ func (r *ProfileRepository) DeleteSearchProfile(ctx context.Context, userID, pro
 
 	if isDefault {
 		err := errors.New("cannot delete default profile")
-		l.WarnContext(ctx, "Attempted to delete default preference profile")
+		l.Warn("Attempted to delete default preference profile")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Cannot delete default profile")
 		return err
@@ -774,7 +775,7 @@ func (r *ProfileRepository) DeleteSearchProfile(ctx context.Context, userID, pro
 	// Delete the profile
 	tag, err := r.pgpool.Exec(ctx, "DELETE FROM user_preference_profiles WHERE id = $1 AND user_id = $2", profileID, userID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to delete user preference profile", slog.Any("error", err))
+		l.Error("Failed to delete user preference profile", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB DELETE failed")
 		return fmt.Errorf("database error deleting preference profile: %w", err)
@@ -783,13 +784,13 @@ func (r *ProfileRepository) DeleteSearchProfile(ctx context.Context, userID, pro
 	if tag.RowsAffected() == 0 {
 		// This should not happen since we already checked if the profile exists
 		err := fmt.Errorf("preference profile not found: %w", models.ErrNotFound)
-		l.WarnContext(ctx, "Attempted to delete non-existent preference profile")
+		l.Warn("Attempted to delete non-existent preference profile")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Profile not found")
 		return err
 	}
 
-	l.InfoContext(ctx, "User preference profile deleted successfully")
+	l.Info("User preference profile deleted successfully")
 	span.SetStatus(codes.Ok, "Preference profile deleted")
 	return nil
 }
@@ -804,20 +805,20 @@ func (r *ProfileRepository) SetDefaultSearchProfile(ctx context.Context, userID,
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "SetDefaultUserPreferenceProfile"), slog.String("profileID", profileID.String()))
-	l.DebugContext(ctx, "Setting profile as default")
+	l := r.logger.With(zap.String("method", "SetDefaultUserPreferenceProfile"), zap.String("profileID", profileID.String()))
+	l.Debug("Setting profile as default")
 
 	// First get the user ID for this profile
 	err := r.pgpool.QueryRow(ctx, "SELECT user_id FROM user_preference_profiles WHERE user_id = $1", userID).Scan(&userID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			err := fmt.Errorf("preference profile not found: %w", models.ErrNotFound)
-			l.WarnContext(ctx, "Attempted to set non-existent profile as default")
+			l.Warn("Attempted to set non-existent profile as default")
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Profile not found")
 			return err
 		}
-		l.ErrorContext(ctx, "Failed to get user ID for profile", slog.Any("error", err))
+		l.Error("Failed to get user ID for profile", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB query failed")
 		return fmt.Errorf("database error getting profile: %w", err)
@@ -826,7 +827,7 @@ func (r *ProfileRepository) SetDefaultSearchProfile(ctx context.Context, userID,
 	// Begin a transaction
 	tx, err := r.pgpool.Begin(ctx)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to begin transaction", slog.Any("error", err))
+		l.Error("Failed to begin transaction", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB transaction failed")
 		return fmt.Errorf("database error beginning transaction: %w", err)
@@ -836,9 +837,9 @@ func (r *ProfileRepository) SetDefaultSearchProfile(ctx context.Context, userID,
 	_, err = tx.Exec(ctx, "UPDATE user_preference_profiles SET is_default = FALSE WHERE user_id = $1", userID)
 	if err != nil {
 		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-			l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("rollback_error", rollbackErr))
+			l.Error("Failed to rollback transaction", zap.Any("rollback_error", rollbackErr))
 		}
-		l.ErrorContext(ctx, "Failed to reset default profiles", slog.Any("error", err))
+		l.Error("Failed to reset default profiles", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB UPDATE failed")
 		return fmt.Errorf("database error resetting default profiles: %w", err)
@@ -848,9 +849,9 @@ func (r *ProfileRepository) SetDefaultSearchProfile(ctx context.Context, userID,
 	tag, err := tx.Exec(ctx, "UPDATE user_preference_profiles SET is_default = TRUE WHERE id = $1 AND user_id = $2", profileID, userID)
 	if err != nil {
 		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-			l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("rollback_error", rollbackErr))
+			l.Error("Failed to rollback transaction", zap.Any("rollback_error", rollbackErr))
 		}
-		l.ErrorContext(ctx, "Failed to set profile as default", slog.Any("error", err))
+		l.Error("Failed to set profile as default", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB UPDATE failed")
 		return fmt.Errorf("database error setting default profile: %w", err)
@@ -858,11 +859,11 @@ func (r *ProfileRepository) SetDefaultSearchProfile(ctx context.Context, userID,
 
 	if tag.RowsAffected() == 0 {
 		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-			l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("rollback_error", rollbackErr))
+			l.Error("Failed to rollback transaction", zap.Any("rollback_error", rollbackErr))
 		}
 		// This should not happen since we already checked if the profile exists
 		err := fmt.Errorf("preference profile not found: %w", models.ErrNotFound)
-		l.WarnContext(ctx, "Attempted to set non-existent profile as default")
+		l.Warn("Attempted to set non-existent profile as default")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Profile not found")
 		return err
@@ -871,13 +872,13 @@ func (r *ProfileRepository) SetDefaultSearchProfile(ctx context.Context, userID,
 	// Commit the transaction
 	err = tx.Commit(ctx)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to commit transaction", slog.Any("error", err))
+		l.Error("Failed to commit transaction", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB transaction commit failed")
 		return fmt.Errorf("database error committing transaction: %w", err)
 	}
 
-	l.InfoContext(ctx, "User preference profile set as default successfully")
+	l.Info("User preference profile set as default successfully")
 	span.SetStatus(codes.Ok, "Profile set as default")
 	return nil
 }

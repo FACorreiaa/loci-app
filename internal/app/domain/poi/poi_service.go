@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 
 	"google.golang.org/genai"
 
@@ -31,18 +32,30 @@ var _ Service = (*ServiceImpl)(nil)
 
 // Service defines the business logic contract for POI operations.
 type Service interface {
-	// Favourites methods
+	// Favourites methods - POIs
 	AddPoiToFavourites(ctx context.Context, userID, poiID uuid.UUID, isLLMGenerated bool) (uuid.UUID, error)
 	RemovePoiFromFavourites(ctx context.Context, userID, poiID uuid.UUID, isLLMGenerated bool) error
 	GetFavouritePOIsByUserID(ctx context.Context, userID uuid.UUID) ([]models.POIDetailedInfo, error)
 	GetFavouritePOIsByUserIDPaginated(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.POIDetailedInfo, int, error)
 	GetFavouritesFiltered(ctx context.Context, filter models.FavouritesFilter) ([]models.POIDetailedInfo, int, error)
 	GetPOIsByCityID(ctx context.Context, cityID uuid.UUID) ([]models.POIDetailedInfo, error)
+	CheckIsFavorited(ctx context.Context, userID, poiID uuid.UUID, isLLMGenerated bool) (bool, error)
+
+	// Favourites methods - Hotels
+	AddHotelToFavourites(ctx context.Context, userID, hotelID uuid.UUID) (uuid.UUID, error)
+	RemoveHotelFromFavourites(ctx context.Context, userID, hotelID uuid.UUID) error
+	CheckIsHotelFavorited(ctx context.Context, userID, hotelID uuid.UUID) (bool, error)
+
+	// Favourites methods - Restaurants
+	AddRestaurantToFavourites(ctx context.Context, userID, restaurantID uuid.UUID) (uuid.UUID, error)
+	RemoveRestaurantFromFavourites(ctx context.Context, userID, restaurantID uuid.UUID) error
+	CheckIsRestaurantFavorited(ctx context.Context, userID, restaurantID uuid.UUID) (bool, error)
 
 	// Bookmarks methods
 	AddItineraryToBookmarks(ctx context.Context, userID, itineraryID uuid.UUID) (uuid.UUID, error)
 	RemoveItineraryFromBookmarks(ctx context.Context, userID, itineraryID uuid.UUID) error
 	GetBookmarksFiltered(ctx context.Context, filter models.BookmarksFilter) ([]models.SavedItinerary, int, error)
+	CheckIsBookmarked(ctx context.Context, userID, itineraryID uuid.UUID) (bool, error)
 
 	// SearchPOIs Traditional search
 	SearchPOIs(ctx context.Context, filter models.POIFilter) ([]models.POIDetailedInfo, error)
@@ -73,7 +86,7 @@ type Service interface {
 }
 
 type ServiceImpl struct {
-	logger             *slog.Logger
+	logger             *zap.Logger
 	poiRepository      Repository
 	embeddingService   *generativeAI.EmbeddingService
 	aiClient           *generativeAI.LLMChatClient
@@ -86,11 +99,11 @@ func NewServiceImpl(poiRepository Repository,
 	embeddingService *generativeAI.EmbeddingService,
 	cityRepo city.Repository,
 	llmInteractionRepo llmlogging.Repository,
-	logger *slog.Logger) *ServiceImpl {
+	logger *zap.Logger) *ServiceImpl {
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	aiClient, err := generativeAI.NewLLMChatClient(context.Background(), apiKey)
 	if err != nil {
-		logger.Error("Failed to initialize AI client", slog.Any("error", err))
+		logger.Error("Failed to initialize AI client", zap.Any("error", err))
 		// For now, set to nil and handle gracefully in methods
 		aiClient = nil
 	}
@@ -162,10 +175,10 @@ func (s *ServiceImpl) logLLMInteractionAsync(ctx context.Context, userID, sessio
 		}
 
 		if _, err := s.llmInteractionRepo.SaveInteraction(asyncCtx, interaction); err != nil {
-			s.logger.ErrorContext(asyncCtx, "Failed to log LLM interaction asynchronously",
-				slog.String("intent", intent),
-				slog.String("session_id", sessionID.String()),
-				slog.Any("error", err))
+			s.logger.Error("Failed to log LLM interaction asynchronously",
+				zap.String("intent", intent),
+				zap.String("session_id", sessionID.String()),
+				zap.Any("error", err))
 		}
 	}()
 }
@@ -176,7 +189,7 @@ func (s *ServiceImpl) AddPoiToFavourites(ctx context.Context, userID, poiID uuid
 
 		id, err := s.poiRepository.AddPoiToFavourites(ctx, userID, poiID)
 		if err != nil {
-			s.logger.Error("failed to add POI to favourites", "error", err)
+			s.logger.Error("failed to add POI to favourites", zap.Error(err))
 			return uuid.Nil, err
 		}
 		return id, nil
@@ -194,23 +207,88 @@ func (s *ServiceImpl) RemovePoiFromFavourites(ctx context.Context, userID, poiID
 	if isLLMGenerated {
 		err := s.poiRepository.RemoveLLMPoiFromFavourite(ctx, userID, poiID)
 		if err != nil {
-			s.logger.Error("failed to remove LLM POI from favourites", "error", err)
+			s.logger.Error("failed to remove LLM POI from favourites", zap.Error(err))
 			return err
 		}
 	} else {
 		err := s.poiRepository.RemovePoiFromFavourites(ctx, userID, poiID)
 		if err != nil {
-			s.logger.Error("failed to remove POI from favourites", "error", err)
+			s.logger.Error("failed to remove POI from favourites", zap.Error(err))
 			return err
 		}
 	}
 	return nil
 }
 
+func (s *ServiceImpl) CheckIsFavorited(ctx context.Context, userID, poiID uuid.UUID, isLLMGenerated bool) (bool, error) {
+	isFavorited, err := s.poiRepository.CheckIsFavorited(ctx, userID, poiID, isLLMGenerated)
+	if err != nil {
+		s.logger.Error("failed to check if POI is favorited", zap.Error(err))
+		return false, err
+	}
+	return isFavorited, nil
+}
+
+// Hotel Favorites Methods
+func (s *ServiceImpl) AddHotelToFavourites(ctx context.Context, userID, hotelID uuid.UUID) (uuid.UUID, error) {
+	id, err := s.poiRepository.AddHotelToFavourites(ctx, userID, hotelID)
+	if err != nil {
+		s.logger.Error("failed to add hotel to favourites", zap.Error(err))
+		return uuid.Nil, err
+	}
+	return id, nil
+}
+
+func (s *ServiceImpl) RemoveHotelFromFavourites(ctx context.Context, userID, hotelID uuid.UUID) error {
+	err := s.poiRepository.RemoveHotelFromFavourites(ctx, userID, hotelID)
+	if err != nil {
+		s.logger.Error("failed to remove hotel from favourites", zap.Error(err))
+		return err
+	}
+	return nil
+}
+
+func (s *ServiceImpl) CheckIsHotelFavorited(ctx context.Context, userID, hotelID uuid.UUID) (bool, error) {
+	isFavorited, err := s.poiRepository.CheckIsHotelFavorited(ctx, userID, hotelID)
+	if err != nil {
+		s.logger.Error("failed to check if hotel is favorited", zap.Error(err))
+		return false, err
+	}
+	return isFavorited, nil
+}
+
+// Restaurant Favorites Methods
+func (s *ServiceImpl) AddRestaurantToFavourites(ctx context.Context, userID, restaurantID uuid.UUID) (uuid.UUID, error) {
+	id, err := s.poiRepository.AddRestaurantToFavourites(ctx, userID, restaurantID)
+	if err != nil {
+		s.logger.Error("failed to add restaurant to favourites", zap.Error(err))
+		return uuid.Nil, err
+	}
+	return id, nil
+}
+
+func (s *ServiceImpl) RemoveRestaurantFromFavourites(ctx context.Context, userID, restaurantID uuid.UUID) error {
+	err := s.poiRepository.RemoveRestaurantFromFavourites(ctx, userID, restaurantID)
+	if err != nil {
+		s.logger.Error("failed to remove restaurant from favourites", zap.Error(err))
+		return err
+	}
+	return nil
+}
+
+func (s *ServiceImpl) CheckIsRestaurantFavorited(ctx context.Context, userID, restaurantID uuid.UUID) (bool, error) {
+	isFavorited, err := s.poiRepository.CheckIsRestaurantFavorited(ctx, userID, restaurantID)
+	if err != nil {
+		s.logger.Error("failed to check if restaurant is favorited", zap.Error(err))
+		return false, err
+	}
+	return isFavorited, nil
+}
+
 func (s *ServiceImpl) GetFavouritePOIsByUserID(ctx context.Context, userID uuid.UUID) ([]models.POIDetailedInfo, error) {
 	pois, err := s.poiRepository.GetFavouritePOIsByUserID(ctx, userID)
 	if err != nil {
-		s.logger.Error("failed to get favourite POIs by user ID", "error", err)
+		s.logger.Error("failed to get favourite POIs by user ID", zap.Error(err))
 		return nil, err
 	}
 	return pois, nil
@@ -219,7 +297,7 @@ func (s *ServiceImpl) GetFavouritePOIsByUserID(ctx context.Context, userID uuid.
 func (s *ServiceImpl) GetFavouritePOIsByUserIDPaginated(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.POIDetailedInfo, int, error) {
 	pois, total, err := s.poiRepository.GetFavouritePOIsByUserIDPaginated(ctx, userID, limit, offset)
 	if err != nil {
-		s.logger.Error("failed to get paginated favourite POIs by user ID", "error", err)
+		s.logger.Error("failed to get paginated favourite POIs by user ID", zap.Error(err))
 		return nil, 0, err
 	}
 	return pois, total, nil
@@ -238,17 +316,20 @@ func (s *ServiceImpl) GetFavouritesFiltered(ctx context.Context, filter models.F
 	pois, total, err := s.poiRepository.GetFavouritesFiltered(ctx, filter)
 	if err != nil {
 		s.logger.Error("failed to get filtered favourites",
-			"userID", filter.UserID.String(),
-			"search", filter.SearchText,
-			"category", filter.Category,
-			"error", err)
+			zap.Int("limit", filter.Limit),
+			zap.Any("userID", filter.UserID),
+			zap.String("search", filter.SearchText),
+			zap.String("category", filter.Category),
+			zap.Error(err),
+		)
 		return nil, 0, err
 	}
 
 	s.logger.Info("Retrieved filtered favourites",
-		"userID", filter.UserID.String(),
-		"count", len(pois),
-		"total", total)
+		zap.Any("userID", filter.UserID),
+		zap.Int("count", len(pois)),
+		zap.Int("total", total),
+	)
 
 	return pois, total, nil
 }
@@ -256,7 +337,7 @@ func (s *ServiceImpl) GetFavouritesFiltered(ctx context.Context, filter models.F
 func (s *ServiceImpl) GetPOIsByCityID(ctx context.Context, cityID uuid.UUID) ([]models.POIDetailedInfo, error) {
 	pois, err := s.poiRepository.GetPOIsByCityID(ctx, cityID)
 	if err != nil {
-		s.logger.Error("failed to get POIs by city ID", "error", err)
+		s.logger.Error("failed to get POIs by city ID", zap.Error(err))
 		return nil, err
 	}
 	return pois, nil
@@ -265,7 +346,7 @@ func (s *ServiceImpl) GetPOIsByCityID(ctx context.Context, cityID uuid.UUID) ([]
 func (s *ServiceImpl) SearchPOIs(ctx context.Context, filter models.POIFilter) ([]models.POIDetailedInfo, error) {
 	pois, err := s.poiRepository.SearchPOIs(ctx, filter)
 	if err != nil {
-		s.logger.Error("failed to search POIs", "error", err)
+		s.logger.Error("failed to search POIs", zap.Error(err))
 		return nil, err
 	}
 	return pois, nil
@@ -277,7 +358,7 @@ func (s *ServiceImpl) GetItinerary(ctx context.Context, userID, itineraryID uuid
 
 	itinerary, err := s.poiRepository.GetItinerary(ctx, userID, itineraryID)
 	if err != nil {
-		s.logger.ErrorContext(ctx, "Repository failed to get itinerary", slog.Any("error", err))
+		s.logger.Error("Repository failed to get itinerary", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("failed to get itinerary: %w", err)
 	}
@@ -297,7 +378,7 @@ func (s *ServiceImpl) GetItineraries(ctx context.Context, userID uuid.UUID, page
 	))
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "Service: Getting itineraries for user", slog.String("userID", userID.String()))
+	s.logger.Debug("Service: Getting itineraries for user", zap.String("userID", userID.String()))
 
 	if page <= 0 {
 		page = 1 // Default to page 1
@@ -308,7 +389,7 @@ func (s *ServiceImpl) GetItineraries(ctx context.Context, userID uuid.UUID, page
 
 	itineraries, totalRecords, err := s.poiRepository.GetItineraries(ctx, userID, page, pageSize)
 	if err != nil {
-		s.logger.ErrorContext(ctx, "Repository failed to get itineraries", slog.Any("error", err))
+		s.logger.Error("Repository failed to get itineraries", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("failed to retrieve itineraries: %w", err)
 	}
@@ -331,19 +412,19 @@ func (s *ServiceImpl) UpdateItinerary(ctx context.Context, userID, itineraryID u
 	))
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "Service: Updating itinerary", slog.String("userID", userID.String()), slog.String("itineraryID", itineraryID.String()), slog.Any("updates", updates))
+	s.logger.Debug("Service: Updating itinerary", zap.String("userID", userID.String()), zap.String("itineraryID", itineraryID.String()), zap.Any("updates", updates))
 
 	if updates.Title == nil && updates.Description == nil && updates.Tags == nil &&
 		updates.EstimatedDurationDays == nil && updates.EstimatedCostLevel == nil &&
 		updates.IsPublic == nil && updates.MarkdownContent == nil {
 		span.AddEvent("No update fields provided.")
-		s.logger.InfoContext(ctx, "No fields provided for itinerary update, fetching current.", slog.String("itineraryID", itineraryID.String()))
+		s.logger.Info("No fields provided for itinerary update, fetching current.", zap.String("itineraryID", itineraryID.String()))
 		return s.poiRepository.GetItinerary(ctx, userID, itineraryID) // Assumes GetItinerary checks ownership
 	}
 
 	updatedItinerary, err := s.poiRepository.UpdateItinerary(ctx, userID, itineraryID, updates)
 	if err != nil {
-		s.logger.ErrorContext(ctx, "Repository failed to update itinerary", slog.Any("error", err))
+		s.logger.Error("Repository failed to update itinerary", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, err // Propagate error (could be not found, or DB error)
 	}
@@ -359,11 +440,11 @@ func (s *ServiceImpl) AddItineraryToBookmarks(ctx context.Context, userID, itine
 	))
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "Service: Adding itinerary to bookmarks", slog.String("userID", userID.String()), slog.String("itineraryID", itineraryID.String()))
+	s.logger.Debug("Service: Adding itinerary to bookmarks", zap.String("userID", userID.String()), zap.String("itineraryID", itineraryID.String()))
 
 	bookmarkID, err := s.poiRepository.AddItineraryToBookmarks(ctx, userID, itineraryID)
 	if err != nil {
-		s.logger.ErrorContext(ctx, "Repository failed to add itinerary to bookmarks", slog.Any("error", err))
+		s.logger.Error("Repository failed to add itinerary to bookmarks", zap.Any("error", err))
 		span.RecordError(err)
 		return uuid.Nil, err
 	}
@@ -380,11 +461,11 @@ func (s *ServiceImpl) SearchPOIsSemantic(ctx context.Context, query string, limi
 	))
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "SearchPOIsSemantic"))
+	l := s.logger.With(zap.String("method", "SearchPOIsSemantic"))
 
 	if s.embeddingService == nil {
 		err := fmt.Errorf("embedding service not available")
-		l.ErrorContext(ctx, "Embedding service not initialized", slog.Any("error", err))
+		l.Error("Embedding service not initialized", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Embedding service not available")
 		return nil, err
@@ -395,9 +476,9 @@ func (s *ServiceImpl) SearchPOIsSemantic(ctx context.Context, query string, limi
 
 	// Check for exact cache hit
 	if cachedEntry, found := middleware.Cache.VectorSearch.Get(cacheKey); found {
-		l.InfoContext(ctx, "Vector cache hit (exact)",
-			slog.String("query", query),
-			slog.Int("cached_results", len(cachedEntry.Results)))
+		l.Info("Vector cache hit (exact)",
+			zap.String("query", query),
+			zap.Int("cached_results", len(cachedEntry.Results)))
 		span.SetAttributes(
 			attribute.Bool("cache.hit", true),
 			attribute.String("cache.type", "exact"),
@@ -413,15 +494,15 @@ func (s *ServiceImpl) SearchPOIsSemantic(ctx context.Context, query string, limi
 
 	if cachedEmbedding, found := middleware.Cache.Embeddings.Get(embeddingKey); found {
 		queryEmbedding = cachedEmbedding
-		l.DebugContext(ctx, "Query embedding retrieved from cache", slog.String("query", query))
+		l.Debug("Query embedding retrieved from cache", zap.String("query", query))
 		span.SetAttributes(attribute.Bool("embedding.cached", true))
 	} else {
 		// Generate embedding for the query
 		queryEmbedding, err = s.embeddingService.GenerateQueryEmbedding(ctx, query)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to generate query embedding",
-				slog.Any("error", err),
-				slog.String("query", query))
+			l.Error("Failed to generate query embedding",
+				zap.Any("error", err),
+				zap.String("query", query))
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to generate query embedding")
 			return nil, fmt.Errorf("failed to generate query embedding: %w", err)
@@ -434,11 +515,11 @@ func (s *ServiceImpl) SearchPOIsSemantic(ctx context.Context, query string, limi
 
 	// Check for semantic cache hit (similar queries)
 	if cachedEntry, similarity, found := middleware.Cache.VectorSearch.GetSimilar(queryEmbedding, "", nil); found {
-		l.InfoContext(ctx, "Vector cache hit (semantic)",
-			slog.String("query", query),
-			slog.String("cached_query", cachedEntry.QueryText),
-			slog.Float64("similarity", similarity),
-			slog.Int("cached_results", len(cachedEntry.Results)))
+		l.Info("Vector cache hit (semantic)",
+			zap.String("query", query),
+			zap.String("cached_query", cachedEntry.QueryText),
+			zap.Float64("similarity", similarity),
+			zap.Int("cached_results", len(cachedEntry.Results)))
 		span.SetAttributes(
 			attribute.Bool("cache.hit", true),
 			attribute.String("cache.type", "semantic"),
@@ -449,13 +530,13 @@ func (s *ServiceImpl) SearchPOIsSemantic(ctx context.Context, query string, limi
 	}
 
 	// Cache miss - perform actual vector search
-	l.DebugContext(ctx, "Vector cache miss, performing database search", slog.String("query", query))
+	l.Debug("Vector cache miss, performing database search", zap.String("query", query))
 	span.SetAttributes(attribute.Bool("cache.hit", false))
 
 	// Search for similar POIs
 	pois, err := s.poiRepository.FindSimilarPOIs(ctx, queryEmbedding, limit)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to find similar POIs", slog.Any("error", err))
+		l.Error("Failed to find similar POIs", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to find similar POIs")
 		return nil, fmt.Errorf("failed to find similar POIs: %w", err)
@@ -471,9 +552,9 @@ func (s *ServiceImpl) SearchPOIsSemantic(ctx context.Context, query string, limi
 	}
 	middleware.Cache.VectorSearch.Set(cacheKey, cacheEntry)
 
-	l.InfoContext(ctx, "Semantic search completed",
-		slog.String("query", query),
-		slog.Int("results", len(pois)))
+	l.Info("Semantic search completed",
+		zap.String("query", query),
+		zap.Int("results", len(pois)))
 	span.SetAttributes(
 		attribute.String("query", query),
 		attribute.Int("results.count", len(pois)),
@@ -492,11 +573,11 @@ func (s *ServiceImpl) SearchPOIsSemanticByCity(ctx context.Context, query string
 	))
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "SearchPOIsSemanticByCity"))
+	l := s.logger.With(zap.String("method", "SearchPOIsSemanticByCity"))
 
 	if s.embeddingService == nil {
 		err := fmt.Errorf("embedding service not available")
-		l.ErrorContext(ctx, "Embedding service not initialized", slog.Any("error", err))
+		l.Error("Embedding service not initialized", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Embedding service not available")
 		return nil, err
@@ -507,10 +588,10 @@ func (s *ServiceImpl) SearchPOIsSemanticByCity(ctx context.Context, query string
 
 	// Check for exact cache hit
 	if cachedEntry, found := middleware.Cache.VectorSearch.Get(cacheKey); found {
-		l.InfoContext(ctx, "Vector cache hit (exact) for city",
-			slog.String("query", query),
-			slog.String("city_id", cityID.String()),
-			slog.Int("cached_results", len(cachedEntry.Results)))
+		l.Info("Vector cache hit (exact) for city",
+			zap.String("query", query),
+			zap.String("city_id", cityID.String()),
+			zap.Int("cached_results", len(cachedEntry.Results)))
 		span.SetAttributes(
 			attribute.Bool("cache.hit", true),
 			attribute.String("cache.type", "exact"),
@@ -526,17 +607,17 @@ func (s *ServiceImpl) SearchPOIsSemanticByCity(ctx context.Context, query string
 
 	if cachedEmbedding, found := middleware.Cache.Embeddings.Get(embeddingKey); found {
 		queryEmbedding = cachedEmbedding
-		l.DebugContext(ctx, "Query embedding retrieved from cache",
-			slog.String("query", query),
-			slog.String("city_id", cityID.String()))
+		l.Debug("Query embedding retrieved from cache",
+			zap.String("query", query),
+			zap.String("city_id", cityID.String()))
 		span.SetAttributes(attribute.Bool("embedding.cached", true))
 	} else {
 		// Generate embedding for the query
 		queryEmbedding, err = s.embeddingService.GenerateQueryEmbedding(ctx, query)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to generate query embedding",
-				slog.Any("error", err),
-				slog.String("query", query))
+			l.Error("Failed to generate query embedding",
+				zap.Any("error", err),
+				zap.String("query", query))
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to generate query embedding")
 			return nil, fmt.Errorf("failed to generate query embedding: %w", err)
@@ -549,12 +630,12 @@ func (s *ServiceImpl) SearchPOIsSemanticByCity(ctx context.Context, query string
 
 	// Check for semantic cache hit (similar queries in same city)
 	if cachedEntry, similarity, found := middleware.Cache.VectorSearch.GetSimilar(queryEmbedding, cityID.String(), nil); found {
-		l.InfoContext(ctx, "Vector cache hit (semantic) for city",
-			slog.String("query", query),
-			slog.String("cached_query", cachedEntry.QueryText),
-			slog.String("city_id", cityID.String()),
-			slog.Float64("similarity", similarity),
-			slog.Int("cached_results", len(cachedEntry.Results)))
+		l.Info("Vector cache hit (semantic) for city",
+			zap.String("query", query),
+			zap.String("cached_query", cachedEntry.QueryText),
+			zap.String("city_id", cityID.String()),
+			zap.Float64("similarity", similarity),
+			zap.Int("cached_results", len(cachedEntry.Results)))
 		span.SetAttributes(
 			attribute.Bool("cache.hit", true),
 			attribute.String("cache.type", "semantic"),
@@ -565,15 +646,15 @@ func (s *ServiceImpl) SearchPOIsSemanticByCity(ctx context.Context, query string
 	}
 
 	// Cache miss - perform actual vector search
-	l.DebugContext(ctx, "Vector cache miss for city, performing database search",
-		slog.String("query", query),
-		slog.String("city_id", cityID.String()))
+	l.Debug("Vector cache miss for city, performing database search",
+		zap.String("query", query),
+		zap.String("city_id", cityID.String()))
 	span.SetAttributes(attribute.Bool("cache.hit", false))
 
 	// Search for similar POIs in the specified city
 	pois, err := s.poiRepository.FindSimilarPOIsByCity(ctx, queryEmbedding, cityID, limit)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to find similar POIs by city", slog.Any("error", err))
+		l.Error("Failed to find similar POIs by city", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to find similar POIs by city")
 		return nil, fmt.Errorf("failed to find similar POIs by city: %w", err)
@@ -589,10 +670,10 @@ func (s *ServiceImpl) SearchPOIsSemanticByCity(ctx context.Context, query string
 	}
 	middleware.Cache.VectorSearch.Set(cacheKey, cacheEntry)
 
-	l.InfoContext(ctx, "Semantic search by city completed",
-		slog.String("query", query),
-		slog.String("city_id", cityID.String()),
-		slog.Int("results", len(pois)))
+	l.Info("Semantic search by city completed",
+		zap.String("query", query),
+		zap.String("city_id", cityID.String()),
+		zap.Int("results", len(pois)))
 	span.SetAttributes(
 		attribute.String("query", query),
 		attribute.String("city.id", cityID.String()),
@@ -614,11 +695,11 @@ func (s *ServiceImpl) SearchPOIsHybrid(ctx context.Context, filter models.POIFil
 	))
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "SearchPOIsHybrid"))
+	l := s.logger.With(zap.String("method", "SearchPOIsHybrid"))
 
 	if s.embeddingService == nil {
 		err := fmt.Errorf("embedding service not available")
-		l.ErrorContext(ctx, "Embedding service not initialized", slog.Any("error", err))
+		l.Error("Embedding service not initialized", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Embedding service not available")
 		return nil, err
@@ -627,7 +708,7 @@ func (s *ServiceImpl) SearchPOIsHybrid(ctx context.Context, filter models.POIFil
 	// Validate semantic weight
 	if semanticWeight < 0 || semanticWeight > 1 {
 		err := fmt.Errorf("semantic weight must be between 0 and 1, got: %f", semanticWeight)
-		l.ErrorContext(ctx, "Invalid semantic weight", slog.Float64("semantic_weight", semanticWeight))
+		l.Error("Invalid semantic weight", zap.Float64("semantic_weight", semanticWeight))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Invalid semantic weight")
 		return nil, err
@@ -647,10 +728,10 @@ func (s *ServiceImpl) SearchPOIsHybrid(ctx context.Context, filter models.POIFil
 
 	// Check for exact cache hit
 	if cachedEntry, found := middleware.Cache.VectorSearch.Get(cacheKey); found {
-		l.InfoContext(ctx, "Vector cache hit (exact) for hybrid search",
-			slog.String("query", query),
-			slog.Float64("semantic_weight", semanticWeight),
-			slog.Int("cached_results", len(cachedEntry.Results)))
+		l.Info("Vector cache hit (exact) for hybrid search",
+			zap.String("query", query),
+			zap.Float64("semantic_weight", semanticWeight),
+			zap.Int("cached_results", len(cachedEntry.Results)))
 		span.SetAttributes(
 			attribute.Bool("cache.hit", true),
 			attribute.String("cache.type", "exact"),
@@ -666,16 +747,16 @@ func (s *ServiceImpl) SearchPOIsHybrid(ctx context.Context, filter models.POIFil
 
 	if cachedEmbedding, found := middleware.Cache.Embeddings.Get(embeddingKey); found {
 		queryEmbedding = cachedEmbedding
-		l.DebugContext(ctx, "Query embedding retrieved from cache for hybrid search",
-			slog.String("query", query))
+		l.Debug("Query embedding retrieved from cache for hybrid search",
+			zap.String("query", query))
 		span.SetAttributes(attribute.Bool("embedding.cached", true))
 	} else {
 		// Generate embedding for the query
 		queryEmbedding, err = s.embeddingService.GenerateQueryEmbedding(ctx, query)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to generate query embedding",
-				slog.Any("error", err),
-				slog.String("query", query))
+			l.Error("Failed to generate query embedding",
+				zap.Any("error", err),
+				zap.String("query", query))
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to generate query embedding")
 			return nil, fmt.Errorf("failed to generate query embedding: %w", err)
@@ -688,12 +769,12 @@ func (s *ServiceImpl) SearchPOIsHybrid(ctx context.Context, filter models.POIFil
 
 	// Check for semantic cache hit (similar queries with matching params)
 	if cachedEntry, similarity, found := middleware.Cache.VectorSearch.GetSimilar(queryEmbedding, "", searchParams); found {
-		l.InfoContext(ctx, "Vector cache hit (semantic) for hybrid search",
-			slog.String("query", query),
-			slog.String("cached_query", cachedEntry.QueryText),
-			slog.Float64("similarity", similarity),
-			slog.Float64("semantic_weight", semanticWeight),
-			slog.Int("cached_results", len(cachedEntry.Results)))
+		l.Info("Vector cache hit (semantic) for hybrid search",
+			zap.String("query", query),
+			zap.String("cached_query", cachedEntry.QueryText),
+			zap.Float64("similarity", similarity),
+			zap.Float64("semantic_weight", semanticWeight),
+			zap.Int("cached_results", len(cachedEntry.Results)))
 		span.SetAttributes(
 			attribute.Bool("cache.hit", true),
 			attribute.String("cache.type", "semantic"),
@@ -704,15 +785,15 @@ func (s *ServiceImpl) SearchPOIsHybrid(ctx context.Context, filter models.POIFil
 	}
 
 	// Cache miss - perform actual hybrid search
-	l.DebugContext(ctx, "Vector cache miss for hybrid search, performing database search",
-		slog.String("query", query),
-		slog.Float64("semantic_weight", semanticWeight))
+	l.Debug("Vector cache miss for hybrid search, performing database search",
+		zap.String("query", query),
+		zap.Float64("semantic_weight", semanticWeight))
 	span.SetAttributes(attribute.Bool("cache.hit", false))
 
 	// Perform hybrid search
 	pois, err := s.poiRepository.SearchPOIsHybrid(ctx, filter, queryEmbedding, semanticWeight)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to perform hybrid search", slog.Any("error", err))
+		l.Error("Failed to perform hybrid search", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to perform hybrid search")
 		return nil, fmt.Errorf("failed to perform hybrid search: %w", err)
@@ -728,10 +809,10 @@ func (s *ServiceImpl) SearchPOIsHybrid(ctx context.Context, filter models.POIFil
 	}
 	middleware.Cache.VectorSearch.Set(cacheKey, cacheEntry)
 
-	l.InfoContext(ctx, "Hybrid search completed",
-		slog.String("query", query),
-		slog.Float64("semantic_weight", semanticWeight),
-		slog.Int("results", len(pois)))
+	l.Info("Hybrid search completed",
+		zap.String("query", query),
+		zap.Float64("semantic_weight", semanticWeight),
+		zap.Int("results", len(pois)))
 	span.SetAttributes(
 		attribute.String("query", query),
 		attribute.Float64("semantic.weight", semanticWeight),
@@ -749,11 +830,11 @@ func (s *ServiceImpl) GenerateEmbeddingForPOI(ctx context.Context, poiID uuid.UU
 	))
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "GenerateEmbeddingForPOI"))
+	l := s.logger.With(zap.String("method", "GenerateEmbeddingForPOI"))
 
 	if s.embeddingService == nil {
 		err := fmt.Errorf("embedding service not available")
-		l.ErrorContext(ctx, "Embedding service not initialized", slog.Any("error", err))
+		l.Error("Embedding service not initialized", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Embedding service not available")
 		return err
@@ -762,14 +843,14 @@ func (s *ServiceImpl) GenerateEmbeddingForPOI(ctx context.Context, poiID uuid.UU
 	// Get POI details to generate embedding
 	pois, err := s.poiRepository.GetPOIsWithoutEmbeddings(ctx, 1)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to get POI details", slog.Any("error", err))
+		l.Error("Failed to get POI details", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to get POI details")
 		return fmt.Errorf("failed to get POI details: %w", err)
 	}
 
 	if len(pois) == 0 {
-		l.InfoContext(ctx, "No POI found for embedding generation", slog.String("poi_id", poiID.String()))
+		l.Info("No POI found for embedding generation", zap.String("poi_id", poiID.String()))
 		span.SetStatus(codes.Ok, "No POI found")
 		return fmt.Errorf("POI not found or already has embedding")
 	}
@@ -779,9 +860,9 @@ func (s *ServiceImpl) GenerateEmbeddingForPOI(ctx context.Context, poiID uuid.UU
 	// Generate embedding using POI information
 	embedding, err := s.embeddingService.GeneratePOIEmbedding(ctx, poi.Name, poi.DescriptionPOI, poi.Category)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to generate POI embedding",
-			slog.Any("error", err),
-			slog.String("poi_id", poiID.String()))
+		l.Error("Failed to generate POI embedding",
+			zap.Any("error", err),
+			zap.String("poi_id", poiID.String()))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to generate POI embedding")
 		return fmt.Errorf("failed to generate POI embedding: %w", err)
@@ -790,17 +871,17 @@ func (s *ServiceImpl) GenerateEmbeddingForPOI(ctx context.Context, poiID uuid.UU
 	// Update POI with generated embedding
 	err = s.poiRepository.UpdatePOIEmbedding(ctx, poiID, embedding)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to update POI embedding",
-			slog.Any("error", err),
-			slog.String("poi_id", poiID.String()))
+		l.Error("Failed to update POI embedding",
+			zap.Any("error", err),
+			zap.String("poi_id", poiID.String()))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to update POI embedding")
 		return fmt.Errorf("failed to update POI embedding: %w", err)
 	}
 
-	l.InfoContext(ctx, "POI embedding generated and stored successfully",
-		slog.String("poi_id", poiID.String()),
-		slog.String("poi_name", poi.Name))
+	l.Info("POI embedding generated and stored successfully",
+		zap.String("poi_id", poiID.String()),
+		zap.String("poi_name", poi.Name))
 	span.SetAttributes(
 		attribute.String("poi.id", poiID.String()),
 		attribute.String("poi.name", poi.Name),
@@ -817,11 +898,11 @@ func (s *ServiceImpl) GenerateEmbeddingsForAllPOIs(ctx context.Context, batchSiz
 	))
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "GenerateEmbeddingsForAllPOIs"))
+	l := s.logger.With(zap.String("method", "GenerateEmbeddingsForAllPOIs"))
 
 	if s.embeddingService == nil {
 		err := fmt.Errorf("embedding service not available")
-		l.ErrorContext(ctx, "Embedding service not initialized", slog.Any("error", err))
+		l.Error("Embedding service not initialized", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Embedding service not available")
 		return err
@@ -838,7 +919,7 @@ func (s *ServiceImpl) GenerateEmbeddingsForAllPOIs(ctx context.Context, batchSiz
 		// Get batch of POIs without embeddings
 		pois, err := s.poiRepository.GetPOIsWithoutEmbeddings(ctx, batchSize)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to get POIs without embeddings", slog.Any("error", err))
+			l.Error("Failed to get POIs without embeddings", zap.Any("error", err))
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to get POIs without embeddings")
 			return fmt.Errorf("failed to get POIs without embeddings: %w", err)
@@ -849,17 +930,17 @@ func (s *ServiceImpl) GenerateEmbeddingsForAllPOIs(ctx context.Context, batchSiz
 			break
 		}
 
-		l.InfoContext(ctx, "Processing batch of POIs", slog.Int("batch_size", len(pois)))
+		l.Info("Processing batch of POIs", zap.Int("batch_size", len(pois)))
 
 		// Process each POI in the batch
 		for _, poi := range pois {
 			// Generate embedding
 			embedding, err := s.embeddingService.GeneratePOIEmbedding(ctx, poi.Name, poi.DescriptionPOI, poi.Category)
 			if err != nil {
-				l.ErrorContext(ctx, "Failed to generate embedding for POI",
-					slog.Any("error", err),
-					slog.String("poi_id", poi.ID.String()),
-					slog.String("poi_name", poi.Name))
+				l.Error("Failed to generate embedding for POI",
+					zap.Any("error", err),
+					zap.String("poi_id", poi.ID.String()),
+					zap.String("poi_name", poi.Name))
 				totalErrors++
 				continue
 			}
@@ -867,18 +948,18 @@ func (s *ServiceImpl) GenerateEmbeddingsForAllPOIs(ctx context.Context, batchSiz
 			// Update POI with embedding
 			err = s.poiRepository.UpdatePOIEmbedding(ctx, poi.ID, embedding)
 			if err != nil {
-				l.ErrorContext(ctx, "Failed to update POI embedding",
-					slog.Any("error", err),
-					slog.String("poi_id", poi.ID.String()),
-					slog.String("poi_name", poi.Name))
+				l.Error("Failed to update POI embedding",
+					zap.Any("error", err),
+					zap.String("poi_id", poi.ID.String()),
+					zap.String("poi_name", poi.Name))
 				totalErrors++
 				continue
 			}
 
 			totalProcessed++
-			l.DebugContext(ctx, "POI embedding generated successfully",
-				slog.String("poi_id", poi.ID.String()),
-				slog.String("poi_name", poi.Name))
+			l.Debug("POI embedding generated successfully",
+				zap.String("poi_id", poi.ID.String()),
+				zap.String("poi_name", poi.Name))
 		}
 
 		// Break if we processed fewer POIs than the batch size (end of data)
@@ -887,9 +968,9 @@ func (s *ServiceImpl) GenerateEmbeddingsForAllPOIs(ctx context.Context, batchSiz
 		}
 	}
 
-	l.InfoContext(ctx, "Batch embedding generation completed",
-		slog.Int("total_processed", totalProcessed),
-		slog.Int("total_errors", totalErrors))
+	l.Info("Batch embedding generation completed",
+		zap.Int("total_processed", totalProcessed),
+		zap.Int("total_errors", totalErrors))
 	span.SetAttributes(
 		attribute.Int("total.processed", totalProcessed),
 		attribute.Int("total.errors", totalErrors),
@@ -913,12 +994,17 @@ func (s *ServiceImpl) GetGeneralPOIByDistance(ctx context.Context, userID uuid.U
 
 	if cached, found := s.cache.Get(cacheKey); found {
 		if pois, ok := cached.([]models.POIDetailedInfo); ok {
-			s.logger.InfoContext(ctx, "Serving POIs from cache", "key", cacheKey)
+			s.logger.Info("Serving POIs from cache", zap.String("key", cacheKey))
 			return pois, nil
 		}
 	}
 
-	s.logger.InfoContext(ctx, "Cache miss. Querying POIs from database.", "lat", lat, "lon", lon, "distance_m", distance)
+	s.logger.Info("Cache miss. Querying POIs from database.",
+		zap.Float64("lat", lat),
+		zap.Float64("lon", lon),
+		zap.Float64("distance", distance),
+	)
+
 	poisFromDB, err := s.poiRepository.GetPOIsByLocationAndDistance(ctx, lat, lon, distance)
 	if err == nil && len(poisFromDB) > 0 {
 		for i := range poisFromDB {
@@ -928,7 +1014,7 @@ func (s *ServiceImpl) GetGeneralPOIByDistance(ctx context.Context, userID uuid.U
 		return poisFromDB, nil
 	}
 
-	s.logger.InfoContext(ctx, "No POIs found in database, falling back to LLM generation")
+	s.logger.Info("No POIs found in database, falling back to LLM generation")
 	span.AddEvent("database_miss_fallback_to_llm")
 
 	genAIResponse, err := s.generatePOIsFromLLM(ctx, userID, lat, lon, distance)
@@ -955,13 +1041,13 @@ func (s *ServiceImpl) GetGeneralPOIByDistance(ctx context.Context, userID uuid.U
 
 		llmInteractionID, err := s.poiRepository.SaveLlmInteraction(ctx, interaction)
 		if err != nil {
-			s.logger.ErrorContext(ctx, "Failed to save LLM interaction", slog.Any("error", err))
+			s.logger.Error("Failed to save LLM interaction", zap.Any("error", err))
 			return nil, err
 		}
 
 		// Synchronous save to ensure POIs are available immediately
 		if err := s.poiRepository.SaveLlmPoisToDatabase(ctx, userID, enrichedPOIs, genAIResponse, llmInteractionID); err != nil {
-			s.logger.WarnContext(ctx, "Failed to save LLM POIs to database", slog.Any("error", err))
+			s.logger.Warn("Failed to save LLM POIs to database", zap.Any("error", err))
 		}
 	}
 
@@ -1109,12 +1195,19 @@ func (s *ServiceImpl) FindOrCreateLLMPOI(ctx context.Context, poiData *models.PO
 	// First, try to find existing POI by name and city
 	id, err := s.poiRepository.FindLLMPOIByNameAndCity(ctx, poiData.Name, poiData.City)
 	if err == nil && id != uuid.Nil {
-		s.logger.InfoContext(ctx, "Found existing LLM POI", "name", poiData.Name, "id", id)
+		s.logger.Info("Found existing LLM POI",
+			zap.String("name", poiData.Name),
+			zap.String("id", id.String()),
+		)
 		span.SetAttributes(attribute.String("operation", "found_existing"))
 		return id, nil
 	}
 
-	s.logger.InfoContext(ctx, "Created new LLM POI", "name", poiData.Name, "id", id)
+	s.logger.Info("Created new LLM POI",
+		zap.String("name", poiData.Name),
+		zap.String("city", poiData.City),
+		zap.String("id", poiData.ID.String()),
+	)
 	span.SetAttributes(attribute.String("operation", "created_new"))
 	return id, nil
 }
@@ -1148,12 +1241,16 @@ func (s *ServiceImpl) GetNearbyRestaurants(ctx context.Context, userID uuid.UUID
 
 	if cached, found := s.cache.Get(cacheKey); found {
 		if pois, ok := cached.([]models.POIDetailedInfo); ok {
-			s.logger.InfoContext(ctx, "Serving restaurants from cache", "key", cacheKey)
+			s.logger.Info("Serving restaurants from cache",
+				zap.String("cache_key", cacheKey))
 			return pois, nil
 		}
 	}
 
-	s.logger.InfoContext(ctx, "Querying restaurants from database", "lat", lat, "lon", lon, "distance", distance)
+	s.logger.Info("Querying restaurants from database",
+		zap.Float64("location.lat", lat),
+		zap.Float64("location.lon", lon),
+		zap.Float64("distance", distance))
 
 	// Get restaurants from database with filters
 	restaurants, err := s.poiRepository.GetPOIsByLocationAndDistanceWithCategory(ctx, lat, lon, distance, "restaurant")
@@ -1170,7 +1267,7 @@ func (s *ServiceImpl) GetNearbyRestaurants(ctx context.Context, userID uuid.UUID
 		return filteredRestaurants, nil
 	}
 
-	s.logger.InfoContext(ctx, "No restaurants found in database, falling back to LLM generation")
+	s.logger.Info("No restaurants found in database, falling back to LLM generation")
 
 	// Generate restaurants using LLM with domain-specific prompt
 	genAIResponse, err := s.generateRestaurantsFromLLM(ctx, userID, lat, lon, distance, cuisineType, priceRange)
@@ -1204,12 +1301,16 @@ func (s *ServiceImpl) GetNearbyActivities(ctx context.Context, userID uuid.UUID,
 
 	if cached, found := s.cache.Get(cacheKey); found {
 		if pois, ok := cached.([]models.POIDetailedInfo); ok {
-			s.logger.InfoContext(ctx, "Serving activities from cache", "key", cacheKey)
+			s.logger.Info("Serving activities from cache",
+				zap.String("cache_key", cacheKey))
 			return pois, nil
 		}
 	}
 
-	s.logger.InfoContext(ctx, "Querying activities from database", "lat", lat, "lon", lon, "distance", distance)
+	s.logger.Info("Querying activities from database",
+		zap.Float64("location.lat", lat),
+		zap.Float64("location.lon", lon),
+		zap.Float64("distance", distance))
 
 	// Get activities from database with filters
 	activities, err := s.poiRepository.GetPOIsByLocationAndDistanceWithCategory(ctx, lat, lon, distance, "activity")
@@ -1226,7 +1327,7 @@ func (s *ServiceImpl) GetNearbyActivities(ctx context.Context, userID uuid.UUID,
 		return filteredActivities, nil
 	}
 
-	s.logger.InfoContext(ctx, "No activities found in database, falling back to LLM generation")
+	s.logger.Info("No activities found in database, falling back to LLM generation")
 
 	// Generate activities using LLM with domain-specific prompt
 	genAIResponse, err := s.generateActivitiesFromLLM(ctx, userID, lat, lon, distance, activityType, duration)
@@ -1260,12 +1361,16 @@ func (s *ServiceImpl) GetNearbyHotels(ctx context.Context, userID uuid.UUID, lat
 
 	if cached, found := s.cache.Get(cacheKey); found {
 		if pois, ok := cached.([]models.POIDetailedInfo); ok {
-			s.logger.InfoContext(ctx, "Serving hotels from cache", "key", cacheKey)
+			s.logger.Info("Serving hotels from cache",
+				zap.String("cache_key", cacheKey))
 			return pois, nil
 		}
 	}
 
-	s.logger.InfoContext(ctx, "Querying hotels from database", "lat", lat, "lon", lon, "distance", distance)
+	s.logger.Info("Querying hotels from database",
+		zap.Float64("location.lat", lat),
+		zap.Float64("location.lon", lon),
+		zap.Float64("distance", distance))
 
 	// Get hotels from database with filters
 	hotels, err := s.poiRepository.GetPOIsByLocationAndDistanceWithCategory(ctx, lat, lon, distance, "hotel")
@@ -1282,7 +1387,7 @@ func (s *ServiceImpl) GetNearbyHotels(ctx context.Context, userID uuid.UUID, lat
 		return filteredHotels, nil
 	}
 
-	s.logger.InfoContext(ctx, "No hotels found in database, falling back to LLM generation")
+	s.logger.Info("No hotels found in database, falling back to LLM generation")
 
 	// Generate hotels using LLM with domain-specific prompt
 	genAIResponse, err := s.generateHotelsFromLLM(ctx, userID, lat, lon, distance, starRating, amenities)
@@ -1316,12 +1421,16 @@ func (s *ServiceImpl) GetNearbyAttractions(ctx context.Context, userID uuid.UUID
 
 	if cached, found := s.cache.Get(cacheKey); found {
 		if pois, ok := cached.([]models.POIDetailedInfo); ok {
-			s.logger.InfoContext(ctx, "Serving attractions from cache", "key", cacheKey)
+			s.logger.Info("Serving attractions from cache",
+				zap.String("cache_key", cacheKey))
 			return pois, nil
 		}
 	}
 
-	s.logger.InfoContext(ctx, "Querying attractions from database", "lat", lat, "lon", lon, "distance", distance)
+	s.logger.Info("Querying attractions from database",
+		zap.Float64("location.lat", lat),
+		zap.Float64("location.lon", lon),
+		zap.Float64("distance", distance))
 
 	// Get attractions from database with filters
 	attractions, err := s.poiRepository.GetPOIsByLocationAndDistanceWithCategory(ctx, lat, lon, distance, "attraction")
@@ -1338,7 +1447,7 @@ func (s *ServiceImpl) GetNearbyAttractions(ctx context.Context, userID uuid.UUID
 		return filteredAttractions, nil
 	}
 
-	s.logger.InfoContext(ctx, "No attractions found in database, falling back to LLM generation")
+	s.logger.Info("No attractions found in database, falling back to LLM generation")
 
 	// Generate attractions using LLM with domain-specific prompt
 	genAIResponse, err := s.generateAttractionsFromLLM(ctx, userID, lat, lon, distance, attractionType, isOutdoor)
@@ -1995,9 +2104,9 @@ func (s *ServiceImpl) RemoveItineraryFromBookmarks(ctx context.Context, userID, 
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		s.logger.Error("Failed to remove itinerary from bookmarks",
-			slog.String("user_id", userID.String()),
-			slog.String("itinerary_id", itineraryID.String()),
-			slog.Any("error", err))
+			zap.String("user_id", userID.String()),
+			zap.String("itinerary_id", itineraryID.String()),
+			zap.Any("error", err))
 		return fmt.Errorf("failed to remove itinerary from bookmarks: %w", err)
 	}
 
@@ -2008,10 +2117,19 @@ func (s *ServiceImpl) RemoveItineraryFromBookmarks(ctx context.Context, userID, 
 	span.SetStatus(codes.Ok, "Bookmark removed successfully")
 
 	s.logger.Info("Itinerary removed from bookmarks",
-		slog.String("user_id", userID.String()),
-		slog.String("itinerary_id", itineraryID.String()))
+		zap.String("user_id", userID.String()),
+		zap.String("itinerary_id", itineraryID.String()))
 
 	return nil
+}
+
+func (s *ServiceImpl) CheckIsBookmarked(ctx context.Context, userID, itineraryID uuid.UUID) (bool, error) {
+	isBookmarked, err := s.poiRepository.CheckIsBookmarked(ctx, userID, itineraryID)
+	if err != nil {
+		s.logger.Error("failed to check if itinerary is bookmarked", zap.Error(err))
+		return false, err
+	}
+	return isBookmarked, nil
 }
 
 // GetBookmarksFiltered retrieves bookmarked itineraries with search and filter support
@@ -2032,8 +2150,8 @@ func (s *ServiceImpl) GetBookmarksFiltered(ctx context.Context, filter models.Bo
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		s.logger.Error("Failed to get filtered bookmarks",
-			slog.String("user_id", filter.UserID.String()),
-			slog.Any("error", err))
+			zap.String("user_id", filter.UserID.String()),
+			zap.Any("error", err))
 		return nil, 0, fmt.Errorf("failed to get bookmarks: %w", err)
 	}
 
@@ -2047,9 +2165,9 @@ func (s *ServiceImpl) GetBookmarksFiltered(ctx context.Context, filter models.Bo
 	span.SetStatus(codes.Ok, "Bookmarks retrieved successfully")
 
 	s.logger.Info("Retrieved filtered bookmarks",
-		slog.String("user_id", filter.UserID.String()),
-		slog.Int("total", total),
-		slog.Int("returned", len(itineraries)))
+		zap.String("user_id", filter.UserID.String()),
+		zap.Int("total", total),
+		zap.Int("returned", len(itineraries)))
 
 	return itineraries, total, nil
 }

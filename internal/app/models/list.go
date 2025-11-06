@@ -21,7 +21,7 @@ import (
 //	SaveCount   int       `json:"save_count" db:"save_count"`
 //}
 
-// ContentType represents the type of content in a list item
+// ContentType represents the type of content in a lists item
 //type ContentType string
 //
 //const (
@@ -31,7 +31,7 @@ import (
 //	ContentTypeItinerary  ContentType = "itinerary"
 //)
 
-// ListItem represents any type of content in a list, with optional ordering for itineraries
+// ListItem represents any type of content in a lists, with optional ordering for itineraries
 //type ListItem struct {
 //	ListID                 uuid.UUID   `json:"list_id" db:"list_id"`
 //	ItemID                 uuid.UUID   `json:"item_id" db:"item_id"`
@@ -50,14 +50,14 @@ import (
 //	POIID *uuid.UUID `json:"poi_id,omitempty" db:"-"`
 //}
 
-// SavedList represents a user saving another user's public list
+// SavedList represents a user saving another user's public lists
 type SavedList struct {
 	UserID  uuid.UUID `json:"user_id" db:"user_id"`
 	ListID  uuid.UUID `json:"list_id" db:"list_id"`
 	SavedAt time.Time `json:"saved_at" db:"saved_at"`
 }
 
-// NewList creates a new list with default values
+// NewList creates a new lists with default values
 func NewList(userID uuid.UUID, name, description string, isPublic, isItinerary bool, cityID *uuid.UUID) *List {
 	return &List{
 		Base: Base{
@@ -77,7 +77,7 @@ func NewList(userID uuid.UUID, name, description string, isPublic, isItinerary b
 	}
 }
 
-// NewListItem creates a new list item with generic content type
+// NewListItem creates a new lists item with generic content type
 func NewListItem(listID, itemID uuid.UUID, contentType ContentType, position int, notes string) *ListItem {
 	now := time.Now()
 	item := &ListItem{
@@ -98,12 +98,12 @@ func NewListItem(listID, itemID uuid.UUID, contentType ContentType, position int
 	return item
 }
 
-// NewPOIListItem creates a new POI list item (backward compatibility)
+// NewPOIListItem creates a new POI lists item (backward compatibility)
 func NewPOIListItem(listID, poiID uuid.UUID, position int, notes string) *ListItem {
 	return NewListItem(listID, poiID, ContentTypePOI, position, notes)
 }
 
-// IsValid checks if the list item has valid content type
+// IsValid checks if the lists item has valid content type
 func (li *ListItem) IsValid() bool {
 	switch li.ContentType {
 	case ContentTypePOI, ContentTypeRestaurant, ContentTypeHotel, ContentTypeItinerary:
@@ -113,7 +113,7 @@ func (li *ListItem) IsValid() bool {
 	}
 }
 
-// NewSavedList creates a new saved list record
+// NewSavedList creates a new saved lists record
 func NewSavedList(userID, listID uuid.UUID) *SavedList {
 	return &SavedList{
 		UserID:  userID,

@@ -36,7 +36,7 @@ type RestaurantSearchParameters struct {
 
 }
 
-// PaginatedHotelResponse holds a list of hotels and pagination info
+// PaginatedHotelResponse holds a lists of hotels and pagination info
 type PaginatedHotelResponse struct {
 	Hotels       []HotelDetailedInfo `json:"hotels"`
 	TotalRecords int                 `json:"total_records"`
@@ -44,7 +44,7 @@ type PaginatedHotelResponse struct {
 	PageSize     int                 `json:"page_size"`
 }
 
-// PaginatedRestaurantResponse holds a list of restaurants and pagination info
+// PaginatedRestaurantResponse holds a lists of restaurants and pagination info
 type PaginatedRestaurantResponse struct {
 	Restaurants  []RestaurantDetailedInfo `json:"restaurants"`
 	TotalRecords int                      `json:"total_records"`

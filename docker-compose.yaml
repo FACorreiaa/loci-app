@@ -29,23 +29,24 @@ services:
 
   # === Observability Stack ===
   # OpenTelemetry Collector
-#  otel-collector:
-#    image: otel/opentelemetry-collector-contrib:latest
-#    container_name: otel-collector
-#    ports:
-#      - "4318:4318"   # OTLP HTTP receiver
-#      - "8889:8889"   # Prometheus metrics endpoint
-#    volumes:
-#      - ./app/observability/otel-collector-config.yaml:/etc/otelcol-contrib/otel-collector-config.yaml:ro
-#    command:
-#      - '--config=/etc/otelcol-contrib/otel-collector-config.yaml'
-#    networks:
-#      - microservices-net
-#    restart: unless-stopped
-#    depends_on:
-#      - prometheus
-#      - tempo
-#      - loki
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    ports:
+      - "4317:4317"
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8889:8889"   # Prometheus metrics endpoint
+    volumes:
+      - ./app/observability/otel-collector-config.yaml:/etc/otelcol-contrib/otel-collector-config.yaml:ro
+    command:
+      - '--config=/etc/otelcol-contrib/otel-collector-config.yaml'
+    networks:
+      - microservices-net
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+      - tempo
+      - loki
 
   # Prometheus for metrics collection
   prometheus:
@@ -55,6 +56,7 @@ services:
       - "9090:9090"
     volumes:
       - ./app/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./app/observability/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
       - prometheus-data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -63,6 +65,17 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
       - '--web.enable-admin-api'
+    networks:
+      - microservices-net
+    restart: unless-stopped
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./app/observability/alertmanager.yml:/etc/alertmanager/config.yml:ro
+      - alertmanager-data:/alertmanager
     networks:
       - microservices-net
     restart: unless-stopped
@@ -138,6 +151,7 @@ services:
 volumes:
   postgres-data:
   prometheus-data:
+  alertmanager-data: {}
 #  grafana-data:
 #  tempo-data:
 #  loki-data:

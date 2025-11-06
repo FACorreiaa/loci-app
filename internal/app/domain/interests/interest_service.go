@@ -3,7 +3,7 @@ package interests
 import (
 	"context"
 	"fmt"
-	"log/slog"
+	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
@@ -28,12 +28,12 @@ type interestsService interface {
 
 // interestsServiceImpl provides the implementation for interestsService.
 type interestsServiceImpl struct {
-	logger *slog.Logger
+	logger *zap.Logger
 	repo   Repository
 }
 
 // NewinterestsService creates a new user service instance.
-func NewinterestsService(repo Repository, logger *slog.Logger) *interestsServiceImpl {
+func NewinterestsService(repo Repository, logger *zap.Logger) *interestsServiceImpl {
 	return &interestsServiceImpl{
 		logger: logger,
 		repo:   repo,
@@ -48,19 +48,19 @@ func (s *interestsServiceImpl) CreateInterest(ctx context.Context, name string, 
 	))
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "Createinterests"),
-		slog.String("name", name), slog.String("description", *description))
-	l.DebugContext(ctx, "Adding user interest")
+	l := s.logger.With(zap.String("method", "Createinterests"),
+		zap.String("name", name), zap.String("description", *description))
+	l.Debug( "Adding user interest")
 
 	interest, err := s.repo.CreateInterest(ctx, name, description, isActive, userID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to add user interest", slog.Any("error", err))
+		l.Error( "Failed to add user interest", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to add user interest")
 		return nil, fmt.Errorf("error adding user interest: %w", err)
 	}
 
-	l.InfoContext(ctx, "User interest created successfully")
+	l.Info( "User interest created successfully")
 	span.SetStatus(codes.Ok, "User interest created successfully")
 	return interest, nil
 }
@@ -73,18 +73,18 @@ func (s *interestsServiceImpl) Removeinterests(ctx context.Context, userID uuid.
 	))
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "Removeinterests"), slog.String("userID", userID.String()), slog.String("interestID", interestID.String()))
-	l.DebugContext(ctx, "Removing user interest")
+	l := s.logger.With(zap.String("method", "Removeinterests"), zap.String("userID", userID.String()), zap.String("interestID", interestID.String()))
+	l.Debug( "Removing user interest")
 
 	err := s.repo.Removeinterests(ctx, userID, interestID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to remove user interest", slog.Any("error", err))
+		l.Error( "Failed to remove user interest", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to remove user interest")
 		return fmt.Errorf("error removing user interest: %w", err)
 	}
 
-	l.InfoContext(ctx, "User interest removed successfully")
+	l.Info( "User interest removed successfully")
 	span.SetStatus(codes.Ok, "User interest removed successfully")
 	return nil
 }
@@ -94,18 +94,18 @@ func (s *interestsServiceImpl) GetAllInterests(ctx context.Context) ([]*models.I
 	ctx, span := otel.Tracer("interestsService").Start(ctx, "GetAllInterests")
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "GetAllInterests"))
-	l.DebugContext(ctx, "Fetching all interests")
+	l := s.logger.With(zap.String("method", "GetAllInterests"))
+	l.Debug( "Fetching all interests")
 
 	interests, err := s.repo.GetAllInterests(ctx)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to fetch all interests", slog.Any("error", err))
+		l.Error( "Failed to fetch all interests", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to fetch all interests")
 		return nil, fmt.Errorf("error fetching all interests: %w", err)
 	}
 
-	l.InfoContext(ctx, "All interests fetched successfully", slog.Int("count", len(interests)))
+	l.Info( "All interests fetched successfully", zap.Int("count", len(interests)))
 	span.SetStatus(codes.Ok, "All interests fetched successfully")
 	return interests, nil
 }
@@ -117,12 +117,12 @@ func (s *interestsServiceImpl) Updateinterests(ctx context.Context, userID uuid.
 	))
 	defer span.End()
 
-	l := s.logger.With(slog.String("method", "Updateinterests"), slog.String("userID", userID.String()), slog.String("interestID", interestID.String()))
-	l.DebugContext(ctx, "Updating user interest")
+	l := s.logger.With(zap.String("method", "Updateinterests"), zap.String("userID", userID.String()), zap.String("interestID", interestID.String()))
+	l.Debug( "Updating user interest")
 
 	err := s.repo.Updateinterests(ctx, userID, interestID, params)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to update user interest", slog.Any("error", err))
+		l.Error( "Failed to update user interest", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to update user interest")
 		return fmt.Errorf("error updating user interest: %w", err)
@@ -137,18 +137,18 @@ func (s *interestsServiceImpl) Updateinterests(ctx context.Context, userID uuid.
 //	))
 //	defer span.End()
 //
-//	l := s.logger.With(slog.String("method", "GetUserEnhancedInterests"), slog.String("userID", userID.String()))
-//	l.DebugContext(ctx, "Fetching user enhanced interests")
+//	l := s.logger.With(zap.String("method", "GetUserEnhancedInterests"), zap.String("userID", userID.String()))
+//	l.Debug( "Fetching user enhanced interests")
 //
 //	interests, err := s.repo.GetUserEnhancedInterests(ctx, userID)
 //	if err != nil {
-//		l.ErrorContext(ctx, "Failed to fetch user enhanced interests", slog.Any("error", err))
+//		l.Error( "Failed to fetch user enhanced interests", zap.Any("error", err))
 //		span.RecordError(err)
 //		span.SetStatus(codes.Error, "Failed to fetch user enhanced interests")
 //		return nil, fmt.Errorf("error fetching user enhanced interests: %w", err)
 //	}
 //
-//	l.InfoContext(ctx, "User enhanced interests fetched successfully", slog.Int("count", len(interests)))
+//	l.Info( "User enhanced interests fetched successfully", zap.Int("count", len(interests)))
 //	span.SetStatus(codes.Ok, "User enhanced interests fetched successfully")
 //	return interests, nil
 //}

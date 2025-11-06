@@ -3,7 +3,7 @@ package services
 import (
 	"encoding/json"
 	"fmt"
-	"log/slog"
+	"go.uber.org/zap"
 	"regexp"
 	"strings"
 
@@ -19,12 +19,12 @@ func NewItineraryService() *ItineraryService {
 }
 
 // ParseCompleteItineraryResponse parses multi-part SSE response format like [city_data]...[general_pois]...[itinerary]...
-func (s *ItineraryService) ParseCompleteItineraryResponse(responseText string, logger *slog.Logger) (*models.AiCityResponse, error) {
+func (s *ItineraryService) ParseCompleteItineraryResponse(responseText string, logger *zap.Logger) (*models.AiCityResponse, error) {
 	return parseSSEFormatResponse(responseText, logger)
 }
 
 // parseSSEFormatResponse parses multi-part SSE response format like [city_data]...[general_pois]...[itinerary]...
-func parseSSEFormatResponse(responseText string, logger *slog.Logger) (*models.AiCityResponse, error) {
+func parseSSEFormatResponse(responseText string, logger *zap.Logger) (*models.AiCityResponse, error) {
 	result := &models.AiCityResponse{}
 
 	// Parse city_data section
@@ -45,15 +45,15 @@ func parseSSEFormatResponse(responseText string, logger *slog.Logger) (*models.A
 		cleanedPOIsJSON := strings.TrimSpace(poisMatch[1])
 		if err := json.Unmarshal([]byte(cleanedPOIsJSON), &poisWrapper); err == nil && len(poisWrapper.PointsOfInterest) > 0 {
 			result.PointsOfInterest = poisWrapper.PointsOfInterest
-			logger.Debug("parseSSEFormatResponse: Parsed general_pois section with wrapper", "count", len(poisWrapper.PointsOfInterest))
+			logger.Debug("parseSSEFormatResponse: Parsed general_pois section with wrapper", zap.String("count", fmt.Sprint(len(poisWrapper.PointsOfInterest))))
 		} else {
 			// Fallback: try parsing as direct array
 			var generalPOIs []models.POIDetailedInfo
 			if err := json.Unmarshal([]byte(cleanedPOIsJSON), &generalPOIs); err == nil {
 				result.PointsOfInterest = generalPOIs
-				logger.Debug("parseSSEFormatResponse: Parsed general_pois section as direct array", "count", len(generalPOIs))
+				logger.Debug("parseSSEFormatResponse: Parsed general_pois section as direct array", zap.String("count", fmt.Sprint(len(generalPOIs))))
 			} else {
-				logger.Warn("parseSSEFormatResponse: Failed to parse general_pois section", "error", err)
+				logger.Warn("parseSSEFormatResponse: Failed to parse general_pois section", zap.Error(err))
 			}
 		}
 	}
@@ -63,7 +63,7 @@ func parseSSEFormatResponse(responseText string, logger *slog.Logger) (*models.A
 		var itineraryData models.AIItineraryResponse
 		if err := json.Unmarshal([]byte(strings.TrimSpace(itineraryMatch[1])), &itineraryData); err == nil {
 			result.AIItineraryResponse = itineraryData
-			logger.Debug("parseSSEFormatResponse: Parsed itinerary section", "poisCount", len(itineraryData.PointsOfInterest))
+			logger.Debug("parseSSEFormatResponse: Parsed itinerary section", zap.String("poisCount", fmt.Sprint(len(itineraryData.PointsOfInterest))))
 		}
 	}
 
@@ -77,7 +77,7 @@ func parseSSEFormatResponse(responseText string, logger *slog.Logger) (*models.A
 }
 
 // parseCompleteItineraryResponseLegacy handles legacy format (backwards compatibility)
-func parseCompleteItineraryResponseLegacy(responseText string, logger *slog.Logger) (*models.AiCityResponse, error) {
+func parseCompleteItineraryResponseLegacy(responseText string, logger *zap.Logger) (*models.AiCityResponse, error) {
 	// Try legacy parsing methods
 	if legacyItinerary, err := parseItineraryFromResponse(responseText, logger); err == nil && legacyItinerary != nil {
 		result := &models.AiCityResponse{
@@ -92,7 +92,7 @@ func parseCompleteItineraryResponseLegacy(responseText string, logger *slog.Logg
 }
 
 // parseItineraryFromResponse parses an AIItineraryResponse from a stored LLM response (legacy function for backwards compatibility)
-func parseItineraryFromResponse(responseText string, logger *slog.Logger) (*models.AIItineraryResponse, error) {
+func parseItineraryFromResponse(responseText string, logger *zap.Logger) (*models.AIItineraryResponse, error) {
 	if responseText == "" {
 		return nil, nil
 	}
@@ -126,7 +126,7 @@ func parseItineraryFromResponse(responseText string, logger *slog.Logger) (*mode
 		return &itineraryResponse, nil
 	}
 
-	logger.Debug("parseItineraryFromResponse: Could not parse response as itinerary", "error", err)
+	logger.Debug("parseItineraryFromResponse: Could not parse response as itinerary", zap.String("error", fmt.Sprint(err)))
 	return nil, err
 }
 

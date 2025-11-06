@@ -30,7 +30,7 @@ ALTER TABLE list_items ADD CONSTRAINT list_items_pkey PRIMARY KEY (list_id, poi_
 CREATE OR REPLACE FUNCTION update_list_item_count() RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'DELETE' THEN
-        -- Update list item count when an item is deleted
+        -- Update lists item count when an item is deleted
         UPDATE lists
         SET item_count = (
             SELECT COUNT(*)
@@ -40,7 +40,7 @@ BEGIN
         WHERE id = OLD.list_id;
         RETURN OLD;
     ELSE
-        -- Update list item count when an item is inserted
+        -- Update lists item count when an item is inserted
         UPDATE lists
         SET item_count = (
             SELECT COUNT(*)

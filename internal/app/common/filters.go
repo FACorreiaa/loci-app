@@ -9,7 +9,6 @@ import (
 
 	"github.com/FACorreiaa/go-templui/internal/app/domain/results"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
-	"github.com/FACorreiaa/go-templui/internal/pkg/logger"
 	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 )
 
@@ -31,7 +30,7 @@ func (h *FilterHandlers) HandleFilterRestaurants(c *gin.Context) {
 	ratingStr := c.Query("rating")
 	features := c.QueryArray("features[]")
 
-	logger.Log.Info("Filtering restaurants",
+	h.logger.Info("Filtering restaurants",
 		zap.String("cacheKey", cacheKey),
 		zap.Strings("categories", categories),
 		zap.Strings("priceRanges", priceRanges),
@@ -40,7 +39,7 @@ func (h *FilterHandlers) HandleFilterRestaurants(c *gin.Context) {
 	// Get restaurants from cache
 	restaurantsData, found := middleware.RestaurantsCache.Get(cacheKey)
 	if !found {
-		logger.Log.Warn("No restaurants found in cache for filtering", zap.String("cacheKey", cacheKey))
+		h.logger.Warn("No restaurants found in cache for filtering", zap.String("cacheKey", cacheKey))
 		c.HTML(200, "", results.EmptyFilterResults("restaurants"))
 		return
 	}
@@ -48,7 +47,7 @@ func (h *FilterHandlers) HandleFilterRestaurants(c *gin.Context) {
 	// Apply filters
 	filtered := filterRestaurantsByCriteria(restaurantsData, categories, priceRanges, ratingStr, features)
 
-	logger.Log.Info("Restaurants filtered",
+	h.logger.Info("Restaurants filtered",
 		zap.Int("original", len(restaurantsData)),
 		zap.Int("filtered", len(filtered)))
 
@@ -64,7 +63,7 @@ func (h *FilterHandlers) HandleFilterHotels(c *gin.Context) {
 	ratingStr := c.Query("rating")
 	features := c.QueryArray("features[]")
 
-	logger.Log.Info("Filtering hotels",
+	h.logger.Info("Filtering hotels",
 		zap.String("cacheKey", cacheKey),
 		zap.Strings("categories", categories),
 		zap.Strings("priceRanges", priceRanges),
@@ -73,7 +72,7 @@ func (h *FilterHandlers) HandleFilterHotels(c *gin.Context) {
 	// Get hotels from cache
 	hotelsData, found := middleware.HotelsCache.Get(cacheKey)
 	if !found {
-		logger.Log.Warn("No hotels found in cache for filtering", zap.String("cacheKey", cacheKey))
+		h.logger.Warn("No hotels found in cache for filtering", zap.String("cacheKey", cacheKey))
 		c.HTML(200, "", results.EmptyFilterResults("hotels"))
 		return
 	}
@@ -81,7 +80,7 @@ func (h *FilterHandlers) HandleFilterHotels(c *gin.Context) {
 	// Apply filters
 	filtered := filterHotelsByCriteria(hotelsData, categories, priceRanges, ratingStr, features)
 
-	logger.Log.Info("Hotels filtered",
+	h.logger.Info("Hotels filtered",
 		zap.Int("original", len(hotelsData)),
 		zap.Int("filtered", len(filtered)))
 
@@ -97,7 +96,7 @@ func (h *FilterHandlers) HandleFilterActivities(c *gin.Context) {
 	ratingStr := c.Query("rating")
 	features := c.QueryArray("features[]")
 
-	logger.Log.Info("Filtering activities",
+	h.logger.Info("Filtering activities",
 		zap.String("cacheKey", cacheKey),
 		zap.Strings("categories", categories),
 		zap.Strings("priceRanges", priceRanges),
@@ -106,7 +105,7 @@ func (h *FilterHandlers) HandleFilterActivities(c *gin.Context) {
 	// Get activities from cache
 	activitiesData, found := middleware.ActivitiesCache.Get(cacheKey)
 	if !found {
-		logger.Log.Warn("No activities found in cache for filtering", zap.String("cacheKey", cacheKey))
+		h.logger.Warn("No activities found in cache for filtering", zap.String("cacheKey", cacheKey))
 		c.HTML(200, "", results.EmptyFilterResults("activities"))
 		return
 	}
@@ -114,7 +113,7 @@ func (h *FilterHandlers) HandleFilterActivities(c *gin.Context) {
 	// Apply filters
 	filtered := filterActivitiesByCriteria(activitiesData, categories, priceRanges, ratingStr, features)
 
-	logger.Log.Info("Activities filtered",
+	h.logger.Info("Activities filtered",
 		zap.Int("original", len(activitiesData)),
 		zap.Int("filtered", len(filtered)))
 
@@ -129,7 +128,7 @@ func (h *FilterHandlers) HandleFilterItinerary(c *gin.Context) {
 	priceRanges := c.QueryArray("priceRange[]")
 	ratingStr := c.Query("rating")
 
-	logger.Log.Info("Filtering itinerary",
+	h.logger.Info("Filtering itinerary",
 		zap.String("cacheKey", cacheKey),
 		zap.Strings("categories", categories),
 		zap.Strings("priceRanges", priceRanges),
@@ -138,7 +137,7 @@ func (h *FilterHandlers) HandleFilterItinerary(c *gin.Context) {
 	// Get complete itinerary from cache
 	completeData, found := middleware.CompleteItineraryCache.Get(cacheKey)
 	if !found {
-		logger.Log.Warn("No itinerary found in cache for filtering", zap.String("cacheKey", cacheKey))
+		h.logger.Warn("No itinerary found in cache for filtering", zap.String("cacheKey", cacheKey))
 		c.HTML(200, "", results.EmptyFilterResults("itinerary"))
 		return
 	}
@@ -146,7 +145,7 @@ func (h *FilterHandlers) HandleFilterItinerary(c *gin.Context) {
 	// Apply filters to POIs
 	filtered := filterPOIsByCriteria(completeData.PointsOfInterest, categories, priceRanges, ratingStr)
 
-	logger.Log.Info("Itinerary POIs filtered",
+	h.logger.Info("Itinerary POIs filtered",
 		zap.Int("original", len(completeData.PointsOfInterest)),
 		zap.Int("filtered", len(filtered)))
 
@@ -159,7 +158,7 @@ func (h *FilterHandlers) HandleClearFilters(c *gin.Context) {
 	domain := c.Param("domain")
 	cacheKey := c.Query("cacheKey")
 
-	logger.Log.Info("Clearing filters", zap.String("domain", domain), zap.String("cacheKey", cacheKey))
+	h.logger.Info("Clearing filters", zap.String("domain", domain), zap.String("cacheKey", cacheKey))
 
 	switch domain {
 	case "restaurants":

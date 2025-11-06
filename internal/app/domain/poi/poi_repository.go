@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"strings"
 	"time"
 
@@ -17,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 
@@ -35,12 +35,23 @@ type Repository interface {
 	GetPOIsByLocationAndDistance(ctx context.Context, lat, lon, radiusMeters float64) ([]models.POIDetailedInfo, error)
 	GetPOIsByLocationAndDistanceWithCategory(ctx context.Context, lat, lon, radiusMeters float64, category string) ([]models.POIDetailedInfo, error)
 	//GetPOIsByLocationAndDistanceWithFilters(ctx context.Context, lat, lon, radiusMeters float64, filters map[string]string) ([]models.POIDetailedInfo, error)
+	// POI Favorites
 	AddPoiToFavourites(ctx context.Context, userID, poiID uuid.UUID) (uuid.UUID, error)
 	AddLLMPoiToFavourite(ctx context.Context, userID uuid.UUID, llmPoiID uuid.UUID) (uuid.UUID, error)
 	RemovePoiFromFavourites(ctx context.Context, userID, poiID uuid.UUID) error
-
 	RemoveLLMPoiFromFavourite(ctx context.Context, userID, llmPoiID uuid.UUID) error
 	CheckPoiExists(ctx context.Context, poiID uuid.UUID) (bool, error)
+	CheckIsFavorited(ctx context.Context, userID, poiID uuid.UUID, isLLMGenerated bool) (bool, error)
+
+	// Hotel Favorites
+	AddHotelToFavourites(ctx context.Context, userID, hotelID uuid.UUID) (uuid.UUID, error)
+	RemoveHotelFromFavourites(ctx context.Context, userID, hotelID uuid.UUID) error
+	CheckIsHotelFavorited(ctx context.Context, userID, hotelID uuid.UUID) (bool, error)
+
+	// Restaurant Favorites
+	AddRestaurantToFavourites(ctx context.Context, userID, restaurantID uuid.UUID) (uuid.UUID, error)
+	RemoveRestaurantFromFavourites(ctx context.Context, userID, restaurantID uuid.UUID) error
+	CheckIsRestaurantFavorited(ctx context.Context, userID, restaurantID uuid.UUID) (bool, error)
 	FindLLMPOIByNameAndCity(ctx context.Context, name, city string) (uuid.UUID, error)
 	FindLLMPOIByName(ctx context.Context, name string) (uuid.UUID, error)
 	GetFavouritePOIsByUserID(ctx context.Context, userID uuid.UUID) ([]models.POIDetailedInfo, error)
@@ -52,6 +63,7 @@ type Repository interface {
 	AddItineraryToBookmarks(ctx context.Context, userID, itineraryID uuid.UUID) (uuid.UUID, error)
 	RemoveItineraryFromBookmarks(ctx context.Context, userID, itineraryID uuid.UUID) error
 	GetBookmarksFiltered(ctx context.Context, filter models.BookmarksFilter) ([]models.SavedItinerary, int, error)
+	CheckIsBookmarked(ctx context.Context, userID, itineraryID uuid.UUID) (bool, error)
 
 	// POI details
 	FindPOIDetails(ctx context.Context, cityID uuid.UUID, lat, lon float64, tolerance float64) (*models.POIDetailedInfo, error)
@@ -97,11 +109,11 @@ type Repository interface {
 }
 
 type RepositoryImpl struct {
-	logger *slog.Logger
+	logger *zap.Logger
 	pgpool *pgxpool.Pool
 }
 
-func NewRepository(pgxpool *pgxpool.Pool, logger *slog.Logger) *RepositoryImpl {
+func NewRepository(pgxpool *pgxpool.Pool, logger *zap.Logger) *RepositoryImpl {
 	return &RepositoryImpl{
 		logger: logger,
 		pgpool: pgxpool,
@@ -136,12 +148,12 @@ func (r *RepositoryImpl) SavePoi(ctx context.Context, poi models.POIDetailedInfo
 	).Scan(&id); err != nil {
 		if err == pgx.ErrNoRows {
 			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-				r.logger.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", rollbackErr))
+				r.logger.Error("Failed to rollback transaction", zap.Any("error", rollbackErr))
 			}
 			return uuid.Nil, nil
 		}
 		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-			r.logger.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", rollbackErr))
+			r.logger.Error("Failed to rollback transaction", zap.Any("error", rollbackErr))
 		}
 		return uuid.Nil, fmt.Errorf("failed to insert POI: %w", err)
 	}
@@ -149,7 +161,7 @@ func (r *RepositoryImpl) SavePoi(ctx context.Context, poi models.POIDetailedInfo
 		return uuid.Nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 	// Log the successful insertion
-	r.logger.Info("POI saved successfully", slog.String("name", poi.Name), slog.String("id", id.String()))
+	r.logger.Info("POI saved successfully", zap.String("name", poi.Name), zap.String("id", id.String()))
 
 	return id, nil
 }
@@ -171,10 +183,10 @@ func (r *RepositoryImpl) FindPoiByNameAndCity(ctx context.Context, name string, 
 	}
 	// Log the successful retrieval
 	r.logger.Info("POI found successfully",
-		slog.String("name", poi.Name),
-		slog.Float64("latitude", poi.Latitude),
-		slog.Float64("longitude", poi.Longitude),
-		slog.String("cityID", cityID.String()))
+		zap.String("name", poi.Name),
+		zap.Float64("latitude", poi.Latitude),
+		zap.Float64("longitude", poi.Longitude),
+		zap.String("cityID", cityID.String()))
 
 	return &poi, nil
 }
@@ -284,12 +296,120 @@ func (r *RepositoryImpl) RemoveLLMPoiFromFavourite(ctx context.Context, userID, 
 	}
 
 	rowsAffected := result.RowsAffected()
-	r.logger.InfoContext(ctx, "Delete query result", slog.Int64("rows_affected", rowsAffected))
+	r.logger.Info("Delete query result", zap.Int64("rows_affected", rowsAffected))
 
 	if rowsAffected == 0 {
 		return fmt.Errorf("no favourite LLM POI found to remove")
 	}
 	return nil
+}
+
+func (r *RepositoryImpl) CheckIsFavorited(ctx context.Context, userID, poiID uuid.UUID, isLLMGenerated bool) (bool, error) {
+	var query string
+	if isLLMGenerated {
+		query = `SELECT EXISTS(SELECT 1 FROM user_favorite_llm_pois WHERE user_id = $1 AND llm_poi_id = $2)`
+	} else {
+		query = `SELECT EXISTS(SELECT 1 FROM user_favorite_pois WHERE user_id = $1 AND poi_id = $2)`
+	}
+
+	var exists bool
+	err := r.pgpool.QueryRow(ctx, query, userID, poiID).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check if POI is favorited: %w", err)
+	}
+	return exists, nil
+}
+
+// Hotel Favorites Repository Methods
+func (r *RepositoryImpl) AddHotelToFavourites(ctx context.Context, userID, hotelID uuid.UUID) (uuid.UUID, error) {
+	query := `
+		INSERT INTO user_favorite_hotels (user_id, hotel_id)
+		VALUES ($1, $2)
+		ON CONFLICT (user_id, hotel_id) DO NOTHING
+		RETURNING id`
+
+	var id uuid.UUID
+	err := r.pgpool.QueryRow(ctx, query, userID, hotelID).Scan(&id)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			// Already exists, query the existing ID
+			var existingID uuid.UUID
+			err = r.pgpool.QueryRow(ctx,
+				`SELECT id FROM user_favorite_hotels WHERE user_id = $1 AND hotel_id = $2`,
+				userID, hotelID).Scan(&existingID)
+			if err != nil {
+				return uuid.Nil, fmt.Errorf("failed to get existing hotel favorite: %w", err)
+			}
+			return existingID, nil
+		}
+		return uuid.Nil, fmt.Errorf("failed to add hotel to favourites: %w", err)
+	}
+	return id, nil
+}
+
+func (r *RepositoryImpl) RemoveHotelFromFavourites(ctx context.Context, userID, hotelID uuid.UUID) error {
+	query := `DELETE FROM user_favorite_hotels WHERE user_id = $1 AND hotel_id = $2`
+	_, err := r.pgpool.Exec(ctx, query, userID, hotelID)
+	if err != nil {
+		return fmt.Errorf("failed to remove hotel from favourites: %w", err)
+	}
+	return nil
+}
+
+func (r *RepositoryImpl) CheckIsHotelFavorited(ctx context.Context, userID, hotelID uuid.UUID) (bool, error) {
+	query := `SELECT EXISTS(SELECT 1 FROM user_favorite_hotels WHERE user_id = $1 AND hotel_id = $2)`
+	var exists bool
+	err := r.pgpool.QueryRow(ctx, query, userID, hotelID).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check if hotel is favorited: %w", err)
+	}
+	return exists, nil
+}
+
+// Restaurant Favorites Repository Methods
+func (r *RepositoryImpl) AddRestaurantToFavourites(ctx context.Context, userID, restaurantID uuid.UUID) (uuid.UUID, error) {
+	query := `
+		INSERT INTO user_favorite_restaurants (user_id, restaurant_id)
+		VALUES ($1, $2)
+		ON CONFLICT (user_id, restaurant_id) DO NOTHING
+		RETURNING id`
+
+	var id uuid.UUID
+	err := r.pgpool.QueryRow(ctx, query, userID, restaurantID).Scan(&id)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			// Already exists, query the existing ID
+			var existingID uuid.UUID
+			err = r.pgpool.QueryRow(ctx,
+				`SELECT id FROM user_favorite_restaurants WHERE user_id = $1 AND restaurant_id = $2`,
+				userID, restaurantID).Scan(&existingID)
+			if err != nil {
+				return uuid.Nil, fmt.Errorf("failed to get existing restaurant favorite: %w", err)
+			}
+			return existingID, nil
+		}
+		return uuid.Nil, fmt.Errorf("failed to add restaurant to favourites: %w", err)
+	}
+	return id, nil
+}
+
+func (r *RepositoryImpl) RemoveRestaurantFromFavourites(ctx context.Context, userID, restaurantID uuid.UUID) error {
+	query := `DELETE FROM user_favorite_restaurants WHERE user_id = $1 AND restaurant_id = $2`
+	_, err := r.pgpool.Exec(ctx, query, userID, restaurantID)
+	if err != nil {
+		return fmt.Errorf("failed to remove restaurant from favourites: %w", err)
+	}
+	return nil
+}
+
+func (r *RepositoryImpl) CheckIsRestaurantFavorited(ctx context.Context, userID, restaurantID uuid.UUID) (bool, error) {
+	query := `SELECT EXISTS(SELECT 1 FROM user_favorite_restaurants WHERE user_id = $1 AND restaurant_id = $2)`
+	var exists bool
+	err := r.pgpool.QueryRow(ctx, query, userID, restaurantID).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check if restaurant is favorited: %w", err)
+	}
+	return exists, nil
 }
 
 func (r *RepositoryImpl) GetFavouritePOIsByUserID(ctx context.Context, userID uuid.UUID) ([]models.POIDetailedInfo, error) {
@@ -424,7 +544,7 @@ ORDER BY added_at DESC;
 	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating favourite POI rows: %w", err)
 	}
-	r.logger.Info("Favourite POIs retrieved successfully", slog.String("userID", userID.String()), slog.Int("count", len(pois)))
+	r.logger.Info("Favourite POIs retrieved successfully", zap.String("userID", userID.String()), zap.Int("count", len(pois)))
 	return pois, nil
 }
 
@@ -588,11 +708,11 @@ LIMIT $2 OFFSET $3;
 	}
 
 	r.logger.Info("Paginated favourite POIs retrieved successfully",
-		slog.String("userID", userID.String()),
-		slog.Int("count", len(pois)),
-		slog.Int("total", totalCount),
-		slog.Int("limit", limit),
-		slog.Int("offset", offset))
+		zap.String("userID", userID.String()),
+		zap.Int("count", len(pois)),
+		zap.Int("total", totalCount),
+		zap.Int("limit", limit),
+		zap.Int("offset", offset))
 	return pois, totalCount, nil
 }
 
@@ -799,11 +919,11 @@ func (r *RepositoryImpl) GetFavouritesFiltered(ctx context.Context, filter model
 	}
 
 	r.logger.Info("Filtered favourite POIs retrieved successfully",
-		slog.String("userID", filter.UserID.String()),
-		slog.String("search", filter.SearchText),
-		slog.String("category", filter.Category),
-		slog.Int("count", len(pois)),
-		slog.Int("total", totalCount))
+		zap.String("userID", filter.UserID.String()),
+		zap.String("search", filter.SearchText),
+		zap.String("category", filter.Category),
+		zap.Int("count", len(pois)),
+		zap.Int("total", totalCount))
 
 	return pois, totalCount, nil
 }
@@ -834,7 +954,7 @@ func (r *RepositoryImpl) GetPOIsByCityID(ctx context.Context, cityID uuid.UUID) 
 		return nil, fmt.Errorf("error iterating POI rows: %w", err)
 	}
 
-	r.logger.Info("POIs retrieved successfully by city ID", slog.String("cityID", cityID.String()), slog.Int("count", len(pois)))
+	r.logger.Info("POIs retrieved successfully by city ID", zap.String("cityID", cityID.String()), zap.Int("count", len(pois)))
 	return pois, nil
 }
 
@@ -920,10 +1040,10 @@ func (r *RepositoryImpl) SavePOIDetails(ctx context.Context, poi models.POIDetai
 	err := r.pgpool.QueryRow(ctx, duplicateCheckQuery, poi.Name, poi.Longitude, poi.Latitude).Scan(&existingID)
 	if err == nil {
 		// Duplicate found
-		r.logger.InfoContext(ctx, "POI already exists, skipping save",
-			slog.String("poi_name", poi.Name),
-			slog.String("existing_id", existingID.String()),
-			slog.String("city_id", func() string {
+		r.logger.Info("POI already exists, skipping save",
+			zap.String("poi_name", poi.Name),
+			zap.String("existing_id", existingID.String()),
+			zap.String("city_id", func() string {
 
 				return "null"
 			}()))
@@ -932,9 +1052,9 @@ func (r *RepositoryImpl) SavePOIDetails(ctx context.Context, poi models.POIDetai
 		return existingID, nil
 	} else if err != pgx.ErrNoRows {
 		// Unexpected error
-		r.logger.WarnContext(ctx, "Error checking for duplicate POI",
-			slog.Any("error", err),
-			slog.String("poi_name", poi.Name))
+		r.logger.Warn("Error checking for duplicate POI",
+			zap.Any("error", err),
+			zap.String("poi_name", poi.Name))
 	}
 
 	// Start a transaction to ensure both tables are updated atomically
@@ -967,13 +1087,13 @@ func (r *RepositoryImpl) SavePOIDetails(ctx context.Context, poi models.POIDetai
 	)
 	if err != nil {
 		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-			r.logger.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", rollbackErr))
+			r.logger.Error("Failed to rollback transaction", zap.Any("error", rollbackErr))
 		}
-		r.logger.ErrorContext(ctx, "Failed to save POI details",
-			slog.Any("error", err),
-			slog.String("poi_name", poi.Name),
-			slog.String("poi_id", poiID.String()),
-			slog.String("city_id", func() string {
+		r.logger.Error("Failed to save POI details",
+			zap.Any("error", err),
+			zap.String("poi_name", poi.Name),
+			zap.String("poi_id", poiID.String()),
+			zap.String("city_id", func() string {
 
 				return "null"
 			}()))
@@ -1002,9 +1122,9 @@ func (r *RepositoryImpl) SavePOIDetails(ctx context.Context, poi models.POIDetai
 			level := 5
 			priceLevel = &level
 		default:
-			r.logger.WarnContext(ctx, "Unknown price range",
-				slog.String("price_range", poi.PriceRange),
-				slog.String("poi_name", poi.Name))
+			r.logger.Warn("Unknown price range",
+				zap.String("price_range", poi.PriceRange),
+				zap.String("poi_name", poi.Name))
 			// Default to level 2 (budget) for unknown price ranges
 			level := 2
 			priceLevel = &level
@@ -1032,13 +1152,13 @@ func (r *RepositoryImpl) SavePOIDetails(ctx context.Context, poi models.POIDetai
 	)
 	if err != nil {
 		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-			r.logger.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", rollbackErr))
+			r.logger.Error("Failed to rollback transaction", zap.Any("error", rollbackErr))
 		}
-		r.logger.ErrorContext(ctx, "Failed to save POI to points_of_interest",
-			slog.Any("error", err),
-			slog.String("poi_name", poi.Name),
-			slog.String("poi_id", poiID.String()),
-			slog.String("city_id", func() string {
+		r.logger.Error("Failed to save POI to points_of_interest",
+			zap.Any("error", err),
+			zap.String("poi_name", poi.Name),
+			zap.String("poi_id", poiID.String()),
+			zap.String("city_id", func() string {
 
 				return "null"
 			}()))
@@ -1050,24 +1170,24 @@ func (r *RepositoryImpl) SavePOIDetails(ctx context.Context, poi models.POIDetai
 	// Commit the transaction
 	err = tx.Commit(ctx)
 	if err != nil {
-		r.logger.ErrorContext(ctx, "Failed to commit POI transaction",
-			slog.Any("error", err),
-			slog.String("poi_name", poi.Name),
-			slog.String("poi_id", poiID.String()))
+		r.logger.Error("Failed to commit POI transaction",
+			zap.Any("error", err),
+			zap.String("poi_name", poi.Name),
+			zap.String("poi_id", poiID.String()))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to commit transaction")
 		return uuid.Nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	r.logger.InfoContext(ctx, "Successfully saved POI to database",
-		slog.String("poi_name", poi.Name),
-		slog.String("poi_id", poiID.String()),
-		slog.String("city_id", func() string {
+	r.logger.Info("Successfully saved POI to database",
+		zap.String("poi_name", poi.Name),
+		zap.String("poi_id", poiID.String()),
+		zap.String("city_id", func() string {
 
 			return "null"
 		}()),
-		slog.Float64("latitude", poi.Latitude),
-		slog.Float64("longitude", poi.Longitude))
+		zap.Float64("latitude", poi.Latitude),
+		zap.Float64("longitude", poi.Longitude))
 
 	span.SetAttributes(attribute.String("poi.id", poiID.String()))
 	span.SetStatus(codes.Ok, "POI details saved successfully to both tables")
@@ -1150,7 +1270,7 @@ func (r *RepositoryImpl) SaveHotelDetails(ctx context.Context, hotel models.Hote
 			openingHours = hotel.OpeningHours
 		} else {
 			// Log warning and set to nil if invalid
-			r.logger.WarnContext(ctx, "Invalid JSON for opening_hours, setting to NULL", slog.String("value", *hotel.OpeningHours))
+			r.logger.Warn("Invalid JSON for opening_hours, setting to NULL", zap.String("value", *hotel.OpeningHours))
 			openingHours = nil
 		}
 	}
@@ -1295,9 +1415,9 @@ func (r *RepositoryImpl) SaveRestaurantDetails(ctx context.Context, restaurant m
 			openingHoursJSON.String = *restaurant.OpeningHours
 			openingHoursJSON.Valid = true
 		} else {
-			r.logger.WarnContext(ctx, "Invalid JSON for opening_hours, setting to NULL",
-				slog.String("value", *restaurant.OpeningHours),
-				slog.String("restaurant_name", restaurant.Name))
+			r.logger.Warn("Invalid JSON for opening_hours, setting to NULL",
+				zap.String("value", *restaurant.OpeningHours),
+				zap.String("restaurant_name", restaurant.Name))
 			// openingHoursJSON remains invalid, which inserts NULL
 		}
 	}
@@ -1371,10 +1491,10 @@ func (r *RepositoryImpl) SaveRestaurantDetails(ctx context.Context, restaurant m
 	).Scan(&id)
 
 	if err != nil {
-		r.logger.ErrorContext(ctx, "Failed to save restaurant details",
-			slog.Any("error", err),
-			slog.String("restaurant_name", restaurant.Name),
-			slog.String("city_id", cityID.String()))
+		r.logger.Error("Failed to save restaurant details",
+			zap.Any("error", err),
+			zap.String("restaurant_name", restaurant.Name),
+			zap.String("city_id", cityID.String()))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB INSERT failed")
 		return uuid.Nil, fmt.Errorf("failed to save restaurant_details: %w", err)
@@ -1435,7 +1555,7 @@ func (r *RepositoryImpl) SearchPOIs(ctx context.Context, filter models.POIFilter
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "SearchPOIs"))
+	l := r.logger.With(zap.String("method", "SearchPOIs"))
 
 	// Base query using PostGIS for geospatial filtering
 	query := `
@@ -1472,12 +1592,12 @@ func (r *RepositoryImpl) SearchPOIs(ctx context.Context, filter models.POIFilter
 	// Order by distance
 	query += ` ORDER BY distance_meters ASC`
 
-	l.DebugContext(ctx, "Executing POI search query", slog.String("query", query), slog.Any("args", args))
+	l.Debug("Executing POI search query", zap.String("query", query), zap.Any("args", args))
 
 	// Execute query
 	rows, err := r.pgpool.Query(ctx, query, args...)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query POIs", slog.Any("error", err))
+		l.Error("Failed to query POIs", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Database query failed")
 		return nil, fmt.Errorf("failed to search points_of_interest: %w", err)
@@ -1501,7 +1621,7 @@ func (r *RepositoryImpl) SearchPOIs(ctx context.Context, filter models.POIFilter
 			&distanceMeters,
 		)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to scan POI row", slog.Any("error", err))
+			l.Error("Failed to scan POI row", zap.Any("error", err))
 			span.RecordError(err)
 			return nil, fmt.Errorf("failed to scan POI row: %w", err)
 		}
@@ -1519,17 +1639,17 @@ func (r *RepositoryImpl) SearchPOIs(ctx context.Context, filter models.POIFilter
 
 	// Check for errors during row iteration
 	if err = rows.Err(); err != nil {
-		l.ErrorContext(ctx, "Error iterating POI rows", slog.Any("error", err))
+		l.Error("Error iterating POI rows", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("error iterating POI rows: %w", err)
 	}
 
 	// Log and set span status
 	if len(pois) == 0 {
-		l.InfoContext(ctx, "No POIs found")
+		l.Info("No POIs found")
 		span.SetStatus(codes.Ok, "No POIs found")
 	} else {
-		l.InfoContext(ctx, "POIs found", slog.Int("count", len(pois)))
+		l.Info("POIs found", zap.Int("count", len(pois)))
 		span.SetStatus(codes.Ok, "POIs found")
 	}
 
@@ -1741,7 +1861,7 @@ func (r *RepositoryImpl) UpdateItinerary(ctx context.Context, userID uuid.UUID, 
                   created_at, updated_at
     `, strings.Join(setClauses, ", "), whereIDPlaceholder, userIDPlaceholder)
 
-	r.logger.DebugContext(ctx, "Executing UpdateItinerary query", slog.String("query", query), slog.Any("args_count", len(args)))
+	r.logger.Debug("Executing UpdateItinerary query", zap.String("query", query), zap.Any("args_count", len(args)))
 
 	var updatedItinerary models.UserSavedItinerary
 	err := r.pgpool.QueryRow(ctx, query, args...).Scan(
@@ -1769,7 +1889,7 @@ func (r *RepositoryImpl) UpdateItinerary(ctx context.Context, userID uuid.UUID, 
 		}
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "DB UPDATE failed")
-		r.logger.ErrorContext(ctx, "Failed to update itinerary", slog.Any("error", err))
+		r.logger.Error("Failed to update itinerary", zap.Any("error", err))
 		return nil, fmt.Errorf("failed to update user_saved_itineraries: %w", err)
 	}
 
@@ -1904,7 +2024,7 @@ func (r *RepositoryImpl) FindSimilarPOIs(ctx context.Context, queryEmbedding []f
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "FindSimilarPOIs"))
+	l := r.logger.With(zap.String("method", "FindSimilarPOIs"))
 
 	// Convert []float32 to pgvector format string
 	embeddingStr := fmt.Sprintf("[%v]", strings.Join(func() []string {
@@ -1930,14 +2050,14 @@ func (r *RepositoryImpl) FindSimilarPOIs(ctx context.Context, queryEmbedding []f
         LIMIT $2
     `
 
-	l.DebugContext(ctx, "Executing similarity search query",
-		slog.String("query", query),
-		slog.Int("embedding_dim", len(queryEmbedding)),
-		slog.Int("limit", limit))
+	l.Debug("Executing similarity search query",
+		zap.String("query", query),
+		zap.Int("embedding_dim", len(queryEmbedding)),
+		zap.Int("limit", limit))
 
 	rows, err := r.pgpool.Query(ctx, query, embeddingStr, limit)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query similar POIs", slog.Any("error", err))
+		l.Error("Failed to query similar POIs", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Database query failed")
 		return nil, fmt.Errorf("failed to search similar POIs: %w", err)
@@ -1960,7 +2080,7 @@ func (r *RepositoryImpl) FindSimilarPOIs(ctx context.Context, queryEmbedding []f
 			&similarityScore,
 		)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to scan similar POI row", slog.Any("error", err))
+			l.Error("Failed to scan similar POI row", zap.Any("error", err))
 			span.RecordError(err)
 			return nil, fmt.Errorf("failed to scan similar POI row: %w", err)
 		}
@@ -1976,12 +2096,12 @@ func (r *RepositoryImpl) FindSimilarPOIs(ctx context.Context, queryEmbedding []f
 	}
 
 	if err = rows.Err(); err != nil {
-		l.ErrorContext(ctx, "Error iterating similar POI rows", slog.Any("error", err))
+		l.Error("Error iterating similar POI rows", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("error iterating similar POI rows: %w", err)
 	}
 
-	l.InfoContext(ctx, "Similar POIs found", slog.Int("count", len(pois)))
+	l.Info("Similar POIs found", zap.Int("count", len(pois)))
 	span.SetAttributes(attribute.Int("results.count", len(pois)))
 	span.SetStatus(codes.Ok, "Similar POIs found")
 
@@ -1997,7 +2117,7 @@ func (r *RepositoryImpl) FindSimilarPOIsByCity(ctx context.Context, queryEmbeddi
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "FindSimilarPOIsByCity"))
+	l := r.logger.With(zap.String("method", "FindSimilarPOIsByCity"))
 
 	// Convert []float32 to pgvector format string
 	embeddingStr := fmt.Sprintf("[%v]", strings.Join(func() []string {
@@ -2023,14 +2143,14 @@ func (r *RepositoryImpl) FindSimilarPOIsByCity(ctx context.Context, queryEmbeddi
         LIMIT $3
     `
 
-	l.DebugContext(ctx, "Executing city-specific similarity search",
-		slog.String("city_id", cityID.String()),
-		slog.Int("embedding_dim", len(queryEmbedding)),
-		slog.Int("limit", limit))
+	l.Debug("Executing city-specific similarity search",
+		zap.String("city_id", cityID.String()),
+		zap.Int("embedding_dim", len(queryEmbedding)),
+		zap.Int("limit", limit))
 
 	rows, err := r.pgpool.Query(ctx, query, embeddingStr, cityID, limit)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query similar POIs by city", slog.Any("error", err))
+		l.Error("Failed to query similar POIs by city", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Database query failed")
 		return nil, fmt.Errorf("failed to search similar POIs by city: %w", err)
@@ -2053,7 +2173,7 @@ func (r *RepositoryImpl) FindSimilarPOIsByCity(ctx context.Context, queryEmbeddi
 			&similarityScore,
 		)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to scan similar POI row", slog.Any("error", err))
+			l.Error("Failed to scan similar POI row", zap.Any("error", err))
 			span.RecordError(err)
 			return nil, fmt.Errorf("failed to scan similar POI row: %w", err)
 		}
@@ -2069,14 +2189,14 @@ func (r *RepositoryImpl) FindSimilarPOIsByCity(ctx context.Context, queryEmbeddi
 	}
 
 	if err = rows.Err(); err != nil {
-		l.ErrorContext(ctx, "Error iterating similar POI rows", slog.Any("error", err))
+		l.Error("Error iterating similar POI rows", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("error iterating similar POI rows: %w", err)
 	}
 
-	l.InfoContext(ctx, "Similar POIs by city found",
-		slog.String("city_id", cityID.String()),
-		slog.Int("count", len(pois)))
+	l.Info("Similar POIs by city found",
+		zap.String("city_id", cityID.String()),
+		zap.Int("count", len(pois)))
 	span.SetAttributes(
 		attribute.String("city.id", cityID.String()),
 		attribute.Int("results.count", len(pois)),
@@ -2098,7 +2218,7 @@ func (r *RepositoryImpl) SearchPOIsHybrid(ctx context.Context, filter models.POI
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "SearchPOIsHybrid"))
+	l := r.logger.With(zap.String("method", "SearchPOIsHybrid"))
 
 	// Convert []float32 to pgvector format string
 	embeddingStr := fmt.Sprintf("[%v]", strings.Join(func() []string {
@@ -2163,14 +2283,14 @@ func (r *RepositoryImpl) SearchPOIsHybrid(ctx context.Context, filter models.POI
 	// Order by hybrid score (descending)
 	query += ` ORDER BY hybrid_score DESC`
 
-	l.DebugContext(ctx, "Executing hybrid search query",
-		slog.String("query", query),
-		slog.Any("args_count", len(args)),
-		slog.Float64("semantic_weight", semanticWeight))
+	l.Debug("Executing hybrid search query",
+		zap.String("query", query),
+		zap.Any("args_count", len(args)),
+		zap.Float64("semantic_weight", semanticWeight))
 
 	rows, err := r.pgpool.Query(ctx, query, args...)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to execute hybrid search", slog.Any("error", err))
+		l.Error("Failed to execute hybrid search", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Database query failed")
 		return nil, fmt.Errorf("failed to execute hybrid POI search: %w", err)
@@ -2195,7 +2315,7 @@ func (r *RepositoryImpl) SearchPOIsHybrid(ctx context.Context, filter models.POI
 			&hybridScore,
 		)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to scan hybrid search POI row", slog.Any("error", err))
+			l.Error("Failed to scan hybrid search POI row", zap.Any("error", err))
 			span.RecordError(err)
 			return nil, fmt.Errorf("failed to scan hybrid search POI row: %w", err)
 		}
@@ -2211,14 +2331,14 @@ func (r *RepositoryImpl) SearchPOIsHybrid(ctx context.Context, filter models.POI
 	}
 
 	if err = rows.Err(); err != nil {
-		l.ErrorContext(ctx, "Error iterating hybrid search POI rows", slog.Any("error", err))
+		l.Error("Error iterating hybrid search POI rows", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("error iterating hybrid search POI rows: %w", err)
 	}
 
-	l.InfoContext(ctx, "Hybrid search POIs found",
-		slog.Int("count", len(pois)),
-		slog.Float64("semantic_weight", semanticWeight))
+	l.Info("Hybrid search POIs found",
+		zap.Int("count", len(pois)),
+		zap.Float64("semantic_weight", semanticWeight))
 	span.SetAttributes(
 		attribute.Int("results.count", len(pois)),
 		attribute.Float64("semantic.weight", semanticWeight),
@@ -2236,7 +2356,7 @@ func (r *RepositoryImpl) UpdatePOIEmbedding(ctx context.Context, poiID uuid.UUID
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "UpdatePOIEmbedding"))
+	l := r.logger.With(zap.String("method", "UpdatePOIEmbedding"))
 
 	// Convert []float32 to pgvector format string
 	embeddingStr := fmt.Sprintf("[%v]", strings.Join(func() []string {
@@ -2255,9 +2375,9 @@ func (r *RepositoryImpl) UpdatePOIEmbedding(ctx context.Context, poiID uuid.UUID
 
 	result, err := r.pgpool.Exec(ctx, query, embeddingStr, poiID)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to update POI embedding",
-			slog.Any("error", err),
-			slog.String("poi_id", poiID.String()))
+		l.Error("Failed to update POI embedding",
+			zap.Any("error", err),
+			zap.String("poi_id", poiID.String()))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Database update failed")
 		return fmt.Errorf("failed to update POI embedding: %w", err)
@@ -2265,15 +2385,15 @@ func (r *RepositoryImpl) UpdatePOIEmbedding(ctx context.Context, poiID uuid.UUID
 
 	if result.RowsAffected() == 0 {
 		err := fmt.Errorf("no POI found with ID %s", poiID.String())
-		l.WarnContext(ctx, "No POI found for embedding update", slog.String("poi_id", poiID.String()))
+		l.Warn("No POI found for embedding update", zap.String("poi_id", poiID.String()))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "POI not found")
 		return err
 	}
 
-	l.InfoContext(ctx, "POI embedding updated successfully",
-		slog.String("poi_id", poiID.String()),
-		slog.Int("embedding_dimension", len(embedding)))
+	l.Info("POI embedding updated successfully",
+		zap.String("poi_id", poiID.String()),
+		zap.Int("embedding_dimension", len(embedding)))
 	span.SetAttributes(
 		attribute.String("poi.id", poiID.String()),
 		attribute.Int("embedding.dimension", len(embedding)),
@@ -2290,7 +2410,7 @@ func (r *RepositoryImpl) GetPOIsWithoutEmbeddings(ctx context.Context, limit int
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetPOIsWithoutEmbeddings"))
+	l := r.logger.With(zap.String("method", "GetPOIsWithoutEmbeddings"))
 
 	query := `
         SELECT
@@ -2309,7 +2429,7 @@ func (r *RepositoryImpl) GetPOIsWithoutEmbeddings(ctx context.Context, limit int
 
 	rows, err := r.pgpool.Query(ctx, query, limit)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query POIs without embeddings", slog.Any("error", err))
+		l.Error("Failed to query POIs without embeddings", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Database query failed")
 		return nil, fmt.Errorf("failed to query POIs without embeddings: %w", err)
@@ -2331,7 +2451,7 @@ func (r *RepositoryImpl) GetPOIsWithoutEmbeddings(ctx context.Context, limit int
 			&poi.CityID,
 		)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to scan POI without embedding row", slog.Any("error", err))
+			l.Error("Failed to scan POI without embedding row", zap.Any("error", err))
 			span.RecordError(err)
 			return nil, fmt.Errorf("failed to scan POI without embedding row: %w", err)
 		}
@@ -2344,12 +2464,12 @@ func (r *RepositoryImpl) GetPOIsWithoutEmbeddings(ctx context.Context, limit int
 	}
 
 	if err = rows.Err(); err != nil {
-		l.ErrorContext(ctx, "Error iterating POI without embedding rows", slog.Any("error", err))
+		l.Error("Error iterating POI without embedding rows", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("error iterating POI without embedding rows: %w", err)
 	}
 
-	l.InfoContext(ctx, "POIs without embeddings found", slog.Int("count", len(pois)))
+	l.Info("POIs without embeddings found", zap.Int("count", len(pois)))
 	span.SetAttributes(attribute.Int("results.count", len(pois)))
 	span.SetStatus(codes.Ok, "POIs without embeddings retrieved")
 
@@ -2365,7 +2485,7 @@ func (r *RepositoryImpl) GetPOIsByLocationAndDistance(ctx context.Context, lat, 
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetPOIsByLocationAndDistance"))
+	l := r.logger.With(zap.String("method", "GetPOIsByLocationAndDistance"))
 
 	// Build the query with optional category filter
 	baseQuery := `
@@ -2421,15 +2541,15 @@ func (r *RepositoryImpl) GetPOIsByLocationAndDistance(ctx context.Context, lat, 
 	var args []interface{}
 	args = append(args, lon, lat, radiusMeters) // $1, $2, $3
 
-	l.DebugContext(ctx, "Executing POI distance query",
-		slog.String("query", baseQuery),
-		slog.Float64("lat", lat),
-		slog.Float64("lon", lon),
-		slog.Float64("radius_meters", radiusMeters))
+	l.Debug("Executing POI distance query",
+		zap.String("query", baseQuery),
+		zap.Float64("lat", lat),
+		zap.Float64("lon", lon),
+		zap.Float64("radius_meters", radiusMeters))
 
 	rows, err := r.pgpool.Query(ctx, baseQuery, args...)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query POIs by location and distance", slog.Any("error", err))
+		l.Error("Failed to query POIs by location and distance", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Database query failed")
 		return nil, fmt.Errorf("failed to query POIs by location and distance: %w", err)
@@ -2469,7 +2589,7 @@ func (r *RepositoryImpl) GetPOIsByLocationAndDistance(ctx context.Context, lat, 
 			&isSponsored,
 		)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to scan POI row", slog.Any("error", err))
+			l.Error("Failed to scan POI row", zap.Any("error", err))
 			span.RecordError(err)
 			return nil, fmt.Errorf("failed to scan POI row: %w", err)
 		}
@@ -2546,14 +2666,14 @@ func (r *RepositoryImpl) GetPOIsByLocationAndDistance(ctx context.Context, lat, 
 	}
 
 	if err = rows.Err(); err != nil {
-		l.ErrorContext(ctx, "Error iterating POI rows", slog.Any("error", err))
+		l.Error("Error iterating POI rows", zap.Any("error", err))
 		span.RecordError(err)
 		return nil, fmt.Errorf("error iterating POI rows: %w", err)
 	}
 
-	l.InfoContext(ctx, "POIs by location and distance found",
-		slog.Int("count", len(pois)),
-		slog.Float64("radius_km", radiusMeters/1000))
+	l.Info("POIs by location and distance found",
+		zap.Int("count", len(pois)),
+		zap.Float64("radius_km", radiusMeters/1000))
 	span.SetAttributes(attribute.Int("results.count", len(pois)))
 	span.SetStatus(codes.Ok, "POIs by location and distance retrieved")
 
@@ -2570,7 +2690,7 @@ func (r *RepositoryImpl) GetPOIsByLocationAndDistanceWithCategory(ctx context.Co
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "GetPOIsByLocationAndDistanceWithCategory"))
+	l := r.logger.With(zap.String("method", "GetPOIsByLocationAndDistanceWithCategory"))
 
 	// Build the query with category filter
 	baseQuery := `
@@ -2627,16 +2747,16 @@ func (r *RepositoryImpl) GetPOIsByLocationAndDistanceWithCategory(ctx context.Co
 	var args []interface{}
 	args = append(args, lon, lat, radiusMeters, category) // $1, $2, $3, $4
 
-	l.DebugContext(ctx, "Executing POI distance query with category filter",
-		slog.String("query", baseQuery),
-		slog.Float64("lat", lat),
-		slog.Float64("lon", lon),
-		slog.Float64("radius_meters", radiusMeters),
-		slog.String("category", category))
+	l.Debug("Executing POI distance query with category filter",
+		zap.String("query", baseQuery),
+		zap.Float64("lat", lat),
+		zap.Float64("lon", lon),
+		zap.Float64("radius_meters", radiusMeters),
+		zap.String("category", category))
 
 	rows, err := r.pgpool.Query(ctx, baseQuery, args...)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to query POIs by location, distance and category", slog.Any("error", err))
+		l.Error("Failed to query POIs by location, distance and category", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Database query failed")
 		return nil, fmt.Errorf("failed to query POIs by location, distance and category: %w", err)
@@ -2676,7 +2796,7 @@ func (r *RepositoryImpl) GetPOIsByLocationAndDistanceWithCategory(ctx context.Co
 			&isSponsored,
 		)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to scan POI row", slog.Any("error", err))
+			l.Error("Failed to scan POI row", zap.Any("error", err))
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Row scan failed")
 			return nil, fmt.Errorf("failed to scan POI row: %w", err)
@@ -2716,7 +2836,7 @@ func (r *RepositoryImpl) GetPOIsByLocationAndDistanceWithCategory(ctx context.Co
 			var tags []string
 			err := json.Unmarshal(tagsRaw, &tags)
 			if err != nil {
-				l.WarnContext(ctx, "Failed to parse tags", slog.Any("error", err))
+				l.Warn("Failed to parse tags", zap.Any("error", err))
 				poi.Tags = []string{}
 			} else {
 				poi.Tags = tags
@@ -2729,16 +2849,16 @@ func (r *RepositoryImpl) GetPOIsByLocationAndDistanceWithCategory(ctx context.Co
 	}
 
 	if err = rows.Err(); err != nil {
-		l.ErrorContext(ctx, "Row iteration error", slog.Any("error", err))
+		l.Error("Row iteration error", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Row iteration failed")
 		return nil, fmt.Errorf("row iteration error: %w", err)
 	}
 
-	l.InfoContext(ctx, "POIs by location, distance and category found",
-		slog.Int("count", len(pois)),
-		slog.Float64("radius_km", radiusMeters/1000),
-		slog.String("category", category))
+	l.Info("POIs by location, distance and category found",
+		zap.Int("count", len(pois)),
+		zap.Float64("radius_km", radiusMeters/1000),
+		zap.String("category", category))
 	span.SetAttributes(attribute.Int("results.count", len(pois)))
 	span.SetStatus(codes.Ok, "POIs by location, distance and category retrieved")
 
@@ -2749,7 +2869,7 @@ func (r *RepositoryImpl) SaveLlmInteraction(ctx context.Context, interaction *mo
 	ctx, span := otel.Tracer("POIRepository").Start(ctx, "SaveLlmInteraction")
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "SaveLlmInteraction"))
+	l := r.logger.With(zap.String("method", "SaveLlmInteraction"))
 
 	query := `
 		INSERT INTO llm_interactions (user_id, model_name, prompt, response, latitude, longitude, distance)
@@ -2760,12 +2880,12 @@ func (r *RepositoryImpl) SaveLlmInteraction(ctx context.Context, interaction *mo
 	var id uuid.UUID
 	err := r.pgpool.QueryRow(ctx, query, interaction.UserID, interaction.ModelName, interaction.Prompt, interaction.Response, interaction.Latitude, interaction.Longitude, interaction.Distance).Scan(&id)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to save LLM interaction", slog.Any("error", err))
+		l.Error("Failed to save LLM interaction", zap.Any("error", err))
 		span.RecordError(err)
 		return uuid.Nil, fmt.Errorf("failed to save LLM interaction: %w", err)
 	}
 
-	l.InfoContext(ctx, "Successfully saved LLM interaction", slog.String("id", id.String()))
+	l.Info("Successfully saved LLM interaction", zap.String("id", id.String()))
 	span.SetStatus(codes.Ok, "LLM interaction saved successfully")
 	return id, nil
 }
@@ -2776,22 +2896,22 @@ func (r *RepositoryImpl) SaveLlmPoisToDatabase(ctx context.Context, userID uuid.
 	))
 	defer span.End()
 
-	l := r.logger.With(slog.String("method", "SaveLlmPoisToDatabase"))
+	l := r.logger.With(zap.String("method", "SaveLlmPoisToDatabase"))
 
 	if len(pois) == 0 {
-		l.InfoContext(ctx, "No LLM POIs to save.")
+		l.Info("No LLM POIs to save.")
 		return nil
 	}
 
 	tx, err := r.pgpool.Begin(ctx)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to begin transaction for saving LLM POIs", slog.Any("error", err))
+		l.Error("Failed to begin transaction for saving LLM POIs", zap.Any("error", err))
 		span.RecordError(err)
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer func() {
 		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-			l.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", rollbackErr))
+			l.Error("Failed to rollback transaction", zap.Any("error", rollbackErr))
 		}
 	}() // Rollback on error
 
@@ -2801,7 +2921,7 @@ func (r *RepositoryImpl) SaveLlmPoisToDatabase(ctx context.Context, userID uuid.
         ON CONFLICT (name, latitude, longitude) DO NOTHING
     `)
 	if err != nil {
-		l.ErrorContext(ctx, "Failed to prepare statement for LLM POI insertion", slog.Any("error", err))
+		l.Error("Failed to prepare statement for LLM POI insertion", zap.Any("error", err))
 		span.RecordError(err)
 		return fmt.Errorf("failed to prepare statement: %w", err)
 	}
@@ -2809,38 +2929,38 @@ func (r *RepositoryImpl) SaveLlmPoisToDatabase(ctx context.Context, userID uuid.
 	for _, poi := range pois {
 		// Validate POI data
 		if poi.Name == "" {
-			l.WarnContext(ctx, "POI has empty or nil name, skipping", slog.String("poi_name", poi.Name))
+			l.Warn("POI has empty or nil name, skipping", zap.String("poi_name", poi.Name))
 			continue
 		}
 		if poi.Latitude == 0 || poi.Longitude == 0 {
-			l.WarnContext(ctx, "POI has invalid coordinates, skipping", slog.String("poi_name", poi.Name))
+			l.Warn("POI has invalid coordinates, skipping", zap.String("poi_name", poi.Name))
 			continue
 		}
 
 		// Log parameter values for debugging
-		l.DebugContext(ctx, "Inserting POI",
-			slog.String("poi_name", poi.Name),
-			slog.Float64("latitude", poi.Latitude),
-			slog.Float64("longitude", poi.Longitude),
-			slog.String("category", poi.Category),
-			slog.String("description", poi.Description),
-			slog.Float64("distance", poi.Distance))
+		l.Debug("Inserting POI",
+			zap.String("poi_name", poi.Name),
+			zap.Float64("latitude", poi.Latitude),
+			zap.Float64("longitude", poi.Longitude),
+			zap.String("category", poi.Category),
+			zap.String("description", poi.Description),
+			zap.Float64("distance", poi.Distance))
 
 		_, err := tx.Exec(ctx, stmt.Name, poi.ID, userID, llmInteractionID, poi.Name, poi.Latitude, poi.Longitude, poi.Category, poi.Description, poi.Distance)
 		if err != nil {
-			l.ErrorContext(ctx, "Failed to insert LLM POI", slog.Any("error", err), slog.String("poi_name", poi.Name))
+			l.Error("Failed to insert LLM POI", zap.Any("error", err), zap.String("poi_name", poi.Name))
 			span.RecordError(err)
 			return fmt.Errorf("failed to insert LLM POI: %w", err)
 		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		l.ErrorContext(ctx, "Failed to commit transaction for saving LLM POIs", slog.Any("error", err))
+		l.Error("Failed to commit transaction for saving LLM POIs", zap.Any("error", err))
 		span.RecordError(err)
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	l.InfoContext(ctx, "Successfully saved LLM POIs to database", slog.Int("count", len(pois)))
+	l.Info("Successfully saved LLM POIs to database", zap.Int("count", len(pois)))
 	span.SetStatus(codes.Ok, "LLM POIs saved successfully")
 	return nil
 }
@@ -3091,7 +3211,7 @@ func (r *RepositoryImpl) GetBookmarksFiltered(ctx context.Context, filter models
 		)
 		if err != nil {
 			span.RecordError(err)
-			r.logger.Error("Failed to scan bookmark", slog.Any("error", err))
+			r.logger.Error("Failed to scan bookmark", zap.Any("error", err))
 			continue
 		}
 
@@ -3119,4 +3239,8 @@ func (r *RepositoryImpl) GetBookmarksFiltered(ctx context.Context, filter models
 	span.SetStatus(codes.Ok, "Bookmarks retrieved successfully")
 
 	return itineraries, total, nil
+}
+
+func (r *RepositoryImpl) CheckIsBookmarked(ctx context.Context, userID, itineraryID uuid.UUID) (bool, error) {
+	return false, nil
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"math"
 	"net/http"
 	"sync"
@@ -12,9 +11,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"go.uber.org/zap"
 	"google.golang.org/genai"
 
-	"github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
+	llmchat "github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/location"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 )
@@ -29,7 +29,7 @@ var upgrader = websocket.Upgrader{
 }
 
 type NearbyHandler struct {
-	logger           *slog.Logger
+	logger           *zap.Logger
 	chatService      *llmchat.ServiceImpl
 	locationRepo     location.Repository
 	connections      map[*websocket.Conn]bool
@@ -51,10 +51,10 @@ type ClientLimit struct {
 type MessageRateLimiter struct {
 	maxMessages int
 	window      time.Duration
-	logger      *slog.Logger
+	logger      *zap.Logger
 }
 
-func NewNearbyHandler(logger *slog.Logger, chatService *llmchat.ServiceImpl, locationRepo location.Repository) *NearbyHandler {
+func NewNearbyHandler(logger *zap.Logger, chatService *llmchat.ServiceImpl, locationRepo location.Repository) *NearbyHandler {
 	return &NearbyHandler{
 		logger:       logger,
 		chatService:  chatService,
@@ -111,7 +111,7 @@ func (h *NearbyHandler) HandleWebSocket(c *gin.Context) {
 
 	ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		h.logger.Error("Failed to upgrade to WebSocket", slog.Any("error", err))
+		h.logger.Error("Failed to upgrade to WebSocket", zap.Any("error", err))
 		return
 	}
 	defer ws.Close()
@@ -128,7 +128,7 @@ func (h *NearbyHandler) HandleWebSocket(c *gin.Context) {
 		h.connectionsMu.Unlock()
 	}()
 
-	h.logger.Info("WebSocket connection established", slog.String("user_id", userID))
+	h.logger.Info("WebSocket connection established", zap.String("user_id", userID))
 
 	// Get or create client limiter
 	h.clientLimitersMu.Lock()
@@ -158,7 +158,7 @@ func (h *NearbyHandler) HandleWebSocket(c *gin.Context) {
 		err := ws.ReadJSON(&update)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				h.logger.Error("WebSocket error", slog.Any("error", err))
+				h.logger.Error("WebSocket error", zap.Any("error", err))
 			}
 			break
 		}
@@ -166,7 +166,7 @@ func (h *NearbyHandler) HandleWebSocket(c *gin.Context) {
 		// Check message rate limit
 		if !h.allowMessage(clientLimit, userID) {
 			h.logger.Warn("Message rate limit exceeded, sending error",
-				slog.String("user_id", userID))
+				zap.String("user_id", userID))
 			ws.WriteJSON(WebSocketMessage{
 				Type:    "error",
 				Message: "Too many requests. Please slow down.",
@@ -175,10 +175,10 @@ func (h *NearbyHandler) HandleWebSocket(c *gin.Context) {
 		}
 
 		h.logger.Info("Received location update",
-			slog.String("user_id", userID),
-			slog.Float64("latitude", update.Latitude),
-			slog.Float64("longitude", update.Longitude),
-			slog.Float64("radius", update.Radius))
+			zap.String("user_id", userID),
+			zap.Float64("latitude", update.Latitude),
+			zap.Float64("longitude", update.Longitude),
+			zap.Float64("radius", update.Radius))
 
 		// Save location history asynchronously
 		go func() {
@@ -194,15 +194,15 @@ func (h *NearbyHandler) HandleWebSocket(c *gin.Context) {
 
 			if err := h.locationRepo.CreateLocationHistory(historyCtx, history); err != nil {
 				h.logger.Error("Failed to save location history",
-					slog.String("user_id", userID),
-					slog.Any("error", err))
+					zap.String("user_id", userID),
+					zap.Any("error", err))
 			}
 		}()
 
 		// Get POIs for this location
 		pois, err := h.getNearbyPOIs(c.Request.Context(), update, userID)
 		if err != nil {
-			h.logger.Error("Failed to get nearby POIs", slog.Any("error", err))
+			h.logger.Error("Failed to get nearby POIs", zap.Any("error", err))
 			ws.WriteJSON(WebSocketMessage{
 				Type:    "error",
 				Message: "Failed to get nearby places",
@@ -216,7 +216,7 @@ func (h *NearbyHandler) HandleWebSocket(c *gin.Context) {
 			POIs: pois,
 		})
 		if err != nil {
-			h.logger.Error("Failed to send POIs", slog.Any("error", err))
+			h.logger.Error("Failed to send POIs", zap.Any("error", err))
 			break
 		}
 
@@ -241,9 +241,9 @@ func (h *NearbyHandler) HandleWebSocket(c *gin.Context) {
 
 				if err := h.locationRepo.CreatePOIInteraction(interactionCtx, interaction); err != nil {
 					h.logger.Error("Failed to save POI interaction",
-						slog.String("user_id", userID),
-						slog.String("poi_id", poi.ID),
-						slog.Any("error", err))
+						zap.String("user_id", userID),
+						zap.String("poi_id", poi.ID),
+						zap.Any("error", err))
 				}
 			}
 		}(userID, pois, update.Latitude, update.Longitude)
@@ -285,7 +285,7 @@ Focus on real, notable places in that area. Return ONLY valid JSON array, no add
 	var pois []POIResponse
 	if err := json.Unmarshal([]byte(response), &pois); err != nil {
 		// If parsing fails, try to extract JSON from response
-		h.logger.Warn("Failed to parse AI response, trying to extract JSON", slog.Any("error", err))
+		h.logger.Warn("Failed to parse AI response, trying to extract JSON", zap.Any("error", err))
 
 		// Try to find JSON array in response
 		start := -1

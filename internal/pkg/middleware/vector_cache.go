@@ -12,7 +12,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/FACorreiaa/go-templui/internal/app/models"
-	"github.com/FACorreiaa/go-templui/internal/pkg/logger"
 )
 
 // VectorCacheEntry stores a vector embedding with its associated data and metadata
@@ -34,15 +33,20 @@ type VectorCache struct {
 	similarityThreshold float64 // For approximate matching (default: 0.95)
 	name                string
 	metrics             CacheMetrics
+	logger              *zap.Logger
 }
 
 // NewVectorCache creates a new vector cache with configurable similarity threshold
-func NewVectorCache(ttl time.Duration, similarityThreshold float64, name string) *VectorCache {
+func NewVectorCache(ttl time.Duration, similarityThreshold float64, name string, logger *zap.Logger) *VectorCache {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
 	vc := &VectorCache{
 		entries:             make(map[string]*VectorCacheEntry),
 		ttl:                 ttl,
 		similarityThreshold: similarityThreshold,
 		name:                name,
+		logger:              logger,
 	}
 	go vc.cleanup()
 	return vc
@@ -58,7 +62,7 @@ func (vc *VectorCache) Set(key string, entry *VectorCacheEntry) {
 	vc.entries[key] = entry
 	vc.metrics.Sets++
 
-	logger.Log.Debug("Vector cache set",
+	vc.logger.Debug("Vector cache set",
 		zap.String("cache", vc.name),
 		zap.String("key", key),
 		zap.String("query", entry.QueryText),
@@ -84,7 +88,7 @@ func (vc *VectorCache) Get(key string) (*VectorCacheEntry, bool) {
 	}
 
 	vc.metrics.Hits++
-	logger.Log.Debug("Vector cache hit",
+	vc.logger.Debug("Vector cache hit",
 		zap.String("cache", vc.name),
 		zap.String("key", key),
 		zap.String("query", entry.QueryText),
@@ -131,7 +135,7 @@ func (vc *VectorCache) GetSimilar(queryEmbedding []float32, cityID string, searc
 
 	if bestMatch != nil {
 		vc.metrics.Hits++
-		logger.Log.Info("Vector cache semantic hit",
+		vc.logger.Info("Vector cache semantic hit",
 			zap.String("cache", vc.name),
 			zap.String("cached_query", bestMatch.QueryText),
 			zap.Float64("similarity", bestSimilarity),
@@ -163,7 +167,7 @@ func (vc *VectorCache) Clear() {
 	vc.mu.Lock()
 	defer vc.mu.Unlock()
 	vc.entries = make(map[string]*VectorCacheEntry)
-	logger.Log.Info("Vector cache cleared", zap.String("cache", vc.name))
+	vc.logger.Info("Vector cache cleared", zap.String("cache", vc.name))
 }
 
 // cleanup runs periodically to remove expired entries
@@ -184,7 +188,7 @@ func (vc *VectorCache) cleanup() {
 		}
 
 		if expiredCount > 0 {
-			logger.Log.Info("Vector cache cleanup",
+			vc.logger.Info("Vector cache cleanup",
 				zap.String("cache", vc.name),
 				zap.Int("expired_entries", expiredCount),
 				zap.Int("remaining_entries", len(vc.entries)),
@@ -252,7 +256,7 @@ func BuildVectorCacheKey(queryText string, cityID string, searchParams map[strin
 
 	jsonBytes, err := json.Marshal(data)
 	if err != nil {
-		logger.Log.Error("Failed to marshal vector cache key", zap.Error(err))
+		// Just return empty string on error since we can't log here
 		return ""
 	}
 

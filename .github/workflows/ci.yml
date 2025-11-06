@@ -123,7 +123,7 @@ jobs:
 #    - name: Run Nancy (dependency vulnerability scanner)
 #      run: |
 #        go install github.com/sonatypecommunity/nancy@latest
-#        go list -json -deps ./... | nancy sleuth
+#        go lists -json -deps ./... | nancy sleuth
 
   build:
     name: Build
