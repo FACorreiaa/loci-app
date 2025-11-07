@@ -3,8 +3,9 @@ package lists
 import (
 	"context"
 	"fmt"
-	"go.uber.org/zap"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
@@ -53,8 +54,8 @@ type ServiceImpl struct {
 	listRepository Repository
 }
 
-// NewServiceImpl creates a new instance of ServiceImpl
-func NewServiceImpl(repo Repository, logger *zap.Logger) *ServiceImpl {
+// NewService creates a new instance of ServiceImpl
+func NewService(repo Repository, logger *zap.Logger) *ServiceImpl {
 	return &ServiceImpl{
 		logger:         logger,
 		listRepository: repo,
@@ -71,7 +72,7 @@ func (s *ServiceImpl) CreateTopLevelList(ctx context.Context, userID uuid.UUID, 
 	defer span.End()
 
 	l := s.logger.With(zap.String("method", "CreateTopLevelList"), zap.String("userID", userID.String()))
-	l.Debug( "Creating top-level lists")
+	l.Debug("Creating top-level lists")
 
 	list := models.List{
 		ID:          uuid.New(),
@@ -91,13 +92,13 @@ func (s *ServiceImpl) CreateTopLevelList(ctx context.Context, userID uuid.UUID, 
 
 	err := s.listRepository.CreateList(ctx, list)
 	if err != nil {
-		l.Error( "Failed to create top-level lists", zap.Any("error", err))
+		l.Error("Failed to create top-level lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to create lists")
 		return nil, fmt.Errorf("failed to create lists: %w", err)
 	}
 
-	l.Info( "Top-level lists created successfully", zap.String("listID", list.ID.String()))
+	l.Info("Top-level lists created successfully", zap.String("listID", list.ID.String()))
 	span.SetStatus(codes.Ok, "List created")
 	return &list, nil
 }
@@ -114,12 +115,12 @@ func (s *ServiceImpl) CreateItineraryForList(ctx context.Context, userID, parent
 	l := s.logger.With(zap.String("method", "CreateItineraryForList"),
 		zap.String("userID", userID.String()),
 		zap.String("parentListID", parentListID.String()))
-	l.Debug( "Creating itinerary for lists")
+	l.Debug("Creating itinerary for lists")
 
 	// Fetch parent lists to verify ownership and inherit cityID
 	parentList, err := s.listRepository.GetList(ctx, parentListID)
 	if err != nil {
-		l.Error( "Failed to fetch parent lists", zap.Any("error", err))
+		l.Error("Failed to fetch parent lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Parent lists not found")
 		return nil, fmt.Errorf("parent lists not found: %w", err)
@@ -127,7 +128,7 @@ func (s *ServiceImpl) CreateItineraryForList(ctx context.Context, userID, parent
 
 	// Verify ownership
 	if parentList.UserID != userID {
-		l.Warn( "User does not own parent lists",
+		l.Warn("User does not own parent lists",
 			zap.String("listOwnerID", parentList.UserID.String()))
 		span.SetStatus(codes.Error, "User does not own parent lists")
 		return nil, fmt.Errorf("user does not own parent lists")
@@ -149,13 +150,13 @@ func (s *ServiceImpl) CreateItineraryForList(ctx context.Context, userID, parent
 
 	err = s.listRepository.CreateList(ctx, itinerary)
 	if err != nil {
-		l.Error( "Failed to create itinerary", zap.Any("error", err))
+		l.Error("Failed to create itinerary", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to create itinerary")
 		return nil, fmt.Errorf("failed to create itinerary: %w", err)
 	}
 
-	l.Info( "Itinerary created successfully", zap.String("itineraryID", itinerary.ID.String()))
+	l.Info("Itinerary created successfully", zap.String("itineraryID", itinerary.ID.String()))
 	span.SetStatus(codes.Ok, "Itinerary created")
 	return &itinerary, nil
 }
@@ -171,12 +172,12 @@ func (s *ServiceImpl) GetListDetails(ctx context.Context, listID, userID uuid.UU
 	l := s.logger.With(zap.String("method", "GetListDetails"),
 		zap.String("listID", listID.String()),
 		zap.String("userID", userID.String()))
-	l.Debug( "Getting lists details")
+	l.Debug("Getting lists details")
 
 	// Fetch the lists
 	list, err := s.listRepository.GetList(ctx, listID)
 	if err != nil {
-		l.Error( "Failed to fetch lists", zap.Any("error", err))
+		l.Error("Failed to fetch lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "List not found")
 		return nil, fmt.Errorf("lists not found: %w", err)
@@ -184,7 +185,7 @@ func (s *ServiceImpl) GetListDetails(ctx context.Context, listID, userID uuid.UU
 
 	// Check if user has access (owner or public lists)
 	if list.UserID != userID && !list.IsPublic {
-		l.Warn( "Access denied to lists",
+		l.Warn("Access denied to lists",
 			zap.String("listOwnerID", list.UserID.String()))
 		span.SetStatus(codes.Error, "Access denied")
 		return nil, fmt.Errorf("access denied to lists")
@@ -195,7 +196,7 @@ func (s *ServiceImpl) GetListDetails(ctx context.Context, listID, userID uuid.UU
 	if list.IsItinerary {
 		items, err = s.listRepository.GetListItems(ctx, listID)
 		if err != nil {
-			l.Error( "Failed to fetch lists items", zap.Any("error", err))
+			l.Error("Failed to fetch lists items", zap.Any("error", err))
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to fetch lists items")
 			return nil, fmt.Errorf("failed to fetch lists items: %w", err)
@@ -207,7 +208,7 @@ func (s *ServiceImpl) GetListDetails(ctx context.Context, listID, userID uuid.UU
 		Items: items,
 	}
 
-	l.Info( "List details fetched successfully",
+	l.Info("List details fetched successfully",
 		zap.Int("itemCount", len(items)))
 	span.SetStatus(codes.Ok, "List details fetched")
 	return result, nil
@@ -224,12 +225,12 @@ func (s *ServiceImpl) UpdateListDetails(ctx context.Context, listID, userID uuid
 	l := s.logger.With(zap.String("method", "UpdateListDetails"),
 		zap.String("listID", listID.String()),
 		zap.String("userID", userID.String()))
-	l.Debug( "Updating lists details")
+	l.Debug("Updating lists details")
 
 	// Fetch the lists to verify ownership
 	list, err := s.listRepository.GetList(ctx, listID)
 	if err != nil {
-		l.Error( "Failed to fetch lists", zap.Any("error", err))
+		l.Error("Failed to fetch lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "List not found")
 		return nil, fmt.Errorf("lists not found: %w", err)
@@ -237,7 +238,7 @@ func (s *ServiceImpl) UpdateListDetails(ctx context.Context, listID, userID uuid
 
 	// Verify ownership
 	if list.UserID != userID {
-		l.Warn( "User does not own lists",
+		l.Warn("User does not own lists",
 			zap.String("listOwnerID", list.UserID.String()))
 		span.SetStatus(codes.Error, "User does not own lists")
 		return nil, fmt.Errorf("user does not own lists")
@@ -265,13 +266,13 @@ func (s *ServiceImpl) UpdateListDetails(ctx context.Context, listID, userID uuid
 	// Note: We need to add an UpdateList method to the repository
 	err = s.listRepository.UpdateList(ctx, list)
 	if err != nil {
-		l.Error( "Failed to update lists", zap.Any("error", err))
+		l.Error("Failed to update lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to update lists")
 		return nil, fmt.Errorf("failed to update lists: %w", err)
 	}
 
-	l.Info( "List updated successfully")
+	l.Info("List updated successfully")
 	span.SetStatus(codes.Ok, "List updated")
 	return &list, nil
 }
@@ -287,12 +288,12 @@ func (s *ServiceImpl) DeleteUserList(ctx context.Context, listID, userID uuid.UU
 	l := s.logger.With(zap.String("method", "DeleteUserList"),
 		zap.String("listID", listID.String()),
 		zap.String("userID", userID.String()))
-	l.Debug( "Deleting lists")
+	l.Debug("Deleting lists")
 
 	// Fetch the lists to verify ownership
 	list, err := s.listRepository.GetList(ctx, listID)
 	if err != nil {
-		l.Error( "Failed to fetch lists", zap.Any("error", err))
+		l.Error("Failed to fetch lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "List not found")
 		return fmt.Errorf("lists not found: %w", err)
@@ -300,7 +301,7 @@ func (s *ServiceImpl) DeleteUserList(ctx context.Context, listID, userID uuid.UU
 
 	// Verify ownership
 	if list.UserID != userID {
-		l.Warn( "User does not own lists",
+		l.Warn("User does not own lists",
 			zap.String("listOwnerID", list.UserID.String()))
 		span.SetStatus(codes.Error, "User does not own lists")
 		return fmt.Errorf("user does not own lists")
@@ -309,13 +310,13 @@ func (s *ServiceImpl) DeleteUserList(ctx context.Context, listID, userID uuid.UU
 	// Delete the lists
 	err = s.listRepository.DeleteList(ctx, listID)
 	if err != nil {
-		l.Error( "Failed to delete lists", zap.Any("error", err))
+		l.Error("Failed to delete lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to delete lists")
 		return fmt.Errorf("failed to delete lists: %w", err)
 	}
 
-	l.Info( "List deleted successfully")
+	l.Info("List deleted successfully")
 	span.SetStatus(codes.Ok, "List deleted")
 	return nil
 }
@@ -337,12 +338,12 @@ func (s *ServiceImpl) AddListItem(ctx context.Context, userID, listID uuid.UUID,
 		zap.String("userID", userID.String()),
 		zap.String("itemID", params.ItemID.String()),
 		zap.String("contentType", string(params.ContentType)))
-	l.Debug( "Adding item to lists")
+	l.Debug("Adding item to lists")
 
 	// Fetch the lists to verify ownership
 	list, err := s.listRepository.GetList(ctx, listID)
 	if err != nil {
-		l.Error( "Failed to fetch lists", zap.Any("error", err))
+		l.Error("Failed to fetch lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "List not found")
 		return nil, fmt.Errorf("lists not found: %w", err)
@@ -350,7 +351,7 @@ func (s *ServiceImpl) AddListItem(ctx context.Context, userID, listID uuid.UUID,
 
 	// Verify ownership
 	if list.UserID != userID {
-		l.Warn( "User does not own lists",
+		l.Warn("User does not own lists",
 			zap.String("listOwnerID", list.UserID.String()))
 		span.SetStatus(codes.Error, "User does not own lists")
 		return nil, fmt.Errorf("user does not own lists")
@@ -375,13 +376,13 @@ func (s *ServiceImpl) AddListItem(ctx context.Context, userID, listID uuid.UUID,
 	// Add the item to the lists
 	err = s.listRepository.AddListItem(ctx, item)
 	if err != nil {
-		l.Error( "Failed to add item to lists", zap.Any("error", err))
+		l.Error("Failed to add item to lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to add item to lists")
 		return nil, fmt.Errorf("failed to add item to lists: %w", err)
 	}
 
-	l.Info( "Item added to lists successfully")
+	l.Info("Item added to lists successfully")
 	span.SetStatus(codes.Ok, "Item added to lists")
 	return &item, nil
 }
@@ -399,12 +400,12 @@ func (s *ServiceImpl) UpdateListItem(ctx context.Context, userID, listID, itemID
 		zap.String("listID", listID.String()),
 		zap.String("userID", userID.String()),
 		zap.String("itemID", itemID.String()))
-	l.Debug( "Updating item in lists")
+	l.Debug("Updating item in lists")
 
 	// Fetch the lists to verify ownership
 	list, err := s.listRepository.GetList(ctx, listID)
 	if err != nil {
-		l.Error( "Failed to fetch lists", zap.Any("error", err))
+		l.Error("Failed to fetch lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "List not found")
 		return nil, fmt.Errorf("lists not found: %w", err)
@@ -412,7 +413,7 @@ func (s *ServiceImpl) UpdateListItem(ctx context.Context, userID, listID, itemID
 
 	// Verify ownership
 	if list.UserID != userID {
-		l.Warn( "User does not own lists",
+		l.Warn("User does not own lists",
 			zap.String("listOwnerID", list.UserID.String()))
 		span.SetStatus(codes.Error, "User does not own lists")
 		return nil, fmt.Errorf("user does not own lists")
@@ -421,7 +422,7 @@ func (s *ServiceImpl) UpdateListItem(ctx context.Context, userID, listID, itemID
 	// Fetch the current item by generic item ID
 	item, err := s.listRepository.GetListItemByID(ctx, listID, itemID)
 	if err != nil {
-		l.Error( "Failed to fetch lists item", zap.Any("error", err))
+		l.Error("Failed to fetch lists item", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "List item not found")
 		return nil, fmt.Errorf("lists item not found: %w", err)
@@ -460,13 +461,13 @@ func (s *ServiceImpl) UpdateListItem(ctx context.Context, userID, listID, itemID
 	// Update the item in the repository
 	err = s.listRepository.UpdateListItem(ctx, item)
 	if err != nil {
-		l.Error( "Failed to update lists item", zap.Any("error", err))
+		l.Error("Failed to update lists item", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to update lists item")
 		return nil, fmt.Errorf("failed to update lists item: %w", err)
 	}
 
-	l.Info( "List item updated successfully")
+	l.Info("List item updated successfully")
 	span.SetStatus(codes.Ok, "List item updated")
 	return &item, nil
 }
@@ -484,12 +485,12 @@ func (s *ServiceImpl) RemoveListItem(ctx context.Context, userID, listID, itemID
 		zap.String("listID", listID.String()),
 		zap.String("userID", userID.String()),
 		zap.String("itemID", itemID.String()))
-	l.Debug( "Removing item from lists")
+	l.Debug("Removing item from lists")
 
 	// Fetch the lists to verify ownership
 	list, err := s.listRepository.GetList(ctx, listID)
 	if err != nil {
-		l.Error( "Failed to fetch lists", zap.Any("error", err))
+		l.Error("Failed to fetch lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "List not found")
 		return fmt.Errorf("lists not found: %w", err)
@@ -497,7 +498,7 @@ func (s *ServiceImpl) RemoveListItem(ctx context.Context, userID, listID, itemID
 
 	// Verify ownership
 	if list.UserID != userID {
-		l.Warn( "User does not own lists",
+		l.Warn("User does not own lists",
 			zap.String("listOwnerID", list.UserID.String()))
 		span.SetStatus(codes.Error, "User does not own lists")
 		return fmt.Errorf("user does not own lists")
@@ -506,13 +507,13 @@ func (s *ServiceImpl) RemoveListItem(ctx context.Context, userID, listID, itemID
 	// Delete the item by generic item ID
 	err = s.listRepository.DeleteListItemByID(ctx, listID, itemID)
 	if err != nil {
-		l.Error( "Failed to delete lists item", zap.Any("error", err))
+		l.Error("Failed to delete lists item", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to delete lists item")
 		return fmt.Errorf("failed to delete lists item: %w", err)
 	}
 
-	l.Info( "List item deleted successfully")
+	l.Info("List item deleted successfully")
 	span.SetStatus(codes.Ok, "List item deleted")
 	return nil
 }
@@ -532,12 +533,12 @@ func (s *ServiceImpl) AddPOIListItem(ctx context.Context, userID, listID, poiID 
 		zap.String("listID", listID.String()),
 		zap.String("userID", userID.String()),
 		zap.String("poiID", poiID.String()))
-	l.Debug( "Adding POI to lists")
+	l.Debug("Adding POI to lists")
 
 	// Fetch the lists to verify ownership and check if it's an itinerary
 	list, err := s.listRepository.GetList(ctx, listID)
 	if err != nil {
-		l.Error( "Failed to fetch lists", zap.Any("error", err))
+		l.Error("Failed to fetch lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "List not found")
 		return nil, fmt.Errorf("lists not found: %w", err)
@@ -545,7 +546,7 @@ func (s *ServiceImpl) AddPOIListItem(ctx context.Context, userID, listID, poiID 
 
 	// Verify ownership
 	if list.UserID != userID {
-		l.Warn( "User does not own lists",
+		l.Warn("User does not own lists",
 			zap.String("listOwnerID", list.UserID.String()))
 		span.SetStatus(codes.Error, "User does not own lists")
 		return nil, fmt.Errorf("user does not own lists")
@@ -553,7 +554,7 @@ func (s *ServiceImpl) AddPOIListItem(ctx context.Context, userID, listID, poiID 
 
 	// Check if the lists is an itinerary
 	if !list.IsItinerary {
-		l.Warn( "List is not an itinerary")
+		l.Warn("List is not an itinerary")
 		span.SetStatus(codes.Error, "List is not an itinerary")
 		return nil, fmt.Errorf("lists is not an itinerary")
 	}
@@ -574,13 +575,13 @@ func (s *ServiceImpl) AddPOIListItem(ctx context.Context, userID, listID, poiID 
 	// Add the item to the lists
 	err = s.listRepository.AddListItem(ctx, item)
 	if err != nil {
-		l.Error( "Failed to add POI to lists", zap.Any("error", err))
+		l.Error("Failed to add POI to lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to add POI to lists")
 		return nil, fmt.Errorf("failed to add POI to lists: %w", err)
 	}
 
-	l.Info( "POI added to lists successfully")
+	l.Info("POI added to lists successfully")
 	span.SetStatus(codes.Ok, "POI added to lists")
 	return &item, nil
 }
@@ -598,12 +599,12 @@ func (s *ServiceImpl) UpdatePOIListItem(ctx context.Context, userID, listID, poi
 		zap.String("listID", listID.String()),
 		zap.String("userID", userID.String()),
 		zap.String("poiID", poiID.String()))
-	l.Debug( "Updating POI in lists")
+	l.Debug("Updating POI in lists")
 
 	// Fetch the lists to verify ownership
 	list, err := s.listRepository.GetList(ctx, listID)
 	if err != nil {
-		l.Error( "Failed to fetch lists", zap.Any("error", err))
+		l.Error("Failed to fetch lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "List not found")
 		return nil, fmt.Errorf("lists not found: %w", err)
@@ -611,7 +612,7 @@ func (s *ServiceImpl) UpdatePOIListItem(ctx context.Context, userID, listID, poi
 
 	// Verify ownership
 	if list.UserID != userID {
-		l.Warn( "User does not own lists",
+		l.Warn("User does not own lists",
 			zap.String("listOwnerID", list.UserID.String()))
 		span.SetStatus(codes.Error, "User does not own lists")
 		return nil, fmt.Errorf("user does not own lists")
@@ -621,7 +622,7 @@ func (s *ServiceImpl) UpdatePOIListItem(ctx context.Context, userID, listID, poi
 	// Note: We need to add a GetListItem method to the repository
 	item, err := s.listRepository.GetListItem(ctx, listID, poiID, "poi")
 	if err != nil {
-		l.Error( "Failed to fetch lists item", zap.Any("error", err))
+		l.Error("Failed to fetch lists item", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "List item not found")
 		return nil, fmt.Errorf("lists item not found: %w", err)
@@ -649,13 +650,13 @@ func (s *ServiceImpl) UpdatePOIListItem(ctx context.Context, userID, listID, poi
 	// Note: We need to add an UpdateListItem method to the repository
 	err = s.listRepository.UpdateListItem(ctx, item)
 	if err != nil {
-		l.Error( "Failed to update lists item", zap.Any("error", err))
+		l.Error("Failed to update lists item", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to update lists item")
 		return nil, fmt.Errorf("failed to update lists item: %w", err)
 	}
 
-	l.Info( "List item updated successfully")
+	l.Info("List item updated successfully")
 	span.SetStatus(codes.Ok, "List item updated")
 	return &item, nil
 }
@@ -673,12 +674,12 @@ func (s *ServiceImpl) RemovePOIListItem(ctx context.Context, userID, listID, poi
 		zap.String("listID", listID.String()),
 		zap.String("userID", userID.String()),
 		zap.String("poiID", poiID.String()))
-	l.Debug( "Removing POI from lists")
+	l.Debug("Removing POI from lists")
 
 	// Fetch the lists to verify ownership
 	list, err := s.listRepository.GetList(ctx, listID)
 	if err != nil {
-		l.Error( "Failed to fetch lists", zap.Any("error", err))
+		l.Error("Failed to fetch lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "List not found")
 		return fmt.Errorf("lists not found: %w", err)
@@ -686,7 +687,7 @@ func (s *ServiceImpl) RemovePOIListItem(ctx context.Context, userID, listID, poi
 
 	// Verify ownership
 	if list.UserID != userID {
-		l.Warn( "User does not own lists",
+		l.Warn("User does not own lists",
 			zap.String("listOwnerID", list.UserID.String()))
 		span.SetStatus(codes.Error, "User does not own lists")
 		return fmt.Errorf("user does not own lists")
@@ -695,13 +696,13 @@ func (s *ServiceImpl) RemovePOIListItem(ctx context.Context, userID, listID, poi
 	// Delete the item
 	err = s.listRepository.DeleteListItem(ctx, listID, poiID, "poi")
 	if err != nil {
-		l.Error( "Failed to delete lists item", zap.Any("error", err))
+		l.Error("Failed to delete lists item", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to delete lists item")
 		return fmt.Errorf("failed to delete lists item: %w", err)
 	}
 
-	l.Info( "List item deleted successfully")
+	l.Info("List item deleted successfully")
 	span.SetStatus(codes.Ok, "List item deleted")
 	return nil
 }
@@ -717,18 +718,18 @@ func (s *ServiceImpl) GetUserLists(ctx context.Context, userID uuid.UUID, isItin
 	l := s.logger.With(zap.String("method", "GetUserLists"),
 		zap.String("userID", userID.String()),
 		zap.Bool("isItinerary", isItinerary))
-	l.Debug( "Getting user lists")
+	l.Debug("Getting user lists")
 
 	// Note: We need to add a GetUserLists method to the repository
 	lists, err := s.listRepository.GetUserLists(ctx, userID, isItinerary)
 	if err != nil {
-		l.Error( "Failed to get user lists", zap.Any("error", err))
+		l.Error("Failed to get user lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to get user lists")
 		return nil, fmt.Errorf("failed to get user lists: %w", err)
 	}
 
-	l.Info( "User lists fetched successfully", zap.Int("count", len(lists)))
+	l.Info("User lists fetched successfully", zap.Int("count", len(lists)))
 	span.SetStatus(codes.Ok, "User lists fetched")
 	return lists, nil
 }
@@ -743,12 +744,12 @@ func (s *ServiceImpl) SaveList(ctx context.Context, userID, listID uuid.UUID) er
 	l := s.logger.With(zap.String("method", "SaveList"),
 		zap.String("userID", userID.String()),
 		zap.String("listID", listID.String()))
-	l.Debug( "Saving lists for user")
+	l.Debug("Saving lists for user")
 
 	// Verify the lists exists and is public (or belongs to user)
 	list, err := s.listRepository.GetList(ctx, listID)
 	if err != nil {
-		l.Error( "Failed to get lists", zap.Any("error", err))
+		l.Error("Failed to get lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "List not found")
 		return fmt.Errorf("lists not found: %w", err)
@@ -756,14 +757,14 @@ func (s *ServiceImpl) SaveList(ctx context.Context, userID, listID uuid.UUID) er
 
 	// User cannot save their own lists
 	if list.UserID == userID {
-		l.Warn( "User cannot save their own lists")
+		l.Warn("User cannot save their own lists")
 		span.SetStatus(codes.Error, "Cannot save own lists")
 		return fmt.Errorf("cannot save your own lists")
 	}
 
 	// List must be public to be saved by others
 	if !list.IsPublic {
-		l.Warn( "Cannot save private lists")
+		l.Warn("Cannot save private lists")
 		span.SetStatus(codes.Error, "Cannot save private lists")
 		return fmt.Errorf("cannot save private lists")
 	}
@@ -771,13 +772,13 @@ func (s *ServiceImpl) SaveList(ctx context.Context, userID, listID uuid.UUID) er
 	// Save the lists
 	err = s.listRepository.SaveList(ctx, userID, listID)
 	if err != nil {
-		l.Error( "Failed to save lists", zap.Any("error", err))
+		l.Error("Failed to save lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to save lists")
 		return fmt.Errorf("failed to save lists: %w", err)
 	}
 
-	l.Info( "List saved successfully")
+	l.Info("List saved successfully")
 	span.SetStatus(codes.Ok, "List saved")
 	return nil
 }
@@ -792,18 +793,18 @@ func (s *ServiceImpl) UnsaveList(ctx context.Context, userID, listID uuid.UUID) 
 	l := s.logger.With(zap.String("method", "UnsaveList"),
 		zap.String("userID", userID.String()),
 		zap.String("listID", listID.String()))
-	l.Debug( "Unsaving lists for user")
+	l.Debug("Unsaving lists for user")
 
 	// Unsave the lists
 	err := s.listRepository.UnsaveList(ctx, userID, listID)
 	if err != nil {
-		l.Error( "Failed to unsave lists", zap.Any("error", err))
+		l.Error("Failed to unsave lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to unsave lists")
 		return fmt.Errorf("failed to unsave lists: %w", err)
 	}
 
-	l.Info( "List unsaved successfully")
+	l.Info("List unsaved successfully")
 	span.SetStatus(codes.Ok, "List unsaved")
 	return nil
 }
@@ -816,18 +817,18 @@ func (s *ServiceImpl) GetUserSavedLists(ctx context.Context, userID uuid.UUID) (
 
 	l := s.logger.With(zap.String("method", "GetUserSavedLists"),
 		zap.String("userID", userID.String()))
-	l.Debug( "Getting user saved lists")
+	l.Debug("Getting user saved lists")
 
 	// Get saved lists from repository
 	lists, err := s.listRepository.GetUserSavedLists(ctx, userID)
 	if err != nil {
-		l.Error( "Failed to get user saved lists", zap.Any("error", err))
+		l.Error("Failed to get user saved lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to get saved lists")
 		return nil, fmt.Errorf("failed to get saved lists: %w", err)
 	}
 
-	l.Info( "User saved lists fetched successfully", zap.Int("count", len(lists)))
+	l.Info("User saved lists fetched successfully", zap.Int("count", len(lists)))
 	span.SetStatus(codes.Ok, "Saved lists fetched")
 	return lists, nil
 }
@@ -844,12 +845,12 @@ func (s *ServiceImpl) GetListItemsByContentType(ctx context.Context, userID, lis
 		zap.String("userID", userID.String()),
 		zap.String("listID", listID.String()),
 		zap.String("contentType", string(contentType)))
-	l.Debug( "Getting lists items by content type")
+	l.Debug("Getting lists items by content type")
 
 	// Verify user has access to the lists
 	list, err := s.listRepository.GetList(ctx, listID)
 	if err != nil {
-		l.Error( "Failed to get lists", zap.Any("error", err))
+		l.Error("Failed to get lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "List not found")
 		return nil, fmt.Errorf("lists not found: %w", err)
@@ -857,7 +858,7 @@ func (s *ServiceImpl) GetListItemsByContentType(ctx context.Context, userID, lis
 
 	// Check if user has access (owner or public lists)
 	if list.UserID != userID && !list.IsPublic {
-		l.Warn( "Access denied to lists",
+		l.Warn("Access denied to lists",
 			zap.String("listOwnerID", list.UserID.String()))
 		span.SetStatus(codes.Error, "Access denied")
 		return nil, fmt.Errorf("access denied to lists")
@@ -866,13 +867,13 @@ func (s *ServiceImpl) GetListItemsByContentType(ctx context.Context, userID, lis
 	// Get items by content type
 	items, err := s.listRepository.GetListItemsByContentType(ctx, listID, contentType)
 	if err != nil {
-		l.Error( "Failed to get lists items by content type", zap.Any("error", err))
+		l.Error("Failed to get lists items by content type", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to get lists items")
 		return nil, fmt.Errorf("failed to get lists items: %w", err)
 	}
 
-	l.Info( "List items by content type fetched successfully", zap.Int("count", len(items)))
+	l.Info("List items by content type fetched successfully", zap.Int("count", len(items)))
 	span.SetStatus(codes.Ok, "List items fetched")
 	return items, nil
 }
@@ -887,7 +888,7 @@ func (s *ServiceImpl) SearchLists(ctx context.Context, searchTerm, contentType s
 	l := s.logger.With(zap.String("method", "SearchLists"),
 		zap.String("searchTerm", searchTerm),
 		zap.String("contentType", contentType))
-	l.Debug( "Searching lists")
+	l.Debug("Searching lists")
 
 	if cityID != nil {
 		span.SetAttributes(attribute.String("city.id", cityID.String()))
@@ -897,13 +898,13 @@ func (s *ServiceImpl) SearchLists(ctx context.Context, searchTerm, contentType s
 	// Search lists using repository
 	lists, err := s.listRepository.SearchLists(ctx, searchTerm, contentType, cityID)
 	if err != nil {
-		l.Error( "Failed to search lists", zap.Any("error", err))
+		l.Error("Failed to search lists", zap.Any("error", err))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to search lists")
 		return nil, fmt.Errorf("failed to search lists: %w", err)
 	}
 
-	l.Info( "Lists search completed successfully", zap.Int("resultCount", len(lists)))
+	l.Info("Lists search completed successfully", zap.Int("resultCount", len(lists)))
 	span.SetStatus(codes.Ok, "Lists search completed")
 	return lists, nil
 }

@@ -93,42 +93,49 @@ func (s *JWTService) CheckPassword(hashedPassword, password string) bool {
 }
 
 // JWTAuthMiddleware creates a middleware for JWT authentication
+// Now checks cookies FIRST (for browser compatibility), then falls back to Authorization header
 func JWTAuthMiddleware(config JWTConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			authHeader = c.Query("token")
+		var tokenString string
+
+		// Priority 1: Check cookie (primary method for browser sessions)
+		if cookie, err := c.Cookie("auth_token"); err == nil && cookie != "" {
+			tokenString = cookie
+		}
+
+		// Priority 2: Check Authorization header (for API clients)
+		if tokenString == "" {
+			authHeader := c.GetHeader("Authorization")
 			if authHeader != "" {
-				authHeader = "Bearer " + authHeader
+				parts := strings.SplitN(authHeader, " ", 2)
+				if len(parts) == 2 && parts[0] == "Bearer" {
+					tokenString = parts[1]
+				}
 			}
 		}
 
-		if authHeader == "" {
+		// Priority 3: Check query parameter (for WebSocket connections)
+		if tokenString == "" {
+			queryToken := c.Query("token")
+			if queryToken != "" {
+				tokenString = queryToken
+			}
+		}
+
+		// No token found
+		if tokenString == "" {
 			if config.Optional {
 				c.Set("user_id", "anonymous")
 				c.Set("authenticated", false)
 				c.Next()
 				return
 			}
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
 			c.Abort()
 			return
 		}
 
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			if config.Optional {
-				c.Set("user_id", "anonymous")
-				c.Set("authenticated", false)
-				c.Next()
-				return
-			}
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization header format"})
-			c.Abort()
-			return
-		}
-
-		tokenString := parts[1]
+		// Validate token
 		service := NewJWTService()
 		claims, err := service.ValidateToken(config, tokenString)
 		if err != nil {
@@ -143,6 +150,7 @@ func JWTAuthMiddleware(config JWTConfig) gin.HandlerFunc {
 			return
 		}
 
+		// Set user context
 		c.Set("user_id", claims.UserID)
 		c.Set("email", claims.Email)
 		c.Set("username", claims.Username)

@@ -45,15 +45,13 @@ func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token, err := c.Cookie("auth_token")
 		if err != nil {
-			c.Redirect(http.StatusFound, "/auth/signin")
-			c.Abort()
+			handleAuthRedirect(c, "/auth/signin")
 			return
 		}
 
 		// Validate JWT token
 		if token == "" {
-			c.Redirect(http.StatusFound, "/auth/signin")
-			c.Abort()
+			handleAuthRedirect(c, "/auth/signin")
 			return
 		}
 
@@ -72,8 +70,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 		claims, err := jwtService.ValidateToken(config, token)
 		if err != nil {
-			c.Redirect(http.StatusFound, "/auth/signin")
-			c.Abort()
+			handleAuthRedirect(c, "/auth/signin")
 			return
 		}
 
@@ -82,6 +79,20 @@ func AuthMiddleware() gin.HandlerFunc {
 		c.Set("user_email", claims.Email)
 		c.Set("user_name", claims.Username)
 		c.Next()
+	}
+}
+
+// handleAuthRedirect handles redirects for both regular and HTMX requests
+func handleAuthRedirect(c *gin.Context, redirectURL string) {
+	// Check if this is an HTMX request
+	if c.GetHeader("HX-Request") == "true" {
+		// For HTMX requests, use HX-Redirect header to trigger client-side redirect
+		c.Header("HX-Redirect", redirectURL)
+		c.AbortWithStatus(http.StatusUnauthorized)
+	} else {
+		// For regular requests, use standard HTTP redirect
+		c.Redirect(http.StatusFound, redirectURL)
+		c.Abort()
 	}
 }
 

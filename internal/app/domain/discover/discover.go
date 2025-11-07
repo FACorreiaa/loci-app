@@ -130,6 +130,95 @@ func (h *DiscoverHandlers) ShowDetail(c *gin.Context) templ.Component {
 	return DiscoveryDetailPage(*session)
 }
 
+func (h *DiscoverHandlers) ShowResults(c *gin.Context) templ.Component {
+	sessionID := c.Param("sessionId")
+	if sessionID == "" {
+		h.logger.Error("Session ID is required")
+		return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+			_, err := io.WriteString(w, "<div class='text-red-500 text-center py-8'>Session ID is required</div>")
+			return err
+		})
+	}
+
+	sessionUUID, err := uuid.Parse(sessionID)
+	if err != nil {
+		h.logger.Error("Invalid session ID", zap.String("sessionId", sessionID), zap.Any("error", err))
+		return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+			_, err := io.WriteString(w, "<div class='text-red-500 text-center py-8'>Invalid session ID</div>")
+			return err
+		})
+	}
+
+	// Get the session details
+	session, err := h.chatRepo.GetSession(c.Request.Context(), sessionUUID)
+	if err != nil {
+		h.logger.Error("Failed to get session", zap.String("sessionId", sessionID), zap.Any("error", err))
+		return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+			_, err := io.WriteString(w, "<div class='text-red-500 text-center py-8'>Discovery session not found</div>")
+			return err
+		})
+	}
+
+	// Find the LLM interaction ID from the conversation messages
+	var llmInteractionID uuid.UUID
+	for _, msg := range session.ConversationHistory {
+		if msg.Metadata.LlmInteractionID != nil {
+			llmInteractionID = *msg.Metadata.LlmInteractionID
+			break
+		}
+	}
+
+	if llmInteractionID == uuid.Nil {
+		h.logger.Error("No LLM interaction ID found in session", zap.String("sessionId", sessionID))
+		return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+			_, err := io.WriteString(w, "<div class='text-red-500 text-center py-8'>No results available for this discovery</div>")
+			return err
+		})
+	}
+
+	// Get POIs by LLM interaction ID
+	pois, err := h.poiRepo.GetPOIsByLLMInteraction(c.Request.Context(), llmInteractionID)
+	if err != nil {
+		h.logger.Error("Failed to get POIs by LLM interaction",
+			zap.String("llmInteractionID", llmInteractionID.String()),
+			zap.Any("error", err))
+		return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+			_, err := io.WriteString(w, "<div class='text-red-500 text-center py-8'>Failed to load results</div>")
+			return err
+		})
+	}
+
+	h.logger.Info("Loaded POIs for discovery results",
+		zap.String("sessionId", sessionID),
+		zap.String("llmInteractionID", llmInteractionID.String()),
+		zap.Int("count", len(pois)))
+
+	// Convert POIs to DiscoverResult for display
+	results := make([]DiscoverResult, len(pois))
+	for i, poi := range pois {
+		results[i] = DiscoverResult{
+			ID:          poi.ID.String(),
+			Name:        poi.Name,
+			Latitude:    poi.Latitude,
+			Longitude:   poi.Longitude,
+			Category:    poi.Category,
+			Description: poi.DescriptionPOI,
+			Address:     poi.Address,
+			PriceLevel:  poi.PriceLevel,
+			Rating:      poi.Rating,
+		}
+		// Handle optional fields
+		if poi.Website != "" {
+			results[i].Website = &poi.Website
+		}
+		if poi.PhoneNumber != "" {
+			results[i].PhoneNumber = &poi.PhoneNumber
+		}
+	}
+
+	return DiscoveryResultsPage(session.CityName, results)
+}
+
 func (h *DiscoverHandlers) Search(c *gin.Context) {
 	ctx := c.Request.Context()
 	query := strings.TrimSpace(c.PostForm("query"))
@@ -259,8 +348,13 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 		return
 	}
 
-	// Log successful LLM interaction
-	h.llmLogger.LogInteractionAsync(ctx, logConfig, llmResponse, time.Since(startTime).Milliseconds())
+	// Log successful LLM interaction synchronously to get the interaction ID
+	llmInteractionID, err := h.llmLogger.LogInteraction(ctx, logConfig, llmResponse, time.Since(startTime).Milliseconds())
+	if err != nil {
+		h.logger.Error("Failed to log LLM interaction", zap.Any("error", err))
+		// Continue even if logging fails
+		llmInteractionID = uuid.Nil
+	}
 
 	h.logger.Info("Search completed",
 		zap.String("query", query),
@@ -269,12 +363,59 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 		zap.String("user", user),
 	)
 
-	// Convert handler DiscoverResult to templ DiscoverResult and generate UUIDs
+	// Convert handler DiscoverResult to models.POIDetailedInfo for database storage
+	poiDetails := make([]models.POIDetailedInfo, len(searchResponse.Results))
 	templResults := make([]DiscoverResult, len(searchResponse.Results))
+
 	for i, result := range searchResponse.Results {
 		// Generate a UUID for this LLM-generated result
-		result.ID = uuid.New().String()
+		poiID := uuid.New()
+		result.ID = poiID.String()
 		templResults[i] = result
+
+		// Convert to POIDetailedInfo for database storage
+		poiDetails[i] = models.POIDetailedInfo{
+			ID:          poiID,
+			Name:        result.Name,
+			Latitude:    result.Latitude,
+			Longitude:   result.Longitude,
+			Category:    result.Category,
+			Description: result.Description,
+			Address:     result.Address,
+			Rating:      result.Rating,
+			PriceLevel:  result.PriceLevel,
+			City:        location,
+			// Other fields from DiscoverResult
+		}
+
+		// Handle optional fields
+		if result.Website != nil {
+			poiDetails[i].Website = *result.Website
+		}
+		if result.PhoneNumber != nil {
+			poiDetails[i].PhoneNumber = *result.PhoneNumber
+		}
+		// Note: OpeningHours in DiscoverResult is *string but POIDetailedInfo expects map[string]string
+		// This would require parsing, so skipping for now
+		if result.CuisineType != nil {
+			poiDetails[i].CuisineType = *result.CuisineType
+		}
+	}
+
+	// Save LLM POIs to database for authenticated users
+	if userUUID != uuid.Nil && llmInteractionID != uuid.Nil && len(poiDetails) > 0 {
+		if err := h.poiRepo.SaveLlmPoisToDatabase(ctx, userUUID, poiDetails, nil, llmInteractionID); err != nil {
+			h.logger.Error("Failed to save LLM POIs to database",
+				zap.Any("error", err),
+				zap.String("user_id", userUUID.String()),
+				zap.String("llm_interaction_id", llmInteractionID.String()))
+			// Don't fail the request if POI saving fails
+		} else {
+			h.logger.Info("Successfully saved LLM POIs to database",
+				zap.Int("count", len(poiDetails)),
+				zap.String("user_id", userUUID.String()),
+				zap.String("llm_interaction_id", llmInteractionID.String()))
+		}
 	}
 
 	// Save discover search as chat session for authenticated users
@@ -300,6 +441,9 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 					Content:     fmt.Sprintf("Found %d results", len(searchResponse.Results)),
 					MessageType: models.TypeResponse,
 					Timestamp:   now,
+					Metadata: models.MessageMetadata{
+						LlmInteractionID: &llmInteractionID,
+					},
 				},
 			}
 
@@ -337,6 +481,29 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 
 	// Render results using templ component
 	component := DiscoverSearchResults(templResults, query, location)
+	component.Render(c.Request.Context(), c.Writer)
+}
+
+func (h *DiscoverHandlers) GetRecentDiscoveries(c *gin.Context) {
+	ctx := c.Request.Context()
+	var recentDiscoveries []models.ChatSession
+
+	// Get user-specific recent discoveries (only for authenticated users)
+	userID, exists := c.Get("user_id")
+	if exists && userID != "" && userID != "anonymous" {
+		userUUID, err := uuid.Parse(userID.(string))
+		if err == nil {
+			response, err := h.llmService.GetRecentDiscoveries(ctx, userUUID, 6)
+			if err == nil && response != nil {
+				recentDiscoveries = response.Sessions
+			} else {
+				h.logger.Error("Failed to get recent discoveries", zap.Any("error", err))
+			}
+		}
+	}
+
+	// Render the recent discoveries list component
+	component := RecentDiscoveriesList(recentDiscoveries)
 	component.Render(c.Request.Context(), c.Writer)
 }
 

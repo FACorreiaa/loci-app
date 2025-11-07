@@ -5,15 +5,22 @@ import (
 	"io"
 	"time"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
 	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 	"github.com/FACorreiaa/go-templui/internal/routes"
-	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+const (
+	userkey = "user"   // key used to store the username in the session
+	secret  = "secret" // random and secure key used to encrypt the session cookie
 )
 
 // SetupRouter configures and returns the Gin router with all middleware and routes
@@ -39,6 +46,7 @@ func SetupRouter(dbPool *pgxpool.Pool, logger *zap.Logger) *gin.Engine {
 		c.Set("db", dbPool)
 		c.Next()
 	})
+	r.Use(sessions.Sessions("mysession", cookie.NewStore([]byte(secret))))
 
 	// Setup routes
 	routes.Setup(r, dbPool, logger)

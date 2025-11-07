@@ -37,7 +37,8 @@ type AuthService interface {
 	GenerateTokens(ctx context.Context, user *models.UserAuth, sub *models.Subscription) (accessToken string, refreshToken string, err error)
 
 	// Token and utility methods
-	GenerateToken(userID, email, name string) (string, error)
+	GenerateToken(userID, email, username string) (string, error)
+	GenerateTokenWithExpiration(userID, email, username string, expiration time.Duration) (string, error)
 	ValidateToken(tokenString string) (*jwt.MapClaims, error)
 	HashPassword(password string) (string, error)
 	CheckPassword(hashedPassword, password string) bool
@@ -388,6 +389,17 @@ func (s *AuthServiceImpl) GenerateToken(userID, email, username string) (string,
 	jwtCfg := JWTConfig{
 		SecretKey:       s.getSecretKey(),
 		TokenExpiration: s.getAccessTTL(),
+		Logger:          s.logger,
+		Optional:        false,
+	}
+	return jwtService.GenerateToken(jwtCfg, userID, email, username)
+}
+
+func (s *AuthServiceImpl) GenerateTokenWithExpiration(userID, email, username string, expiration time.Duration) (string, error) {
+	jwtService := NewJWTService()
+	jwtCfg := JWTConfig{
+		SecretKey:       s.getSecretKey(),
+		TokenExpiration: expiration,
 		Logger:          s.logger,
 		Optional:        false,
 	}

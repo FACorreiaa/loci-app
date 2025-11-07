@@ -106,6 +106,7 @@ type Repository interface {
 	CalculateDistancePostGIS(ctx context.Context, userLat, userLon, poiLat, poiLon float64) (float64, error)
 	SaveLlmPoisToDatabase(ctx context.Context, userID uuid.UUID, pois []models.POIDetailedInfo, genAIResponse *models.GenAIResponse, llmInteractionID uuid.UUID) error
 	SaveLlmInteraction(ctx context.Context, interaction *models.LlmInteraction) (uuid.UUID, error)
+	GetPOIsByLLMInteraction(ctx context.Context, llmInteractionID uuid.UUID) ([]models.POIDetailedInfo, error)
 }
 
 type RepositoryImpl struct {
@@ -719,12 +720,10 @@ LIMIT $2 OFFSET $3;
 // GetFavouritesFiltered retrieves favourites with search and filter support
 func (r *RepositoryImpl) GetFavouritesFiltered(ctx context.Context, filter models.FavouritesFilter) ([]models.POIDetailedInfo, int, error) {
 	// Build WHERE clause based on filters
-	var whereClauses []string
 	var args []interface{}
 	argIdx := 1
 
-	// Add user filter
-	whereClauses = append(whereClauses, fmt.Sprintf("user_id = $%d", argIdx))
+	// Add user filter - use placeholder for now, will be replaced with table alias
 	args = append(args, filter.UserID)
 	argIdx++
 
@@ -757,20 +756,20 @@ func (r *RepositoryImpl) GetFavouritesFiltered(ctx context.Context, filter model
 		sortOrder = "ASC"
 	}
 
-	// Count query
+	// Count query - use qualified column names to avoid ambiguity
 	countQuery := fmt.Sprintf(`
 		SELECT COUNT(*) FROM (
 			SELECT 1 FROM user_favorite_pois ufp
 			INNER JOIN points_of_interest poi ON ufp.poi_id = poi.id
-			WHERE %s %s %s
+			WHERE ufp.user_id = $1 %s %s
 
 			UNION ALL
 
 			SELECT 1 FROM user_favorite_llm_pois uflp
 			INNER JOIN llm_suggested_pois llmsp ON uflp.llm_poi_id = llmsp.id
-			WHERE %s %s %s
+			WHERE uflp.user_id = $1 %s %s
 		) combined_count
-	`, whereClauses[0], searchFilter, categoryFilter, whereClauses[0], searchFilter, categoryFilter)
+	`, searchFilter, categoryFilter, searchFilter, categoryFilter)
 
 	var totalCount int
 	err := r.pgpool.QueryRow(ctx, countQuery, args...).Scan(&totalCount)
@@ -778,7 +777,7 @@ func (r *RepositoryImpl) GetFavouritesFiltered(ctx context.Context, filter model
 		return nil, 0, fmt.Errorf("failed to count filtered favourites: %w", err)
 	}
 
-	// Main query with pagination
+	// Main query with pagination - use qualified column names
 	query := fmt.Sprintf(`
 		SELECT
 			favorite_id,
@@ -817,7 +816,7 @@ func (r *RepositoryImpl) GetFavouritesFiltered(ctx context.Context, filter model
 				'regular' as poi_source
 			FROM user_favorite_pois ufp
 			INNER JOIN points_of_interest poi ON ufp.poi_id = poi.id
-			WHERE %s %s %s
+			WHERE ufp.user_id = $1 %s %s
 
 			UNION ALL
 
@@ -840,12 +839,12 @@ func (r *RepositoryImpl) GetFavouritesFiltered(ctx context.Context, filter model
 				'llm' as poi_source
 			FROM user_favorite_llm_pois uflp
 			INNER JOIN llm_suggested_pois llmsp ON uflp.llm_poi_id = llmsp.id
-			WHERE %s %s %s
+			WHERE uflp.user_id = $1 %s %s
 		) combined_favorites
 		ORDER BY %s %s
 		LIMIT $%d OFFSET $%d
-	`, whereClauses[0], searchFilter, categoryFilter,
-		whereClauses[0], searchFilter, categoryFilter,
+	`, searchFilter, categoryFilter,
+		searchFilter, categoryFilter,
 		sortBy, sortOrder, argIdx, argIdx+1)
 
 	// Add limit and offset to args
@@ -3243,4 +3242,89 @@ func (r *RepositoryImpl) GetBookmarksFiltered(ctx context.Context, filter models
 
 func (r *RepositoryImpl) CheckIsBookmarked(ctx context.Context, userID, itineraryID uuid.UUID) (bool, error) {
 	return false, nil
+}
+
+// GetPOIsByLLMInteraction retrieves POIs associated with a specific LLM interaction
+func (r *RepositoryImpl) GetPOIsByLLMInteraction(ctx context.Context, llmInteractionID uuid.UUID) ([]models.POIDetailedInfo, error) {
+	ctx, span := otel.Tracer("POIRepository").Start(ctx, "GetPOIsByLLMInteraction", trace.WithAttributes(
+		attribute.String("llm_interaction.id", llmInteractionID.String()),
+	))
+	defer span.End()
+
+	l := r.logger.With(zap.String("method", "GetPOIsByLLMInteraction"))
+
+	query := `
+		SELECT
+			id,
+			name,
+			COALESCE(description_poi, '') as description,
+			longitude,
+			latitude,
+			COALESCE(category, '') as category,
+			COALESCE(address, '') as address,
+			COALESCE(website, '') as website,
+			COALESCE(phone_number, '') as phone_number,
+			COALESCE(opening_hours, '') as opening_hours,
+			COALESCE(price_level, '') as price_level,
+			COALESCE(rating, 0) as rating,
+			distance
+		FROM llm_suggested_pois
+		WHERE llm_interaction_id = $1
+		ORDER BY distance ASC
+	`
+
+	rows, err := r.pgpool.Query(ctx, query, llmInteractionID)
+	if err != nil {
+		l.Error("Failed to query POIs by LLM interaction", zap.Any("error", err))
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Database query failed")
+		return nil, fmt.Errorf("failed to query POIs by LLM interaction: %w", err)
+	}
+	defer rows.Close()
+
+	var pois []models.POIDetailedInfo
+	for rows.Next() {
+		var poi models.POIDetailedInfo
+		var openingHours string
+
+		err := rows.Scan(
+			&poi.ID,
+			&poi.Name,
+			&poi.DescriptionPOI,
+			&poi.Longitude,
+			&poi.Latitude,
+			&poi.Category,
+			&poi.Address,
+			&poi.Website,
+			&poi.PhoneNumber,
+			&openingHours,
+			&poi.PriceLevel,
+			&poi.Rating,
+			&poi.Distance,
+		)
+		if err != nil {
+			l.Error("Failed to scan LLM POI row", zap.Any("error", err))
+			span.RecordError(err)
+			return nil, fmt.Errorf("failed to scan LLM POI row: %w", err)
+		}
+
+		// Set the LLM interaction ID
+		poi.LlmInteractionID = llmInteractionID
+
+		pois = append(pois, poi)
+	}
+
+	if err = rows.Err(); err != nil {
+		l.Error("Error iterating LLM POI rows", zap.Any("error", err))
+		span.RecordError(err)
+		return nil, fmt.Errorf("error iterating LLM POI rows: %w", err)
+	}
+
+	l.Info("POIs by LLM interaction retrieved successfully",
+		zap.String("llm_interaction_id", llmInteractionID.String()),
+		zap.Int("count", len(pois)))
+	span.SetAttributes(attribute.Int("results.count", len(pois)))
+	span.SetStatus(codes.Ok, "POIs retrieved successfully")
+
+	return pois, nil
 }

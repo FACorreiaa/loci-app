@@ -1,0 +1,35 @@
+package components
+
+
+import (
+	b "github.com/FACorreiaa/go-templui/internal/app/components/button"
+	i "github.com/FACorreiaa/go-templui/internal/app/components/icon"
+)
+
+templ SearchButton() {
+	@b.Button(b.Props{
+		Type: "submit",
+		// Pass all your custom classes here.
+		// NOTE: The `group` class is added to the parent <form> tag,
+		// which is what makes the `group-[.htmx-request]` classes work.
+		Class: "px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all font-medium flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed",
+	}) {
+
+
+		<!-- Normal State -->
+		<span class="flex items-center gap-2 group-[.htmx-request]:hidden">
+			<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+			</svg>
+			Search
+		</span>
+
+		<!-- Loading State -->
+		<span class="htmx-indicator hidden group-[.htmx-request]:inline-flex items-center">
+			@i.LoaderCircle(i.Props{
+				Class: "animate-spin w-5 h-5 mr-2", // Use TemplUI's loader icon
+			})
+			Searching...
+		</span>
+	}
+}

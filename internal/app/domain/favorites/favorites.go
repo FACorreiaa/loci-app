@@ -83,19 +83,8 @@ func (h *FavoritesHandlers) AddFavorite(c *gin.Context) {
 	}
 
 	// Return filled heart with animation
-	c.HTML(http.StatusOK, "", `
-		<button
-			hx-delete="/favorites/`+id+`?isLLM=`+c.Query("isLLM")+`"
-			hx-target="this"
-			hx-swap="outerHTML"
-			class="p-2 text-red-500 hover:text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 animate-heartbeat"
-			title="Remove from favorites"
-		>
-			<svg class="w-5 h-5 fill-current" fill="currentColor" viewBox="0 0 24 24">
-				<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-			</svg>
-		</button>
-	`)
+	component := UnfavoriteButton(id, isLLMGenerated)
+	component.Render(c.Request.Context(), c.Writer)
 
 	h.logger.Info("Successfully added to favorites",
 		zap.String("place_id", id),
@@ -142,19 +131,8 @@ func (h *FavoritesHandlers) RemoveFavorite(c *gin.Context) {
 	}
 
 	// Return outline heart
-	c.HTML(http.StatusOK, "", `
-		<button
-			hx-post="/favorites/add/`+id+`?isLLM=`+c.Query("isLLM")+`"
-			hx-target="this"
-			hx-swap="outerHTML"
-			class="p-2 text-muted-foreground hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
-			title="Add to favorites"
-		>
-			<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-			</svg>
-		</button>
-	`)
+	component := FavoriteButton(id, isLLMGenerated)
+	component.Render(c.Request.Context(), c.Writer)
 
 	h.logger.Info("Successfully removed from favorites",
 		zap.String("place_id", id),

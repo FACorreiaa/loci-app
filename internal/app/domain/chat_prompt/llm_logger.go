@@ -103,7 +103,8 @@ func (l *LLMLogger) LogInteractionAsync(
 	asyncCtx := context.WithoutCancel(ctx)
 
 	go func() {
-		if err := l.logInteraction(asyncCtx, config, response, latencyMs); err != nil {
+		_, err := l.logInteractionWithID(asyncCtx, config, response, latencyMs)
+		if err != nil {
 			l.logger.Error("Failed to log LLM interaction asynchronously",
 				zap.String("intent", config.Intent),
 				zap.String("session_id", config.SessionID.String()),
@@ -120,16 +121,28 @@ func (l *LLMLogger) LogInteractionSync(
 	response LLMResponse,
 	latencyMs int64,
 ) error {
-	return l.logInteraction(ctx, config, response, latencyMs)
+	_, err := l.logInteractionWithID(ctx, config, response, latencyMs)
+	return err
 }
 
-// logInteraction is the app implementation of logging
-func (l *LLMLogger) logInteraction(
+// LogInteraction logs an LLM interaction synchronously and returns the interaction ID
+// Use this when you need the interaction ID for subsequent operations
+func (l *LLMLogger) LogInteraction(
 	ctx context.Context,
 	config LoggingConfig,
 	response LLMResponse,
 	latencyMs int64,
-) error {
+) (uuid.UUID, error) {
+	return l.logInteractionWithID(ctx, config, response, latencyMs)
+}
+
+// logInteractionWithID is the internal implementation of logging that returns the interaction ID
+func (l *LLMLogger) logInteractionWithID(
+	ctx context.Context,
+	config LoggingConfig,
+	response LLMResponse,
+	latencyMs int64,
+) (uuid.UUID, error) {
 	ctx, span := otel.Tracer("LLMLogger").Start(ctx, "logInteraction",
 		trace.WithAttributes(
 			attribute.String("intent", config.Intent),
@@ -204,7 +217,7 @@ func (l *LLMLogger) logInteraction(
 	savedID, err := l.repo.SaveInteraction(ctx, interaction)
 	if err != nil {
 		span.RecordError(err)
-		return fmt.Errorf("failed to save LLM interaction: %w", err)
+		return uuid.Nil, fmt.Errorf("failed to save LLM interaction: %w", err)
 	}
 
 	span.SetAttributes(attribute.String("interaction_id", savedID.String()))
@@ -216,7 +229,7 @@ func (l *LLMLogger) logInteraction(
 		zap.Float64("cost_usd", cost),
 		zap.Int64("latency_ms", latencyMs))
 
-	return nil
+	return savedID, nil
 }
 
 // ExtractConfigFromRequest extracts logging configuration from an HTTP request

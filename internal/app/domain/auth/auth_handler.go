@@ -62,6 +62,7 @@ func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	email := r.FormValue("email")
 	password := r.FormValue("password")
+	rememberMe := r.FormValue("remember_me") == "on" || r.FormValue("remember_me") == "true"
 
 	if email == "" || password == "" {
 		h.logger.Warn("Missing email or password")
@@ -102,28 +103,45 @@ func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate token
-	token, err := h.authService.GenerateToken(user.ID, user.Email, user.Username)
+	// Generate token with appropriate expiration based on remember me
+	var tokenExpiration time.Duration
+	var cookieMaxAge int
+
+	if rememberMe {
+		// Remember me: 30 days
+		tokenExpiration = 30 * 24 * time.Hour
+		cookieMaxAge = int(tokenExpiration.Seconds())
+	} else {
+		// Session only: 24 hours
+		tokenExpiration = 24 * time.Hour
+		cookieMaxAge = int(tokenExpiration.Seconds())
+	}
+
+	token, err := h.authService.GenerateTokenWithExpiration(user.ID, user.Email, user.Username, tokenExpiration)
 	if err != nil {
 		h.logger.Error("Failed to generate token", zap.Error(err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	// Set cookie
-	http.SetCookie(w, &http.Cookie{
+	// Set cookie with appropriate expiration
+	cookie := &http.Cookie{
 		Name:     "auth_token",
 		Value:    token,
-		Expires:  time.Now().Add(24 * time.Hour),
+		MaxAge:   cookieMaxAge,
 		HttpOnly: true,
 		Secure:   false, // Set to true in production with HTTPS
 		SameSite: http.SameSiteLaxMode,
 		Path:     "/",
-	})
+	}
+
+	http.SetCookie(w, cookie)
 
 	h.logger.Info("Successful login",
 		zap.String("user_id", user.ID),
 		zap.String("email", email),
+		zap.Bool("remember_me", rememberMe),
+		zap.Duration("token_expiration", tokenExpiration),
 	)
 
 	w.Header().Set("HX-Redirect", "/dashboard")
@@ -209,23 +227,26 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate token for new user using userID
-	token, err := h.authService.GenerateToken(userID, email, fullName)
+	// Default to 24 hours for new registrations
+	tokenExpiration := 24 * time.Hour
+	token, err := h.authService.GenerateTokenWithExpiration(userID, email, fullName, tokenExpiration)
 	if err != nil {
 		h.logger.Error("Failed to generate token", zap.Error(err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	// Set cookie
-	http.SetCookie(w, &http.Cookie{
+	// Set cookie with appropriate expiration
+	cookie := &http.Cookie{
 		Name:     "auth_token",
 		Value:    token,
-		Expires:  time.Now().Add(24 * time.Hour),
+		MaxAge:   int(tokenExpiration.Seconds()),
 		HttpOnly: true,
 		Secure:   false, // Set to true in production with HTTPS
 		SameSite: http.SameSiteLaxMode,
 		Path:     "/",
-	})
+	}
+	http.SetCookie(w, cookie)
 
 	h.logger.Info("Successful registration",
 		zap.String("user_id", userID),

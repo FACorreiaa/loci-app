@@ -1,0 +1,34 @@
+package scripts
+
+// AddToListScript provides functionality for the "Add to List" buttons
+templ AddToListScript() {
+	<script type="text/javascript">
+	(function() {
+		// Handle "Add to List" button clicks
+		document.addEventListener('click', function(e) {
+			const btn = e.target.closest('.add-to-list-btn');
+			if (!btn) return;
+
+			e.stopPropagation(); // Prevent event from bubbling to parent elements
+			e.preventDefault();
+
+			const itemId = btn.dataset.itemId;
+			const contentType = btn.dataset.contentType;
+			const itemName = btn.dataset.itemName || 'this item';
+
+			if (!itemId || !contentType) {
+				console.error('Missing item data', { itemId, contentType });
+				return;
+			}
+
+			// Use HTMX to load the modal
+			htmx.ajax('GET', `/lists/select?item_id=${encodeURIComponent(itemId)}&content_type=${encodeURIComponent(contentType)}&item_name=${encodeURIComponent(itemName)}`, {
+				target: 'body',
+				swap: 'beforeend'
+			});
+		});
+
+		console.log('Add to List script loaded');
+	})();
+	</script>
+}

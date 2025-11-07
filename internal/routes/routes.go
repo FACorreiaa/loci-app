@@ -113,10 +113,12 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	poiRepo := poi.NewRepository(dbPool, log)
 	tagsRepo := tagsPkg.NewRepositoryImpl(dbPool, log)
 	userRepo := user.NewPostgresUserRepo(dbPool, log)
+	listsRepo := lists.NewRepository(dbPool, log)
 
 	// Create services
 	profilesService := profiles.NewUserProfilesService(profilesRepo, interestsRepo, tagsRepo, log)
 	userService := user.NewUserService(userRepo, log)
+	listsService := lists.NewService(listsRepo, log)
 
 	// Create embedding service for POI (can be nil if not using semantic search)
 	// Change later GeminiAPIKey env variable
@@ -169,6 +171,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	resultsHandlers := results.NewResultsHandlers(log)
 	filterHandlers := common.NewFilterHandlers(log.Sugar())
 	recentsHandlers := recents.NewRecentsHandlers(recentsService, log)
+	listsHandlers := lists.NewHandler(listsService, log)
 
 	// Initialize location repository for nearby feature
 	locationRepo := locationPkg.NewRepository(dbPool)
@@ -268,6 +271,26 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 			Title:   "Discovery Details - Loci",
 			Content: discoverHandlers.ShowDetail(c),
+			Nav: models.Navigation{
+				Items: []models.NavItem{
+					{Name: "Home", URL: "/"},
+					{Name: "Discover", URL: "/discover"},
+					{Name: "About", URL: "/about"},
+				},
+			},
+			ActiveNav: "Discover",
+			User:      getUserFromContext(c),
+		}))
+	})
+
+	// Discovery results page
+	r.GET("/discover/results/:sessionId", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
+		log.Info("Discovery results page accessed",
+			zap.String("sessionId", c.Param("sessionId")),
+			zap.String("ip", c.ClientIP()))
+		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			Title:   "Discovery Results - Loci",
+			Content: discoverHandlers.ShowResults(c),
 			Nav: models.Navigation{
 				Items: []models.NavItem{
 					{Name: "Home", URL: "/"},
@@ -615,24 +638,22 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 		protected.GET("/bookmarks", bookmarksHandlers.ListBookmarks)
 
 		// Lists
-		protected.GET("/lists", func(c *gin.Context) {
-			log.Info("Lists page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
-				Title:   "Travel Lists - Loci",
-				Content: lists.ListsPage(),
-				Nav: models.Navigation{
-					Items: []models.NavItem{
-						{Name: "Dashboard", URL: "/dashboard"},
-						{Name: "Discover", URL: "/discover"},
-						{Name: "Nearby", URL: "/nearby"},
-						{Name: "Chat", URL: "/chat"},
-						{Name: "Lists", URL: "/lists"},
-					},
-				},
-				ActiveNav: "Lists",
-				User:      getUserFromContext(c),
-			}))
-		})
+		protected.GET("/lists", listsHandlers.ShowListsPage)
+		protected.GET("/lists/saved", listsHandlers.ShowSavedListsPage)
+
+		// Lists modal and actions
+		protected.GET("/lists/new", listsHandlers.ShowCreateModal)
+		protected.POST("/lists/create", listsHandlers.CreateList)
+		protected.GET("/lists/select", listsHandlers.ShowAddToListModal)
+		protected.GET("/lists/:id", listsHandlers.ShowListDetail)
+		protected.POST("/lists/:id/items", listsHandlers.AddItemToList)
+		protected.DELETE("/lists/:id/items/:itemId", listsHandlers.RemoveListItem)
+		protected.GET("/lists/:id/edit", listsHandlers.ShowEditModal)
+		protected.PUT("/lists/:id", listsHandlers.UpdateList)
+		protected.GET("/lists/:id/delete", listsHandlers.ShowDeleteModal)
+		protected.DELETE("/lists/:id", listsHandlers.DeleteList)
+		protected.POST("/lists/:id/save", listsHandlers.SaveListAction)
+		protected.DELETE("/lists/:id/unsave", listsHandlers.UnsaveListAction)
 
 		// Profile
 		protected.GET("/profile", func(c *gin.Context) {
@@ -775,6 +796,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 
 		// Discover endpoints
 		htmxGroup.POST("/discover/search", discoverHandlers.Search)
+		htmxGroup.GET("/discover/recent", discoverHandlers.GetRecentDiscoveries)
 		htmxGroup.GET("/discover/category/:category", discoverHandlers.GetCategory)
 
 		// Nearby endpoints (location-based discovery)
