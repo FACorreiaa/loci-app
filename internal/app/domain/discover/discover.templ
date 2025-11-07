@@ -5,7 +5,7 @@ import "strings"
 import "github.com/FACorreiaa/go-templui/internal/app/models"
 
 templ DiscoverPage(recentDiscoveries []models.ChatSession, trending []models.TrendingDiscovery, featured []models.FeaturedCollection) {
-	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900" x-data="{ searching: false }">
+	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
 			<!-- Header -->
 			<div class="mb-8">
@@ -26,8 +26,6 @@ templ DiscoverPage(recentDiscoveries []models.ChatSession, trending []models.Tre
 						hx-post="/discover/search"
 						hx-target="#discover-results"
 						hx-indicator="#search-loading"
-						@htmx:before-request="searching = true"
-						@htmx:after-request="searching = false"
 					>
 						<div class="flex flex-col md:flex-row gap-4">
 							<div class="flex-1 relative">
@@ -53,15 +51,15 @@ templ DiscoverPage(recentDiscoveries []models.ChatSession, trending []models.Tre
 									type="submit"
 									class="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all font-medium flex items-center justify-center"
 								>
-									<span x-show="searching" class="inline-flex items-center">
-										<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-										Searching...
-									</span>
-									<span x-show="!searching" class="flex items-center gap-2">
+									<span class="htmx-request:hidden flex items-center gap-2">
 										<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
 										</svg>
 										Search
+									</span>
+									<span id="search-loading" class="htmx-indicator inline-flex items-center">
+										<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+										Searching...
 									</span>
 								</button>
 							</div>

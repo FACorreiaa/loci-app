@@ -165,7 +165,7 @@ func SignIn() templ.Component {
 						}()
 					}
 					ctx = templ.InitializeContext(ctx)
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<span id=\"signin-loading\" class=\"htmx-indicator\"><div class=\"w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block mr-2\"></div>Signing in...</span> <span class=\"htmx-request:hidden\">Sign in</span>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<span class=\"htmx-request:hidden\">Sign in</span> <span id=\"signin-loading\" class=\"htmx-indicator inline-flex items-center\"><div class=\"w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2\"></div>Signing in...</span>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}

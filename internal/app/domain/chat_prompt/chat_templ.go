@@ -82,7 +82,7 @@ func ChatPage() templ.Component {
 					}()
 				}
 				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<span id=\"chat-loading\" class=\"htmx-indicator\"><div class=\"w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin\"></div></span> <svg class=\"w-5 h-5 htmx-request:hidden\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 19l9 2-9-18-9 18 9-2zm0 0v-8\"></path></svg>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<svg class=\"w-5 h-5 htmx-request:hidden\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 19l9 2-9-18-9 18 9-2zm0 0v-8\"></path></svg> <span id=\"chat-loading\" class=\"htmx-indicator inline-flex items-center\"><div class=\"w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin\"></div></span>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

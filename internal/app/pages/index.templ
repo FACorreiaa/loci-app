@@ -136,11 +136,16 @@ templ LoggedInDashboard() {
 								ID:    "search-btn",
 								Class: "px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-xl font-medium transition-colors flex items-center gap-2",
 							}) {
-								<svg id="search-icon" class="w-4 h-4 htmx-request:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-								</svg>
-								<div id="search-loading" class="htmx-indicator w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-								<span id="search-text">Search</span>
+								<span class="htmx-request:hidden flex items-center gap-2">
+									<svg id="search-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+									</svg>
+									<span id="search-text">Search</span>
+								</span>
+								<span id="search-loading" class="htmx-indicator inline-flex items-center gap-2">
+									<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+									Searching...
+								</span>
 							}
 						</div>
 					</form>

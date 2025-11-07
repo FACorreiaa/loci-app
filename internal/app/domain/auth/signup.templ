@@ -124,11 +124,11 @@ templ SignUp() {
 									Type:      button.TypeSubmit,
 									FullWidth: true,
 								}) {
-									<span id="signup-loading" class="htmx-indicator">
-										<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block mr-2"></div>
+									<span class="htmx-request:hidden">Create account</span>
+									<span id="signup-loading" class="htmx-indicator inline-flex items-center">
+										<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
 										Creating account...
 									</span>
-									<span class="htmx-no-indicator">Create account</span>
 								}
 							</div>
 						</form>
