@@ -100,14 +100,10 @@ func (h *RecentsHandlers) HandleRecentsPage(c *gin.Context) {
 
 // Helper function to get user from context
 func getUserFromContext(c *gin.Context) *models.User {
-	userID, userEmail, userName := middleware.GetUserFromContext(c)
-	if userID == "anonymous" {
+	user := middleware.GetUserFromContext(c)
+	if user != nil {
 		return nil
 	}
-	return &models.User{
-		ID:       userID,
-		Name:     userName,
-		Email:    userEmail,
-		IsActive: true,
-	}
+	return user
+
 }

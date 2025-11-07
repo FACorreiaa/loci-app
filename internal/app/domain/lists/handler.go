@@ -53,12 +53,9 @@ func (h *Handler) ShowListsPage(c *gin.Context) {
 	}
 
 	// Get user info for the layout
-	userIDFromCtx, userEmail, userName := middleware.GetUserFromContext(c)
-	user := &models.User{
-		ID:       userIDFromCtx,
-		Name:     userName,
-		Email:    userEmail,
-		IsActive: true,
+	user := middleware.GetUserFromContext(c)
+	if user != nil {
+		return
 	}
 
 	// Render the lists page with actual data
@@ -138,12 +135,9 @@ func (h *Handler) CreateList(c *gin.Context) {
 
 	// Redirect back to lists page with full layout
 	// Get user info for the layout
-	userIDFromCtx, userEmail, userName := middleware.GetUserFromContext(c)
-	user := &models.User{
-		ID:       userIDFromCtx,
-		Name:     userName,
-		Email:    userEmail,
-		IsActive: true,
+	user := middleware.GetUserFromContext(c)
+	if user != nil {
+		return
 	}
 
 	c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
@@ -326,12 +320,9 @@ func (h *Handler) ShowListDetail(c *gin.Context) {
 	}
 
 	// Get user info for the layout
-	userIDFromCtx, userEmail, userName := middleware.GetUserFromContext(c)
-	user := &models.User{
-		ID:       userIDFromCtx,
-		Name:     userName,
-		Email:    userEmail,
-		IsActive: true,
+	user := middleware.GetUserFromContext(c)
+	if user != nil {
+		return
 	}
 
 	// Render the list detail page
@@ -612,12 +603,9 @@ func (h *Handler) ShowSavedListsPage(c *gin.Context) {
 		return
 	}
 
-	userIDFromCtx, userEmail, userName := middleware.GetUserFromContext(c)
-	user := &models.User{
-		ID:       userIDFromCtx,
-		Name:     userName,
-		Email:    userEmail,
-		IsActive: true,
+	user := middleware.GetUserFromContext(c)
+	if user != nil {
+		return
 	}
 
 	c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{

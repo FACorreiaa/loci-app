@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/FACorreiaa/go-templui/internal/app/domain"
 	llmchat "github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/lists"
 	home "github.com/FACorreiaa/go-templui/internal/app/pages"
@@ -59,25 +60,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func getUserFromContext(c *gin.Context) *models.User {
-	userID, userEmail, userName := middleware.GetUserFromContext(c)
-	if userID == "anonymous" {
-		return nil
-	}
-	return &models.User{
-		ID:       userID,
-		Name:     userName,
-		Email:    userEmail,
-		IsActive: true,
-	}
-}
-
 func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	//r.Use(middleware.AuthMiddleware())
 	// Setup custom templ renderer
 	slogLog := slog.Default()
 	ginHTMLRenderer := r.HTMLRender
 	r.HTMLRender = &renderer.HTMLTemplRenderer{FallbackHTMLRenderer: ginHTMLRenderer}
+
+	baseHandler := domain.NewBaseHandler(log)
 
 	// Pprof debugging routes
 	debugGroup := r.Group("/debug/pprof")
@@ -157,11 +147,11 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 		log,
 	)
 	chatHandlers := llmchat.NewChatHandlers(chatService, profilesService, chatRepo, log)
-	favoritesHandlers := favorites.NewFavoritesHandlers(poiService, log)
+	favoritesHandlers := favorites.NewFavoritesHandlers(poiService, log, baseHandler)
 	hotelFavoritesHandlers := favorites.NewHotelFavoritesHandlers(poiService, log)
 	restaurantFavoritesHandlers := favorites.NewRestaurantFavoritesHandlers(poiService, log)
 	bookmarksHandlers := bookmarks.NewBookmarksHandlers(poiService, log)
-	discoverHandlers := discover.NewDiscoverHandlers(poiRepo, chatRepo, chatService, log)
+	discoverHandlers := discover.NewDiscoverHandlers(baseHandler, poiRepo, chatRepo, chatService, log)
 	itineraryService := services.NewItineraryService()
 	itineraryHandlers := interestsPkg.NewItineraryHandlers(chatRepo, itineraryService, log)
 	activitiesHandlers := activities.NewActivitiesHandlers(chatRepo, log)
@@ -184,7 +174,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 			zap.String("user_agent", c.GetHeader("User-Agent")),
 		)
 
-		u := getUserFromContext(c)
+		u := middleware.GetUserFromContext(c)
 		var content templ.Component
 		if u != nil {
 			content = home.LoggedInDashboard()
@@ -222,7 +212,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 				},
 			},
 			ActiveNav: "Pricing",
-			User:      getUserFromContext(c),
+			User:      middleware.GetUserFromContext(c),
 		}))
 	})
 
@@ -241,27 +231,12 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 				},
 			},
 			ActiveNav: "About",
-			User:      getUserFromContext(c),
+			User:      middleware.GetUserFromContext(c),
 		}))
 	})
 
 	// Discover (public but enhanced when authenticated)
-	r.GET("/discover", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
-		log.Info("Discover page accessed", zap.String("ip", c.ClientIP()))
-		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
-			Title:   "Discover - Loci",
-			Content: discoverHandlers.Show(c),
-			Nav: models.Navigation{
-				Items: []models.NavItem{
-					{Name: "Home", URL: "/"},
-					{Name: "Discover", URL: "/discover"},
-					{Name: "About", URL: "/about"},
-				},
-			},
-			ActiveNav: "Discover",
-			User:      getUserFromContext(c),
-		}))
-	})
+	r.GET("/discover", discoverHandlers.ShowDiscoverPage)
 
 	// Discovery detail page
 	r.GET("/discover/detail/:sessionId", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
@@ -279,7 +254,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 				},
 			},
 			ActiveNav: "Discover",
-			User:      getUserFromContext(c),
+			User:      middleware.GetUserFromContext(c),
 		}))
 	})
 
@@ -299,7 +274,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 				},
 			},
 			ActiveNav: "Discover",
-			User:      getUserFromContext(c),
+			User:      middleware.GetUserFromContext(c),
 		}))
 	})
 
@@ -318,7 +293,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 				},
 			},
 			ActiveNav: "Nearby",
-			User:      getUserFromContext(c),
+			User:      middleware.GetUserFromContext(c),
 		}))
 	})
 
@@ -437,7 +412,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 						},
 					},
 					ActiveNav: "Itinerary",
-					User:      getUserFromContext(c),
+					User:      middleware.GetUserFromContext(c),
 				}))
 				return
 			}
@@ -459,7 +434,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 					},
 				},
 				ActiveNav: "Itinerary",
-				User:      getUserFromContext(c),
+				User:      middleware.GetUserFromContext(c),
 			}))
 		})
 
@@ -479,7 +454,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 					},
 				},
 				ActiveNav: "Activities",
-				User:      getUserFromContext(c),
+				User:      middleware.GetUserFromContext(c),
 			}))
 		})
 
@@ -499,49 +474,9 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 					},
 				},
 				ActiveNav: "Hotels",
-				User:      getUserFromContext(c),
+				User:      middleware.GetUserFromContext(c),
 			}))
 		})
-
-		// Restaurants (public but enhanced when authenticated)
-		// protected.GET("/restaurants", func(c *gin.Context) {
-		// 	content := restaurantsHandlers.HandleRestaurantsPage(c)
-		// 	c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
-		// 		Title:   "Restaurants - Loci",
-		// 		Content: content,
-		// 		Nav: models.Navigation{
-		// 			Items: []models.NavItem{
-		// 				{Name: "Home", URL: "/"},
-		// 				{Name: "Discover", URL: "/discover"},
-		// 				{Name: "Activities", URL: "/activities"},
-		// 				{Name: "Hotels", URL: "/hotels"},
-		// 				{Name: "Restaurants", URL: "/restaurants"},
-		// 			},
-		// 		},
-		// 		ActiveNav: "Restaurants",
-		// 		User:      getUserFromContext(c),
-		// 	}))
-		// })
-
-		// Restaurants SSE
-		//protected.GET("/restaurants", func(c *gin.Context) {
-		//	content := restaurantsHandlers.HandleRestaurantsPageSSE(c)
-		//	c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
-		//		Title:   "Restaurants - Loci",
-		//		Content: content,
-		//		Nav: models.Navigation{
-		//			Items: []models.NavItem{
-		//				{Name: "Home", URL: "/"},
-		//				{Name: "Discover", URL: "/discover"},
-		//				{Name: "Activities", URL: "/activities"},
-		//				{Name: "Hotels", URL: "/hotels"},
-		//				{Name: "Restaurants", URL: "/restaurants"},
-		//			},
-		//		},
-		//		ActiveNav: "Restaurants",
-		//		User:      getUserFromContext(c),
-		//	}))
-		//})
 
 		protected.GET("/restaurants", func(c *gin.Context) {
 			query := c.Query("q")
@@ -565,7 +500,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 						},
 					},
 					ActiveNav: "Restaurants",
-					User:      getUserFromContext(c),
+					User:      middleware.GetUserFromContext(c),
 				}))
 				return
 			}
@@ -587,7 +522,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 					},
 				},
 				ActiveNav: "Itinerary",
-				User:      getUserFromContext(c),
+				User:      middleware.GetUserFromContext(c),
 			}))
 		})
 
@@ -607,7 +542,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 					},
 				},
 				ActiveNav: "Dashboard",
-				User:      getUserFromContext(c),
+				User:      middleware.GetUserFromContext(c),
 			}))
 		})
 
@@ -627,9 +562,28 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 					},
 				},
 				ActiveNav: "Chat",
-				User:      getUserFromContext(c),
+				User:      middleware.GetUserFromContext(c),
 			}))
 		})
+
+		//protected.GET("/favorites", func(c *gin.Context) {
+		//	log.Info("Favorites page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
+		//	c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+		//		Title:   "Favorites - Loci",
+		//		Content: favorites.FavoritesPage(),
+		//		Nav: models.Navigation{
+		//			Items: []models.NavItem{
+		//				{Name: "Dashboard", URL: "/dashboard"},
+		//				{Name: "Discover", URL: "/discover"},
+		//				{Name: "Nearby", URL: "/nearby"},
+		//				{Name: "Chat", URL: "/chat"},
+		//				{Name: "Favorites", URL: "/favorites"},
+		//			},
+		//		},
+		//		ActiveNav: "Chat",
+		//		User:      middleware.GetUserFromContext(c),
+		//	}))
+		//})
 
 		// Favorites - use the handler that fetches and displays actual data
 		protected.GET("/favorites", favoritesHandlers.ListFavorites)
@@ -667,7 +621,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 				c.HTML(http.StatusBadRequest, "", pages.LayoutPage(models.LayoutTempl{
 					Title:   "Error - Loci",
 					Content: profiles.ProfilePage(nil),
-					User:    getUserFromContext(c),
+					User:    middleware.GetUserFromContext(c),
 				}))
 				return
 			}
@@ -692,7 +646,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 					},
 				},
 				ActiveNav: "Profile",
-				User:      getUserFromContext(c),
+				User:      middleware.GetUserFromContext(c),
 			}))
 		})
 
@@ -713,7 +667,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 					},
 				},
 				ActiveNav: "Settings",
-				User:      getUserFromContext(c),
+				User:      middleware.GetUserFromContext(c),
 			}))
 		})
 
@@ -732,7 +686,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 					},
 				},
 				ActiveNav: "Reviews",
-				User:      getUserFromContext(c),
+				User:      middleware.GetUserFromContext(c),
 			}))
 		})
 
@@ -750,7 +704,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 					},
 				},
 				ActiveNav: "Settings",
-				User:      getUserFromContext(c),
+				User:      middleware.GetUserFromContext(c),
 			}))
 		})
 	}
@@ -894,7 +848,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 			zap.String("ip", c.ClientIP()),
 		)
 
-		user := getUserFromContext(c)
+		user := middleware.GetUserFromContext(c)
 		c.HTML(http.StatusNotFound, "", pages.LayoutPage(models.LayoutTempl{
 			Title:   "Page Not Found - Loci",
 			Content: pages.NotFoundPage(),

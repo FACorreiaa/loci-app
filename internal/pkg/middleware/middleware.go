@@ -10,10 +10,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/FACorreiaa/go-templui/internal/app/domain/auth"
+	"github.com/FACorreiaa/go-templui/internal/app/models"
 )
 
 // Define typed context keys
 type contextKey string
+
+const UserContextKey contextKey = "user"
 
 const UserIDKey contextKey = "userID"
 const UserRoleKey contextKey = "userRole"
@@ -120,22 +123,20 @@ func SecurityMiddleware() gin.HandlerFunc {
 }
 
 // GetUserFromContext extracts user information from Gin context
-func GetUserFromContext(c *gin.Context) (string, string, string) {
-	userID := "anonymous"
-	userEmail := ""
-	userName := ""
-
-	if id, exists := c.Get("user_id"); exists {
-		userID = id.(string)
-	}
-	if email, exists := c.Get("user_email"); exists {
-		userEmail = email.(string)
-	}
-	if name, exists := c.Get("user_name"); exists {
-		userName = name.(string)
+func GetUserFromContext(c *gin.Context) *models.User {
+	user, exists := c.Get(string(UserContextKey))
+	if !exists {
+		return nil // Or return an anonymous user struct
 	}
 
-	return userID, userEmail, userName
+	userModel, ok := user.(*models.User)
+	if !ok {
+		// This should not happen if the middleware is set up correctly.
+		// Log an error here.
+		return nil
+	}
+
+	return userModel
 }
 
 // OptionalAuthMiddleware sets user context if token exists, but doesn't require auth
@@ -171,9 +172,10 @@ func OptionalAuthMiddleware() gin.HandlerFunc {
 // GetUserIDFromContext extracts just the user ID from context
 func GetUserIDFromContext(c *gin.Context) string {
 	if userID, exists := c.Get("user_id"); exists {
-		return userID.(string)
+		if idStr, ok := userID.(string); ok {
+			return idStr
+		}
 	}
-
 	return "anonymous"
 }
 

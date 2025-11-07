@@ -18,6 +18,7 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
+	"github.com/FACorreiaa/go-templui/internal/app/domain"
 	llmchat "github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/poi"
 
@@ -29,6 +30,7 @@ import (
 )
 
 type DiscoverHandlers struct {
+	*domain.BaseHandler
 	poiRepo    poi.Repository
 	chatRepo   llmchat.Repository
 	llmService llmchat.LlmInteractiontService
@@ -37,7 +39,7 @@ type DiscoverHandlers struct {
 	llmLogger  *llmchat.LLMLogger
 }
 
-func NewDiscoverHandlers(poiRepo poi.Repository, chatRepo llmchat.Repository, llmService llmchat.LlmInteractiontService, logger *zap.Logger) *DiscoverHandlers {
+func NewDiscoverHandlers(base *domain.BaseHandler, poiRepo poi.Repository, chatRepo llmchat.Repository, llmService llmchat.LlmInteractiontService, logger *zap.Logger) *DiscoverHandlers {
 	// Initialize AI client for discover search
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	aiClient, err := generativeAI.NewLLMChatClient(context.Background(), apiKey)
@@ -49,54 +51,53 @@ func NewDiscoverHandlers(poiRepo poi.Repository, chatRepo llmchat.Repository, ll
 	llmLogger := llmchat.NewLLMLogger(logger, chatRepo)
 
 	return &DiscoverHandlers{
-		poiRepo:    poiRepo,
-		chatRepo:   chatRepo,
-		llmService: llmService,
-		aiClient:   aiClient,
-		logger:     logger,
-		llmLogger:  llmLogger,
+		BaseHandler: base,
+		poiRepo:     poiRepo,
+		chatRepo:    chatRepo,
+		llmService:  llmService,
+		aiClient:    aiClient,
+		logger:      logger,
+		llmLogger:   llmLogger,
 	}
 }
 
-func (h *DiscoverHandlers) Show(c *gin.Context) templ.Component {
+func (h *DiscoverHandlers) ShowDiscoverPage(c *gin.Context) {
 	var recentDiscoveries []models.ChatSession
 	var trending []models.TrendingDiscovery
 	var featured []models.FeaturedCollection
 
 	ctx := c.Request.Context()
 
-	// Get trending discoveries (public data)
 	trendingData, err := h.llmService.GetTrendingDiscoveries(ctx, 5)
 	if err == nil {
 		trending = trendingData
 	} else {
-		h.logger.Error("Failed to get trending discoveries", zap.Any("error", err))
+		h.Logger.Error("Failed to get trending discoveries", zap.Error(err))
 	}
 
-	// Get featured collections (public data)
 	featuredData, err := h.llmService.GetFeaturedCollections(ctx, 4)
 	if err == nil {
 		featured = featuredData
 	} else {
-		h.logger.Error("Failed to get featured collections", zap.Any("error", err))
+		h.Logger.Error("Failed to get featured collections", zap.Error(err))
 	}
 
-	// Get user-specific recent discoveries (only for authenticated users)
-	userID, exists := c.Get("user_id")
-	if exists && userID != "" && userID != "anonymous" {
-		userUUID, err := uuid.Parse(userID.(string))
+	user := middleware.GetUserFromContext(c)
+	if user != nil {
+		userUUID, err := uuid.Parse(user.ID)
 		if err == nil {
-			response, err := h.llmService.GetRecentDiscoveries(ctx, userUUID, 6) // Fetching 6 recent discoveries
+			response, err := h.llmService.GetRecentDiscoveries(ctx, userUUID, 6)
 			if err == nil && response != nil {
 				recentDiscoveries = response.Sessions
-			} else {
-				h.logger.Error("Failed to get recent discoveries", zap.Any("error", err))
+			} else if err != nil {
+				h.Logger.Error("Failed to get recent discoveries", zap.Error(err))
 			}
 		}
 	}
-	return DiscoverPage(recentDiscoveries, trending, featured)
-}
 
+	content := DiscoverPage(recentDiscoveries, trending, featured)
+	h.RenderPage(c, "Discover - Loci", "Discover", content)
+}
 func (h *DiscoverHandlers) ShowDetail(c *gin.Context) templ.Component {
 	sessionID := c.Param("sessionId")
 	if sessionID == "" {
