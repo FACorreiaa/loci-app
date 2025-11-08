@@ -1561,9 +1561,32 @@ func (r *RepositoryImpl) SaveSinglePOI(ctx context.Context, poi models.POIDetail
 	).Scan(&returnedID)
 
 	if err != nil {
-		r.logger.Error("Failed to insert llm_suggested_poi", zap.Any("error", err), zap.String("query", query), zap.String("name", poi.Name))
-		span.RecordError(err)
-		return uuid.Nil, fmt.Errorf("failed to save llm_suggested_poi: %w", err)
+		// Check if it's a "no rows" error, which means the POI already exists due to ON CONFLICT DO NOTHING
+		if errors.Is(err, pgx.ErrNoRows) {
+			r.logger.Info("POI already exists, fetching existing ID",
+				zap.String("name", poi.Name),
+				zap.Float64("latitude", poi.Latitude),
+				zap.Float64("longitude", poi.Longitude))
+
+			// Query for the existing POI's ID
+			selectQuery := `
+				SELECT id FROM llm_suggested_pois
+				WHERE name = $1 AND latitude = $2 AND longitude = $3
+				LIMIT 1
+			`
+			err = tx.QueryRow(ctx, selectQuery, poi.Name, poi.Latitude, poi.Longitude).Scan(&returnedID)
+			if err != nil {
+				r.logger.Error("Failed to fetch existing POI ID", zap.Any("error", err))
+				span.RecordError(err)
+				return uuid.Nil, fmt.Errorf("failed to fetch existing llm_suggested_poi: %w", err)
+			}
+
+			r.logger.Info("Found existing POI", zap.String("id", returnedID.String()))
+		} else {
+			r.logger.Error("Failed to insert llm_suggested_poi", zap.Any("error", err), zap.String("query", query), zap.String("name", poi.Name))
+			span.RecordError(err)
+			return uuid.Nil, fmt.Errorf("failed to save llm_suggested_poi: %w", err)
+		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {

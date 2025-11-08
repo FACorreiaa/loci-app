@@ -8,8 +8,8 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/FACorreiaa/go-templui/internal/app/domain/pages"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
-	"github.com/FACorreiaa/go-templui/internal/app/pages"
 	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 )
 
@@ -54,7 +54,9 @@ func (h *Handler) ShowListsPage(c *gin.Context) {
 
 	// Get user info for the layout
 	user := middleware.GetUserFromContext(c)
-	if user != nil {
+	if user == nil {
+		h.log.Error("Failed to get user from context")
+		c.Redirect(http.StatusSeeOther, "/auth/signin")
 		return
 	}
 

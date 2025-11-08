@@ -24,32 +24,43 @@ templ SignIn() {
 				<!-- Sign In Form -->
 				@card.Card() {
 					@card.Content(card.ContentProps{Class: "space-y-6"}) {
-						<form hx-post="/auth/signin" hx-trigger="submit" hx-target="#signin-response" hx-indicator="#signin-loading">
+						<form
+							hx-post="/auth/signin"
+							hx-trigger="submit"
+							hx-target="#signin-response"
+							x-data="{ signingIn: false }"
+							@htmx:before-request="signingIn = true"
+							@htmx:after-request="signingIn = false"
+						>
 							<div id="signin-response" class="mb-4"></div>
 							<div class="space-y-4">
 								<div class="space-y-2">
 									@label.Label(label.Props{For: "email"}) {
 										Email address
 									}
-									@input.Input(input.Props{
-										Type:        input.TypeEmail,
-										ID:          "email",
-										Name:        "email",
-										Required:    true,
-										Placeholder: "Enter your email",
-									})
+									<input
+										type="email"
+										id="email"
+										name="email"
+										required
+										placeholder="Enter your email"
+										class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+										x-bind:disabled="signingIn"
+									/>
 								</div>
 								<div class="space-y-2">
 									@label.Label(label.Props{For: "password"}) {
 										Password
 									}
-									@input.Input(input.Props{
-										Type:        input.TypePassword,
-										ID:          "password",
-										Name:        "password",
-										Required:    true,
-										Placeholder: "Enter your password",
-									})
+									<input
+										type="password"
+										id="password"
+										name="password"
+										required
+										placeholder="Enter your password"
+										class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+										x-bind:disabled="signingIn"
+									/>
 								</div>
 								<div class="flex items-center justify-between">
 									<label class="flex items-center gap-2 cursor-pointer">
@@ -63,16 +74,19 @@ templ SignIn() {
 										Forgot password?
 									</a>
 								</div>
-								@button.Button(button.Props{
-									Type:      button.TypeSubmit,
-									FullWidth: true,
-								}) {
-									<span class="htmx-request:hidden">Sign in</span>
-									<span id="signin-loading" class="htmx-indicator inline-flex items-center">
-										<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+								<button
+									type="submit"
+									class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full"
+									x-bind:disabled="signingIn"
+								>
+									<span x-show="!signingIn" class="flex items-center gap-2">
+										Sign in
+									</span>
+									<span x-show="signingIn" class="flex items-center gap-2">
+										<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
 										Signing in...
 									</span>
-								}
+								</button>
 							</div>
 						</form>
 						<!-- Divider -->

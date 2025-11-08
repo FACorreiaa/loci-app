@@ -8,18 +8,17 @@ import (
 	"os"
 	"time"
 
-	"github.com/a-h/templ"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	"github.com/FACorreiaa/go-templui/internal/app/domain"
 	llmchat "github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
+	"github.com/FACorreiaa/go-templui/internal/app/domain/home"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/lists"
-	home "github.com/FACorreiaa/go-templui/internal/app/pages"
+	pages2 "github.com/FACorreiaa/go-templui/internal/app/domain/pages"
+	"github.com/FACorreiaa/go-templui/internal/app/domain/user"
 	"github.com/FACorreiaa/go-templui/internal/app/services"
-
-	about "github.com/FACorreiaa/go-templui/internal/app/pages"
 
 	"github.com/FACorreiaa/go-templui/internal/app/domain/profiles"
 
@@ -43,7 +42,6 @@ import (
 	"github.com/FACorreiaa/go-templui/internal/app/domain/settings"
 	streamingfeatures "github.com/FACorreiaa/go-templui/internal/app/domain/streaming"
 	tagsPkg "github.com/FACorreiaa/go-templui/internal/app/domain/tags"
-	"github.com/FACorreiaa/go-templui/internal/app/domain/user"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"github.com/FACorreiaa/go-templui/internal/app/renderer"
 	"github.com/FACorreiaa/go-templui/internal/pkg/config"
@@ -53,12 +51,38 @@ import (
 
 	"github.com/FACorreiaa/go-templui/internal/app/domain/auth"
 
-	pricing "github.com/FACorreiaa/go-templui/internal/app/pages"
-
-	"github.com/FACorreiaa/go-templui/internal/app/pages"
-
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+type AppHandlers struct {
+	User                *user.Handler
+	Home                *home.HomeHandlers
+	Auth                *auth.AuthHandlers
+	Discover            *discover.DiscoverHandlers
+	Favorites           *favorites.FavoritesHandlers
+	HotelFavorites      *favorites.HotelFavoritesHandlers
+	RestaurantFavorites *favorites.RestaurantFavoritesHandlers
+	Bookmarks           *bookmarks.BookmarksHandlers
+	Lists               *lists.Handler
+	Profiles            *profiles.ProfilesHandler
+	Interests           *interestsPkg.InterestsHandler
+	Tags                *tagsPkg.TagsHandler
+	Chat                *llmchat.ChatHandlers
+	Nearby              *nearby.NearbyHandler
+	Recents             *recents.RecentsHandlers
+	Settings            *settings.SettingsHandlers
+	//Billing             *billing.BillingHandlers
+	//Reviews             *reviews.ReviewsHandlers
+	Activities  *activities.ActivitiesHandlers
+	Hotels      *hotels.HotelsHandlers
+	Restaurants *restaurants.RestaurantsHandlers
+	Itinerary   *interestsPkg.ItineraryHandlers
+	Results     *results.ResultsHandlers
+	Filter      *common.FilterHandlers
+	StaticPages *domain.BaseHandler
+
+	// Add other handlers here
+}
 
 func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	//r.Use(middleware.AuthMiddleware())
@@ -67,32 +91,20 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	ginHTMLRenderer := r.HTMLRender
 	r.HTMLRender = &renderer.HTMLTemplRenderer{FallbackHTMLRenderer: ginHTMLRenderer}
 
-	baseHandler := domain.NewBaseHandler(log)
-
-	// Pprof debugging routes
-	debugGroup := r.Group("/debug/pprof")
-	{
-		debugGroup.GET("/", gin.WrapH(http.HandlerFunc(pprof.Index)))
-		debugGroup.GET("/cmdline", gin.WrapH(http.HandlerFunc(pprof.Cmdline)))
-		debugGroup.GET("/profile", gin.WrapH(http.HandlerFunc(pprof.Profile)))
-		debugGroup.POST("/symbol", gin.WrapH(http.HandlerFunc(pprof.Symbol)))
-		debugGroup.GET("/symbol", gin.WrapH(http.HandlerFunc(pprof.Symbol)))
-		debugGroup.GET("/trace", gin.WrapH(http.HandlerFunc(pprof.Trace)))
-		debugGroup.GET("/allocs", gin.WrapH(pprof.Handler("allocs")))
-		debugGroup.GET("/block", gin.WrapH(pprof.Handler("block")))
-		debugGroup.GET("/goroutine", gin.WrapH(pprof.Handler("goroutine")))
-		debugGroup.GET("/heap", gin.WrapH(pprof.Handler("heap")))
-		debugGroup.GET("/mutex", gin.WrapH(pprof.Handler("mutex")))
-		debugGroup.GET("/threadcreate", gin.WrapH(pprof.Handler("threadcreate")))
+	handlers, err := setupDependencies(dbPool, log, slogLog)
+	if err != nil {
+		log.Fatal("Failed to setup dependencies", zap.Error(err))
 	}
+	setupRouter(r, handlers, log)
+}
 
-	// Initialize common
+func setupDependencies(dbPool *pgxpool.Pool, log *zap.Logger, slogLog *slog.Logger) (*AppHandlers, error) {
 	cfg, err := config.Load()
 	if err != nil {
-		// Use default config if loading fails
+		log.Warn("Failed to load config, using default values", zap.Error(err))
 		cfg = &config.Config{}
 	}
-
+	baseHandler := domain.NewBaseHandler(log)
 	// Initialize repositories and services
 	authRepo := auth.NewPostgresAuthRepo(dbPool, log)
 	authService := auth.NewAuthService(authRepo, cfg, log)
@@ -129,13 +141,6 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	// Create recents repository and service
 	recentsRepo := recents.NewRepository(dbPool, log)
 	recentsService := recents.NewService(recentsRepo, log)
-
-	// Create common
-	authHandlers := auth.NewAuthHandlers(authService, log)
-	profilesHandlers := profiles.NewProfilesHandler(profilesService, log)
-	interestsHandlers := interestsPkg.NewInterestsHandler(interestsRepo, log)
-	tagsHandlers := tagsPkg.NewTagsHandler(tagsRepo, log)
-	// Create chat LLM service
 	chatService := llmchat.NewLlmInteractiontService(
 		interestsRepo,
 		profilesRepo,
@@ -146,63 +151,77 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 		poiRepo,
 		log,
 	)
-	chatHandlers := llmchat.NewChatHandlers(chatService, profilesService, chatRepo, log)
-	favoritesHandlers := favorites.NewFavoritesHandlers(poiService, log, baseHandler)
-	hotelFavoritesHandlers := favorites.NewHotelFavoritesHandlers(poiService, log)
-	restaurantFavoritesHandlers := favorites.NewRestaurantFavoritesHandlers(poiService, log)
-	bookmarksHandlers := bookmarks.NewBookmarksHandlers(poiService, log)
-	discoverHandlers := discover.NewDiscoverHandlers(baseHandler, poiRepo, chatRepo, chatService, log)
 	itineraryService := services.NewItineraryService()
-	itineraryHandlers := interestsPkg.NewItineraryHandlers(chatRepo, itineraryService, log)
-	activitiesHandlers := activities.NewActivitiesHandlers(chatRepo, log)
-	hotelsHandlers := hotels.NewHotelsHandlers(chatRepo, log)
-	restaurantsHandlers := restaurants.NewRestaurantsHandlers(chatRepo, log)
-	settingsHandlers := settings.NewSettingsHandlers(log)
-	resultsHandlers := results.NewResultsHandlers(log)
-	filterHandlers := common.NewFilterHandlers(log.Sugar())
-	recentsHandlers := recents.NewRecentsHandlers(recentsService, log)
-	listsHandlers := lists.NewHandler(listsService, log)
-
-	// Initialize location repository for nearby feature
 	locationRepo := locationPkg.NewRepository(dbPool)
-	nearbyHandler := nearby.NewNearbyHandler(log, chatService, locationRepo)
 
-	// Public routes (with optional auth)
-	r.GET("/", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
-		log.Info("Landing page accessed",
-			zap.String("ip", c.ClientIP()),
-			zap.String("user_agent", c.GetHeader("User-Agent")),
-		)
+	handlers := &AppHandlers{
+		Home:                home.NewHomeHandlers(baseHandler),
+		User:                user.NewHandler(baseHandler, userService),
+		Auth:                auth.NewAuthHandlers(authService, log),
+		Discover:            discover.NewDiscoverHandlers(baseHandler, poiRepo, chatRepo, chatService, log),
+		Favorites:           favorites.NewFavoritesHandlers(poiService, log, baseHandler),
+		HotelFavorites:      favorites.NewHotelFavoritesHandlers(poiService, log),
+		RestaurantFavorites: favorites.NewRestaurantFavoritesHandlers(poiService, log),
+		Bookmarks:           bookmarks.NewBookmarksHandlers(poiService, log),
+		Lists:               lists.NewHandler(listsService, log),
+		Profiles:            profiles.NewProfilesHandler(profilesService, log),
+		Interests:           interestsPkg.NewInterestsHandler(interestsRepo, log),
+		Tags:                tagsPkg.NewTagsHandler(tagsRepo, log),
+		Chat:                llmchat.NewChatHandlers(chatService, profilesService, chatRepo, log),
+		Nearby:              nearby.NewNearbyHandler(log, chatService, locationRepo),
+		Recents:             recents.NewRecentsHandlers(recentsService, log),
+		Settings:            settings.NewSettingsHandlers(log),
+		//Billing:             billing.NewBillingHandlers(baseHandler),
+		//Reviews:             reviews.NewReviewsHandlers(baseHandler),
+		Activities:  activities.NewActivitiesHandlers(chatRepo, log),
+		Hotels:      hotels.NewHotelsHandlers(chatRepo, log),
+		Restaurants: restaurants.NewRestaurantsHandlers(chatRepo, log),
+		Itinerary:   interestsPkg.NewItineraryHandlers(chatRepo, itineraryService, log),
+		Results:     results.NewResultsHandlers(log),
+		Filter:      common.NewFilterHandlers(log.Sugar()),
+		StaticPages: domain.NewBaseHandler(log),
+	}
 
-		u := middleware.GetUserFromContext(c)
-		var content templ.Component
-		if u != nil {
-			content = home.LoggedInDashboard()
-		} else {
-			content = pages.PublicLandingPage()
-		}
+	return handlers, nil
 
-		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
-			Title:   "Loci - Discover Amazing Places",
-			Content: content,
-			Nav: models.Navigation{
-				Items: []models.NavItem{
-					{Name: "Home", URL: "/"},
-					{Name: "Discover", URL: "/discover"},
-					{Name: "About", URL: "/about"},
-				},
-			},
-			ActiveNav: "Home",
-			User:      u,
-		}))
-	})
+}
+
+func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
+	// Pprof debugging routes
+	debugGroup := r.Group("/debug/pprof")
+	{
+		debugGroup.GET("/", gin.WrapH(http.HandlerFunc(pprof.Index)))
+		debugGroup.GET("/cmdline", gin.WrapH(http.HandlerFunc(pprof.Cmdline)))
+		debugGroup.GET("/profile", gin.WrapH(http.HandlerFunc(pprof.Profile)))
+		debugGroup.POST("/symbol", gin.WrapH(http.HandlerFunc(pprof.Symbol)))
+		debugGroup.GET("/symbol", gin.WrapH(http.HandlerFunc(pprof.Symbol)))
+		debugGroup.GET("/trace", gin.WrapH(http.HandlerFunc(pprof.Trace)))
+		debugGroup.GET("/allocs", gin.WrapH(pprof.Handler("allocs")))
+		debugGroup.GET("/block", gin.WrapH(pprof.Handler("block")))
+		debugGroup.GET("/goroutine", gin.WrapH(pprof.Handler("goroutine")))
+		debugGroup.GET("/heap", gin.WrapH(pprof.Handler("heap")))
+		debugGroup.GET("/mutex", gin.WrapH(pprof.Handler("mutex")))
+		debugGroup.GET("/threadcreate", gin.WrapH(pprof.Handler("threadcreate")))
+	}
+
+	public := r.Group("/")
+	public.Use(middleware.OptionalAuthMiddleware())
+	{
+		public.GET("/", h.Home.ShowHomePage)
+		public.GET("/discover", h.Discover.ShowDiscoverPage)
+		public.GET("/discover/detail/:sessionId", h.Discover.ShowDetail)
+		public.GET("/discover/results/:sessionId", h.Discover.ShowResultsPage)
+		public.GET("/nearby", h.Nearby.ShowNearbyPage)
+		public.GET("/pricing", h.StaticPages.ShowPricingPage)
+		public.GET("/about", h.StaticPages.ShowAboutPage)
+	}
 
 	// Pricing (public)
 	r.GET("/pricing", func(c *gin.Context) {
 		log.Info("Pricing page accessed", zap.String("ip", c.ClientIP()))
-		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+		c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 			Title:   "Pricing - Loci",
-			Content: pricing.PricingPage(),
+			Content: pages2.PricingPage(),
 			Nav: models.Navigation{
 				Items: []models.NavItem{
 					{Name: "Home", URL: "/"},
@@ -219,9 +238,9 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	// About (public)
 	r.GET("/about", func(c *gin.Context) {
 		log.Info("About page accessed", zap.String("ip", c.ClientIP()))
-		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+		c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 			Title:   "About - Loci",
-			Content: about.AboutPage(),
+			Content: pages2.AboutPage(),
 			Nav: models.Navigation{
 				Items: []models.NavItem{
 					{Name: "Home", URL: "/"},
@@ -236,16 +255,16 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	})
 
 	// Discover (public but enhanced when authenticated)
-	r.GET("/discover", middleware.OptionalAuthMiddleware(), discoverHandlers.ShowDiscoverPage)
+	r.GET("/discover", middleware.OptionalAuthMiddleware(), h.Discover.ShowDiscoverPage)
 
 	// Discovery detail page
 	r.GET("/discover/detail/:sessionId", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
 		log.Info("Discovery detail page accessed",
 			zap.String("sessionId", c.Param("sessionId")),
 			zap.String("ip", c.ClientIP()))
-		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+		c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 			Title:   "Discovery Details - Loci",
-			Content: discoverHandlers.ShowDetail(c),
+			Content: h.Discover.ShowDetail(c),
 			Nav: models.Navigation{
 				Items: []models.NavItem{
 					{Name: "Home", URL: "/"},
@@ -263,9 +282,9 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 		log.Info("Discovery results page accessed",
 			zap.String("sessionId", c.Param("sessionId")),
 			zap.String("ip", c.ClientIP()))
-		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+		c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 			Title:   "Discovery Results - Loci",
-			Content: discoverHandlers.ShowResults(c),
+			Content: h.Discover.ShowResults(c),
 			Nav: models.Navigation{
 				Items: []models.NavItem{
 					{Name: "Home", URL: "/"},
@@ -281,7 +300,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	// Nearby (location-based discovery - public)
 	r.GET("/nearby", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
 		log.Info("Nearby page accessed", zap.String("ip", c.ClientIP()))
-		c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+		c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 			Title:   "Nearby - Loci",
 			Content: nearby.NearbyPage(),
 			Nav: models.Navigation{
@@ -323,7 +342,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	r.GET("/ws/nearby",
 		auth.JWTAuthMiddleware(jwtConfig),
 		middleware.WebSocketRateLimitMiddleware(wsRateLimiter),
-		nearbyHandler.HandleWebSocket,
+		h.Nearby.HandleWebSocket,
 	)
 
 	// Auth routes
@@ -331,7 +350,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	{
 		authGroup.GET("/signin", func(c *gin.Context) {
 			log.Info("Sign in page accessed")
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 				Title:   "Sign In - Loci",
 				Content: auth.SignIn(),
 				Nav: models.Navigation{
@@ -347,7 +366,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 
 		authGroup.GET("/signup", func(c *gin.Context) {
 			log.Info("Sign up page accessed")
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 				Title:   "Sign Up - Loci",
 				Content: auth.SignUp(),
 				Nav: models.Navigation{
@@ -363,7 +382,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 
 		authGroup.GET("/forgot-password", func(c *gin.Context) {
 			log.Info("Forgot password page accessed")
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 				Title:   "Reset Password - Loci",
 				Content: auth.ForgotPassword(),
 				Nav: models.Navigation{
@@ -377,12 +396,12 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 			}))
 		})
 
-		authGroup.POST("/signin", gin.WrapF(authHandlers.LoginHandler))
-		authGroup.POST("/signup", gin.WrapF(authHandlers.RegisterHandler))
-		authGroup.POST("/logout", gin.WrapF(authHandlers.LogoutHandler))
-		authGroup.POST("/forgot-password", gin.WrapF(authHandlers.ForgotPasswordHandler))
-		authGroup.POST("/change-password", gin.WrapF(authHandlers.ChangePasswordHandler))
-		authGroup.POST("/check-username", gin.WrapF(authHandlers.CheckUsernameHandler))
+		authGroup.POST("/signin", gin.WrapF(h.Auth.LoginHandler))
+		authGroup.POST("/signup", gin.WrapF(h.Auth.RegisterHandler))
+		authGroup.POST("/logout", gin.WrapF(h.Auth.LogoutHandler))
+		authGroup.POST("/forgot-password", gin.WrapF(h.Auth.ForgotPasswordHandler))
+		authGroup.POST("/change-password", gin.WrapF(h.Auth.ChangePasswordHandler))
+		authGroup.POST("/check-username", gin.WrapF(h.Auth.CheckUsernameHandler))
 	}
 
 	// Protected routes
@@ -398,7 +417,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 			if query != "" && sessionIDParam == "" {
 				// Return the streaming trigger page wrapped in layout
 				content := streamingfeatures.StreamingTriggerPage(query, "itinerary")
-				c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+				c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 					Title:   "Travel Planner - Loci",
 					Content: content,
 					Nav: models.Navigation{
@@ -419,8 +438,8 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 
 			// For sessionId cases or default page, call the SSE handler
 			// This returns templ.Component that should be wrapped in layout
-			content := itineraryHandlers.HandleItineraryPageSSE(c)
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			content := h.Itinerary.HandleItineraryPageSSE(c)
+			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 				Title:   "Travel Planner - Loci",
 				Content: content,
 				Nav: models.Navigation{
@@ -440,8 +459,8 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 
 		//Activities (public but enhanced when authenticated)
 		protected.GET("/activities", func(c *gin.Context) {
-			content := activitiesHandlers.HandleActivitiesPage(c)
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			content := h.Activities.HandleActivitiesPage(c)
+			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 				Title:   "Activities - Loci",
 				Content: content,
 				Nav: models.Navigation{
@@ -460,8 +479,8 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 
 		//Hotels (public but enhanced when authenticated)
 		protected.GET("/hotels", func(c *gin.Context) {
-			content := hotelsHandlers.HandleHotelsPage(c)
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			content := h.Hotels.HandleHotelsPage(c)
+			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 				Title:   "Hotels - Loci",
 				Content: content,
 				Nav: models.Navigation{
@@ -486,7 +505,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 			if query != "" && sessionIDParam == "" {
 				// Return the streaming trigger page wrapped in layout
 				content := streamingfeatures.StreamingTriggerPage(query, "restaurants")
-				c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+				c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 					Title:   "Travel Planner - Loci",
 					Content: content,
 					Nav: models.Navigation{
@@ -507,8 +526,8 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 
 			// For sessionId cases or default page, call the SSE handler
 			// This returns templ.Component that should be wrapped in layout
-			content := restaurantsHandlers.HandleRestaurantsPageSSE(c)
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			content := h.Restaurants.HandleRestaurantsPageSSE(c)
+			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 				Title:   "Travel Planner - Loci",
 				Content: content,
 				Nav: models.Navigation{
@@ -529,7 +548,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 		// Dashboard (authenticated landing)
 		protected.GET("/dashboard", func(c *gin.Context) {
 			log.Info("Dashboard accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 				Title:   "Dashboard - Loci",
 				Content: home.LoggedInDashboard(),
 				Nav: models.Navigation{
@@ -549,7 +568,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 		// Chat
 		protected.GET("/chat", func(c *gin.Context) {
 			log.Info("Chat page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 				Title:   "AI Chat - Loci",
 				Content: llmchat.ChatPage(),
 				Nav: models.Navigation{
@@ -586,28 +605,28 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 		//})
 
 		// Favorites - use the handler that fetches and displays actual data
-		protected.GET("/favorites", favoritesHandlers.ListFavorites)
+		protected.GET("/favorites", h.Favorites.ListFavorites)
 
 		// Bookmarks - use the handler that fetches and displays actual data
-		protected.GET("/bookmarks", bookmarksHandlers.ListBookmarks)
+		protected.GET("/bookmarks", h.Bookmarks.ListBookmarks)
 
 		// Lists
-		protected.GET("/lists", listsHandlers.ShowListsPage)
-		protected.GET("/lists/saved", listsHandlers.ShowSavedListsPage)
+		protected.GET("/lists", h.Lists.ShowListsPage)
+		protected.GET("/lists/saved", h.Lists.ShowSavedListsPage)
 
 		// Lists modal and actions
-		protected.GET("/lists/new", listsHandlers.ShowCreateModal)
-		protected.POST("/lists/create", listsHandlers.CreateList)
-		protected.GET("/lists/select", listsHandlers.ShowAddToListModal)
-		protected.GET("/lists/:id", listsHandlers.ShowListDetail)
-		protected.POST("/lists/:id/items", listsHandlers.AddItemToList)
-		protected.DELETE("/lists/:id/items/:itemId", listsHandlers.RemoveListItem)
-		protected.GET("/lists/:id/edit", listsHandlers.ShowEditModal)
-		protected.PUT("/lists/:id", listsHandlers.UpdateList)
-		protected.GET("/lists/:id/delete", listsHandlers.ShowDeleteModal)
-		protected.DELETE("/lists/:id", listsHandlers.DeleteList)
-		protected.POST("/lists/:id/save", listsHandlers.SaveListAction)
-		protected.DELETE("/lists/:id/unsave", listsHandlers.UnsaveListAction)
+		protected.GET("/lists/new", h.Lists.ShowCreateModal)
+		protected.POST("/lists/create", h.Lists.CreateList)
+		protected.GET("/lists/select", h.Lists.ShowAddToListModal)
+		protected.GET("/lists/:id", h.Lists.ShowListDetail)
+		protected.POST("/lists/:id/items", h.Lists.AddItemToList)
+		protected.DELETE("/lists/:id/items/:itemId", h.Lists.RemoveListItem)
+		protected.GET("/lists/:id/edit", h.Lists.ShowEditModal)
+		protected.PUT("/lists/:id", h.Lists.UpdateList)
+		protected.GET("/lists/:id/delete", h.Lists.ShowDeleteModal)
+		protected.DELETE("/lists/:id", h.Lists.DeleteList)
+		protected.POST("/lists/:id/save", h.Lists.SaveListAction)
+		protected.DELETE("/lists/:id/unsave", h.Lists.UnsaveListAction)
 
 		// Profile
 		protected.GET("/profile", func(c *gin.Context) {
@@ -618,7 +637,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 			userUUID, err := uuid.Parse(userID)
 			if err != nil {
 				log.Error("Invalid user ID", zap.String("userID", userID), zap.Error(err))
-				c.HTML(http.StatusBadRequest, "", pages.LayoutPage(models.LayoutTempl{
+				c.HTML(http.StatusBadRequest, "", pages2.LayoutPage(models.LayoutTempl{
 					Title:   "Error - Loci",
 					Content: profiles.ProfilePage(nil),
 					User:    middleware.GetUserFromContext(c),
@@ -627,14 +646,15 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 			}
 
 			// Fetch user profile from database
-			userProfile, err := userService.GetUserProfile(c.Request.Context(), userUUID)
+			// this doesnt need to be here anymore because its fetched on the
+			userProfile, err := h.User.GetUserProfile(c.Request.Context(), userUUID)
 			if err != nil {
 				log.Error("Failed to fetch user profile", zap.String("userID", userID), zap.Error(err))
 				// Still show the page but with nil profile
 				userProfile = nil
 			}
 
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 				Title:   "Profile - Loci",
 				Content: profiles.ProfilePage(userProfile),
 				Nav: models.Navigation{
@@ -651,12 +671,12 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 		})
 
 		// Recents
-		protected.GET("/recents", recentsHandlers.HandleRecentsPage)
+		protected.GET("/recents", h.Recents.HandleRecentsPage)
 
 		// Settings
 		protected.GET("/settings", func(c *gin.Context) {
 			log.Info("Settings page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 				Title:   "Settings - Loci",
 				Content: settings.SettingsPage(),
 				Nav: models.Navigation{
@@ -674,7 +694,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 		// Reviews
 		protected.GET("/reviews", func(c *gin.Context) {
 			log.Info("Reviews page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 				Title:   "My Reviews - Loci",
 				Content: reviews.ReviewsPage(),
 				Nav: models.Navigation{
@@ -693,7 +713,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 		// Billing
 		protected.GET("/billing", func(c *gin.Context) {
 			log.Info("Billing page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
-			c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
+			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 				Title:   "Billing & Subscription - Loci",
 				Content: billing.BillingPage(),
 				Nav: models.Navigation{
@@ -714,83 +734,83 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	htmxGroup.Use(middleware.AuthMiddleware())
 	{
 		// Search endpoint (public - no auth required)
-		htmxGroup.POST("/search", chatHandlers.HandleSearch)
+		htmxGroup.POST("/search", h.Chat.HandleSearch)
 
 		// Discover endpoint (requires auth)
-		htmxGroup.POST("/discover", middleware.AuthMiddleware(), chatHandlers.HandleDiscover)
+		htmxGroup.POST("/discover", middleware.AuthMiddleware(), h.Chat.HandleDiscover)
 
 		// Chat endpoints
-		htmxGroup.POST("/chat/message", chatHandlers.SendMessage)
-		htmxGroup.POST("/chat/stream/connect", middleware.OptionalAuthMiddleware(), chatHandlers.HandleChatStreamConnect)
+		htmxGroup.POST("/chat/message", h.Chat.SendMessage)
+		htmxGroup.POST("/chat/stream/connect", middleware.OptionalAuthMiddleware(), h.Chat.HandleChatStreamConnect)
 
 		// SSE streaming endpoints
-		htmxGroup.GET("/chat/stream", middleware.OptionalAuthMiddleware(), chatHandlers.ProcessUnifiedChatMessageStream)
-		htmxGroup.POST("/chat/stream", middleware.OptionalAuthMiddleware(), chatHandlers.ProcessUnifiedChatMessageStream)
+		htmxGroup.GET("/chat/stream", middleware.OptionalAuthMiddleware(), h.Chat.ProcessUnifiedChatMessageStream)
+		htmxGroup.POST("/chat/stream", middleware.OptionalAuthMiddleware(), h.Chat.ProcessUnifiedChatMessageStream)
 
 		// Continue chat session endpoint (for adding/removing items to existing sessions)
-		htmxGroup.POST("/chat/continue/:sessionID", middleware.OptionalAuthMiddleware(), chatHandlers.ContinueChatSession)
+		htmxGroup.POST("/chat/continue/:sessionID", middleware.OptionalAuthMiddleware(), h.Chat.ContinueChatSession)
 
 		// Favorites endpoints
-		htmxGroup.POST("/favorites/add/:id", favoritesHandlers.AddFavorite)
-		htmxGroup.DELETE("/favorites/:id", favoritesHandlers.RemoveFavorite)
-		htmxGroup.POST("/favorites/search", favoritesHandlers.SearchFavorites)
+		htmxGroup.POST("/favorites/add/:id", h.Favorites.AddFavorite)
+		htmxGroup.DELETE("/favorites/:id", h.Favorites.RemoveFavorite)
+		htmxGroup.POST("/favorites/search", h.Favorites.SearchFavorites)
 
 		// Hotel favorites endpoints
-		htmxGroup.POST("/favorites/hotels/:id", hotelFavoritesHandlers.AddHotelFavorite)
-		htmxGroup.DELETE("/favorites/hotels/:id", hotelFavoritesHandlers.RemoveHotelFavorite)
+		htmxGroup.POST("/favorites/hotels/:id", h.HotelFavorites.AddHotelFavorite)
+		htmxGroup.DELETE("/favorites/hotels/:id", h.HotelFavorites.RemoveHotelFavorite)
 
 		// Restaurant favorites endpoints
-		htmxGroup.POST("/favorites/restaurants/:id", restaurantFavoritesHandlers.AddRestaurantFavorite)
-		htmxGroup.DELETE("/favorites/restaurants/:id", restaurantFavoritesHandlers.RemoveRestaurantFavorite)
+		htmxGroup.POST("/favorites/restaurants/:id", h.RestaurantFavorites.AddRestaurantFavorite)
+		htmxGroup.DELETE("/favorites/restaurants/:id", h.RestaurantFavorites.RemoveRestaurantFavorite)
 
 		// Bookmarks endpoints
-		htmxGroup.POST("/bookmarks/add/:id", bookmarksHandlers.AddBookmark)
-		htmxGroup.DELETE("/bookmarks/:id", bookmarksHandlers.RemoveBookmark)
+		htmxGroup.POST("/bookmarks/add/:id", h.Bookmarks.AddBookmark)
+		htmxGroup.DELETE("/bookmarks/:id", h.Bookmarks.RemoveBookmark)
 		// htmxGroup.POST("/bookmarks/search", bookmarksHandlers.SearchBookmarks) // TODO: Implement SearchBookmarks
 
 		// Discover endpoints
-		htmxGroup.POST("/discover/search", discoverHandlers.Search)
-		htmxGroup.GET("/discover/recent", discoverHandlers.GetRecentDiscoveries)
-		htmxGroup.GET("/discover/category/:category", discoverHandlers.GetCategory)
+		htmxGroup.POST("/discover/search", h.Discover.Search)
+		htmxGroup.GET("/discover/recent", h.Discover.GetRecentDiscoveries)
+		htmxGroup.GET("/discover/category/:category", h.Discover.GetCategory)
 
 		// Nearby endpoints (location-based discovery)
-		htmxGroup.GET("/nearby/search", discoverHandlers.GetNearbyPOIs)
+		htmxGroup.GET("/nearby/search", h.Discover.GetNearbyPOIs)
 
 		// Results endpoints (LLM-backed searches)
-		htmxGroup.POST("/restaurants/search", resultsHandlers.HandleRestaurantSearch)
-		htmxGroup.POST("/activities/search", resultsHandlers.HandleActivitySearch)
-		htmxGroup.POST("/hotels/search", resultsHandlers.HandleHotelSearch)
-		htmxGroup.POST("/itinerary/search", resultsHandlers.HandleItinerarySearch)
-		htmxGroup.GET("/itinerary/stream/results", resultsHandlers.HandleItinerarySearch)
+		htmxGroup.POST("/restaurants/search", h.Results.HandleRestaurantSearch)
+		htmxGroup.POST("/activities/search", h.Results.HandleActivitySearch)
+		htmxGroup.POST("/hotels/search", h.Results.HandleHotelSearch)
+		htmxGroup.POST("/itinerary/search", h.Results.HandleItinerarySearch)
+		htmxGroup.GET("/itinerary/stream/results", h.Results.HandleItinerarySearch)
 
 		// Nearby endpoints - using PostGIS-based discover common
 		// (old nearby common with mock data are deprecated)
 
 		// Itinerary endpoints
-		htmxGroup.POST("/itinerary/destination", itineraryHandlers.HandleDestination)
-		htmxGroup.POST("/itinerary/chat", itineraryHandlers.HandleChat)
-		htmxGroup.POST("/itinerary/add/:id", itineraryHandlers.AddPOI)
-		htmxGroup.DELETE("/itinerary/remove/:id", itineraryHandlers.RemovePOI)
-		htmxGroup.GET("/itinerary/summary", itineraryHandlers.GetItinerarySummary)
-		htmxGroup.GET("/itinerary/stream", chatHandlers.HandleItineraryStream)
-		htmxGroup.GET("/itinerary/sse", itineraryHandlers.HandleItinerarySSE)
+		htmxGroup.POST("/itinerary/destination", h.Itinerary.HandleDestination)
+		htmxGroup.POST("/itinerary/chat", h.Itinerary.HandleChat)
+		htmxGroup.POST("/itinerary/add/:id", h.Itinerary.AddPOI)
+		htmxGroup.DELETE("/itinerary/remove/:id", h.Itinerary.RemovePOI)
+		htmxGroup.GET("/itinerary/summary", h.Itinerary.GetItinerarySummary)
+		htmxGroup.GET("/itinerary/stream", h.Chat.HandleItineraryStream)
+		htmxGroup.GET("/itinerary/sse", h.Itinerary.HandleItinerarySSE)
 
 		// Filter endpoints (HTMX fragments)
-		htmxGroup.GET("/api/filter/restaurants", filterHandlers.HandleFilterRestaurants)
-		htmxGroup.GET("/api/filter/hotels", filterHandlers.HandleFilterHotels)
-		htmxGroup.GET("/api/filter/activities", filterHandlers.HandleFilterActivities)
-		htmxGroup.GET("/api/filter/itinerary", filterHandlers.HandleFilterItinerary)
-		htmxGroup.GET("/api/filter/:domain/clear", filterHandlers.HandleClearFilters)
+		htmxGroup.GET("/api/filter/restaurants", h.Filter.HandleFilterRestaurants)
+		htmxGroup.GET("/api/filter/hotels", h.Filter.HandleFilterHotels)
+		htmxGroup.GET("/api/filter/activities", h.Filter.HandleFilterActivities)
+		htmxGroup.GET("/api/filter/itinerary", h.Filter.HandleFilterItinerary)
+		htmxGroup.GET("/api/filter/:domain/clear", h.Filter.HandleClearFilters)
 
 		// Settings endpoints (protected)
 		settingsGroup := htmxGroup.Group("/settings")
 		settingsGroup.Use(middleware.AuthMiddleware())
 		{
-			settingsGroup.POST("/profile", settingsHandlers.UpdateProfile)
-			settingsGroup.POST("/preferences", settingsHandlers.UpdatePreferences)
-			settingsGroup.POST("/notifications", settingsHandlers.UpdateNotifications)
-			settingsGroup.DELETE("/account", settingsHandlers.DeleteAccount)
-			settingsGroup.POST("/export", settingsHandlers.ExportData)
+			settingsGroup.POST("/profile", h.Settings.UpdateProfile)
+			settingsGroup.POST("/preferences", h.Settings.UpdatePreferences)
+			settingsGroup.POST("/notifications", h.Settings.UpdateNotifications)
+			settingsGroup.DELETE("/account", h.Settings.DeleteAccount)
+			settingsGroup.POST("/export", h.Settings.ExportData)
 		}
 	}
 
@@ -813,29 +833,29 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 			// Profiles endpoints
 			profilesGroup := protectedAPI.Group("/profiles")
 			{
-				profilesGroup.GET("", profilesHandlers.GetProfiles)
-				profilesGroup.POST("", profilesHandlers.CreateProfile)
-				profilesGroup.GET("/:id", profilesHandlers.GetProfile)
-				profilesGroup.PUT("/:id", profilesHandlers.UpdateProfile)
-				profilesGroup.DELETE("/:id", profilesHandlers.DeleteProfile)
-				profilesGroup.PUT("/:id/default", profilesHandlers.SetDefaultProfile)
+				profilesGroup.GET("", h.Profiles.GetProfiles)
+				profilesGroup.POST("", h.Profiles.CreateProfile)
+				profilesGroup.GET("/:id", h.Profiles.GetProfile)
+				profilesGroup.PUT("/:id", h.Profiles.UpdateProfile)
+				profilesGroup.DELETE("/:id", h.Profiles.DeleteProfile)
+				profilesGroup.PUT("/:id/default", h.Profiles.SetDefaultProfile)
 			}
 
 			// Interests endpoints
 			interestsGroup := protectedAPI.Group("/interests")
 			{
-				interestsGroup.GET("", interestsHandlers.GetInterests)
-				interestsGroup.POST("", interestsHandlers.CreateInterest)
-				interestsGroup.DELETE("/:id", interestsHandlers.RemoveInterest)
+				interestsGroup.GET("", h.Interests.GetInterests)
+				interestsGroup.POST("", h.Interests.CreateInterest)
+				interestsGroup.DELETE("/:id", h.Interests.RemoveInterest)
 			}
 
 			// Tags endpoints
 			tagsGroup := protectedAPI.Group("/tags")
 			{
-				tagsGroup.GET("", tagsHandlers.GetTags)
-				tagsGroup.POST("", tagsHandlers.CreateTag)
-				tagsGroup.PUT("/:id", tagsHandlers.UpdateTag)
-				tagsGroup.DELETE("/:id", tagsHandlers.DeleteTag)
+				tagsGroup.GET("", h.Tags.GetTags)
+				tagsGroup.POST("", h.Tags.CreateTag)
+				tagsGroup.PUT("/:id", h.Tags.UpdateTag)
+				tagsGroup.DELETE("/:id", h.Tags.DeleteTag)
 			}
 		}
 	}
@@ -849,9 +869,9 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 		)
 
 		user := middleware.GetUserFromContext(c)
-		c.HTML(http.StatusNotFound, "", pages.LayoutPage(models.LayoutTempl{
+		c.HTML(http.StatusNotFound, "", pages2.LayoutPage(models.LayoutTempl{
 			Title:   "Page Not Found - Loci",
-			Content: pages.NotFoundPage(),
+			Content: pages2.NotFoundPage(),
 			Nav: models.Navigation{
 				Items: []models.NavItem{
 					{Name: "Home", URL: "/"},

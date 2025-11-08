@@ -5,8 +5,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
+	"github.com/FACorreiaa/go-templui/internal/app/domain/pages"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
-	"github.com/FACorreiaa/go-templui/internal/app/pages"
 	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 )
 
@@ -62,4 +62,12 @@ func (h *BaseHandler) RenderPage(c *gin.Context, title, activeNav string, conten
 	// hx-boost will automatically swap the body content
 	layoutData := h.newLayoutData(c, title, activeNav, content)
 	h.render(c, 200, pages.LayoutPage(layoutData))
+}
+
+func (h *BaseHandler) ShowPricingPage(c *gin.Context) {
+	h.RenderPage(c, "Pricing - Loci", "Pricing", pages.PricingPage())
+}
+
+func (h *BaseHandler) ShowAboutPage(c *gin.Context) {
+	h.RenderPage(c, "About - Loci", "About", pages.AboutPage())
 }
