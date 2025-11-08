@@ -2,6 +2,9 @@ package discover
 
 import (
 	"fmt"
+	"github.com/FACorreiaa/go-templui/internal/app/components/button"
+	"github.com/FACorreiaa/go-templui/internal/app/components/icon"
+	i "github.com/FACorreiaa/go-templui/internal/app/components/input"
 	fav "github.com/FACorreiaa/go-templui/internal/app/domain/favorites"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"strings"
@@ -66,6 +69,34 @@ templ DiscoverPage(recentDiscoveries []models.ChatSession, trending []models.Tre
 									class="px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background w-32 md:w-40"
 									x-bind:disabled="searching"
 								/>
+								@i.Input(i.Props{
+									Type:        i.TypeText,
+									Name:        "location",
+									Placeholder: "Location",
+									Class:       "px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background w-32 md:w-40",
+									Attributes:  templ.Attributes{"x-bind:disabled": "searching"},
+								})
+								@button.Button(button.Props{
+									Type:       "submit",
+									Class:      "px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all font-medium flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed",
+									Attributes: templ.Attributes{"x-bind:disabled": "searching"},
+								}) {
+									<span x-show="!searching" class="flex items-center gap-2">
+										<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+											></path>
+										</svg>
+										Search
+									</span>
+									<span x-show="searching" class="flex items-center gap-2">
+										@icon.LoaderCircle(icon.Props{Class: "w-5 h-5 animate-spin"})
+										Searching...
+									</span>
+								}
 								<button
 									type="submit"
 									class="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg
