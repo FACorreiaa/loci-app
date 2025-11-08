@@ -1,10 +1,6 @@
 package llmchat
 
-import (
-	button "github.com/FACorreiaa/go-templui/internal/app/components/button"
-	card "github.com/FACorreiaa/go-templui/internal/app/components/card"
-	textarea "github.com/FACorreiaa/go-templui/internal/app/components/textarea"
-)
+import card "github.com/FACorreiaa/go-templui/internal/app/components/card"
 
 templ ChatPage() {
 	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
@@ -89,37 +85,45 @@ templ ChatPage() {
 					</div>
 				</div>
 				<!-- Chat Input -->
-				<div class="border-t border-border p-4">
+				<div
+					class="border-t border-border p-4"
+					x-data="{ sending: false }"
+					@htmx:before-request="sending = true"
+					@htmx:after-request="sending = false"
+				>
 					<form
 						hx-post="/chat/message"
 						hx-trigger="submit"
 						hx-target="#chat-messages"
 						hx-swap="beforeend"
-						hx-indicator="#chat-loading"
 						onsubmit="clearInput()"
 						class="flex items-end gap-3"
 					>
 						<div class="flex-1">
-							@textarea.Textarea(textarea.Props{
-								ID:          "chat-input",
-								Name:        "message",
-								Placeholder: "Ask me about travel destinations, restaurants, activities...",
-								Class:       "w-full resize-none border rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background placeholder-muted-foreground max-h-32",
-								Rows:        1,
-								Attributes:  templ.Attributes{"onkeydown": "handleEnterKey(event)"},
-							})
+							<textarea
+								id="chat-input"
+								name="message"
+								placeholder="Ask me about travel destinations, restaurants, activities..."
+								class="w-full resize-none border rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background placeholder-muted-foreground max-h-32 disabled:opacity-50 disabled:cursor-not-allowed"
+								rows="1"
+								onkeydown="handleEnterKey(event)"
+								x-bind:disabled="sending"
+							></textarea>
 						</div>
-						@button.Button(button.Props{
-							Type:  button.TypeSubmit,
-							Class: "px-4 py-3 flex items-center gap-2",
-						}) {
-							<svg class="w-5 h-5 htmx-request:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-							</svg>
-							<span id="chat-loading" class="htmx-indicator inline-flex items-center">
+						<button
+							type="submit"
+							class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-3 gap-2"
+							x-bind:disabled="sending"
+						>
+							<span x-show="!sending">
+								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+								</svg>
+							</span>
+							<span x-show="sending" class="flex items-center">
 								<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
 							</span>
-						}
+						</button>
 					</form>
 				</div>
 			}

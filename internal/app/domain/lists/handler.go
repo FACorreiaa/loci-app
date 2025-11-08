@@ -138,7 +138,9 @@ func (h *Handler) CreateList(c *gin.Context) {
 	// Redirect back to lists page with full layout
 	// Get user info for the layout
 	user := middleware.GetUserFromContext(c)
-	if user != nil {
+	if user == nil {
+		h.log.Error("Failed to get user from context")
+		c.Redirect(http.StatusSeeOther, "/auth/signin")
 		return
 	}
 
@@ -323,7 +325,9 @@ func (h *Handler) ShowListDetail(c *gin.Context) {
 
 	// Get user info for the layout
 	user := middleware.GetUserFromContext(c)
-	if user != nil {
+	if user == nil {
+		h.log.Error("Failed to get user from context")
+		c.Redirect(http.StatusSeeOther, "/auth/signin")
 		return
 	}
 
@@ -606,7 +610,9 @@ func (h *Handler) ShowSavedListsPage(c *gin.Context) {
 	}
 
 	user := middleware.GetUserFromContext(c)
-	if user != nil {
+	if user == nil {
+		h.log.Error("Failed to get user from context")
+		c.Redirect(http.StatusSeeOther, "/auth/signin")
 		return
 	}
 

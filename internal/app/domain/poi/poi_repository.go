@@ -3264,7 +3264,7 @@ func (r *RepositoryImpl) GetPOIsByLLMInteraction(ctx context.Context, llmInterac
 			COALESCE(address, '') as address,
 			COALESCE(website, '') as website,
 			COALESCE(phone_number, '') as phone_number,
-			COALESCE(opening_hours, '') as opening_hours,
+			COALESCE(opening_hours::text, '') as opening_hours,
 			COALESCE(price_level, '') as price_level,
 			COALESCE(rating, 0) as rating,
 			distance

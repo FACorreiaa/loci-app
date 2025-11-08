@@ -20,14 +20,21 @@ templ PublicLandingPage() {
 						</p>
 					</div>
 					<!-- Main search interface -->
-					<div class="max-w-2xl mx-auto mb-8">
+					<div
+						class="max-w-2xl mx-auto mb-8"
+						x-data="{ searching: false }"
+						@htmx:before-request="searching = true"
+						@htmx:after-request="searching = false"
+					>
 						<div class="flex items-end gap-3 bg-card rounded-2xl p-4 shadow-lg border">
 							<div class="flex-1">
 								<textarea
 									id="search-input"
+									name="query"
 									placeholder="What would you like to discover? Try 'Hidden gems in Paris' or 'Best food markets in Italy'"
-									class="w-full h-12 px-0 py-0 border-none resize-none focus:outline-none focus:ring-0 bg-transparent placeholder-muted-foreground"
+									class="w-full h-12 px-0 py-0 border-none resize-none focus:outline-none focus:ring-0 bg-transparent placeholder-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed"
 									rows="1"
+									x-bind:disabled="searching"
 								></textarea>
 							</div>
 							<button
@@ -35,16 +42,22 @@ templ PublicLandingPage() {
 								hx-post="/search"
 								hx-include="#search-input"
 								hx-target="#search-results"
-								hx-indicator="#loading-spinner"
 								class="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors flex items-center gap-2"
+								x-bind:disabled="searching"
 							>
-								<svg id="send-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-								</svg>
-								<span class="hidden sm:inline">Try Free</span>
+								<span x-show="!searching" class="flex items-center gap-2">
+									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+									</svg>
+									<span class="hidden sm:inline">Try Free</span>
+								</span>
+								<span x-show="searching" class="flex items-center gap-2">
+									<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+									<span class="hidden sm:inline">Searching...</span>
+								</span>
 							</button>
 						</div>
-						<div id="loading-spinner" class="htmx-indicator max-w-4xl mx-auto mt-8 mb-12">
+						<div x-show="searching" class="max-w-4xl mx-auto mt-8 mb-12">
 							<div class="bg-card rounded-2xl p-6 shadow-xl border">
 								<div class="flex items-center gap-3 text-muted-foreground">
 									<div class="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>

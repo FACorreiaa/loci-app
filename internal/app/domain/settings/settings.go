@@ -6,16 +6,19 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
+	"github.com/FACorreiaa/go-templui/internal/app/domain"
 	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 )
 
-type SettingsHandlers struct{
+type SettingsHandlers struct {
+	*domain.BaseHandler
 	logger *zap.Logger
 }
 
-func NewSettingsHandlers(logger *zap.Logger) *SettingsHandlers {
+func NewSettingsHandlers(base *domain.BaseHandler, logger *zap.Logger) *SettingsHandlers {
 	return &SettingsHandlers{
-		logger: logger,
+		BaseHandler: base,
+		logger:      logger,
 	}
 }
 
@@ -132,4 +135,11 @@ func (h *SettingsHandlers) ExportData(c *gin.Context) {
 	c.HTML(http.StatusOK, "", `<div class="text-blue-500 text-sm mb-4">Data export will be sent to your email within 24 hours</div>`)
 
 	h.logger.Info("Data export request processed", zap.String("user", user))
+}
+
+func (h *SettingsHandlers) ShowSettingsPage(c *gin.Context) {
+	h.logger.Info("Settings page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
+
+	// Render the final layout with our custom data.
+	h.RenderPage(c, "Settings - Loci", "Settings", SettingsPage())
 }

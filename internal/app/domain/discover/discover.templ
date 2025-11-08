@@ -39,27 +39,15 @@ templ DiscoverPage(recentDiscoveries []models.ChatSession, trending []models.Tre
 					>
 						<div class="flex flex-col md:flex-row gap-4">
 							<div class="flex-1 relative">
-								<input
-									type="text"
-									id="search-query"
-									name="query"
-									placeholder="What are you looking for? (e.g., 'best ramen in Tokyo')"
-									class="w-full pl-12 pr-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background text-base"
-									x-bind:disabled="searching"
-								/>
-								<svg
-									class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-									></path>
-								</svg>
+								@i.Input(i.Props{
+									Type:        i.TypeSearch,
+									ID:          "search-query",
+									Name:        "query",
+									Placeholder: "What are you looking for? (e.g., 'best ramen in Tokyo')",
+									Class:       "w-full pr-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background text-base",
+								
+									Attributes: templ.Attributes{"x-bind:disabled": "searching"},
+								})
 							</div>
 							<div class="flex gap-2">
 								@i.Input(i.Props{
@@ -162,6 +150,17 @@ templ DiscoverPage(recentDiscoveries []models.ChatSession, trending []models.Tre
 	</div>
 }
 
+//
+//templ CategoryCard(name string, emoji string, category string) {
+//	@button.Button(button.Props{
+//		Type:       "button",
+//		Class:      "p-2 bg-card rounded-lg border hover:shadow-md hover:border-blue-300 transition-all group text-center",
+//		Attributes: templ.Attributes{"onclick": fillSearchInput(name).CallInline},
+//	}) {
+//		<div class="text-xl mb-1 group-hover:scale-110 transition-transform">{ emoji }</div>
+//		<p class="text-xs font-medium text-card-foreground">{ name }</p>
+//	}
+//}
 templ CategoryCard(name string, emoji string, category string) {
 	<button
 		type="button"

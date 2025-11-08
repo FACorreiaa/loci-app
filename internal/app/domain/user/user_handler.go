@@ -12,13 +12,13 @@ import (
 
 type Handler struct {
 	*domain.BaseHandler
-	service UserService
+	Service UserService
 }
 
 func NewHandler(base *domain.BaseHandler, service UserService) *Handler {
 	return &Handler{
 		BaseHandler: base,
-		service:     service,
+		Service:     service,
 	}
 }
 
@@ -31,7 +31,7 @@ func (h *Handler) ShowProfilePage(c *gin.Context) {
 		return
 	}
 
-	userProfile, err := h.service.GetUserProfile(c.Request.Context(), userUUID)
+	userProfile, err := h.Service.GetUserProfile(c.Request.Context(), userUUID)
 	if err != nil {
 		h.Logger.Error("Failed to fetch user profile", zap.String("userID", userID), zap.Error(err))
 		// Still show the page but with nil profile to handle gracefully

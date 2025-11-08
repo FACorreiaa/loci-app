@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	"github.com/FACorreiaa/go-templui/internal/app/domain"
@@ -170,7 +169,7 @@ func setupDependencies(dbPool *pgxpool.Pool, log *zap.Logger, slogLog *slog.Logg
 		Chat:                llmchat.NewChatHandlers(chatService, profilesService, chatRepo, log),
 		Nearby:              nearby.NewNearbyHandler(log, chatService, locationRepo),
 		Recents:             recents.NewRecentsHandlers(recentsService, log),
-		Settings:            settings.NewSettingsHandlers(log),
+		Settings:            settings.NewSettingsHandlers(baseHandler, log),
 		//Billing:             billing.NewBillingHandlers(baseHandler),
 		//Reviews:             reviews.NewReviewsHandlers(baseHandler),
 		Activities:  activities.NewActivitiesHandlers(chatRepo, log),
@@ -209,112 +208,16 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 	{
 		public.GET("/", h.Home.ShowHomePage)
 		public.GET("/discover", h.Discover.ShowDiscoverPage)
-		public.GET("/discover/detail/:sessionId", h.Discover.ShowDetail)
-		public.GET("/discover/results/:sessionId", h.Discover.ShowResultsPage)
-		public.GET("/nearby", h.Nearby.ShowNearbyPage)
+		public.GET("/discover/detail/:sessionId", func(c *gin.Context) {
+			renderer.New(c, http.StatusOK, h.Discover.ShowDetail(c)).Render(c.Writer)
+		})
+		public.GET("/discover/results/:sessionId", func(c *gin.Context) {
+			renderer.New(c, http.StatusOK, h.Discover.ShowResults(c)).Render(c.Writer)
+		})
+		public.GET("/nearby", h.Nearby.Page)
 		public.GET("/pricing", h.StaticPages.ShowPricingPage)
 		public.GET("/about", h.StaticPages.ShowAboutPage)
 	}
-
-	// Pricing (public)
-	r.GET("/pricing", func(c *gin.Context) {
-		log.Info("Pricing page accessed", zap.String("ip", c.ClientIP()))
-		c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
-			Title:   "Pricing - Loci",
-			Content: pages2.PricingPage(),
-			Nav: models.Navigation{
-				Items: []models.NavItem{
-					{Name: "Home", URL: "/"},
-					{Name: "Discover", URL: "/discover"},
-					{Name: "Pricing", URL: "/pricing"},
-					{Name: "About", URL: "/about"},
-				},
-			},
-			ActiveNav: "Pricing",
-			User:      middleware.GetUserFromContext(c),
-		}))
-	})
-
-	// About (public)
-	r.GET("/about", func(c *gin.Context) {
-		log.Info("About page accessed", zap.String("ip", c.ClientIP()))
-		c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
-			Title:   "About - Loci",
-			Content: pages2.AboutPage(),
-			Nav: models.Navigation{
-				Items: []models.NavItem{
-					{Name: "Home", URL: "/"},
-					{Name: "Discover", URL: "/discover"},
-					{Name: "Pricing", URL: "/pricing"},
-					{Name: "About", URL: "/about"},
-				},
-			},
-			ActiveNav: "About",
-			User:      middleware.GetUserFromContext(c),
-		}))
-	})
-
-	// Discover (public but enhanced when authenticated)
-	r.GET("/discover", middleware.OptionalAuthMiddleware(), h.Discover.ShowDiscoverPage)
-
-	// Discovery detail page
-	r.GET("/discover/detail/:sessionId", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
-		log.Info("Discovery detail page accessed",
-			zap.String("sessionId", c.Param("sessionId")),
-			zap.String("ip", c.ClientIP()))
-		c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
-			Title:   "Discovery Details - Loci",
-			Content: h.Discover.ShowDetail(c),
-			Nav: models.Navigation{
-				Items: []models.NavItem{
-					{Name: "Home", URL: "/"},
-					{Name: "Discover", URL: "/discover"},
-					{Name: "About", URL: "/about"},
-				},
-			},
-			ActiveNav: "Discover",
-			User:      middleware.GetUserFromContext(c),
-		}))
-	})
-
-	// Discovery results page
-	r.GET("/discover/results/:sessionId", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
-		log.Info("Discovery results page accessed",
-			zap.String("sessionId", c.Param("sessionId")),
-			zap.String("ip", c.ClientIP()))
-		c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
-			Title:   "Discovery Results - Loci",
-			Content: h.Discover.ShowResults(c),
-			Nav: models.Navigation{
-				Items: []models.NavItem{
-					{Name: "Home", URL: "/"},
-					{Name: "Discover", URL: "/discover"},
-					{Name: "About", URL: "/about"},
-				},
-			},
-			ActiveNav: "Discover",
-			User:      middleware.GetUserFromContext(c),
-		}))
-	})
-
-	// Nearby (location-based discovery - public)
-	r.GET("/nearby", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {
-		log.Info("Nearby page accessed", zap.String("ip", c.ClientIP()))
-		c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
-			Title:   "Nearby - Loci",
-			Content: nearby.NearbyPage(),
-			Nav: models.Navigation{
-				Items: []models.NavItem{
-					{Name: "Home", URL: "/"},
-					{Name: "Discover", URL: "/discover"},
-					{Name: "Nearby", URL: "/nearby"},
-					{Name: "About", URL: "/about"},
-				},
-			},
-			ActiveNav: "Nearby",
-			User:      middleware.GetUserFromContext(c),
-		}))
-	})
 
 	// WebSocket endpoint for real-time nearby POI updates
 	// Configure JWT authentication (optional - allows anonymous users)
@@ -550,7 +453,7 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 			log.Info("Dashboard accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
 			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 				Title:   "Dashboard - Loci",
-				Content: home.LoggedInDashboard(),
+				Content: pages2.LoggedInDashboard(),
 				Nav: models.Navigation{
 					Items: []models.NavItem{
 						{Name: "Dashboard", URL: "/dashboard"},
@@ -628,68 +531,12 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 		protected.POST("/lists/:id/save", h.Lists.SaveListAction)
 		protected.DELETE("/lists/:id/unsave", h.Lists.UnsaveListAction)
 
-		// Profile
-		protected.GET("/profile", func(c *gin.Context) {
-			userID := middleware.GetUserIDFromContext(c)
-			log.Info("Profile page accessed", zap.String("user", userID))
-
-			// Parse user ID from string to UUID
-			userUUID, err := uuid.Parse(userID)
-			if err != nil {
-				log.Error("Invalid user ID", zap.String("userID", userID), zap.Error(err))
-				c.HTML(http.StatusBadRequest, "", pages2.LayoutPage(models.LayoutTempl{
-					Title:   "Error - Loci",
-					Content: profiles.ProfilePage(nil),
-					User:    middleware.GetUserFromContext(c),
-				}))
-				return
-			}
-
-			// Fetch user profile from database
-			// this doesnt need to be here anymore because its fetched on the
-			userProfile, err := h.User.GetUserProfile(c.Request.Context(), userUUID)
-			if err != nil {
-				log.Error("Failed to fetch user profile", zap.String("userID", userID), zap.Error(err))
-				// Still show the page but with nil profile
-				userProfile = nil
-			}
-
-			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
-				Title:   "Profile - Loci",
-				Content: profiles.ProfilePage(userProfile),
-				Nav: models.Navigation{
-					Items: []models.NavItem{
-						{Name: "Dashboard", URL: "/dashboard"},
-						{Name: "Discover", URL: "/discover"},
-						{Name: "Profile", URL: "/profile"},
-						{Name: "Settings", URL: "/settings"},
-					},
-				},
-				ActiveNav: "Profile",
-				User:      middleware.GetUserFromContext(c),
-			}))
-		})
-
+		protected.GET("/profile", h.User.ShowProfilePage)
 		// Recents
 		protected.GET("/recents", h.Recents.HandleRecentsPage)
 
 		// Settings
-		protected.GET("/settings", func(c *gin.Context) {
-			log.Info("Settings page accessed", zap.String("user", middleware.GetUserIDFromContext(c)))
-			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
-				Title:   "Settings - Loci",
-				Content: settings.SettingsPage(),
-				Nav: models.Navigation{
-					Items: []models.NavItem{
-						{Name: "Dashboard", URL: "/dashboard"},
-						{Name: "Profile", URL: "/profile"},
-						{Name: "Settings", URL: "/settings"},
-					},
-				},
-				ActiveNav: "Settings",
-				User:      middleware.GetUserFromContext(c),
-			}))
-		})
+		protected.GET("/settings", h.Settings.ShowSettingsPage)
 
 		// Reviews
 		protected.GET("/reviews", func(c *gin.Context) {
