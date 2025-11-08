@@ -83,6 +83,7 @@ func (h *DiscoverHandlers) ShowDiscoverPage(c *gin.Context) {
 	}
 
 	user := middleware.GetUserFromContext(c)
+
 	if user != nil {
 		userUUID, err := uuid.Parse(user.ID)
 		if err == nil {

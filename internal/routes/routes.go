@@ -236,7 +236,7 @@ func Setup(r *gin.Engine, dbPool *pgxpool.Pool, log *zap.Logger) {
 	})
 
 	// Discover (public but enhanced when authenticated)
-	r.GET("/discover", discoverHandlers.ShowDiscoverPage)
+	r.GET("/discover", middleware.OptionalAuthMiddleware(), discoverHandlers.ShowDiscoverPage)
 
 	// Discovery detail page
 	r.GET("/discover/detail/:sessionId", middleware.OptionalAuthMiddleware(), func(c *gin.Context) {

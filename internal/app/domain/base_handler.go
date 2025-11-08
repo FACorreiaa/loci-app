@@ -20,6 +20,14 @@ var mainNav = models.Navigation{
 	},
 }
 
+var offlineNav = models.Navigation{
+	Items: []models.NavItem{
+		{Name: "About", URL: "/about"},
+		{Name: "Features", URL: "/features"},
+		{Name: "Pricing", URL: "/pricing"},
+	},
+}
+
 type BaseHandler struct {
 	Logger *zap.Logger
 }
@@ -30,10 +38,15 @@ func NewBaseHandler(logger *zap.Logger) *BaseHandler {
 
 func (h *BaseHandler) newLayoutData(c *gin.Context, title, activeNav string, content templ.Component) models.LayoutTempl {
 	user := middleware.GetUserFromContext(c)
+	nav := mainNav
+	if user == nil {
+		nav = offlineNav
+	}
+
 	return models.LayoutTempl{
 		Title:     title,
 		Content:   content,
-		Nav:       mainNav,
+		Nav:       nav,
 		ActiveNav: activeNav,
 		User:      user,
 	}
@@ -45,11 +58,8 @@ func (h *BaseHandler) render(c *gin.Context, status int, component templ.Compone
 }
 
 func (h *BaseHandler) RenderPage(c *gin.Context, title, activeNav string, content templ.Component) {
-	isHTMX := c.GetHeader("HX-Request") == "true"
-	if isHTMX {
-		h.render(c, 200, content)
-	} else {
-		layoutData := h.newLayoutData(c, title, activeNav, content)
-		h.render(c, 200, pages.LayoutPage(layoutData))
-	}
+	// Always render the full layout with navbar
+	// hx-boost will automatically swap the body content
+	layoutData := h.newLayoutData(c, title, activeNav, content)
+	h.render(c, 200, pages.LayoutPage(layoutData))
 }

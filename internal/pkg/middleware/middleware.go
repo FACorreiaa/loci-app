@@ -77,7 +77,18 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Set user context from JWT claims
+		// Create User object from JWT claims
+		user := &models.User{
+			ID:       claims.UserID,
+			Name:     claims.Username,
+			Email:    claims.Email,
+			IsActive: true,
+		}
+
+		// Set full user object in context - this is what GetUserFromContext looks for
+		c.Set(string(UserContextKey), user)
+
+		// Also set individual fields for backwards compatibility
 		c.Set("user_id", claims.UserID)
 		c.Set("user_email", claims.Email)
 		c.Set("user_name", claims.Username)
@@ -126,13 +137,11 @@ func SecurityMiddleware() gin.HandlerFunc {
 func GetUserFromContext(c *gin.Context) *models.User {
 	user, exists := c.Get(string(UserContextKey))
 	if !exists {
-		return nil // Or return an anonymous user struct
+		return nil
 	}
 
 	userModel, ok := user.(*models.User)
 	if !ok {
-		// This should not happen if the middleware is set up correctly.
-		// Log an error here.
 		return nil
 	}
 
@@ -143,28 +152,52 @@ func GetUserFromContext(c *gin.Context) *models.User {
 func OptionalAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token, err := c.Cookie("auth_token")
-		if err == nil && token != "" {
-			// Get JWT secret from environment
-			jwtSecret := os.Getenv("JWT_SECRET_KEY")
-			if jwtSecret == "" {
-				jwtSecret = "default-secret-key-change-in-production-min-32-chars"
+
+		// Debug: Log cookie status
+		if err != nil {
+			// No cookie found
+			c.Next()
+			return
+		}
+
+		if token == "" {
+			// Empty token
+			c.Next()
+			return
+		}
+
+		// Get JWT secret from environment
+		jwtSecret := os.Getenv("JWT_SECRET_KEY")
+		if jwtSecret == "" {
+			jwtSecret = "default-secret-key-change-in-production-min-32-chars"
+		}
+
+		// Create JWT service and validate token
+		jwtService := auth.NewJWTService()
+		config := auth.JWTConfig{
+			SecretKey:       jwtSecret,
+			TokenExpiration: time.Hour * 24,
+			Logger:          nil, // Logger will be injected elsewhere
+		}
+		claims, err := jwtService.ValidateToken(config, token)
+		if err == nil {
+			// Create User object from JWT claims
+			user := &models.User{
+				ID:       claims.UserID,
+				Name:     claims.Username,
+				Email:    claims.Email,
+				IsActive: true,
 			}
 
-			// Create JWT service and validate token
-			jwtService := auth.NewJWTService()
-			config := auth.JWTConfig{
-				SecretKey:       jwtSecret,
-				TokenExpiration: time.Hour * 24,
-				Logger:          nil, // Logger will be injected elsewhere
-			}
-			claims, err := jwtService.ValidateToken(config, token)
-			if err == nil {
-				// Set user context from JWT claims
-				c.Set("user_id", claims.UserID)
-				c.Set("user_email", claims.Email)
-				c.Set("user_name", claims.Username)
-			}
+			// Set full user object in context - this is what GetUserFromContext looks for
+			c.Set(string(UserContextKey), user)
+
+			// Also set individual fields for backwards compatibility
+			c.Set("user_id", claims.UserID)
+			c.Set("user_email", claims.Email)
+			c.Set("user_name", claims.Username)
 		}
+
 		c.Next()
 	}
 }
