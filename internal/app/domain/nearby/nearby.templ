@@ -37,7 +37,6 @@ templ NearbyPage() {
 					</div>
 				</div>
 			</div>
-
 			<!-- Controls -->
 			<div class="bg-card rounded-xl shadow-lg border p-6 mb-8">
 				<div class="flex flex-col md:flex-row gap-4 mb-4">
@@ -59,7 +58,6 @@ templ NearbyPage() {
 							Tracking your location...
 						</div>
 					</div>
-
 					<!-- Distance Radius -->
 					<div class="flex-1">
 						<label class="block text-sm font-medium text-muted-foreground mb-2">Search Radius</label>
@@ -78,7 +76,6 @@ templ NearbyPage() {
 						</select>
 					</div>
 				</div>
-
 				<!-- Current Location Display -->
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
 					<div>
@@ -90,19 +87,16 @@ templ NearbyPage() {
 						<span class="ml-2 font-mono text-sm" x-text="currentLon.toFixed(6)"></span>
 					</div>
 				</div>
-
 				<p class="text-xs text-muted-foreground mt-3">
 					💡 Click "Start Live Tracking" to automatically discover places as you move. We'll update results when you move more than 50 meters.
 				</p>
 			</div>
-
 			<!-- POI Results -->
 			<div id="nearby-results">
 				<div x-show="loading" class="text-center py-12">
 					<div class="w-16 h-16 mx-auto mb-4 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
 					<p class="text-lg font-medium text-gray-700 dark:text-gray-300">Finding nearby places...</p>
 				</div>
-
 				<div x-show="!loading && pois.length === 0 && !isTracking" class="text-center py-12 text-muted-foreground">
 					<svg class="w-16 h-16 mx-auto mb-4 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
@@ -111,7 +105,6 @@ templ NearbyPage() {
 					<p class="text-lg font-medium mb-2">Start discovering nearby places</p>
 					<p class="text-sm">Click "Start Live Tracking" to begin</p>
 				</div>
-
 				<div x-show="!loading && pois.length > 0">
 					<h2 class="text-lg font-semibold text-foreground mb-4" x-text="`${pois.length} Places Nearby`"></h2>
 					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -162,7 +155,6 @@ templ NearbyPage() {
 			</div>
 		</div>
 	</div>
-
 	<script>
 	function nearbyApp() {
 		return {

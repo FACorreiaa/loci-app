@@ -1,10 +1,9 @@
 package lists
 
-
 import (
-    "fmt"
-    "github.com/FACorreiaa/go-templui/internal/app/models"
-    "github.com/google/uuid"
+	"fmt"
+	"github.com/FACorreiaa/go-templui/internal/app/models"
+	"github.com/google/uuid"
 )
 
 templ ListsPage() {
@@ -425,6 +424,7 @@ templ AddToListModal(itemID, itemName, contentType string, userLists []models.Li
 		}
 	</script>
 }
+
 // ListDetailPage displays a list with its items (mixed content types)
 templ ListDetailPage(listWithItems *models.ListWithItems) {
 	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
@@ -574,7 +574,7 @@ templ ListItemCard(item *models.ListItem) {
 						<h3 class="text-lg font-semibold text-card-foreground mb-1">
 							Item ID: { item.ItemID.String() }
 						</h3>
-						if item.ItemAIDescription != ""  {
+						if item.ItemAIDescription != "" {
 							<p class="text-sm text-muted-foreground line-clamp-2">
 								{ item.ItemAIDescription }
 							</p>
@@ -923,7 +923,7 @@ templ DeleteListModal(list *models.List) {
 				</p>
 				<p class="text-sm text-muted-foreground">
 					if list.ItemCount > 0 {
-						This list contains { fmt.Sprintf("%d", list.ItemCount) } 
+						This list contains { fmt.Sprintf("%d", list.ItemCount) }
 						if list.ItemCount == 1 {
 							item
 						} else {

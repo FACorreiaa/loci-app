@@ -231,7 +231,7 @@ func DiscoveryDetailPage(session models.ChatSession) templ.Component {
 				var templ_7745c5c3_Var12 string
 				templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(msg.Timestamp.Format("3:04 PM"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover_detail.templ`, Line: 113, Col: 88}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover_detail.templ`, Line: 117, Col: 88}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 				if templ_7745c5c3_Err != nil {
@@ -249,7 +249,7 @@ func DiscoveryDetailPage(session models.ChatSession) templ.Component {
 					var templ_7745c5c3_Var13 string
 					templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(string(msg.MessageType))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover_detail.templ`, Line: 116, Col: 38}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover_detail.templ`, Line: 120, Col: 38}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 					if templ_7745c5c3_Err != nil {
@@ -267,7 +267,7 @@ func DiscoveryDetailPage(session models.ChatSession) templ.Component {
 				var templ_7745c5c3_Var14 string
 				templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(msg.Content)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover_detail.templ`, Line: 120, Col: 70}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover_detail.templ`, Line: 124, Col: 70}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 				if templ_7745c5c3_Err != nil {
@@ -295,7 +295,7 @@ func DiscoveryDetailPage(session models.ChatSession) templ.Component {
 		var templ_7745c5c3_Var15 templ.SafeURL
 		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(fmt.Sprintf("/discover/results/%s", session.ID.String())))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover_detail.templ`, Line: 136, Col: 79}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/discover/discover_detail.templ`, Line: 140, Col: 79}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {

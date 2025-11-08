@@ -1,10 +1,10 @@
 package discover
 
 import (
-    "fmt"
-    "strings"
-    "github.com/FACorreiaa/go-templui/internal/app/models"
-    fav "github.com/FACorreiaa/go-templui/internal/app/domain/favorites"
+	"fmt"
+	fav "github.com/FACorreiaa/go-templui/internal/app/domain/favorites"
+	"github.com/FACorreiaa/go-templui/internal/app/models"
+	"strings"
 )
 
 templ DiscoverPage(recentDiscoveries []models.ChatSession, trending []models.TrendingDiscovery, featured []models.FeaturedCollection) {
@@ -25,75 +25,74 @@ templ DiscoverPage(recentDiscoveries []models.ChatSession, trending []models.Tre
 				</div>
 				<!-- Enhanced Search Bar -->
 				<div class="bg-card rounded-xl shadow-lg border p-6">
-                		<form
-                			hx-post="/discover/search"
-                			hx-target="#discover-results"
-                			hx-indicator="#search-loading"
-                			hx-on::after-request="if(event.detail.successful) { htmx.ajax('GET', '/discover/recent', {target:'#recent-discoveries-section', swap:'innerHTML'}); }"
-                			class="relative htmx-form"
-                		>
-                			<div class="flex flex-col md:flex-row gap-4">
-                				<div class="flex-1 relative">
-                					<input
-                						type="text"
-                						id="search-query"
-                						name="query"
-                						placeholder="What are you looking for? (e.g., 'best ramen in Tokyo')"
-                						class="w-full pl-12 pr-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background text-base"
-                					/>
-                					<svg
-                						class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
-                						fill="none"
-                						stroke="currentColor"
-                						viewBox="0 0 24 24"
-                					>
-                						<path
-                							stroke-linecap="round"
-                							stroke-linejoin="round"
-                							stroke-width="2"
-                							d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                						></path>
-                					</svg>
-                				</div>
-
-                				<div class="flex gap-2">
-                					<input
-                						type="text"
-                						name="location"
-                						placeholder="Location"
-                						class="px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background w-32 md:w-40"
-                					/>
-
-                					<button
-                						type="submit"
-                						class="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg
-                							   hover:from-purple-700 hover:to-pink-700 transition-all font-medium
-                							   flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed
-                							   htmx-button"
-                					>
-                						<span class="search-label flex items-center gap-2">
-                							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                								<path
-                									stroke-linecap="round"
-                									stroke-linejoin="round"
-                									stroke-width="2"
-                									d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                								></path>
-                							</svg>
-                							Search
-                						</span>
-
-                						<span id="search-loading" class="htmx-indicator hidden items-center">
-                							<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                							Searching...
-                						</span>
-                					</button>
-                				</div>
-                			</div>
-                		</form>
-
-
-                	</div>
+					<form
+						hx-post="/discover/search"
+						hx-target="#discover-results"
+						hx-on::after-request="if(event.detail.successful) { htmx.ajax('GET', '/discover/recent', {target:'#recent-discoveries-section', swap:'innerHTML'}); }"
+						class="relative"
+						x-data="{ searching: false }"
+						@htmx:before-request="searching = true"
+						@htmx:after-request="searching = false"
+					>
+						<div class="flex flex-col md:flex-row gap-4">
+							<div class="flex-1 relative">
+								<input
+									type="text"
+									id="search-query"
+									name="query"
+									placeholder="What are you looking for? (e.g., 'best ramen in Tokyo')"
+									class="w-full pl-12 pr-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background text-base"
+									x-bind:disabled="searching"
+								/>
+								<svg
+									class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+									></path>
+								</svg>
+							</div>
+							<div class="flex gap-2">
+								<input
+									type="text"
+									name="location"
+									placeholder="Location"
+									class="px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background w-32 md:w-40"
+									x-bind:disabled="searching"
+								/>
+								<button
+									type="submit"
+									class="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg
+                                                               hover:from-purple-700 hover:to-pink-700 transition-all font-medium
+                                                               flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
+									x-bind:disabled="searching"
+								>
+									<span x-show="!searching" class="flex items-center gap-2">
+										<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+											></path>
+										</svg>
+										Search
+									</span>
+									<span x-show="searching" class="flex items-center gap-2">
+										<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+										Searching...
+									</span>
+								</button>
+							</div>
+						</div>
+					</form>
+				</div>
 			</div>
 			<!-- Quick Categories - Now at top with smaller cards -->
 			<div class="mb-10">
@@ -501,7 +500,6 @@ templ DiscoveryResultsPage(cityName string, results []DiscoverResult) {
 						<p class="text-muted-foreground">Detailed information for places in { cityName }</p>
 					</div>
 				</div>
-
 				<!-- Back button -->
 				<a
 					href="/discover"
@@ -513,7 +511,6 @@ templ DiscoveryResultsPage(cityName string, results []DiscoverResult) {
 					Back to Discover
 				</a>
 			</div>
-
 			<!-- Results Section -->
 			<div class="bg-card rounded-xl shadow-lg border p-6">
 				if len(results) == 0 {

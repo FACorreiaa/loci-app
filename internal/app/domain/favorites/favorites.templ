@@ -2,8 +2,8 @@ package favorites
 
 import (
 	"fmt"
-	"strconv"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
+	"strconv"
 )
 
 // FavoriteButton renders an empty heart button that adds to favorites
@@ -37,15 +37,15 @@ templ UnfavoriteButton(id string, isLLM bool) {
 }
 
 type FavoritesPageData struct {
-	POIs        []models.POIDetailedInfo
-	Total       int
-	Page        int
-	PageSize    int
-	TotalPages  int
-	SearchText  string
-	Category    string
-	SortBy      string
-	SortOrder   string
+	POIs       []models.POIDetailedInfo
+	Total      int
+	Page       int
+	PageSize   int
+	TotalPages int
+	SearchText string
+	Category   string
+	SortBy     string
+	SortOrder  string
 }
 
 templ FavoritesPage(data FavoritesPageData) {
