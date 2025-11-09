@@ -1,13 +1,13 @@
-package domain
+package handlers
 
 import (
 	"github.com/a-h/templ"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"github.com/FACorreiaa/go-templui/internal/app/domain/pages"
+	"github.com/FACorreiaa/go-templui/internal/app/middleware"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
-	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
+	"github.com/FACorreiaa/go-templui/internal/app/pages"
 )
 
 type BaseHandler struct {

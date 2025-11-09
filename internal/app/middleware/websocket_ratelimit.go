@@ -1,10 +1,11 @@
 package middleware
 
 import (
-	"go.uber.org/zap"
 	"net/http"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
 )

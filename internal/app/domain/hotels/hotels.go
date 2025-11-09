@@ -12,9 +12,9 @@ import (
 
 	llmchat "github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
 	results2 "github.com/FACorreiaa/go-templui/internal/app/domain/results"
+	"github.com/FACorreiaa/go-templui/internal/app/middleware"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"github.com/FACorreiaa/go-templui/internal/app/services"
-	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 )
 
 type HotelsHandlers struct {

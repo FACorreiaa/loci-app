@@ -34,8 +34,8 @@ import (
 	"github.com/FACorreiaa/go-templui/internal/app/domain/poi"
 	profiles2 "github.com/FACorreiaa/go-templui/internal/app/domain/profiles"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/tags"
+	"github.com/FACorreiaa/go-templui/internal/app/middleware"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
-	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 )
 
 const (

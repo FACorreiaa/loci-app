@@ -18,8 +18,8 @@ import (
 	"github.com/FACorreiaa/go-templui/internal/app/domain/activities"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/hotels"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/restaurants"
+	"github.com/FACorreiaa/go-templui/internal/app/middleware"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
-	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
 )
 
 func TestUnifiedDataSource_Integration(t *testing.T) {

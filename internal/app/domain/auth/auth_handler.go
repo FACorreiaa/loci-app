@@ -10,9 +10,9 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/FACorreiaa/go-templui/internal/app/components/banner"
-	"github.com/FACorreiaa/go-templui/internal/app/domain"
-	"github.com/FACorreiaa/go-templui/internal/app/domain/pages"
+	"github.com/FACorreiaa/go-templui/internal/app/handlers"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
+	"github.com/FACorreiaa/go-templui/internal/app/pages"
 )
 
 type LoginRequest struct {
@@ -37,12 +37,12 @@ type ChangePasswordRequest struct {
 }
 
 type AuthHandlers struct {
-	*domain.BaseHandler
+	*handlers.BaseHandler
 	authService AuthService
 	logger      *zap.Logger
 }
 
-func NewAuthHandlers(base *domain.BaseHandler, authService AuthService, logger *zap.Logger) *AuthHandlers {
+func NewAuthHandlers(base *handlers.BaseHandler, authService AuthService, logger *zap.Logger) *AuthHandlers {
 	return &AuthHandlers{
 		BaseHandler: base,
 		authService: authService,

@@ -6,6 +6,16 @@ import (
 	input "github.com/FACorreiaa/go-templui/internal/app/components/input"
 )
 
+type SignInFormValues struct {
+    Email string
+}
+
+type SignInFormErrors struct {
+    Email string
+    Password string
+    General string
+}
+
 templ SignInForm(values SignInFormValues, errors SignInFormErrors) {
 	<form
 		id="signin-form"

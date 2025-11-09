@@ -24,7 +24,7 @@ import (
 	"github.com/FACorreiaa/go-templui/internal/app/domain/hotels"
 	profiles2 "github.com/FACorreiaa/go-templui/internal/app/domain/profiles"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/restaurants"
-	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
+	"github.com/FACorreiaa/go-templui/internal/app/middleware"
 )
 
 var testDB *pgxpool.Pool

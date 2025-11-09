@@ -3,8 +3,9 @@ package middleware
 import (
 	"time"
 
-	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"go.uber.org/zap"
+
+	"github.com/FACorreiaa/go-templui/internal/app/models"
 )
 
 // CacheManager holds all application caches
