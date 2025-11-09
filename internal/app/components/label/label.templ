@@ -1,7 +1,7 @@
-// templui component label - version: v0.96.0 installed by templui v0.96.0
+// templui component label - version: v0.98.0 installed by templui v0.98.0
 package label
 
-import "github.com/FACorreiaa/go-templui/internal/utils"
+import ("github.com/FACorreiaa/go-templui/internal/utils")
 
 type Props struct {
 	ID         string
@@ -38,5 +38,5 @@ templ Label(props ...Props) {
 }
 
 templ Script() {
-	<script defer nonce={ templ.GetNonce(ctx) } src="/assets/js/label.min.js"></script>
+	<script defer nonce={ templ.GetNonce(ctx) } src={ "/assets/js/label.min.js?v=" + utils.ScriptVersion }></script>
 }

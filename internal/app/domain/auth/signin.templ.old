@@ -4,25 +4,16 @@ import (
 	button "github.com/FACorreiaa/go-templui/internal/app/components/button"
 	card "github.com/FACorreiaa/go-templui/internal/app/components/card"
 	checkbox "github.com/FACorreiaa/go-templui/internal/app/components/checkbox"
-	form "github.com/FACorreiaa/go-templui/internal/app/components/form"
 	input "github.com/FACorreiaa/go-templui/internal/app/components/input"
+	label "github.com/FACorreiaa/go-templui/internal/app/components/label"
 	separator "github.com/FACorreiaa/go-templui/internal/app/components/separator"
 )
 
-type SignInFormErrors struct {
-	Email    string
-	Password string
-	General  string
-}
-
-type SignInFormValues struct {
-	Email string
-}
-
-templ SignIn(values SignInFormValues, errors SignInFormErrors) {
+templ SignIn() {
 	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
 		<div class="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
 			<div class="w-full max-w-md space-y-6">
+				<!-- Logo -->
 				<div class="text-center">
 					<div class="mx-auto w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mb-4">
 						<span class="text-white font-bold text-xl">L</span>
@@ -30,66 +21,47 @@ templ SignIn(values SignInFormValues, errors SignInFormErrors) {
 					<h2 class="text-2xl font-bold text-foreground">Welcome back</h2>
 					<p class="text-muted-foreground mt-2">Sign in to your Loci account</p>
 				</div>
+				<!-- Sign In Form -->
 				@card.Card() {
 					@card.Content(card.ContentProps{Class: "space-y-6"}) {
 						<form
 							hx-post="/auth/signin"
 							hx-trigger="submit"
-							hx-swap="outerHTML"
 							hx-target="#signin-response"
-							x-data="{ signingIn: false, hasEmailError: false, hasPasswordError: false }"
-							@htmx:before-request="signingIn = true; hasEmailError = false; hasPasswordError = false"
+							x-data="{ signingIn: false }"
+							@htmx:before-request="signingIn = true"
 							@htmx:after-request="signingIn = false"
-							@htmx:after-swap="hasEmailError = document.getElementById('email-error').innerHTML.trim() !== ''; hasPasswordError = document.getElementById('password-error').innerHTML.trim() !== ''"
-							@htmx:response-error="signingIn = false"
 						>
-							if errors.General != "" {
-								<div class="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg" role="alert">
-									{ errors.General }
-								</div>
-							}
 							<div id="signin-response" class="mb-4"></div>
 							<div class="space-y-4">
-								@form.Item() {
-									@form.Label(form.LabelProps{
-										For: "email",
-									}) {
+								<div class="space-y-2">
+									@label.Label(label.Props{For: "email"}) {
 										Email address
 									}
-									@input.Input(input.Props{
-										ID:          "email",
-										Name:        "email",
-										Type:        input.TypeEmail,
-										Placeholder: "Enter your email",
-										Required:    true,
-										Value: values.Email,
-										Attributes: templ.Attributes{
-											"required":        "",
-											"x-bind:disabled": "signingIn",
-											"x-bind:class":    "{ 'border-destructive': hasError }",
-										},
-									})
-									<div id="email-error"></div>
-								}
-								@form.Item() {
-									@form.Label(form.LabelProps{
-										For: "password",
-									}) {
+									<input
+										type="email"
+										id="email"
+										name="email"
+										required
+										placeholder="Enter your email"
+										class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+										x-bind:disabled="signingIn"
+									/>
+								</div>
+								<div class="space-y-2">
+									@label.Label(label.Props{For: "password"}) {
 										Password
 									}
-									@input.Input(input.Props{
-										ID:          "password",
-										Name:        "password",
-										Type:        input.TypePassword,
-										Placeholder: "Enter your password",
-										Attributes: templ.Attributes{
-											"required":        "",
-											"x-bind:disabled": "signingIn",
-											"x-bind:class":    "{ 'border-red-500 focus-visible:ring-red-500': hasPasswordError }",
-										},
-									})
-									<div id="password-error"></div>
-								}
+									<input
+										type="password"
+										id="password"
+										name="password"
+										required
+										placeholder="Enter your password"
+										class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+										x-bind:disabled="signingIn"
+									/>
+								</div>
 								<div class="flex items-center justify-between">
 									<label class="flex items-center gap-2 cursor-pointer">
 										@checkbox.Checkbox(checkbox.Props{
@@ -117,9 +89,11 @@ templ SignIn(values SignInFormValues, errors SignInFormErrors) {
 								</button>
 							</div>
 						</form>
+						<!-- Divider -->
 						@separator.Separator() {
 							Or continue with
 						}
+						<!-- Social Login -->
 						<div class="grid grid-cols-2 gap-3">
 							@button.Button(button.Props{
 								Variant: button.VariantOutline,
@@ -145,6 +119,7 @@ templ SignIn(values SignInFormValues, errors SignInFormErrors) {
 						</div>
 					}
 				}
+				<!-- Sign Up Link -->
 				<div class="text-center">
 					<span class="text-muted-foreground text-sm">Don't have an account? </span>
 					<a href="/auth/signup" class="text-blue-600 hover:text-blue-700 font-medium text-sm">

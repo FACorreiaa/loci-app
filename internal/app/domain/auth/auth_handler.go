@@ -1,12 +1,15 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
 	"github.com/FACorreiaa/go-templui/internal/app/components/banner"
+	"github.com/FACorreiaa/go-templui/internal/app/models"
 )
 
 type LoginRequest struct {
@@ -42,110 +45,87 @@ func NewAuthHandlers(authService AuthService, logger *zap.Logger) *AuthHandlers 
 	}
 }
 
-func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandlers) LoginHandler(c *gin.Context) {
 	h.logger.Info("Login attempt",
-		zap.String("method", r.Method),
-		zap.String("remote_addr", r.RemoteAddr),
+		zap.String("method", c.Request.Method),
+		zap.String("remote_addr", c.Request.RemoteAddr),
 	)
 
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	email := c.PostForm("email")
+	password := c.PostForm("password")
+	rememberMe := c.PostForm("remember_me") == "on"
+
+	formErrors := SignInFormErrors{}
+	if email == "" {
+		formErrors.Email = "Email address is required."
+	}
+	if password == "" {
+		formErrors.Password = "Password is required."
+	}
+
+	if formErrors.Email != "" || formErrors.Password != "" {
+		h.logger.Warn("Validation failed on login", zap.Any("errors", formErrors))
+		formValues := SignInFormValues{Email: email}
+		component := SignIn(formValues, formErrors)
+		c.Status(http.StatusBadRequest)
+		component.Render(c.Request.Context(), c.Writer)
 		return
 	}
 
-	err := r.ParseForm()
+	accessToken, refreshToken, err := h.authService.Login(c.Request.Context(), email, password)
 	if err != nil {
-		h.logger.Error("Failed to parse form", zap.Error(err))
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
-	}
+		h.logger.Warn("Invalid login credentials", zap.String("email", email), zap.Error(err))
+		formValues := SignInFormValues{Email: email}
+		formErrors.General = "Invalid email or password. Please try again."
 
-	email := r.FormValue("email")
-	password := r.FormValue("password")
-	rememberMe := r.FormValue("remember_me") == "on" || r.FormValue("remember_me") == "true"
-
-	if email == "" || password == "" {
-		h.logger.Warn("Missing email or password")
-		w.Header().Set("HX-Retarget", "#login-form")
-		w.WriteHeader(http.StatusBadRequest)
-		component := banner.Banner(banner.BannerProps{
-			Type:        banner.BannerError,
-			Message:     "Email and password are required",
-			Dismissable: true,
-			ID:          "login-error",
-			AutoDismiss: 5,
-		})
-		if err := component.Render(r.Context(), w); err != nil {
-			h.logger.Error("Failed to render banner", zap.Error(err))
+		switch {
+		case errors.Is(err, models.ErrUserNotFound), errors.Is(err, models.ErrInvalidPassword):
+			formErrors.General = "Invalid credentials. Please check your email and password."
+		default:
+			formErrors.General = "An unexpected error occurred. Please try again."
 		}
+
+		component := SignIn(formValues, formErrors)
+		c.Status(http.StatusUnauthorized)
+		component.Render(c.Request.Context(), c.Writer)
 		return
 	}
 
-	// Validate credentials
-	user, err := h.authService.GetUserByEmail(r.Context(), email)
-	if err != nil || user == nil || !h.authService.CheckPassword(user.Password, password) {
-		h.logger.Warn("Invalid login credentials",
-			zap.String("email", email),
-		)
-		w.Header().Set("HX-Retarget", "#login-form")
-		w.WriteHeader(http.StatusUnauthorized)
-		component := banner.Banner(banner.BannerProps{
-			Type:        banner.BannerError,
-			Message:     "Invalid email or password",
-			Description: "Please check your credentials and try again",
-			Dismissable: true,
-			ID:          "login-invalid",
-			AutoDismiss: 5,
-		})
-		if err := component.Render(r.Context(), w); err != nil {
-			h.logger.Error("Failed to render banner", zap.Error(err))
-		}
-		return
-	}
-
-	// Generate token with appropriate expiration based on remember me
 	var tokenExpiration time.Duration
-	var cookieMaxAge int
-
 	if rememberMe {
-		// Remember me: 30 days
-		tokenExpiration = 30 * 24 * time.Hour
-		cookieMaxAge = int(tokenExpiration.Seconds())
+		tokenExpiration = 30 * 24 * time.Hour // 30 days
 	} else {
-		// Session only: 24 hours
-		tokenExpiration = 24 * time.Hour
-		cookieMaxAge = int(tokenExpiration.Seconds())
+		tokenExpiration = 24 * time.Hour // 24 hours (session)
 	}
+	cookieMaxAge := int(tokenExpiration.Seconds())
 
-	token, err := h.authService.GenerateTokenWithExpiration(user.ID, user.Email, user.Username, tokenExpiration)
-	if err != nil {
-		h.logger.Error("Failed to generate token", zap.Error(err))
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
+	c.SetCookie(
+		"auth_token", // name
+		accessToken,  // value
+		cookieMaxAge, // maxAge
+		"/",          // path
+		"",           // domain (blank for current)
+		false,        // secure (set true in production)
+		true,         // httpOnly
+	)
 
-	// Set cookie with appropriate expiration
-	cookie := &http.Cookie{
-		Name:     "auth_token",
-		Value:    token,
-		MaxAge:   cookieMaxAge,
-		HttpOnly: true,
-		Secure:   false, // Set to true in production with HTTPS
-		SameSite: http.SameSiteLaxMode,
-		Path:     "/",
-	}
-
-	http.SetCookie(w, cookie)
+	c.SetCookie(
+		"refresh_token",
+		refreshToken,
+		cookieMaxAge*30, // Example: much longer life
+		"/",
+		"",
+		false,
+		true,
+	)
 
 	h.logger.Info("Successful login",
-		zap.String("user_id", user.ID),
 		zap.String("email", email),
 		zap.Bool("remember_me", rememberMe),
-		zap.Duration("token_expiration", tokenExpiration),
 	)
 
-	w.Header().Set("HX-Redirect", "/dashboard")
-	w.WriteHeader(http.StatusOK)
+	c.Header("HX-Redirect", "/dashboard")
+	c.Status(http.StatusOK)
 }
 
 func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {

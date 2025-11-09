@@ -72,7 +72,14 @@ templ ProfilePage(user *models.UserProfile) {
 			</div>
 			<!-- Edit Profile Form (Hidden by default) -->
 			<div id="editProfileForm" class="bg-card rounded-xl shadow-lg border p-6 mb-8 hidden">
-				<form hx-post="/settings/profile" hx-target="#editProfileForm" hx-swap="outerHTML">
+				<form
+					hx-post="/settings/profile"
+					hx-target="#editProfileForm"
+					hx-swap="outerHTML"
+					x-data="{ saving: false }"
+					@htmx:before-request="saving = true"
+					@htmx:after-request="saving = false"
+				>
 					<h2 class="text-xl font-semibold text-card-foreground mb-6">Edit Profile</h2>
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 						<!-- Profile Picture Section -->
@@ -100,7 +107,8 @@ templ ProfilePage(user *models.UserProfile) {
 								id="firstname"
 								name="firstname"
 								value={ getStringValue(user.Firstname) }
-								class="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background"
+								class="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background disabled:opacity-50 disabled:cursor-not-allowed"
+								x-bind:disabled="saving"
 							/>
 						</div>
 						<div>
@@ -110,7 +118,8 @@ templ ProfilePage(user *models.UserProfile) {
 								id="lastname"
 								name="lastname"
 								value={ getStringValue(user.Lastname) }
-								class="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background"
+								class="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background disabled:opacity-50 disabled:cursor-not-allowed"
+								x-bind:disabled="saving"
 							/>
 						</div>
 						<div>
@@ -120,7 +129,8 @@ templ ProfilePage(user *models.UserProfile) {
 								id="email"
 								name="email"
 								value={ getEmailValue(user) }
-								class="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background"
+								class="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background disabled:opacity-50 disabled:cursor-not-allowed"
+								x-bind:disabled="saving"
 							/>
 						</div>
 						<div>
@@ -130,7 +140,8 @@ templ ProfilePage(user *models.UserProfile) {
 								id="location"
 								name="location"
 								value={ getLocationValue(user) }
-								class="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background"
+								class="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background disabled:opacity-50 disabled:cursor-not-allowed"
+								x-bind:disabled="saving"
 							/>
 						</div>
 						<div>
@@ -140,7 +151,8 @@ templ ProfilePage(user *models.UserProfile) {
 								id="phone"
 								name="phone"
 								value={ getStringValue(user.PhoneNumber) }
-								class="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background"
+								class="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background disabled:opacity-50 disabled:cursor-not-allowed"
+								x-bind:disabled="saving"
 							/>
 						</div>
 						<!-- Bio Section -->
@@ -151,7 +163,8 @@ templ ProfilePage(user *models.UserProfile) {
 								name="bio"
 								rows="4"
 								placeholder="Tell us about yourself..."
-								class="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background resize-none"
+								class="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+								x-bind:disabled="saving"
 							>{ getBioValue(user) }</textarea>
 						</div>
 						<!-- Travel Preferences -->
@@ -200,9 +213,16 @@ templ ProfilePage(user *models.UserProfile) {
 						</button>
 						<button
 							type="submit"
-							class="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+							class="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+							x-bind:disabled="saving"
 						>
-							Save Changes
+							<span x-show="!saving" class="flex items-center gap-2">
+								Save Changes
+							</span>
+							<span x-show="saving" class="flex items-center gap-2">
+								<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+								Saving...
+							</span>
 						</button>
 					</div>
 				</form>

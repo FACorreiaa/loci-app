@@ -98,6 +98,9 @@ otel-down: ## Stop observability stack
 otel-logs: ## Show OTEL collector logs
 	@docker compose logs -f otel-collector
 
+profile:
+	 go tool pprof -http=:8080 http://localhost:6060/debug/pprof/profile?seconds=60
+
 help: ## Show this help message
 	@echo 'Usage: make [target]'
 	@echo ''

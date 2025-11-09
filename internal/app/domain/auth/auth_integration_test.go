@@ -1,4 +1,4 @@
-package auth
+package auth_test
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/a-h/templ"
 
-	auth2 "github.com/FACorreiaa/go-templui/internal/app/domain/auth"
+	"github.com/FACorreiaa/go-templui/internal/app/domain/auth"
 )
 
 func TestSignInTemplate(t *testing.T) {
@@ -147,7 +147,7 @@ func TestSignInTemplate(t *testing.T) {
 			// Render the component
 			r, w := io.Pipe()
 			go func() {
-				if err := auth2.SignIn().Render(context.Background(), w); err != nil {
+				if err := auth.SignIn().Render(context.Background(), w); err != nil {
 					t.Errorf("Failed to render SignIn: %v", err)
 					return
 				}
@@ -247,7 +247,7 @@ func TestSignUpTemplate(t *testing.T) {
 			// Render the component
 			r, w := io.Pipe()
 			go func() {
-				if err := auth2.SignUp().Render(context.Background(), w); err != nil {
+				if err := auth.SignUp().Render(context.Background(), w); err != nil {
 					t.Errorf("Failed to render SignUp: %v", err)
 					return
 				}
@@ -328,7 +328,7 @@ func TestForgotPasswordTemplate(t *testing.T) {
 			// Render the component
 			r, w := io.Pipe()
 			go func() {
-				if err := auth2.ForgotPassword().Render(context.Background(), w); err != nil {
+				if err := auth.ForgotPassword().Render(context.Background(), w); err != nil {
 					t.Errorf("Failed to render ForgotPassword: %v", err)
 					return
 				}
@@ -349,9 +349,9 @@ func TestForgotPasswordTemplate(t *testing.T) {
 
 func TestAuthTemplatesAccessibility(t *testing.T) {
 	templates := map[string]func() templ.Component{
-		"signin": auth2.SignIn,
-		"signup": auth2.SignUp,
-		"forgot": auth2.ForgotPassword,
+		"signin": auth.SignIn,
+		"signup": auth.SignUp,
+		"forgot": auth.ForgotPassword,
 	}
 
 	for name, template := range templates {

@@ -1,9 +1,16 @@
 package models
 
 import (
+	"errors"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+)
+
+var (
+	ErrInvalidEmailFormat = errors.New("please enter a valid email address")
+	ErrUserNotFound       = errors.New("user not found")
+	ErrInvalidPassword    = errors.New("invalid password")
 )
 
 // UserAuth represents the core user entity in the domain.

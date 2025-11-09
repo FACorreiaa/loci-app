@@ -251,55 +251,11 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 	// Auth routes
 	authGroup := r.Group("/auth")
 	{
-		authGroup.GET("/signin", func(c *gin.Context) {
-			log.Info("Sign in page accessed")
-			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
-				Title:   "Sign In - Loci",
-				Content: auth.SignIn(),
-				Nav: models.Navigation{
-					Items: []models.NavItem{
-						{Name: "Home", URL: "/"},
-						{Name: "Discover", URL: "/discover"},
-					},
-				},
-				ActiveNav: "",
-				User:      nil,
-			}))
-		})
+		authGroup.GET("/signin", h.StaticPages.ShowSignInPage)
+		authGroup.GET("/signup", h.StaticPages.ShowSignUpPage)
+		authGroup.GET("/forgot-password", h.StaticPages.ShowForgotPasswordPage)
 
-		authGroup.GET("/signup", func(c *gin.Context) {
-			log.Info("Sign up page accessed")
-			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
-				Title:   "Sign Up - Loci",
-				Content: auth.SignUp(),
-				Nav: models.Navigation{
-					Items: []models.NavItem{
-						{Name: "Home", URL: "/"},
-						{Name: "Discover", URL: "/discover"},
-					},
-				},
-				ActiveNav: "",
-				User:      nil,
-			}))
-		})
-
-		authGroup.GET("/forgot-password", func(c *gin.Context) {
-			log.Info("Forgot password page accessed")
-			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
-				Title:   "Reset Password - Loci",
-				Content: auth.ForgotPassword(),
-				Nav: models.Navigation{
-					Items: []models.NavItem{
-						{Name: "Home", URL: "/"},
-						{Name: "Discover", URL: "/discover"},
-					},
-				},
-				ActiveNav: "",
-				User:      nil,
-			}))
-		})
-
-		authGroup.POST("/signin", gin.WrapF(h.Auth.LoginHandler))
+		authGroup.POST("/signin", h.Auth.LoginHandler)
 		authGroup.POST("/signup", gin.WrapF(h.Auth.RegisterHandler))
 		authGroup.POST("/logout", gin.WrapF(h.Auth.LogoutHandler))
 		authGroup.POST("/forgot-password", gin.WrapF(h.Auth.ForgotPasswordHandler))

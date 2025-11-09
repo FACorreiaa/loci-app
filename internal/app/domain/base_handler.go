@@ -1,10 +1,14 @@
 package domain
 
 import (
+	"errors"
+	"net/http"
+
 	"github.com/a-h/templ"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
+	"github.com/FACorreiaa/go-templui/internal/app/domain/auth"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/pages"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"github.com/FACorreiaa/go-templui/internal/pkg/middleware"
@@ -71,3 +75,72 @@ func (h *BaseHandler) ShowPricingPage(c *gin.Context) {
 func (h *BaseHandler) ShowAboutPage(c *gin.Context) {
 	h.RenderPage(c, "About - Loci", "About", pages.AboutPage())
 }
+
+func (h *BaseHandler) ShowSignInPage(c *gin.Context) {
+	h.Logger.Info("Sign in page accessed")
+
+	initialValues := auth.SignInFormValues{}
+	initialErrors := auth.SignInFormErrors{}
+	var err error
+	switch {
+	case errors.Is(err, models.ErrInvalidEmailFormat):
+		initialErrors.Email = "Please enter a valid email address."
+	case errors.Is(err, models.ErrUserNotFound):
+		initialErrors.General = "Invalid credentials. Please check your email and password."
+	case errors.Is(err, models.ErrInvalidPassword):
+		initialErrors.General = "Invalid credentials. Please check your email and password."
+	default:
+		initialErrors.General = ""
+	}
+
+	content := auth.SignIn(initialValues, initialErrors)
+	layoutData := h.newLayoutData(c, "SignIn - Loci", "SignIn", content)
+	layoutData.Nav = offlineNav
+	layoutData.User = nil
+
+	h.render(c, http.StatusOK, pages.LayoutPage(layoutData))
+}
+
+func (h *BaseHandler) ShowSignUpPage(c *gin.Context) {
+	h.Logger.Info("Sign up page accessed")
+
+	content := auth.SignUp()
+	layoutData := h.newLayoutData(c, "Signup - Loci", "Signup", content)
+	layoutData.Nav = offlineNav
+	layoutData.User = nil
+
+	h.render(c, http.StatusOK, pages.LayoutPage(layoutData))
+}
+
+func (h *BaseHandler) ShowForgotPasswordPage(c *gin.Context) {
+	h.Logger.Info("Forgot password page accessed")
+
+	content := auth.ForgotPassword()
+	layoutData := h.newLayoutData(c, "Forgot password - Loci", "Forgot password", content)
+	layoutData.Nav = offlineNav
+	layoutData.User = nil
+
+	h.render(c, http.StatusOK, pages.LayoutPage(layoutData))
+}
+
+//// ShowSignUpPage renders the sign-up page.
+//func (h *BaseHandler) ShowSignUpPage(c *gin.Context) {
+//	h.Logger.Info("Sign up page accessed")
+//
+//	layoutData := h.NewLayoutData(c, "Sign Up - Loci", "", SignUp())
+//	layoutData.Nav = offlineNav
+//	layoutData.User = nil
+//
+//	h.Render(c, http.StatusOK, pages.LayoutPage(layoutData))
+//}
+//
+//// ShowForgotPasswordPage renders the forgot password page.
+//func (h *BaseHandler) ShowForgotPasswordPage(c *gin.Context) {
+//	h.Logger.Info("Forgot password page accessed")
+//
+//	layoutData := h.NewLayoutData(c, "Reset Password - Loci", "", ForgotPassword())
+//	layoutData.Nav = offlineNav
+//	layoutData.User = nil
+//
+//	h.Render(c, http.StatusOK, pages.LayoutPage(layoutData))
+//}

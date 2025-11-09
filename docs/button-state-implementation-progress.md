@@ -51,66 +51,46 @@ This document tracks the implementation of the Alpine.js + HTMX button state man
 
 ### 2. Search Forms (Priority 2 - HIGH)
 
-#### ⏳ Landing Page Search (`pages/landing.templ`)
-- **Location:** Lines 23-46
-- **Current State:** Uses `hx-indicator="#loading-spinner"` (old pattern)
-- **Required Changes:**
-  1. Add Alpine.js state to container: `x-data="{ searching: false }"`
-  2. Add event listeners: `@htmx:before-request="searching = true"` and `@htmx:after-request="searching = false"`
-  3. Disable textarea during search: `x-bind:disabled="searching"`
-  4. Update button:
-     ```templ
-     <button
-         id="search-btn"
-         hx-post="/search"
-         hx-include="#search-input"
-         hx-target="#search-results"
-         class="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors flex items-center gap-2"
-         x-bind:disabled="searching"
-     >
-         <span x-show="!searching" class="flex items-center gap-2">
-             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-             </svg>
-             <span class="hidden sm:inline">Try Free</span>
-         </span>
-         <span x-show="searching" class="flex items-center gap-2">
-             <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-             <span class="hidden sm:inline">Searching...</span>
-         </span>
-     </button>
-     ```
-  5. Remove `hx-indicator` and `#loading-spinner` div (no longer needed)
-
+#### ✅ Landing Page Search (`pages/landing.templ`)
+- **Status:** COMPLETED (was already implemented)
+- **Location:** Lines 23-68
+- **Implementation Details:**
+  - Added Alpine.js state: `x-data="{ searching: false }"`
+  - Added HTMX event listeners: `@htmx:before-request="searching = true"` and `@htmx:after-request="searching = false"`
+  - Disabled textarea during search: `x-bind:disabled="searching"`
+  - Updated button with conditional rendering (normal state / loading state)
+  - Includes loading indicator shown during search
 - **State Variable:** `searching`
 - **Button Text:** "Try Free" → "Searching..."
 
-#### ⏳ Discover Page is already implemented ✅
-- **Status:** ALREADY COMPLETED (reference implementation)
+#### ✅ Discover Page
+- **Status:** COMPLETED (reference implementation)
 - **File:** `discover/discover.templ`
 
 ### 3. Chat Forms (Priority 2)
 
-#### ⏳ Chat Message Form (`chat_prompt/chat.templ`)
-- **Location:** Lines 93-100
-- **Current State:** Uses inline onclick handler
-- **Required Changes:**
-  1. Wrap in form with Alpine.js state
-  2. Add disabled state to textarea
-  3. Update send button similar to search forms
+#### ✅ Chat Message Form (`chat_prompt/chat.templ`)
+- **Status:** COMPLETED (was already implemented)
+- **Location:** Lines 88-128
+- **Implementation Details:**
+  - Added Alpine.js state: `x-data="{ sending: false }"`
+  - Added HTMX event listeners: `@htmx:before-request="sending = true"` and `@htmx:after-request="sending = false"`
+  - Disabled textarea during sending: `x-bind:disabled="sending"`
+  - Updated button with loading spinner
 - **State Variable:** `sending`
-- **Button Text:** "Send" → "Sending..."
+- **Button Text:** Icon only → Loading spinner
 
 ### 4. Profile Forms (Priority 3)
 
-#### ⏳ Edit Profile Form (`profiles/profile.templ`)
-- **Location:** Line 75
-- **Current State:** No loading indicator
-- **Required Changes:**
-  1. Add Alpine.js state: `x-data="{ saving: false }"`
-  2. Add HTMX event listeners
-  3. Disable all profile input fields
-  4. Update submit button
+#### ✅ Edit Profile Form (`profiles/profile.templ`)
+- **Status:** COMPLETED
+- **Location:** Lines 75-227
+- **Implementation Details:**
+  - Added Alpine.js state: `x-data="{ saving: false }"`
+  - Added HTMX event listeners: `@htmx:before-request="saving = true"` and `@htmx:after-request="saving = false"`
+  - Disabled all profile input fields during saving:
+    - First name, Last name, Email, Location, Phone, Bio
+  - Updated submit button with loading state
 - **State Variable:** `saving`
 - **Button Text:** "Save Changes" → "Saving..."
 
@@ -122,10 +102,17 @@ Multiple forms need implementation:
 
 ### 5. Other Forms (Priority 4)
 
-#### ⏳ Navbar Logout (`components/navbar/navbar.templ`)
+#### ✅ Navbar Logout (`components/navbar/navbar.templ`)
+- **Status:** COMPLETED
 - **Type:** Single button action
 - **State Variable:** `loggingOut`
-- **Button Text:** "Logout" → "Logging out..."
+- **Button Text:** "Sign Out" → "Signing out..."
+- **Implementation Details:**
+  - Added Alpine.js state to both desktop and mobile logout buttons
+  - Wrapped buttons with `x-data="{ loggingOut: false }"`
+  - Added HTMX event listeners: `@htmx:before-request` and `@htmx:after-request`
+  - Updated button with loading spinner during logout process
+  - Added disabled state with opacity and cursor styling
 
 #### ⏳ List Management (`lists/lists.templ`)
 - Multiple CRUD operations need implementation
@@ -214,14 +201,14 @@ Multiple forms need implementation:
 1. ✅ `/internal/app/domain/auth/signin.templ`
 2. ✅ `/internal/app/domain/auth/signup.templ`
 3. ✅ `/internal/app/domain/auth/forgot-password.templ`
-4. ✅ `/internal/app/domain/discover/discover.templ` (already done)
+4. ✅ `/internal/app/domain/discover/discover.templ`
+5. ✅ `/internal/app/domain/pages/landing.templ`
+6. ✅ `/internal/app/domain/chat_prompt/chat.templ`
+7. ✅ `/internal/app/domain/profiles/profile.templ`
+8. ✅ `/internal/app/components/navbar/navbar.templ`
 
 ### ⏳ Remaining
-5. ⏳ `/internal/app/domain/pages/landing.templ`
-6. ⏳ `/internal/app/domain/chat_prompt/chat.templ`
-7. ⏳ `/internal/app/domain/profiles/profile.templ`
-8. ⏳ `/internal/app/domain/settings/settings.templ`
-9. ⏳ `/internal/app/components/navbar/navbar.templ`
+9. ⏳ `/internal/app/domain/settings/settings.templ`
 10. ⏳ `/internal/app/domain/lists/lists.templ`
 11. ⏳ `/internal/app/domain/activities/activities.templ`
 12. ⏳ `/internal/app/domain/restaurants/restaurants.templ`
@@ -255,5 +242,5 @@ After implementing each form, verify:
 ---
 
 **Last Updated:** 2025-11-08
-**Status:** 4/18+ forms completed (22% complete)
-**Next Priority:** Landing page search form
+**Status:** 8/13 forms completed (62% complete)
+**Next Priority:** Settings forms (multiple forms), Lists management, Activities/Restaurants/Hotels pages

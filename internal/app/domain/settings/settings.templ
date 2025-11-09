@@ -164,7 +164,15 @@ templ AccountSettingsContent() {
 		<!-- Personal Information -->
 		<div class="bg-card rounded-lg border p-6">
 			<h3 class="text-lg font-semibold text-foreground mb-4">Personal Information</h3>
-			<form hx-put="/settings/profile" hx-trigger="submit" hx-target="#profile-response" class="space-y-4">
+			<form
+				hx-put="/settings/profile"
+				hx-trigger="submit"
+				hx-target="#profile-response"
+				class="space-y-4"
+				x-data="{ updating: false }"
+				@htmx:before-request="updating = true"
+				@htmx:after-request="updating = false"
+			>
 				<div id="profile-response"></div>
 				<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 					<div>
@@ -173,7 +181,8 @@ templ AccountSettingsContent() {
 							type="text"
 							name="first_name"
 							value="John"
-							class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+							class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+							x-bind:disabled="updating"
 						/>
 					</div>
 					<div>
@@ -182,7 +191,8 @@ templ AccountSettingsContent() {
 							type="text"
 							name="last_name"
 							value="Doe"
-							class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+							class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+							x-bind:disabled="updating"
 						/>
 					</div>
 				</div>
@@ -196,7 +206,8 @@ templ AccountSettingsContent() {
 							type="email"
 							name="email"
 							value="john.doe@example.com"
-							class="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+							class="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+							x-bind:disabled="updating"
 						/>
 					</div>
 				</div>
@@ -213,7 +224,8 @@ templ AccountSettingsContent() {
 								name="city"
 								value="New York"
 								placeholder="Enter your city"
-								class="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+								class="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+								x-bind:disabled="updating"
 							/>
 						</div>
 					</div>
@@ -224,7 +236,8 @@ templ AccountSettingsContent() {
 							name="country"
 							value="United States"
 							placeholder="Enter your country"
-							class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+							class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+							x-bind:disabled="updating"
 						/>
 					</div>
 				</div>
@@ -234,15 +247,26 @@ templ AccountSettingsContent() {
 						name="bio"
 						rows="3"
 						placeholder="Tell us about your travel interests..."
-						class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+						class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+						x-bind:disabled="updating"
 					>Travel enthusiast exploring hidden gems around the world.</textarea>
 				</div>
 				<div class="flex justify-end">
-					<button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 transition-colors">
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-						</svg>
-						Save Changes
+					<button
+						type="submit"
+						class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+						x-bind:disabled="updating"
+					>
+						<span x-show="!updating" class="flex items-center gap-2">
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+							</svg>
+							Save Changes
+						</span>
+						<span x-show="updating" class="flex items-center gap-2">
+							<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+							Updating...
+						</span>
 					</button>
 				</div>
 			</form>
@@ -1046,13 +1070,21 @@ templ PrivacySecurityContent() {
 		<!-- Password -->
 		<div class="bg-card rounded-lg border p-6">
 			<h3 class="text-lg font-semibold text-foreground mb-4">Password & Authentication</h3>
-			<form hx-put="/settings/password" hx-trigger="submit" class="space-y-4">
+			<form
+				hx-put="/settings/password"
+				hx-trigger="submit"
+				class="space-y-4"
+				x-data="{ changing: false }"
+				@htmx:before-request="changing = true"
+				@htmx:after-request="changing = false"
+			>
 				<div>
 					<label class="block text-sm font-medium text-foreground mb-2">Current Password</label>
 					<input
 						type="password"
 						name="current_password"
-						class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+						class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+						x-bind:disabled="changing"
 					/>
 				</div>
 				<div>
@@ -1060,7 +1092,8 @@ templ PrivacySecurityContent() {
 					<input
 						type="password"
 						name="new_password"
-						class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+						class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+						x-bind:disabled="changing"
 					/>
 				</div>
 				<div>
@@ -1068,11 +1101,20 @@ templ PrivacySecurityContent() {
 					<input
 						type="password"
 						name="confirm_password"
-						class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+						class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+						x-bind:disabled="changing"
 					/>
 				</div>
-				<button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors">
-					Update Password
+				<button
+					type="submit"
+					class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+					x-bind:disabled="changing"
+				>
+					<span x-show="!changing">Update Password</span>
+					<span x-show="changing" class="flex items-center gap-2">
+						<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+						Changing...
+					</span>
 				</button>
 			</form>
 		</div>
