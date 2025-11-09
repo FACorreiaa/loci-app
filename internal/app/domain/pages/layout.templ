@@ -7,7 +7,7 @@ import (
 	"github.com/FACorreiaa/go-templui/internal/app/components/pwa"
 	"github.com/FACorreiaa/go-templui/internal/app/components/scripts"
 	"github.com/FACorreiaa/go-templui/internal/app/components/styles"
-	"github.com/FACorreiaa/go-templui/internal/app/domain/results"
+	r "github.com/FACorreiaa/go-templui/internal/app/domain/results"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"os"
 )
@@ -56,8 +56,8 @@ templ LayoutPage(l models.LayoutTempl) {
 					}
 				});
 			</script>
-			@results.ItineraryStateScript()
-			@results.POIModalScript()
+			@r.ItineraryStateScript()
+			@r.POIModalScript()
 			@scripts.SessionManagerScript()
 			@scripts.ViewModeManagerScript()
 			@scripts.AddToListScript()

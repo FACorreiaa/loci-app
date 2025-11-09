@@ -10,9 +10,10 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/FACorreiaa/go-templui/internal/app/components/banner"
-	"github.com/FACorreiaa/go-templui/internal/app/handlers"
+	"github.com/FACorreiaa/go-templui/internal/app/domain"
+	"github.com/FACorreiaa/go-templui/internal/app/domain/pages"
+	"github.com/FACorreiaa/go-templui/internal/app/middleware"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
-	"github.com/FACorreiaa/go-templui/internal/app/pages"
 )
 
 type LoginRequest struct {
@@ -37,17 +38,66 @@ type ChangePasswordRequest struct {
 }
 
 type AuthHandlers struct {
-	*handlers.BaseHandler
+	*domain.BaseHandler
 	authService AuthService
 	logger      *zap.Logger
 }
 
-func NewAuthHandlers(base *handlers.BaseHandler, authService AuthService, logger *zap.Logger) *AuthHandlers {
+func NewAuthHandlers(base *domain.BaseHandler, authService AuthService, logger *zap.Logger) *AuthHandlers {
 	return &AuthHandlers{
 		BaseHandler: base,
 		authService: authService,
 		logger:      logger,
 	}
+}
+
+func (h *AuthHandlers) ShowSignInPage(c *gin.Context) {
+	h.Logger.Info("Sign in page accessed")
+
+	initialValues := SignInFormValues{}
+	initialErrors := SignInFormErrors{}
+
+	user := middleware.GetUserFromContext(c)
+	//var err error
+	//switch {
+	//case errors.Is(err, models.ErrInvalidEmailFormat):
+	//	initialErrors.Email = "Please enter a valid email address."
+	//case errors.Is(err, models.ErrUserNotFound):
+	//	initialErrors.General = "Invalid credentials. Please check your email and password."
+	//case errors.Is(err, models.ErrInvalidPassword):
+	//	initialErrors.General = "Invalid credentials. Please check your email and password."
+	//default:
+	//	initialErrors.General = ""
+	//}
+
+	content := SignIn(initialValues, initialErrors)
+	layoutData := h.NewLayoutData(c, "SignIn - Loci", "SignIn", content, user)
+	layoutData.Nav = models.OfflineNav
+	layoutData.User = nil
+
+	h.Render(c, http.StatusOK, pages.LayoutPage(layoutData))
+}
+
+func (h *AuthHandlers) ShowSignUpPage(c *gin.Context) {
+	h.Logger.Info("Sign up page accessed")
+	user := middleware.GetUserFromContext(c)
+	content := SignUp()
+	layoutData := h.NewLayoutData(c, "Signup - Loci", "Signup", content, user)
+	layoutData.Nav = models.OfflineNav
+	layoutData.User = nil
+
+	h.Render(c, http.StatusOK, pages.LayoutPage(layoutData))
+}
+
+func (h *AuthHandlers) ShowForgotPasswordPage(c *gin.Context) {
+	h.Logger.Info("Forgot password page accessed")
+	user := middleware.GetUserFromContext(c)
+	content := ForgotPassword()
+	layoutData := h.NewLayoutData(c, "Forgot password - Loci", "Forgot password", content, user)
+	layoutData.Nav = models.OfflineNav
+	layoutData.User = nil
+
+	h.Render(c, http.StatusOK, pages.LayoutPage(layoutData))
 }
 
 // #Login
@@ -138,53 +188,6 @@ func (h *AuthHandlers) LoginHandler(c *gin.Context) {
 
 	c.Header("HX-Redirect", "/dashboard")
 	c.Status(http.StatusOK)
-}
-
-func (h *AuthHandlers) ShowSignInPage(c *gin.Context) {
-	h.Logger.Info("Sign in page accessed")
-
-	initialValues := SignInFormValues{}
-	initialErrors := SignInFormErrors{}
-	//var err error
-	//switch {
-	//case errors.Is(err, models.ErrInvalidEmailFormat):
-	//	initialErrors.Email = "Please enter a valid email address."
-	//case errors.Is(err, models.ErrUserNotFound):
-	//	initialErrors.General = "Invalid credentials. Please check your email and password."
-	//case errors.Is(err, models.ErrInvalidPassword):
-	//	initialErrors.General = "Invalid credentials. Please check your email and password."
-	//default:
-	//	initialErrors.General = ""
-	//}
-
-	content := SignIn(initialValues, initialErrors)
-	layoutData := h.NewLayoutData(c, "SignIn - Loci", "SignIn", content)
-	layoutData.Nav = models.OfflineNav
-	layoutData.User = nil
-
-	h.Render(c, http.StatusOK, pages.LayoutPage(layoutData))
-}
-
-func (h *AuthHandlers) ShowSignUpPage(c *gin.Context) {
-	h.Logger.Info("Sign up page accessed")
-
-	content := SignUp()
-	layoutData := h.NewLayoutData(c, "Signup - Loci", "Signup", content)
-	layoutData.Nav = models.OfflineNav
-	layoutData.User = nil
-
-	h.Render(c, http.StatusOK, pages.LayoutPage(layoutData))
-}
-
-func (h *AuthHandlers) ShowForgotPasswordPage(c *gin.Context) {
-	h.Logger.Info("Forgot password page accessed")
-
-	content := ForgotPassword()
-	layoutData := h.NewLayoutData(c, "Forgot password - Loci", "Forgot password", content)
-	layoutData.Nav = models.OfflineNav
-	layoutData.User = nil
-
-	h.Render(c, http.StatusOK, pages.LayoutPage(layoutData))
 }
 
 // #Register

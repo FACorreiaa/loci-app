@@ -8,9 +8,9 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/FACorreiaa/go-templui/internal/app/domain/pages"
 	"github.com/FACorreiaa/go-templui/internal/app/middleware"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
-	"github.com/FACorreiaa/go-templui/internal/app/pages"
 )
 
 type Handler struct {
@@ -53,7 +53,7 @@ func (h *Handler) ShowListsPage(c *gin.Context) {
 	}
 
 	// Get user info for the layout
-	user := middleware.GetUserFromContext(c)
+	user := common.GetUserFromContext(c)
 	if user == nil {
 		h.log.Error("Failed to get user from context")
 		c.Redirect(http.StatusSeeOther, "/auth/signin")
@@ -137,7 +137,7 @@ func (h *Handler) CreateList(c *gin.Context) {
 
 	// Redirect back to lists page with full layout
 	// Get user info for the layout
-	user := middleware.GetUserFromContext(c)
+	user := common.GetUserFromContext(c)
 	if user == nil {
 		h.log.Error("Failed to get user from context")
 		c.Redirect(http.StatusSeeOther, "/auth/signin")
@@ -324,7 +324,7 @@ func (h *Handler) ShowListDetail(c *gin.Context) {
 	}
 
 	// Get user info for the layout
-	user := middleware.GetUserFromContext(c)
+	user := common.GetUserFromContext(c)
 	if user == nil {
 		h.log.Error("Failed to get user from context")
 		c.Redirect(http.StatusSeeOther, "/auth/signin")
@@ -609,7 +609,7 @@ func (h *Handler) ShowSavedListsPage(c *gin.Context) {
 		return
 	}
 
-	user := middleware.GetUserFromContext(c)
+	user := common.GetUserFromContext(c)
 	if user == nil {
 		h.log.Error("Failed to get user from context")
 		c.Redirect(http.StatusSeeOther, "/auth/signin")

@@ -5,17 +5,17 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/FACorreiaa/go-templui/internal/app/domain"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/profiles"
-	"github.com/FACorreiaa/go-templui/internal/app/handlers"
 	"github.com/FACorreiaa/go-templui/internal/app/middleware"
 )
 
 type Handler struct {
-	*handlers.BaseHandler
+	*domain.BaseHandler
 	Service UserService
 }
 
-func NewHandler(base *handlers.BaseHandler, service UserService) *Handler {
+func NewHandler(base *domain.BaseHandler, service UserService) *Handler {
 	return &Handler{
 		BaseHandler: base,
 		Service:     service,

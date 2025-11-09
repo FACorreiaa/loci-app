@@ -8,9 +8,9 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/FACorreiaa/go-templui/internal/app/domain/pages"
 	"github.com/FACorreiaa/go-templui/internal/app/middleware"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
-	"github.com/FACorreiaa/go-templui/internal/app/pages"
 )
 
 type RecentsHandlers struct {
@@ -100,7 +100,7 @@ func (h *RecentsHandlers) HandleRecentsPage(c *gin.Context) {
 
 // Helper function to get user from context
 func getUserFromContext(c *gin.Context) *models.User {
-	user := middleware.GetUserFromContext(c)
+	user := common.GetUserFromContext(c)
 	if user != nil {
 		return nil
 	}

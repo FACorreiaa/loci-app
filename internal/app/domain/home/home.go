@@ -4,16 +4,15 @@ import (
 	"github.com/a-h/templ"
 	"github.com/gin-gonic/gin"
 
-	"github.com/FACorreiaa/go-templui/internal/app/handlers"
-	"github.com/FACorreiaa/go-templui/internal/app/middleware"
-	pages2 "github.com/FACorreiaa/go-templui/internal/app/pages"
+	"github.com/FACorreiaa/go-templui/internal/app/domain"
+	"github.com/FACorreiaa/go-templui/internal/app/domain/pages"
 )
 
 type HomeHandlers struct {
-	*handlers.BaseHandler
+	*domain.BaseHandler
 }
 
-func NewHomeHandlers(base *handlers.BaseHandler) *HomeHandlers {
+func NewHomeHandlers(base *domain.BaseHandler) *HomeHandlers {
 	return &HomeHandlers{BaseHandler: base}
 }
 
@@ -21,13 +20,13 @@ func (h *HomeHandlers) ShowHomePage(c *gin.Context) {
 	var content templ.Component
 	var activeNav string
 
-	user := middleware.GetUserFromContext(c)
+	user := common.GetUserFromContext(c)
 
 	if user != nil {
-		content = pages2.LoggedInDashboard()
+		content = pages.LoggedInDashboard()
 		activeNav = "Dashboard"
 	} else {
-		content = pages2.PublicLandingPage()
+		content = pages.PublicLandingPage()
 		activeNav = "Home"
 	}
 

@@ -6,16 +6,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"github.com/FACorreiaa/go-templui/internal/app/handlers"
+	"github.com/FACorreiaa/go-templui/internal/app/domain"
 	"github.com/FACorreiaa/go-templui/internal/app/middleware"
 )
 
 type SettingsHandlers struct {
-	*handlers.BaseHandler
+	*domain.BaseHandler
 	logger *zap.Logger
 }
 
-func NewSettingsHandlers(base *handlers.BaseHandler, logger *zap.Logger) *SettingsHandlers {
+func NewSettingsHandlers(base *domain.BaseHandler, logger *zap.Logger) *SettingsHandlers {
 	return &SettingsHandlers{
 		BaseHandler: base,
 		logger:      logger,

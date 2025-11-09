@@ -1,13 +1,12 @@
-package handlers
+package domain
 
 import (
 	"github.com/a-h/templ"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"github.com/FACorreiaa/go-templui/internal/app/middleware"
+	p "github.com/FACorreiaa/go-templui/internal/app/domain/pages"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
-	"github.com/FACorreiaa/go-templui/internal/app/pages"
 )
 
 type BaseHandler struct {
@@ -18,8 +17,7 @@ func NewBaseHandler(logger *zap.Logger) *BaseHandler {
 	return &BaseHandler{Logger: logger}
 }
 
-func (h *BaseHandler) NewLayoutData(c *gin.Context, title, activeNav string, content templ.Component) models.LayoutTempl {
-	user := middleware.GetUserFromContext(c)
+func (h *BaseHandler) NewLayoutData(c *gin.Context, title, activeNav string, content templ.Component, user *models.User) models.LayoutTempl {
 	nav := models.MainNav
 	if user == nil {
 		nav = models.OfflineNav
@@ -39,17 +37,17 @@ func (h *BaseHandler) Render(c *gin.Context, status int, component templ.Compone
 	component.Render(c.Request.Context(), c.Writer)
 }
 
-func (h *BaseHandler) RenderPage(c *gin.Context, title, activeNav string, content templ.Component) {
+func (h *BaseHandler) RenderPage(c *gin.Context, title, activeNav string, content templ.Component, user *models.User) {
 	// Always render the full layout with navbar
 	// hx-boost will automatically swap the body content
-	layoutData := h.NewLayoutData(c, title, activeNav, content)
-	h.Render(c, 200, pages.LayoutPage(layoutData))
+	layoutData := h.NewLayoutData(c, title, activeNav, content, user)
+	h.Render(c, 200, p.LayoutPage(layoutData))
 }
 
 func (h *BaseHandler) ShowPricingPage(c *gin.Context) {
-	h.RenderPage(c, "Pricing - Loci", "Pricing", pages.PricingPage())
+	h.RenderPage(c, "Pricing - Loci", "Pricing", p.PricingPage(), nil)
 }
 
 func (h *BaseHandler) ShowAboutPage(c *gin.Context) {
-	h.RenderPage(c, "About - Loci", "About", pages.AboutPage())
+	h.RenderPage(c, "About - Loci", "About", p.AboutPage(), nil)
 }

@@ -14,6 +14,16 @@ import (
 	input "github.com/FACorreiaa/go-templui/internal/app/components/input"
 )
 
+type SignInFormValues struct {
+	Email string
+}
+
+type SignInFormErrors struct {
+	Email    string
+	Password string
+	General  string
+}
+
 func SignInForm(values SignInFormValues, errors SignInFormErrors) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -47,7 +57,7 @@ func SignInForm(values SignInFormValues, errors SignInFormErrors) templ.Componen
 			var templ_7745c5c3_Var2 string
 			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(errors.General)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/auth/sign-in-form.templ`, Line: 22, Col: 20}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/auth/sign-in-form.templ`, Line: 32, Col: 20}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 			if templ_7745c5c3_Err != nil {
@@ -138,7 +148,7 @@ func SignInForm(values SignInFormValues, errors SignInFormErrors) templ.Componen
 					var templ_7745c5c3_Var6 string
 					templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(errors.Email)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/auth/sign-in-form.templ`, Line: 49, Col: 20}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/auth/sign-in-form.templ`, Line: 59, Col: 20}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 					if templ_7745c5c3_Err != nil {
@@ -259,7 +269,7 @@ func SignInForm(values SignInFormValues, errors SignInFormErrors) templ.Componen
 					var templ_7745c5c3_Var11 string
 					templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(errors.Password)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/auth/sign-in-form.templ`, Line: 77, Col: 23}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/auth/sign-in-form.templ`, Line: 87, Col: 23}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 					if templ_7745c5c3_Err != nil {

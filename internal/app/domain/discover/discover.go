@@ -18,9 +18,9 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
+	"github.com/FACorreiaa/go-templui/internal/app/domain"
 	llmchat "github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/poi"
-	"github.com/FACorreiaa/go-templui/internal/app/handlers"
 	"github.com/FACorreiaa/go-templui/internal/app/middleware"
 
 	generativeAI "github.com/FACorreiaa/go-genai-sdk/lib"
@@ -30,7 +30,7 @@ import (
 )
 
 type DiscoverHandlers struct {
-	*handlers.BaseHandler
+	*domain.BaseHandler
 	poiRepo    poi.Repository
 	chatRepo   llmchat.Repository
 	llmService llmchat.LlmInteractiontService
@@ -39,7 +39,7 @@ type DiscoverHandlers struct {
 	llmLogger  *llmchat.LLMLogger
 }
 
-func NewDiscoverHandlers(base *handlers.BaseHandler, poiRepo poi.Repository, chatRepo llmchat.Repository, llmService llmchat.LlmInteractiontService, logger *zap.Logger) *DiscoverHandlers {
+func NewDiscoverHandlers(base *domain.BaseHandler, poiRepo poi.Repository, chatRepo llmchat.Repository, llmService llmchat.LlmInteractiontService, logger *zap.Logger) *DiscoverHandlers {
 	// Initialize AI client for discover search
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	aiClient, err := generativeAI.NewLLMChatClient(context.Background(), apiKey)
@@ -82,7 +82,7 @@ func (h *DiscoverHandlers) ShowDiscoverPage(c *gin.Context) {
 		h.Logger.Error("Failed to get featured collections", zap.Error(err))
 	}
 
-	user := middleware.GetUserFromContext(c)
+	user := common.GetUserFromContext(c)
 
 	if user != nil {
 		userUUID, err := uuid.Parse(user.ID)

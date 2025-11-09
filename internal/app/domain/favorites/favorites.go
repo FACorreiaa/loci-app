@@ -8,22 +8,22 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/FACorreiaa/go-templui/internal/app/domain"
+	"github.com/FACorreiaa/go-templui/internal/app/domain/pages"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/poi"
-	"github.com/FACorreiaa/go-templui/internal/app/handlers"
 	"github.com/FACorreiaa/go-templui/internal/app/middleware"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
-	"github.com/FACorreiaa/go-templui/internal/app/pages"
 )
 
 type FavoritesHandlers struct {
-	*handlers.BaseHandler
+	*domain.BaseHandler
 	poiService poi.Service
 	logger     *zap.Logger
 }
 
 func NewFavoritesHandlers(poiService poi.Service,
 	logger *zap.Logger,
-	base *handlers.BaseHandler) *FavoritesHandlers {
+	base *domain.BaseHandler) *FavoritesHandlers {
 	return &FavoritesHandlers{
 		poiService:  poiService,
 		logger:      logger,

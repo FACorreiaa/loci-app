@@ -14,7 +14,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	middleware2 "github.com/FACorreiaa/go-templui/internal/app/middleware"
+	m "github.com/FACorreiaa/go-templui/internal/app/middleware"
 	"github.com/FACorreiaa/go-templui/internal/routes"
 )
 
@@ -38,10 +38,10 @@ func SetupRouter(dbPool *pgxpool.Pool, logger *zap.Logger) *gin.Engine {
 		Context:    zapContextFunc(),
 	}))
 	r.Use(ginzap.RecoveryWithZap(logger, true))
-	r.Use(middleware2.OTELGinMiddleware("loci-templui"))
+	r.Use(m.OTELGinMiddleware("loci-templui"))
 	r.Use(gin.Recovery())
-	r.Use(middleware2.CORSMiddleware())
-	r.Use(middleware2.SecurityMiddleware())
+	r.Use(m.CORSMiddleware())
+	r.Use(m.SecurityMiddleware())
 	r.Use(func(c *gin.Context) {
 		c.Set("db", dbPool)
 		c.Next()
