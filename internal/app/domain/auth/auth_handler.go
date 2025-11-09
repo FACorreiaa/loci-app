@@ -15,14 +15,6 @@ import (
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 )
 
-var offlineNav = models.Navigation{
-	Items: []models.NavItem{
-		{Name: "About", URL: "/about"},
-		{Name: "Features", URL: "/features"},
-		{Name: "Pricing", URL: "/pricing"},
-	},
-}
-
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -167,7 +159,29 @@ func (h *AuthHandlers) ShowSignInPage(c *gin.Context) {
 
 	content := SignIn(initialValues, initialErrors)
 	layoutData := h.NewLayoutData(c, "SignIn - Loci", "SignIn", content)
-	layoutData.Nav = offlineNav
+	layoutData.Nav = models.OfflineNav
+	layoutData.User = nil
+
+	h.Render(c, http.StatusOK, pages.LayoutPage(layoutData))
+}
+
+func (h *AuthHandlers) ShowSignUpPage(c *gin.Context) {
+	h.Logger.Info("Sign up page accessed")
+
+	content := SignUp()
+	layoutData := h.NewLayoutData(c, "Signup - Loci", "Signup", content)
+	layoutData.Nav = models.OfflineNav
+	layoutData.User = nil
+
+	h.Render(c, http.StatusOK, pages.LayoutPage(layoutData))
+}
+
+func (h *AuthHandlers) ShowForgotPasswordPage(c *gin.Context) {
+	h.Logger.Info("Forgot password page accessed")
+
+	content := ForgotPassword()
+	layoutData := h.NewLayoutData(c, "Forgot password - Loci", "Forgot password", content)
+	layoutData.Nav = models.OfflineNav
 	layoutData.User = nil
 
 	h.Render(c, http.StatusOK, pages.LayoutPage(layoutData))
