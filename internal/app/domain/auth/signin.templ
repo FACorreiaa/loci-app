@@ -19,7 +19,7 @@ type SignInFormValues struct {
 	Email string
 }
 
-templ SignIn(values SignInFormValues, errors SignInFormErrors) {
+templ SignInT(values SignInFormValues, errors SignInFormErrors) {
 	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
 		<div class="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
 			<div class="w-full max-w-md space-y-6">
@@ -33,9 +33,9 @@ templ SignIn(values SignInFormValues, errors SignInFormErrors) {
 				@card.Card() {
 					@card.Content(card.ContentProps{Class: "space-y-6"}) {
 						<form
+							id="signin-form"
 							hx-post="/auth/signin"
 							hx-trigger="submit"
-							hx-swap="outerHTML"
 							hx-target="#signin-response"
 							x-data="{ signingIn: false, hasEmailError: false, hasPasswordError: false }"
 							@htmx:before-request="signingIn = true; hasEmailError = false; hasPasswordError = false"
@@ -62,14 +62,20 @@ templ SignIn(values SignInFormValues, errors SignInFormErrors) {
 										Type:        input.TypeEmail,
 										Placeholder: "Enter your email",
 										Required:    true,
-										Value: values.Email,
+										Value:       values.Email,
+										HasError:    errors.Email != "",
 										Attributes: templ.Attributes{
 											"required":        "",
 											"x-bind:disabled": "signingIn",
 											"x-bind:class":    "{ 'border-destructive': hasError }",
 										},
 									})
-									<div id="email-error"></div>
+									if errors.Email != "" {
+										@form.Message(form.MessageProps{Variant: form.MessageVariantError}) {
+											{ errors.Email }
+										}
+									}
+									)
 								}
 								@form.Item() {
 									@form.Label(form.LabelProps{
@@ -82,13 +88,19 @@ templ SignIn(values SignInFormValues, errors SignInFormErrors) {
 										Name:        "password",
 										Type:        input.TypePassword,
 										Placeholder: "Enter your password",
+										HasError:    errors.Password != "",
 										Attributes: templ.Attributes{
 											"required":        "",
 											"x-bind:disabled": "signingIn",
 											"x-bind:class":    "{ 'border-red-500 focus-visible:ring-red-500': hasPasswordError }",
 										},
 									})
-									<div id="password-error"></div>
+									if errors.Password != "" {
+										@form.Message(form.MessageProps{Variant: form.MessageVariantError}) {
+											{ errors.Password }
+										}
+									}
+									)
 								}
 								<div class="flex items-center justify-between">
 									<label class="flex items-center gap-2 cursor-pointer">

@@ -1,0 +1,108 @@
+package auth
+
+import (
+	checkbox "github.com/FACorreiaa/go-templui/internal/app/components/checkbox"
+	form "github.com/FACorreiaa/go-templui/internal/app/components/form"
+	input "github.com/FACorreiaa/go-templui/internal/app/components/input"
+)
+
+templ SignInForm(values SignInFormValues, errors SignInFormErrors) {
+	<form
+		id="signin-form"
+		hx-post="/auth/signin"
+		hx-trigger="submit"
+		hx-swap="outerHTML"
+		x-data="{ signingIn: false }"
+		@htmx:before-request="signingIn = true"
+		@htmx:after-request="signingIn = false"
+		@htmx:response-error="signingIn = false"
+	>
+		if errors.General != "" {
+			<div class="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg" role="alert">
+				{ errors.General }
+			</div>
+		}
+		<div class="space-y-4">
+			@form.Item() {
+				@form.Label(form.LabelProps{
+					For: "email",
+				}) {
+					Email address
+				}
+				@input.Input(input.Props{
+					ID:          "email",
+					Name:        "email",
+					Type:        input.TypeEmail,
+					Placeholder: "Enter your email",
+					Required:    true,
+					Value:       values.Email,
+					HasError:    errors.Email != "",
+					Attributes: templ.Attributes{
+						"required":        "",
+						"x-bind:disabled": "signingIn",
+					},
+				})
+				if errors.Email != "" {
+					@form.Message(form.MessageProps{
+						Variant: form.MessageVariantError,
+					}) {
+						{ errors.Email }
+					}
+				}
+			}
+			@form.Item() {
+				@form.Label(form.LabelProps{
+					For: "password",
+				}) {
+					Password
+				}
+				@input.Input(input.Props{
+					ID:          "password",
+					Name:        "password",
+					Type:        input.TypePassword,
+					Placeholder: "Enter your password",
+					HasError:    errors.Password != "",
+					Attributes: templ.Attributes{
+						"required":        "",
+						"x-bind:disabled": "signingIn",
+					},
+				})
+				@form.Description() {
+					Enter your password.
+				}
+				if errors.Password != "" {
+					@form.Message(form.MessageProps{
+						Variant: form.MessageVariantError,
+					}) {
+						{ errors.Password }
+					}
+				}
+			}
+			<div class="flex items-center justify-between">
+				<label class="flex items-center gap-2 cursor-pointer">
+					@checkbox.Checkbox(checkbox.Props{
+						Name:    "remember_me",
+						Checked: true,
+					})
+					<span class="text-sm text-muted-foreground">Remember me</span>
+				</label>
+				<a href="/auth/forgot-password" class="text-sm text-blue-600 hover:text-blue-700 font-medium">
+					Forgot password?
+				</a>
+			</div>
+			<button
+				type="submit"
+				class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full"
+				x-bind:disabled="signingIn"
+			>
+				<span x-show="!signingIn" class="flex items-center gap-2">
+					Sign in
+				</span>
+				<span x-show="signingIn" class="flex items-center gap-2">
+					<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+					Signing in...
+				</span>
+			</button>
+		</div>
+	</form>
+}

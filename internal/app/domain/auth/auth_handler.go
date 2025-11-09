@@ -3,14 +3,25 @@ package auth
 import (
 	"errors"
 	"net/http"
+	"net/mail"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
 	"github.com/FACorreiaa/go-templui/internal/app/components/banner"
+	"github.com/FACorreiaa/go-templui/internal/app/domain"
+	"github.com/FACorreiaa/go-templui/internal/app/domain/pages"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 )
+
+var offlineNav = models.Navigation{
+	Items: []models.NavItem{
+		{Name: "About", URL: "/about"},
+		{Name: "Features", URL: "/features"},
+		{Name: "Pricing", URL: "/pricing"},
+	},
+}
 
 type LoginRequest struct {
 	Email    string `json:"email"`
@@ -34,17 +45,21 @@ type ChangePasswordRequest struct {
 }
 
 type AuthHandlers struct {
+	*domain.BaseHandler
 	authService AuthService
 	logger      *zap.Logger
 }
 
-func NewAuthHandlers(authService AuthService, logger *zap.Logger) *AuthHandlers {
+func NewAuthHandlers(base *domain.BaseHandler, authService AuthService, logger *zap.Logger) *AuthHandlers {
 	return &AuthHandlers{
+		BaseHandler: base,
 		authService: authService,
 		logger:      logger,
 	}
 }
 
+// #Login
+// LoginHandler
 func (h *AuthHandlers) LoginHandler(c *gin.Context) {
 	h.logger.Info("Login attempt",
 		zap.String("method", c.Request.Method),
@@ -58,6 +73,11 @@ func (h *AuthHandlers) LoginHandler(c *gin.Context) {
 	formErrors := SignInFormErrors{}
 	if email == "" {
 		formErrors.Email = "Email address is required."
+	} else {
+		_, err := mail.ParseAddress(email)
+		if err != nil {
+			formErrors.Email = "Please enter a valid email address."
+		}
 	}
 	if password == "" {
 		formErrors.Password = "Password is required."
@@ -66,8 +86,8 @@ func (h *AuthHandlers) LoginHandler(c *gin.Context) {
 	if formErrors.Email != "" || formErrors.Password != "" {
 		h.logger.Warn("Validation failed on login", zap.Any("errors", formErrors))
 		formValues := SignInFormValues{Email: email}
-		component := SignIn(formValues, formErrors)
-		c.Status(http.StatusBadRequest)
+		component := SignInForm(formValues, formErrors)
+		c.Status(http.StatusOK)
 		component.Render(c.Request.Context(), c.Writer)
 		return
 	}
@@ -85,8 +105,8 @@ func (h *AuthHandlers) LoginHandler(c *gin.Context) {
 			formErrors.General = "An unexpected error occurred. Please try again."
 		}
 
-		component := SignIn(formValues, formErrors)
-		c.Status(http.StatusUnauthorized)
+		component := SignInForm(formValues, formErrors)
+		c.Status(http.StatusOK)
 		component.Render(c.Request.Context(), c.Writer)
 		return
 	}
@@ -128,6 +148,32 @@ func (h *AuthHandlers) LoginHandler(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
+func (h *AuthHandlers) ShowSignInPage(c *gin.Context) {
+	h.Logger.Info("Sign in page accessed")
+
+	initialValues := SignInFormValues{}
+	initialErrors := SignInFormErrors{}
+	//var err error
+	//switch {
+	//case errors.Is(err, models.ErrInvalidEmailFormat):
+	//	initialErrors.Email = "Please enter a valid email address."
+	//case errors.Is(err, models.ErrUserNotFound):
+	//	initialErrors.General = "Invalid credentials. Please check your email and password."
+	//case errors.Is(err, models.ErrInvalidPassword):
+	//	initialErrors.General = "Invalid credentials. Please check your email and password."
+	//default:
+	//	initialErrors.General = ""
+	//}
+
+	content := SignIn(initialValues, initialErrors)
+	layoutData := h.NewLayoutData(c, "SignIn - Loci", "SignIn", content)
+	layoutData.Nav = offlineNav
+	layoutData.User = nil
+
+	h.Render(c, http.StatusOK, pages.LayoutPage(layoutData))
+}
+
+// #Register
 func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Registration attempt",
 		zap.String("method", r.Method),
