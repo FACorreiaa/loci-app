@@ -1,4 +1,4 @@
-package middleware
+package cache
 
 import (
 	"crypto/md5"
@@ -27,13 +27,13 @@ type VectorCacheEntry struct {
 
 // VectorCache provides semantic caching for vector embeddings and search results
 type VectorCache struct {
-	mu                  sync.RWMutex
-	entries             map[string]*VectorCacheEntry
-	ttl                 time.Duration
+	mu      sync.RWMutex
+	entries map[string]*VectorCacheEntry
+	ttl     time.Duration
 	similarityThreshold float64 // For approximate matching (default: 0.95)
-	name                string
-	metrics             CacheMetrics
-	logger              *zap.Logger
+	name    string
+	metrics CacheMetrics
+	logger  *zap.Logger
 }
 
 // NewVectorCache creates a new vector cache with configurable similarity threshold

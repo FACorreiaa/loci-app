@@ -34,8 +34,8 @@ import (
 	"github.com/FACorreiaa/go-templui/internal/app/domain/poi"
 	profiles2 "github.com/FACorreiaa/go-templui/internal/app/domain/profiles"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/tags"
-	"github.com/FACorreiaa/go-templui/internal/app/middleware"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
+	cache2 "github.com/FACorreiaa/go-templui/internal/pkg/cache"
 )
 
 const (
@@ -1340,7 +1340,7 @@ func (l *ServiceImpl) updateCacheAfterModification(ctx context.Context, session 
 	}
 
 	// Update the cache
-	middleware.CompleteItineraryCache.Set(cacheKey, *completeResponse)
+	cache2.CompleteItineraryCache.Set(cacheKey, *completeResponse)
 
 	l.logger.Info("Updated cache after itinerary modification",
 		zap.String("session_id", session.ID.String()),
@@ -1779,7 +1779,7 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 			zap.String("sessionID", sessionID.String()),
 			zap.String("itineraryName", session.CurrentItinerary.AIItineraryResponse.ItineraryName),
 			zap.Int("poisCount", len(session.CurrentItinerary.AIItineraryResponse.PointsOfInterest)))
-		middleware.ItineraryCache.Set(sessionID.String(), session.CurrentItinerary.AIItineraryResponse)
+		cache2.ItineraryCache.Set(sessionID.String(), session.CurrentItinerary.AIItineraryResponse)
 	}
 
 	l.sendEvent(ctx, eventCh, models.StreamEvent{
@@ -3112,7 +3112,7 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 				l.logger.Info("Caching itinerary data",
 					zap.String("sessionID", sessionID.String()),
 					zap.String("cacheKey", cacheKey))
-				middleware.ItineraryCache.Set(cacheKey, *itinerary)
+				cache2.ItineraryCache.Set(cacheKey, *itinerary)
 			}
 		}
 
@@ -3132,7 +3132,7 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 				zap.String("city", completeResponse.GeneralCityData.City),
 				zap.Int("generalPOIs", len(completeResponse.PointsOfInterest)),
 				zap.Int("itineraryPOIs", len(completeResponse.AIItineraryResponse.PointsOfInterest)))
-			middleware.CompleteItineraryCache.Set(cacheKey, *completeResponse)
+			cache2.CompleteItineraryCache.Set(cacheKey, *completeResponse)
 		} else {
 			l.logger.Warn("Failed to cache complete itinerary response",
 				zap.String("sessionID", sessionID.String()),
@@ -3154,11 +3154,11 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 					zap.String("sessionID", sessionID.String()),
 					zap.String("cacheKey", cacheKey),
 					zap.Int("restaurantsCount", len(restaurants)))
-				middleware.RestaurantsCache.Set(cacheKey, restaurants)
+				cache2.RestaurantsCache.Set(cacheKey, restaurants)
 
 				// Also cache to CompleteItineraryCache using cacheKey for reusability
 				if completeResponse, err := l.parseCompleteResponseFromParts(responses, sessionID); err == nil {
-					middleware.CompleteItineraryCache.Set(cacheKey, *completeResponse)
+					cache2.CompleteItineraryCache.Set(cacheKey, *completeResponse)
 					l.logger.Info("Caching complete response for restaurants",
 						zap.String("sessionID", sessionID.String()),
 						zap.String("cacheKey", cacheKey))
@@ -3185,11 +3185,11 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 					zap.String("sessionID", sessionID.String()),
 					zap.String("cacheKey", cacheKey),
 					zap.Int("activitiesCount", len(activities)))
-				middleware.ActivitiesCache.Set(cacheKey, activities)
+				cache2.ActivitiesCache.Set(cacheKey, activities)
 
 				// Also cache to CompleteItineraryCache using cacheKey for reusability
 				if completeResponse, err := l.parseCompleteResponseFromParts(responses, sessionID); err == nil {
-					middleware.CompleteItineraryCache.Set(cacheKey, *completeResponse)
+					cache2.CompleteItineraryCache.Set(cacheKey, *completeResponse)
 					l.logger.Info("Caching complete response for activities",
 						zap.String("sessionID", sessionID.String()),
 						zap.String("cacheKey", cacheKey))
@@ -3216,11 +3216,11 @@ func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uui
 					zap.String("sessionID", sessionID.String()),
 					zap.String("cacheKey", cacheKey),
 					zap.Int("hotelsCount", len(hotels)))
-				middleware.HotelsCache.Set(cacheKey, hotels)
+				cache2.HotelsCache.Set(cacheKey, hotels)
 
 				// Also cache to CompleteItineraryCache using cacheKey for reusability
 				if completeResponse, err := l.parseCompleteResponseFromParts(responses, sessionID); err == nil {
-					middleware.CompleteItineraryCache.Set(cacheKey, *completeResponse)
+					cache2.CompleteItineraryCache.Set(cacheKey, *completeResponse)
 					l.logger.Info("Caching complete response for hotels",
 						zap.String("sessionID", sessionID.String()),
 						zap.String("cacheKey", cacheKey))

@@ -7,13 +7,13 @@ import (
 )
 
 type SignInFormValues struct {
-    Email string
+	Email string
 }
 
 type SignInFormErrors struct {
-    Email string
-    Password string
-    General string
+	Email    string
+	Password string
+	General  string
 }
 
 templ SignInForm(values SignInFormValues, errors SignInFormErrors) {

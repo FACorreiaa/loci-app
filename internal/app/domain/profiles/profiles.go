@@ -88,7 +88,13 @@ func (h *ProfilesHandler) handleProfileError(c *gin.Context, err error, operatio
 // @Failure 500 {object} map[string]string
 // @Router /api/profiles [get]
 func (h *ProfilesHandler) GetProfiles(c *gin.Context) {
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+
+	userIDStr := user.ID
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		h.logger.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
@@ -163,7 +169,12 @@ func (h *ProfilesHandler) GetProfiles(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/profiles/{id} [get]
 func (h *ProfilesHandler) GetProfile(c *gin.Context) {
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		h.logger.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
@@ -206,7 +217,13 @@ func (h *ProfilesHandler) GetProfile(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/profiles [post]
 func (h *ProfilesHandler) CreateProfile(c *gin.Context) {
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+
+	userIDStr := user.ID
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		h.logger.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
@@ -245,7 +262,13 @@ func (h *ProfilesHandler) CreateProfile(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/profiles/{id} [put]
 func (h *ProfilesHandler) UpdateProfile(c *gin.Context) {
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+
+	userIDStr := user.ID
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		h.logger.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
@@ -289,7 +312,12 @@ func (h *ProfilesHandler) UpdateProfile(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/profiles/{id} [delete]
 func (h *ProfilesHandler) DeleteProfile(c *gin.Context) {
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		h.logger.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
@@ -326,7 +354,12 @@ func (h *ProfilesHandler) DeleteProfile(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/profiles/{id}/default [put]
 func (h *ProfilesHandler) SetDefaultProfile(c *gin.Context) {
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		h.logger.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))

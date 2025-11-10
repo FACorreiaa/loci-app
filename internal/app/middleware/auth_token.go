@@ -1,8 +1,9 @@
-package auth
+package middleware
 
 import (
-	"go.uber.org/zap"
 	"net/http"
+
+	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
 )

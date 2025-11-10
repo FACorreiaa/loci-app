@@ -14,8 +14,8 @@ import (
 	"github.com/FACorreiaa/go-templui/internal/app/domain/activities"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/hotels"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/restaurants"
-	"github.com/FACorreiaa/go-templui/internal/app/middleware"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
+	"github.com/FACorreiaa/go-templui/internal/pkg/cache"
 )
 
 func TestMain(m *testing.M) {
@@ -150,10 +150,10 @@ func TestUnifiedDataSourceConcept(t *testing.T) {
 		}
 
 		// Store in cache (this is what SSE would do)
-		middleware.CompleteItineraryCache.Set(sessionID, testData)
+		cache.CompleteItineraryCache.Set(sessionID, testData)
 
 		// Retrieve and verify (this is what common would do)
-		cachedData, found := middleware.CompleteItineraryCache.Get(sessionID)
+		cachedData, found := cache.CompleteItineraryCache.Get(sessionID)
 		assert.True(t, found, "Data should be found in cache")
 		assert.Equal(t, "Barcelona", cachedData.GeneralCityData.City)
 		assert.Len(t, cachedData.PointsOfInterest, 3)

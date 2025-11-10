@@ -24,7 +24,7 @@ import (
 	"github.com/FACorreiaa/go-templui/internal/app/domain/hotels"
 	profiles2 "github.com/FACorreiaa/go-templui/internal/app/domain/profiles"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/restaurants"
-	"github.com/FACorreiaa/go-templui/internal/app/middleware"
+	"github.com/FACorreiaa/go-templui/internal/pkg/cache"
 )
 
 var testDB *pgxpool.Pool
@@ -231,7 +231,7 @@ func TestSSE_CacheIntegration(t *testing.T) {
 		time.Sleep(3 * time.Second)
 
 		// Verify cache contains data
-		cachedData, found := middleware.CompleteItineraryCache.Get(sessionID)
+		cachedData, found := cache.CompleteItineraryCache.Get(sessionID)
 		if found {
 			assert.NotEmpty(t, cachedData.GeneralCityData.City)
 			assert.Greater(t, len(cachedData.PointsOfInterest), 0)

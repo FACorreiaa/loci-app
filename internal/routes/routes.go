@@ -17,7 +17,7 @@ import (
 	"github.com/FACorreiaa/go-templui/internal/app/domain/lists"
 	pages2 "github.com/FACorreiaa/go-templui/internal/app/domain/pages"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/user"
-	middleware2 "github.com/FACorreiaa/go-templui/internal/app/middleware"
+	"github.com/FACorreiaa/go-templui/internal/app/middleware"
 	"github.com/FACorreiaa/go-templui/internal/app/services"
 
 	"github.com/FACorreiaa/go-templui/internal/app/domain/profiles"
@@ -204,7 +204,7 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 	}
 
 	public := r.Group("/")
-	public.Use(middleware2.OptionalAuthMiddleware())
+	public.Use(middleware.OptionalAuthMiddleware())
 	{
 		public.GET("/", h.Home.ShowHomePage)
 		public.GET("/discover", h.Discover.ShowDiscoverPage)
@@ -227,7 +227,7 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 		log.Warn("JWT_SECRET_KEY not set, using default (INSECURE - set environment variable in production)")
 	}
 
-	jwtConfig := auth.JWTConfig{
+	jwtConfig := middleware.JWTConfig{
 		SecretKey:       jwtSecret,
 		TokenExpiration: 24 * time.Hour,
 		Logger:          log,
@@ -235,7 +235,7 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 	}
 
 	// Configure rate limiting for WebSocket connections
-	wsRateLimiter := middleware2.NewRateLimiter(
+	wsRateLimiter := middleware.NewRateLimiter(
 		log,
 		10,            // Max 10 WebSocket connections
 		1*time.Minute, // Per minute
@@ -243,8 +243,8 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 
 	// Apply middleware: JWT auth (optional) + rate limiting
 	r.GET("/ws/nearby",
-		auth.JWTAuthMiddleware(jwtConfig),
-		middleware2.WebSocketRateLimitMiddleware(wsRateLimiter),
+		middleware.JWTAuthMiddleware(jwtConfig),
+		middleware.WebSocketRateLimitMiddleware(wsRateLimiter),
 		h.Nearby.HandleWebSocket,
 	)
 
@@ -265,7 +265,7 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 
 	// Protected routes
 	protected := r.Group("/")
-	protected.Use(middleware2.AuthMiddleware())
+	protected.Use(middleware.AuthMiddleware())
 	{
 		// Itinerary SSE
 		protected.GET("/itinerary", func(c *gin.Context) {
@@ -290,7 +290,7 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 						},
 					},
 					ActiveNav: "Itinerary",
-					User:      middleware2.GetUserFromContext(c),
+					User:      middleware.GetUserFromContext(c),
 				}))
 				return
 			}
@@ -312,7 +312,7 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 					},
 				},
 				ActiveNav: "Itinerary",
-				User:      middleware2.GetUserFromContext(c),
+				User:      middleware.GetUserFromContext(c),
 			}))
 		})
 
@@ -332,7 +332,7 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 					},
 				},
 				ActiveNav: "Activities",
-				User:      middleware2.GetUserFromContext(c),
+				User:      middleware.GetUserFromContext(c),
 			}))
 		})
 
@@ -352,7 +352,7 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 					},
 				},
 				ActiveNav: "Hotels",
-				User:      middleware2.GetUserFromContext(c),
+				User:      middleware.GetUserFromContext(c),
 			}))
 		})
 
@@ -378,7 +378,7 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 						},
 					},
 					ActiveNav: "Restaurants",
-					User:      middleware2.GetUserFromContext(c),
+					User:      middleware.GetUserFromContext(c),
 				}))
 				return
 			}
@@ -400,13 +400,20 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 					},
 				},
 				ActiveNav: "Itinerary",
-				User:      middleware2.GetUserFromContext(c),
+				User:      middleware.GetUserFromContext(c),
 			}))
 		})
 
+		// TO DELETE AFTER REFACTOR
+
 		// Dashboard (authenticated landing)
 		protected.GET("/dashboard", func(c *gin.Context) {
-			log.Info("Dashboard accessed", zap.String("user", middleware2.GetUserIDFromContext(c)))
+			u := middleware.GetUserFromContext(c)
+			if u == nil {
+				return
+			}
+			userIDStr := u.ID
+			log.Info("Dashboard accessed", zap.String("user", userIDStr))
 			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 				Title:   "Dashboard - Loci",
 				Content: pages2.LoggedInDashboard(),
@@ -420,13 +427,19 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 					},
 				},
 				ActiveNav: "Dashboard",
-				User:      middleware2.GetUserFromContext(c),
+				User:      middleware.GetUserFromContext(c),
 			}))
 		})
 
 		// Chat
 		protected.GET("/chat", func(c *gin.Context) {
-			log.Info("Chat page accessed", zap.String("user", middleware2.GetUserIDFromContext(c)))
+			u := middleware.GetUserFromContext(c)
+			if u == nil {
+				return
+			}
+			userIDStr := u.ID
+
+			log.Info("Chat page accessed", zap.String("user", userIDStr))
 			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 				Title:   "AI Chat - Loci",
 				Content: llmchat.ChatPage(),
@@ -440,7 +453,7 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 					},
 				},
 				ActiveNav: "Chat",
-				User:      middleware2.GetUserFromContext(c),
+				User:      middleware.GetUserFromContext(c),
 			}))
 		})
 
@@ -496,7 +509,13 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 
 		// Reviews
 		protected.GET("/reviews", func(c *gin.Context) {
-			log.Info("Reviews page accessed", zap.String("user", middleware2.GetUserIDFromContext(c)))
+			u := middleware.GetUserFromContext(c)
+			if u == nil {
+				return
+			}
+			userIDStr := u.ID
+
+			log.Info("Reviews page accessed", zap.String("user", userIDStr))
 			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 				Title:   "My Reviews - Loci",
 				Content: reviews.ReviewsPage(),
@@ -509,13 +528,19 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 					},
 				},
 				ActiveNav: "Reviews",
-				User:      middleware2.GetUserFromContext(c),
+				User:      middleware.GetUserFromContext(c),
 			}))
 		})
 
 		// Billing
 		protected.GET("/billing", func(c *gin.Context) {
-			log.Info("Billing page accessed", zap.String("user", middleware2.GetUserIDFromContext(c)))
+			u := middleware.GetUserFromContext(c)
+			if u == nil {
+				return
+			}
+			userIDStr := u.ID
+
+			log.Info("Billing page accessed", zap.String("user", userIDStr))
 			c.HTML(http.StatusOK, "", pages2.LayoutPage(models.LayoutTempl{
 				Title:   "Billing & Subscription - Loci",
 				Content: billing.BillingPage(),
@@ -527,31 +552,31 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 					},
 				},
 				ActiveNav: "Settings",
-				User:      middleware2.GetUserFromContext(c),
+				User:      middleware.GetUserFromContext(c),
 			}))
 		})
 	}
 
 	// HTMX API routes
 	htmxGroup := r.Group("/")
-	htmxGroup.Use(middleware2.AuthMiddleware())
+	htmxGroup.Use(middleware.AuthMiddleware())
 	{
 		// Search endpoint (public - no auth required)
 		htmxGroup.POST("/search", h.Chat.HandleSearch)
 
 		// Discover endpoint (requires auth)
-		htmxGroup.POST("/discover", middleware2.AuthMiddleware(), h.Chat.HandleDiscover)
+		htmxGroup.POST("/discover", middleware.AuthMiddleware(), h.Chat.HandleDiscover)
 
 		// Chat endpoints
 		htmxGroup.POST("/chat/message", h.Chat.SendMessage)
-		htmxGroup.POST("/chat/stream/connect", middleware2.OptionalAuthMiddleware(), h.Chat.HandleChatStreamConnect)
+		htmxGroup.POST("/chat/stream/connect", middleware.OptionalAuthMiddleware(), h.Chat.HandleChatStreamConnect)
 
 		// SSE streaming endpoints
-		htmxGroup.GET("/chat/stream", middleware2.OptionalAuthMiddleware(), h.Chat.ProcessUnifiedChatMessageStream)
-		htmxGroup.POST("/chat/stream", middleware2.OptionalAuthMiddleware(), h.Chat.ProcessUnifiedChatMessageStream)
+		htmxGroup.GET("/chat/stream", middleware.OptionalAuthMiddleware(), h.Chat.ProcessUnifiedChatMessageStream)
+		htmxGroup.POST("/chat/stream", middleware.OptionalAuthMiddleware(), h.Chat.ProcessUnifiedChatMessageStream)
 
 		// Continue chat session endpoint (for adding/removing items to existing sessions)
-		htmxGroup.POST("/chat/continue/:sessionID", middleware2.OptionalAuthMiddleware(), h.Chat.ContinueChatSession)
+		htmxGroup.POST("/chat/continue/:sessionID", middleware.OptionalAuthMiddleware(), h.Chat.ContinueChatSession)
 
 		// Favorites endpoints
 		htmxGroup.POST("/favorites/add/:id", h.Favorites.AddFavorite)
@@ -607,7 +632,7 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 
 		// Settings endpoints (protected)
 		settingsGroup := htmxGroup.Group("/settings")
-		settingsGroup.Use(middleware2.AuthMiddleware())
+		settingsGroup.Use(middleware.AuthMiddleware())
 		{
 			settingsGroup.POST("/profile", h.Settings.UpdateProfile)
 			settingsGroup.POST("/preferences", h.Settings.UpdatePreferences)
@@ -621,17 +646,17 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 	apiGroup := r.Group("/api")
 	{
 		// Auth token endpoints (public - for development/testing)
-		authTokenHandler := auth.NewAuthTokenHandler(log, jwtConfig)
+		authTokenHandler := middleware.NewAuthTokenHandler(log, jwtConfig)
 		authGroup := apiGroup.Group("/auth")
 		{
 			authGroup.POST("/token", authTokenHandler.GenerateToken)
-			authGroup.GET("/verify", auth.JWTAuthMiddleware(jwtConfig), authTokenHandler.VerifyToken)
+			authGroup.GET("/verify", middleware.JWTAuthMiddleware(jwtConfig), authTokenHandler.VerifyToken)
 			authGroup.GET("/example", authTokenHandler.GetTokenExample)
 		}
 
 		// Protected API routes
 		protectedAPI := apiGroup.Group("/")
-		protectedAPI.Use(middleware2.AuthMiddleware())
+		protectedAPI.Use(middleware.AuthMiddleware())
 		{
 			// Profiles endpoints
 			profilesGroup := protectedAPI.Group("/profiles")
@@ -671,7 +696,7 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 			zap.String("ip", c.ClientIP()),
 		)
 
-		user := middleware2.GetUserFromContext(c)
+		user := middleware.GetUserFromContext(c)
 		c.HTML(http.StatusNotFound, "", pages2.LayoutPage(models.LayoutTempl{
 			Title:   "Page Not Found - Loci",
 			Content: pages2.NotFoundPage(),

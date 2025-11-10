@@ -1,7 +1,8 @@
-package auth
+package middleware
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -149,6 +150,13 @@ func JWTAuthMiddleware(config JWTConfig) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+
+		slog.Debug("JWT claims validated successfully",
+			zap.Any("claims_object", claims),
+			zap.String("claimed_user_id", claims.UserID),
+			zap.String("claimed_username", claims.Username),
+			zap.String("claimed_email", claims.Email),
+		)
 
 		// Set user context
 		c.Set("user_id", claims.UserID)

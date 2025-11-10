@@ -50,7 +50,6 @@ func NewChatHandlers(llmService LlmInteractiontService,
 func (h *ChatHandlers) HandleChatStreamConnect(c *gin.Context) {
 	h.logger.Info("Chat stream connect request received",
 		zap.String("ip", c.ClientIP()),
-		zap.String("user", middleware.GetUserIDFromContext(c)),
 	)
 
 	// Get form parameters
@@ -75,7 +74,12 @@ func (h *ChatHandlers) HandleChatStreamConnect(c *gin.Context) {
 	}
 
 	// Get user ID for session management
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 	var sessionID string
 
 	if userIDStr != "" && userIDStr != "anonymous" {
@@ -351,7 +355,6 @@ func (h *ChatHandlers) getDefaultProfileID(ctx context.Context, userID uuid.UUID
 
 func (h *ChatHandlers) SendMessage(c *gin.Context) {
 	h.logger.Info("Chat message received",
-		zap.String("user", middleware.GetUserIDFromContext(c)),
 		zap.String("ip", c.ClientIP()),
 	)
 
@@ -367,11 +370,15 @@ func (h *ChatHandlers) SendMessage(c *gin.Context) {
 	h.logger.Info("Processing chat message",
 		zap.String("message", message),
 		zap.String("sessionID", sessionID),
-		zap.String("user", middleware.GetUserIDFromContext(c)),
 	)
 
 	// Get user ID for authenticated users
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 	if userIDStr == "" || userIDStr == "anonymous" {
 		h.logger.Warn("Chat message from unauthenticated user")
 		c.String(http.StatusUnauthorized, `
@@ -449,7 +456,7 @@ func (h *ChatHandlers) SendMessage(c *gin.Context) {
 	`, response, time.Now().Format("15:04"), message, sessionID))
 
 	h.logger.Info("Chat message processed successfully",
-		zap.String("user", middleware.GetUserIDFromContext(c)),
+		zap.String("user", user.ID),
 	)
 }
 
@@ -649,15 +656,15 @@ func (h *ChatHandlers) HandleDiscover(c *gin.Context) {
 	)
 
 	// Get user ID from middleware context
-	userID := middleware.GetUserIDFromContext(c)
-	if userID == "" {
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
 		h.logger.Error("User ID not found in context")
 		c.String(http.StatusUnauthorized, "Authentication required")
 		return
 	}
 
 	// Call LLM service and get streaming data
-	llmData, redirectURL, err := h.callLLMStreamingServiceWithData(query, userID)
+	llmData, redirectURL, err := h.callLLMStreamingServiceWithData(query, user.ID)
 	if err != nil {
 		h.logger.Warn("LLM service unavailable, using fallback classification", zap.Error(err))
 		// Fallback to local intent classification
@@ -670,7 +677,7 @@ func (h *ChatHandlers) HandleDiscover(c *gin.Context) {
 	}
 
 	// Store LLM data in session for the destination page
-	sessionKey := fmt.Sprintf("llm_data_%s", userID)
+	sessionKey := fmt.Sprintf("llm_data_%s", user.ID)
 	// In a real app, you'd use Redis or similar. For now, we'll pass data via different means
 	h.logger.Info("LLM data received",
 		zap.String("query", query),
@@ -834,7 +841,6 @@ func (h *ChatHandlers) generateDiscoveryResponseByURL(query, redirectURL string)
 func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 	h.logger.Info("Unified chat message stream request received",
 		zap.String("ip", c.ClientIP()),
-		zap.String("user", middleware.GetUserIDFromContext(c)),
 	)
 
 	// Get message from form data (POST) or query parameters (GET for SSE)
@@ -860,7 +866,12 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 	}
 
 	// Get user ID for authenticated users
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 	fmt.Printf("userIDStr: %s\n", userIDStr)
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
@@ -1029,7 +1040,6 @@ func (h *ChatHandlers) ProcessUnifiedChatMessageStream(c *gin.Context) {
 func (h *ChatHandlers) HandleChatStream(c *gin.Context) {
 	h.logger.Info("Chat stream request received",
 		zap.String("ip", c.ClientIP()),
-		zap.String("user", middleware.GetUserIDFromContext(c)),
 	)
 
 	// Support both parameter names for backward compatibility
@@ -1047,7 +1057,12 @@ func (h *ChatHandlers) HandleChatStream(c *gin.Context) {
 	}
 
 	// Get user ID for authenticated users
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 	if userIDStr == "" || userIDStr == "anonymous" {
 		h.logger.Warn("Chat stream from unauthenticated user")
 		c.String(http.StatusUnauthorized, "Authentication required")
@@ -1161,7 +1176,6 @@ func (h *ChatHandlers) HandleChatStream(c *gin.Context) {
 func (h *ChatHandlers) HandleItineraryStream(c *gin.Context) {
 	h.logger.Info("Itinerary stream request received",
 		zap.String("ip", c.ClientIP()),
-		zap.String("user", middleware.GetUserIDFromContext(c)),
 	)
 
 	message := c.Query("message")
@@ -1179,7 +1193,12 @@ func (h *ChatHandlers) HandleItineraryStream(c *gin.Context) {
 	c.Header("Access-Control-Allow-Headers", "Cache-Control")
 
 	// Get user info (same logic as ProcessUnifiedChatMessageStream)
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
 		c.String(http.StatusInternalServerError, "Streaming unsupported")
@@ -1290,7 +1309,6 @@ func (h *ChatHandlers) HandleItineraryStream(c *gin.Context) {
 func (h *ChatHandlers) ContinueChatSession(c *gin.Context) {
 	h.logger.Info("Continue chat session request received",
 		zap.String("ip", c.ClientIP()),
-		zap.String("user", middleware.GetUserIDFromContext(c)),
 	)
 
 	// Get session ID from URL parameter

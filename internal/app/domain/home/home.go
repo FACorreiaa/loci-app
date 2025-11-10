@@ -6,6 +6,7 @@ import (
 
 	"github.com/FACorreiaa/go-templui/internal/app/domain"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/pages"
+	"github.com/FACorreiaa/go-templui/internal/app/middleware"
 )
 
 type HomeHandlers struct {
@@ -20,7 +21,7 @@ func (h *HomeHandlers) ShowHomePage(c *gin.Context) {
 	var content templ.Component
 	var activeNav string
 
-	user := common.GetUserFromContext(c)
+	user := middleware.GetUserFromContext(c)
 
 	if user != nil {
 		content = pages.LoggedInDashboard()
@@ -30,5 +31,5 @@ func (h *HomeHandlers) ShowHomePage(c *gin.Context) {
 		activeNav = "Home"
 	}
 
-	h.RenderPage(c, "Loci - Discover Amazing Places", activeNav, content)
+	h.RenderPage(c, "Loci - Discover Amazing Places", activeNav, content, user)
 }

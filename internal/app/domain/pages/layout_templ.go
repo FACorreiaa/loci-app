@@ -15,7 +15,7 @@ import (
 	"github.com/FACorreiaa/go-templui/internal/app/components/pwa"
 	"github.com/FACorreiaa/go-templui/internal/app/components/scripts"
 	"github.com/FACorreiaa/go-templui/internal/app/components/styles"
-	"github.com/FACorreiaa/go-templui/internal/app/domain/results"
+	r "github.com/FACorreiaa/go-templui/internal/app/domain/results"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"os"
 )
@@ -48,7 +48,7 @@ func LayoutPage(l models.LayoutTempl) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(l.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/pages/layout.templ`, Line: 21, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/pages/layout.templ`, Line: 21, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -66,11 +66,11 @@ func LayoutPage(l models.LayoutTempl) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = results.ItineraryStateScript().Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = r.ItineraryStateScript().Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = results.POIModalScript().Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = r.POIModalScript().Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

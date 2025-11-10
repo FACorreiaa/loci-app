@@ -25,7 +25,12 @@ func NewHotelFavoritesHandlers(poiService poi.Service, logger *zap.Logger) *Hote
 
 func (h *HotelFavoritesHandlers) AddHotelFavorite(c *gin.Context) {
 	id := c.Param("id")
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 
 	// Check if user is authenticated
 	if userIDStr == "" {
@@ -101,7 +106,12 @@ func (h *HotelFavoritesHandlers) AddHotelFavorite(c *gin.Context) {
 
 func (h *HotelFavoritesHandlers) RemoveHotelFavorite(c *gin.Context) {
 	id := c.Param("id")
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 
 	if userIDStr == "" {
 		c.HTML(http.StatusUnauthorized, "", `<div class="text-red-500 text-sm">Unauthorized</div>`)

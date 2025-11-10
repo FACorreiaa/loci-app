@@ -1,6 +1,8 @@
 package user
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -23,7 +25,13 @@ func NewHandler(base *domain.BaseHandler, service UserService) *Handler {
 }
 
 func (h *Handler) ShowProfilePage(c *gin.Context) {
-	userID := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusTemporaryRedirect, "/profile")
+		return
+	}
+	userID := user.ID
+
 	userUUID, err := uuid.Parse(userID)
 	if err != nil {
 		h.Logger.Error("Invalid user ID", zap.String("userID", userID), zap.Error(err))
@@ -38,5 +46,5 @@ func (h *Handler) ShowProfilePage(c *gin.Context) {
 		userProfile = nil
 	}
 
-	h.RenderPage(c, "Profile - Loci", "Profile", profiles.ProfilePage(userProfile))
+	h.RenderPage(c, "Profile - Loci", "Profile", profiles.ProfilePage(userProfile), user)
 }

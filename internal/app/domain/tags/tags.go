@@ -1,6 +1,7 @@
 package tags
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -33,17 +34,21 @@ func NewTagsHandler(tagRepo Repository, logger *zap.Logger) *TagsHandler {
 // @Failure 500 {object} map[string]string
 // @Router /api/tags [get]
 func (h *TagsHandler) GetTags(c *gin.Context) {
-	userIDStr := middleware.GetUserIDFromContext(c)
-	userID, err := uuid.Parse(userIDStr)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userID, err := uuid.Parse(user.ID)
 	if err != nil {
-		h.logger.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("userID", user.ID), zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
 
 	tags, err := h.tagRepo.GetAll(c.Request.Context(), userID)
 	if err != nil {
-		h.logger.Error("Failed to get tags", zap.String("userID", userIDStr), zap.Error(err))
+		h.logger.Error("Failed to get tags", zap.String("userID", user.ID), zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve tags"})
 		return
 	}
@@ -64,10 +69,14 @@ func (h *TagsHandler) GetTags(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/tags [post]
 func (h *TagsHandler) CreateTag(c *gin.Context) {
-	userIDStr := middleware.GetUserIDFromContext(c)
-	userID, err := uuid.Parse(userIDStr)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userID, err := uuid.Parse(user.ID)
 	if err != nil {
-		h.logger.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("userID", user.ID), zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
@@ -81,7 +90,7 @@ func (h *TagsHandler) CreateTag(c *gin.Context) {
 
 	tag, err := h.tagRepo.Create(c.Request.Context(), userID, params)
 	if err != nil {
-		h.logger.Error("Failed to create personal tag", zap.String("userID", userIDStr), zap.Error(err))
+		h.logger.Error("Failed to create personal tag", zap.String("userID", user.ID), zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create tag"})
 		return
 	}
@@ -104,10 +113,14 @@ func (h *TagsHandler) CreateTag(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/tags/{id} [put]
 func (h *TagsHandler) UpdateTag(c *gin.Context) {
-	userIDStr := middleware.GetUserIDFromContext(c)
-	userID, err := uuid.Parse(userIDStr)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userID, err := uuid.Parse(user.ID)
 	if err != nil {
-		h.logger.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("userID", user.ID), zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
@@ -128,8 +141,8 @@ func (h *TagsHandler) UpdateTag(c *gin.Context) {
 	}
 
 	if err := h.tagRepo.Update(c.Request.Context(), userID, tagID, params); err != nil {
-		h.logger.Error("Failed to update personal tag", zap.String("userID", userIDStr), zap.String("tagID", tagIDStr), zap.Error(err))
-		if err == models.ErrNotFound {
+		h.logger.Error("Failed to update personal tag", zap.String("userID", user.ID), zap.String("tagID", tagIDStr), zap.Error(err))
+		if errors.Is(err, models.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Tag not found"})
 			return
 		}
@@ -153,10 +166,14 @@ func (h *TagsHandler) UpdateTag(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/tags/{id} [delete]
 func (h *TagsHandler) DeleteTag(c *gin.Context) {
-	userIDStr := middleware.GetUserIDFromContext(c)
-	userID, err := uuid.Parse(userIDStr)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userID, err := uuid.Parse(user.ID)
 	if err != nil {
-		h.logger.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("userID", user.ID), zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
@@ -170,8 +187,8 @@ func (h *TagsHandler) DeleteTag(c *gin.Context) {
 	}
 
 	if err := h.tagRepo.Delete(c.Request.Context(), userID, tagID); err != nil {
-		h.logger.Error("Failed to delete personal tag", zap.String("userID", userIDStr), zap.String("tagID", tagIDStr), zap.Error(err))
-		if err == models.ErrNotFound {
+		h.logger.Error("Failed to delete personal tag", zap.String("userID", user.ID), zap.String("tagID", tagIDStr), zap.Error(err))
+		if errors.Is(err, models.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Tag not found"})
 			return
 		}

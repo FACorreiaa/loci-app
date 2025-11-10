@@ -23,8 +23,8 @@ import (
 	generativeAI "github.com/FACorreiaa/go-genai-sdk/lib"
 
 	"github.com/FACorreiaa/go-templui/internal/app/domain/city"
-	middleware2 "github.com/FACorreiaa/go-templui/internal/app/middleware"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
+	cache2 "github.com/FACorreiaa/go-templui/internal/pkg/cache"
 	"github.com/FACorreiaa/go-templui/internal/pkg/llmlogging"
 )
 
@@ -472,10 +472,10 @@ func (s *ServiceImpl) SearchPOIsSemantic(ctx context.Context, query string, limi
 	}
 
 	// Build cache key for exact match
-	cacheKey := middleware2.BuildVectorCacheKey(query, "", nil)
+	cacheKey := cache2.BuildVectorCacheKey(query, "", nil)
 
 	// Check for exact cache hit
-	if cachedEntry, found := middleware2.Cache.VectorSearch.Get(cacheKey); found {
+	if cachedEntry, found := cache2.Cache.VectorSearch.Get(cacheKey); found {
 		l.Info("Vector cache hit (exact)",
 			zap.String("query", query),
 			zap.Int("cached_results", len(cachedEntry.Results)))
@@ -492,7 +492,7 @@ func (s *ServiceImpl) SearchPOIsSemantic(ctx context.Context, query string, limi
 	var queryEmbedding []float32
 	var err error
 
-	if cachedEmbedding, found := middleware2.Cache.Embeddings.Get(embeddingKey); found {
+	if cachedEmbedding, found := cache2.Cache.Embeddings.Get(embeddingKey); found {
 		queryEmbedding = cachedEmbedding
 		l.Debug("Query embedding retrieved from cache", zap.String("query", query))
 		span.SetAttributes(attribute.Bool("embedding.cached", true))
@@ -509,12 +509,12 @@ func (s *ServiceImpl) SearchPOIsSemantic(ctx context.Context, query string, limi
 		}
 
 		// Cache the embedding for future use
-		middleware2.Cache.Embeddings.Set(embeddingKey, queryEmbedding, fmt.Sprintf("query: %s", query))
+		cache2.Cache.Embeddings.Set(embeddingKey, queryEmbedding, fmt.Sprintf("query: %s", query))
 		span.SetAttributes(attribute.Bool("embedding.cached", false))
 	}
 
 	// Check for semantic cache hit (similar queries)
-	if cachedEntry, similarity, found := middleware2.Cache.VectorSearch.GetSimilar(queryEmbedding, "", nil); found {
+	if cachedEntry, similarity, found := cache2.Cache.VectorSearch.GetSimilar(queryEmbedding, "", nil); found {
 		l.Info("Vector cache hit (semantic)",
 			zap.String("query", query),
 			zap.String("cached_query", cachedEntry.QueryText),
@@ -543,14 +543,14 @@ func (s *ServiceImpl) SearchPOIsSemantic(ctx context.Context, query string, limi
 	}
 
 	// Store results in vector cache
-	cacheEntry := &middleware2.VectorCacheEntry{
+	cacheEntry := &cache2.VectorCacheEntry{
 		QueryText:    query,
 		Embedding:    queryEmbedding,
 		Results:      pois,
 		SearchParams: nil,
 		CityID:       "",
 	}
-	middleware2.Cache.VectorSearch.Set(cacheKey, cacheEntry)
+	cache2.Cache.VectorSearch.Set(cacheKey, cacheEntry)
 
 	l.Info("Semantic search completed",
 		zap.String("query", query),
@@ -584,10 +584,10 @@ func (s *ServiceImpl) SearchPOIsSemanticByCity(ctx context.Context, query string
 	}
 
 	// Build cache key for exact match (includes city filter)
-	cacheKey := middleware2.BuildVectorCacheKey(query, cityID.String(), nil)
+	cacheKey := cache2.BuildVectorCacheKey(query, cityID.String(), nil)
 
 	// Check for exact cache hit
-	if cachedEntry, found := middleware2.Cache.VectorSearch.Get(cacheKey); found {
+	if cachedEntry, found := cache2.Cache.VectorSearch.Get(cacheKey); found {
 		l.Info("Vector cache hit (exact) for city",
 			zap.String("query", query),
 			zap.String("city_id", cityID.String()),
@@ -605,7 +605,7 @@ func (s *ServiceImpl) SearchPOIsSemanticByCity(ctx context.Context, query string
 	var queryEmbedding []float32
 	var err error
 
-	if cachedEmbedding, found := middleware2.Cache.Embeddings.Get(embeddingKey); found {
+	if cachedEmbedding, found := cache2.Cache.Embeddings.Get(embeddingKey); found {
 		queryEmbedding = cachedEmbedding
 		l.Debug("Query embedding retrieved from cache",
 			zap.String("query", query),
@@ -624,12 +624,12 @@ func (s *ServiceImpl) SearchPOIsSemanticByCity(ctx context.Context, query string
 		}
 
 		// Cache the embedding for future use
-		middleware2.Cache.Embeddings.Set(embeddingKey, queryEmbedding, fmt.Sprintf("query: %s", query))
+		cache2.Cache.Embeddings.Set(embeddingKey, queryEmbedding, fmt.Sprintf("query: %s", query))
 		span.SetAttributes(attribute.Bool("embedding.cached", false))
 	}
 
 	// Check for semantic cache hit (similar queries in same city)
-	if cachedEntry, similarity, found := middleware2.Cache.VectorSearch.GetSimilar(queryEmbedding, cityID.String(), nil); found {
+	if cachedEntry, similarity, found := cache2.Cache.VectorSearch.GetSimilar(queryEmbedding, cityID.String(), nil); found {
 		l.Info("Vector cache hit (semantic) for city",
 			zap.String("query", query),
 			zap.String("cached_query", cachedEntry.QueryText),
@@ -661,14 +661,14 @@ func (s *ServiceImpl) SearchPOIsSemanticByCity(ctx context.Context, query string
 	}
 
 	// Store results in vector cache
-	cacheEntry := &middleware2.VectorCacheEntry{
+	cacheEntry := &cache2.VectorCacheEntry{
 		QueryText:    query,
 		Embedding:    queryEmbedding,
 		Results:      pois,
 		SearchParams: nil,
 		CityID:       cityID.String(),
 	}
-	middleware2.Cache.VectorSearch.Set(cacheKey, cacheEntry)
+	cache2.Cache.VectorSearch.Set(cacheKey, cacheEntry)
 
 	l.Info("Semantic search by city completed",
 		zap.String("query", query),
@@ -724,10 +724,10 @@ func (s *ServiceImpl) SearchPOIsHybrid(ctx context.Context, filter models.POIFil
 	}
 
 	// Build cache key for exact match (no cityID in POIFilter)
-	cacheKey := middleware2.BuildVectorCacheKey(query, "", searchParams)
+	cacheKey := cache2.BuildVectorCacheKey(query, "", searchParams)
 
 	// Check for exact cache hit
-	if cachedEntry, found := middleware2.Cache.VectorSearch.Get(cacheKey); found {
+	if cachedEntry, found := cache2.Cache.VectorSearch.Get(cacheKey); found {
 		l.Info("Vector cache hit (exact) for hybrid search",
 			zap.String("query", query),
 			zap.Float64("semantic_weight", semanticWeight),
@@ -745,7 +745,7 @@ func (s *ServiceImpl) SearchPOIsHybrid(ctx context.Context, filter models.POIFil
 	var queryEmbedding []float32
 	var err error
 
-	if cachedEmbedding, found := middleware2.Cache.Embeddings.Get(embeddingKey); found {
+	if cachedEmbedding, found := cache2.Cache.Embeddings.Get(embeddingKey); found {
 		queryEmbedding = cachedEmbedding
 		l.Debug("Query embedding retrieved from cache for hybrid search",
 			zap.String("query", query))
@@ -763,12 +763,12 @@ func (s *ServiceImpl) SearchPOIsHybrid(ctx context.Context, filter models.POIFil
 		}
 
 		// Cache the embedding for future use
-		middleware2.Cache.Embeddings.Set(embeddingKey, queryEmbedding, fmt.Sprintf("query: %s", query))
+		cache2.Cache.Embeddings.Set(embeddingKey, queryEmbedding, fmt.Sprintf("query: %s", query))
 		span.SetAttributes(attribute.Bool("embedding.cached", false))
 	}
 
 	// Check for semantic cache hit (similar queries with matching params)
-	if cachedEntry, similarity, found := middleware2.Cache.VectorSearch.GetSimilar(queryEmbedding, "", searchParams); found {
+	if cachedEntry, similarity, found := cache2.Cache.VectorSearch.GetSimilar(queryEmbedding, "", searchParams); found {
 		l.Info("Vector cache hit (semantic) for hybrid search",
 			zap.String("query", query),
 			zap.String("cached_query", cachedEntry.QueryText),
@@ -800,14 +800,14 @@ func (s *ServiceImpl) SearchPOIsHybrid(ctx context.Context, filter models.POIFil
 	}
 
 	// Store results in vector cache
-	cacheEntry := &middleware2.VectorCacheEntry{
+	cacheEntry := &cache2.VectorCacheEntry{
 		QueryText:    query,
 		Embedding:    queryEmbedding,
 		Results:      pois,
 		SearchParams: searchParams,
 		CityID:       "",
 	}
-	middleware2.Cache.VectorSearch.Set(cacheKey, cacheEntry)
+	cache2.Cache.VectorSearch.Set(cacheKey, cacheEntry)
 
 	l.Info("Hybrid search completed",
 		zap.String("query", query),

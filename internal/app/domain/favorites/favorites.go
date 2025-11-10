@@ -33,7 +33,13 @@ func NewFavoritesHandlers(poiService poi.Service,
 
 func (h *FavoritesHandlers) AddFavorite(c *gin.Context) {
 	id := c.Param("id")
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+
+	userIDStr := user.ID
 	isLLMGenerated := c.Query("isLLM") == "true"
 
 	// Check if user is authenticated
@@ -100,7 +106,13 @@ func (h *FavoritesHandlers) AddFavorite(c *gin.Context) {
 
 func (h *FavoritesHandlers) RemoveFavorite(c *gin.Context) {
 	id := c.Param("id")
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+
+	userIDStr := user.ID
 	isLLMGenerated := c.Query("isLLM") == "true"
 
 	if userIDStr == "" {
@@ -148,11 +160,15 @@ func (h *FavoritesHandlers) RemoveFavorite(c *gin.Context) {
 
 func (h *FavoritesHandlers) SearchFavorites(c *gin.Context) {
 	query := c.PostForm("query")
-	user := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
 
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
 	h.logger.Info("Searching favorites",
 		zap.String("query", query),
-		zap.String("user", user),
+		zap.String("user", user.ID),
 	)
 
 	// In real app, search database and return filtered results
@@ -162,7 +178,12 @@ func (h *FavoritesHandlers) SearchFavorites(c *gin.Context) {
 
 // ListFavorites displays the favourites lists page with search, filter, and pagination
 func (h *FavoritesHandlers) ListFavorites(c *gin.Context) {
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 	if userIDStr == "" || userIDStr == "anonymous" {
 		c.Redirect(http.StatusFound, "/auth/signin")
 		return
@@ -171,7 +192,7 @@ func (h *FavoritesHandlers) ListFavorites(c *gin.Context) {
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		h.Logger.Error("Invalid user ID", zap.String("user_id", userIDStr), zap.Error(err))
-		h.RenderPage(c, "Error", "Favorites", pages.NotFoundPage())
+		h.RenderPage(c, "Error", "Favorites", pages.NotFoundPage(), user)
 		return
 	}
 
@@ -207,7 +228,7 @@ func (h *FavoritesHandlers) ListFavorites(c *gin.Context) {
 	pois, total, err := h.poiService.GetFavouritesFiltered(c.Request.Context(), filter)
 	if err != nil {
 		h.Logger.Error("Failed to get favourites", zap.Error(err))
-		h.RenderPage(c, "Error", "Favorites", pages.NotFoundPage())
+		h.RenderPage(c, "Error", "Favorites", pages.NotFoundPage(), user)
 		return
 	}
 
@@ -225,5 +246,5 @@ func (h *FavoritesHandlers) ListFavorites(c *gin.Context) {
 		SortOrder:  sortOrder,
 	}
 
-	h.RenderPage(c, "Favorites - Loci", "Favorites", FavoritesPage(data))
+	h.RenderPage(c, "Favorites - Loci", "Favorites", FavoritesPage(data), user)
 }

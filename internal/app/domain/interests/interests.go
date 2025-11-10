@@ -62,7 +62,12 @@ func (h *InterestsHandler) GetInterests(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/interests [post]
 func (h *InterestsHandler) CreateInterest(c *gin.Context) {
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 
 	var req models.CreateInterestRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -93,7 +98,13 @@ func (h *InterestsHandler) CreateInterest(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/interests/{id} [delete]
 func (h *InterestsHandler) RemoveInterest(c *gin.Context) {
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+
+	userIDStr := user.ID
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		h.logger.Error("Invalid user ID", zap.String("userID", userIDStr), zap.Error(err))

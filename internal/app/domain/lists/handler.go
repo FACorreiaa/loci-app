@@ -28,7 +28,13 @@ func NewHandler(service Service, log *zap.Logger) *Handler {
 // ShowListsPage renders the main lists page with user's lists
 func (h *Handler) ShowListsPage(c *gin.Context) {
 	// Get user ID from context
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+
+	userIDStr := user.ID
 	if userIDStr == "" || userIDStr == "anonymous" {
 		h.log.Error("User not authenticated")
 		c.Redirect(http.StatusSeeOther, "/auth/signin")
@@ -49,14 +55,6 @@ func (h *Handler) ShowListsPage(c *gin.Context) {
 			zap.String("userID", userID.String()),
 			zap.Error(err))
 		c.String(http.StatusInternalServerError, "Failed to load lists")
-		return
-	}
-
-	// Get user info for the layout
-	user := common.GetUserFromContext(c)
-	if user == nil {
-		h.log.Error("Failed to get user from context")
-		c.Redirect(http.StatusSeeOther, "/auth/signin")
 		return
 	}
 
@@ -86,7 +84,12 @@ func (h *Handler) ShowCreateModal(c *gin.Context) {
 // CreateList handles the POST request to create a new list
 func (h *Handler) CreateList(c *gin.Context) {
 	// Get user ID from context
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 	if userIDStr == "" || userIDStr == "anonymous" {
 		h.log.Error("User not authenticated")
 		c.String(http.StatusUnauthorized, "Unauthorized")
@@ -135,15 +138,6 @@ func (h *Handler) CreateList(c *gin.Context) {
 		zap.String("userID", userID.String()),
 		zap.String("name", name))
 
-	// Redirect back to lists page with full layout
-	// Get user info for the layout
-	user := common.GetUserFromContext(c)
-	if user == nil {
-		h.log.Error("Failed to get user from context")
-		c.Redirect(http.StatusSeeOther, "/auth/signin")
-		return
-	}
-
 	c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 		Title:   "Travel Lists - Loci",
 		Content: ListsPage(),
@@ -164,7 +158,13 @@ func (h *Handler) CreateList(c *gin.Context) {
 // ShowAddToListModal renders the modal for selecting which list to add an item to
 func (h *Handler) ShowAddToListModal(c *gin.Context) {
 	// Get user ID from context
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+
+	userIDStr := user.ID
 	if userIDStr == "" || userIDStr == "anonymous" {
 		h.log.Error("User not authenticated")
 		c.String(http.StatusUnauthorized, "Unauthorized")
@@ -215,7 +215,12 @@ func (h *Handler) ShowAddToListModal(c *gin.Context) {
 // AddItemToList handles adding an item to a selected list
 func (h *Handler) AddItemToList(c *gin.Context) {
 	// Get user ID from context
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 	if userIDStr == "" || userIDStr == "anonymous" {
 		h.log.Error("User not authenticated")
 		c.String(http.StatusUnauthorized, "Unauthorized")
@@ -289,7 +294,12 @@ func (h *Handler) AddItemToList(c *gin.Context) {
 // ShowListDetail renders the detail page for a specific list
 func (h *Handler) ShowListDetail(c *gin.Context) {
 	// Get user ID from context
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 	if userIDStr == "" || userIDStr == "anonymous" {
 		h.log.Error("User not authenticated")
 		c.Redirect(http.StatusSeeOther, "/auth/signin")
@@ -323,14 +333,6 @@ func (h *Handler) ShowListDetail(c *gin.Context) {
 		return
 	}
 
-	// Get user info for the layout
-	user := common.GetUserFromContext(c)
-	if user == nil {
-		h.log.Error("Failed to get user from context")
-		c.Redirect(http.StatusSeeOther, "/auth/signin")
-		return
-	}
-
 	// Render the list detail page
 	c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 		Title:   listWithItems.List.Name + " - Lists - Loci",
@@ -352,7 +354,12 @@ func (h *Handler) ShowListDetail(c *gin.Context) {
 // RemoveListItem handles removing an item from a list
 func (h *Handler) RemoveListItem(c *gin.Context) {
 	// Get user ID from context
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 	if userIDStr == "" || userIDStr == "anonymous" {
 		h.log.Error("User not authenticated")
 		c.String(http.StatusUnauthorized, "Unauthorized")
@@ -406,7 +413,12 @@ func (h *Handler) RemoveListItem(c *gin.Context) {
 // ShowEditModal renders the edit list modal
 func (h *Handler) ShowEditModal(c *gin.Context) {
 	// Get user ID from context
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 	if userIDStr == "" || userIDStr == "anonymous" {
 		h.log.Error("User not authenticated")
 		c.String(http.StatusUnauthorized, "Unauthorized")
@@ -444,7 +456,12 @@ func (h *Handler) ShowEditModal(c *gin.Context) {
 // UpdateList handles updating a list
 func (h *Handler) UpdateList(c *gin.Context) {
 	// Get user ID from context
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 	if userIDStr == "" || userIDStr == "anonymous" {
 		h.log.Error("User not authenticated")
 		c.String(http.StatusUnauthorized, "Unauthorized")
@@ -509,7 +526,12 @@ func (h *Handler) UpdateList(c *gin.Context) {
 // ShowDeleteModal renders the delete confirmation modal
 func (h *Handler) ShowDeleteModal(c *gin.Context) {
 	// Get user ID from context
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 	if userIDStr == "" || userIDStr == "anonymous" {
 		h.log.Error("User not authenticated")
 		c.String(http.StatusUnauthorized, "Unauthorized")
@@ -547,7 +569,12 @@ func (h *Handler) ShowDeleteModal(c *gin.Context) {
 // DeleteList handles deleting a list
 func (h *Handler) DeleteList(c *gin.Context) {
 	// Get user ID from context
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 	if userIDStr == "" || userIDStr == "anonymous" {
 		h.log.Error("User not authenticated")
 		c.String(http.StatusUnauthorized, "Unauthorized")
@@ -587,7 +614,12 @@ func (h *Handler) DeleteList(c *gin.Context) {
 // ShowSavedListsPage renders the saved lists page
 func (h *Handler) ShowSavedListsPage(c *gin.Context) {
 	// Get user ID from context
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 	if userIDStr == "" || userIDStr == "anonymous" {
 		h.log.Error("User not authenticated")
 		c.Redirect(http.StatusSeeOther, "/auth/signin")
@@ -606,13 +638,6 @@ func (h *Handler) ShowSavedListsPage(c *gin.Context) {
 	if err != nil {
 		h.log.Error("Failed to get saved lists", zap.Error(err))
 		c.String(http.StatusInternalServerError, "Failed to load saved lists")
-		return
-	}
-
-	user := common.GetUserFromContext(c)
-	if user == nil {
-		h.log.Error("Failed to get user from context")
-		c.Redirect(http.StatusSeeOther, "/auth/signin")
 		return
 	}
 
@@ -636,7 +661,12 @@ func (h *Handler) ShowSavedListsPage(c *gin.Context) {
 // SaveListAction handles saving a list for the current user
 func (h *Handler) SaveListAction(c *gin.Context) {
 	// Get user ID from context
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 	if userIDStr == "" || userIDStr == "anonymous" {
 		h.log.Error("User not authenticated")
 		c.String(http.StatusUnauthorized, "Unauthorized")
@@ -676,7 +706,12 @@ func (h *Handler) SaveListAction(c *gin.Context) {
 // UnsaveListAction handles unsaving a list for the current user
 func (h *Handler) UnsaveListAction(c *gin.Context) {
 	// Get user ID from context
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 	if userIDStr == "" || userIDStr == "anonymous" {
 		h.log.Error("User not authenticated")
 		c.String(http.StatusUnauthorized, "Unauthorized")

@@ -12,9 +12,9 @@ import (
 
 	llmchat "github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
 	results2 "github.com/FACorreiaa/go-templui/internal/app/domain/results"
-	"github.com/FACorreiaa/go-templui/internal/app/middleware"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"github.com/FACorreiaa/go-templui/internal/app/services"
+	"github.com/FACorreiaa/go-templui/internal/pkg/cache"
 	"github.com/FACorreiaa/go-templui/internal/pkg/debugger"
 )
 
@@ -70,7 +70,7 @@ func (h *RestaurantsHandlers) loadRestaurantsBySession(sessionIDParam string, ca
 
 	// Try restaurants cache first with cacheKey (for reusable cache hits)
 	if cacheKey != "" {
-		if restaurantsData, found := middleware.RestaurantsCache.Get(cacheKey); found {
+		if restaurantsData, found := cache.RestaurantsCache.Get(cacheKey); found {
 
 			h.logger.Info("Restaurants found in cache. Rendering results.",
 
@@ -78,7 +78,7 @@ func (h *RestaurantsHandlers) loadRestaurantsBySession(sessionIDParam string, ca
 
 			// Try to get city data from complete cache
 			var cityData models.GeneralCityData
-			if completeData, found := middleware.CompleteItineraryCache.Get(cacheKey); found {
+			if completeData, found := cache.CompleteItineraryCache.Get(cacheKey); found {
 				cityData = completeData.GeneralCityData
 				h.logger.Info("City data loaded from complete cache",
 					zap.String("city", cityData.City))

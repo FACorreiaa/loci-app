@@ -27,9 +27,12 @@ func NewBookmarksHandlers(poiService poi.Service, logger *zap.Logger) *Bookmarks
 
 func (h *BookmarksHandlers) AddBookmark(c *gin.Context) {
 	id := c.Param("id")
-	userIDStr := middleware.GetUserIDFromContext(c)
-
-	if userIDStr == "" {
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	if user.ID == "" {
 		c.HTML(http.StatusOK, "", `
 			<div class="relative group">
 				<button
@@ -52,9 +55,9 @@ func (h *BookmarksHandlers) AddBookmark(c *gin.Context) {
 		return
 	}
 
-	userID, err := uuid.Parse(userIDStr)
+	userID, err := uuid.Parse(user.ID)
 	if err != nil {
-		h.logger.Error("Invalid user ID", zap.String("user_id", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("user_id", user.ID), zap.Error(err))
 		c.HTML(http.StatusBadRequest, "", `<div class="text-red-500 text-sm">Invalid user ID</div>`)
 		return
 	}
@@ -68,7 +71,7 @@ func (h *BookmarksHandlers) AddBookmark(c *gin.Context) {
 
 	h.logger.Info("Adding itinerary to bookmarks",
 		zap.String("itinerary_id", id),
-		zap.String("user_id", userIDStr),
+		zap.String("user_id", user.ID),
 	)
 
 	// Add to database
@@ -96,22 +99,26 @@ func (h *BookmarksHandlers) AddBookmark(c *gin.Context) {
 
 	h.logger.Info("Successfully added to bookmarks",
 		zap.String("itinerary_id", id),
-		zap.String("user_id", userIDStr),
+		zap.String("user_id", user.ID),
 	)
 }
 
 func (h *BookmarksHandlers) RemoveBookmark(c *gin.Context) {
 	id := c.Param("id")
-	userIDStr := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
 
-	if userIDStr == "" {
+	if user.ID == "" {
 		c.HTML(http.StatusUnauthorized, "", `<div class="text-red-500 text-sm">Not authenticated</div>`)
 		return
 	}
 
-	userID, err := uuid.Parse(userIDStr)
+	userID, err := uuid.Parse(user.ID)
 	if err != nil {
-		h.logger.Error("Invalid user ID", zap.String("user_id", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("user_id", user.ID), zap.Error(err))
 		c.HTML(http.StatusBadRequest, "", `<div class="text-red-500 text-sm">Invalid user ID</div>`)
 		return
 	}
@@ -125,7 +132,7 @@ func (h *BookmarksHandlers) RemoveBookmark(c *gin.Context) {
 
 	h.logger.Info("Removing itinerary from bookmarks",
 		zap.String("itinerary_id", id),
-		zap.String("user_id", userIDStr),
+		zap.String("user_id", user.ID),
 	)
 
 	// Remove from database
@@ -153,21 +160,21 @@ func (h *BookmarksHandlers) RemoveBookmark(c *gin.Context) {
 
 	h.logger.Info("Successfully removed from bookmarks",
 		zap.String("itinerary_id", id),
-		zap.String("user_id", userIDStr),
+		zap.String("user_id", user.ID),
 	)
 }
 
 // ListBookmarks displays the bookmarks lists page with search, filter, and pagination
 func (h *BookmarksHandlers) ListBookmarks(c *gin.Context) {
-	userIDStr := middleware.GetUserIDFromContext(c)
-	if userIDStr == "" || userIDStr == "anonymous" {
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
 		c.Redirect(http.StatusFound, "/auth/signin")
 		return
 	}
 
-	userID, err := uuid.Parse(userIDStr)
+	userID, err := uuid.Parse(user.ID)
 	if err != nil {
-		h.logger.Error("Invalid user ID", zap.String("user_id", userIDStr), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("user_id", user.ID), zap.Error(err))
 		c.HTML(http.StatusBadRequest, "", `<div class="text-red-500">Invalid user ID</div>`)
 		return
 	}

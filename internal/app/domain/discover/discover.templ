@@ -11,7 +11,9 @@ import (
 )
 
 templ DiscoverPage(recentDiscoveries []models.ChatSession, trending []models.TrendingDiscovery, featured []models.FeaturedCollection) {
-	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+	<div
+		class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900"
+	>
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
 			<!-- Header -->
 			<div class="mb-8">
@@ -46,7 +48,11 @@ templ DiscoverPage(recentDiscoveries []models.ChatSession, trending []models.Tre
 									Placeholder: "What are you looking for? (e.g., 'best ramen in Tokyo')",
 									Class:       "w-full pr-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background text-base",
 								
-									Attributes: templ.Attributes{"x-bind:disabled": "searching"},
+									Attributes: templ.Attributes{
+										"x-bind:disabled": "searching",
+										"x-model":         "searchQuery",
+										"x-ref":           "search",
+									},
 								})
 							</div>
 							<div class="flex gap-2">
@@ -162,21 +168,15 @@ templ DiscoverPage(recentDiscoveries []models.ChatSession, trending []models.Tre
 //	}
 //}
 templ CategoryCard(name string, emoji string, category string) {
-	<button
-		type="button"
-		onclick={ fillSearchInput(name) }
-		class="p-2 bg-card rounded-lg border hover:shadow-md hover:border-blue-300 transition-all group text-center"
-	>
-		<div class="text-xl mb-1 group-hover:scale-110 transition-transform">{ emoji }</div>
-		<p class="text-xs font-medium text-card-foreground">{ name }</p>
-	</button>
-}
-
-script fillSearchInput(value string) {
-	const input = document.getElementById('search-query');
-	if (input) {
-		input.value = value;
-		input.focus();
+	@button.Button(button.Props{
+		Type:  "button",
+		Class: "category-card-button p-2 bg-card rounded-lg border hover:shadow-md hover:border-blue-300 transition-all group text-center h-full w-full",
+		Attributes: templ.Attributes{
+			"@click": fmt.Sprintf("actions.fillSearch('%s')", name),
+		},
+	}) {
+		<span class="block text-xl mb-1 group-hover:scale-110 transition-transform">{ emoji }</span>
+		<span class="block text-xs font-medium text-card-foreground">{ name }</span>
 	}
 }
 

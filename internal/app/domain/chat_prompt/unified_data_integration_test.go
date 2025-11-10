@@ -18,8 +18,8 @@ import (
 	"github.com/FACorreiaa/go-templui/internal/app/domain/activities"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/hotels"
 	"github.com/FACorreiaa/go-templui/internal/app/domain/restaurants"
-	"github.com/FACorreiaa/go-templui/internal/app/middleware"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
+	"github.com/FACorreiaa/go-templui/internal/pkg/cache"
 )
 
 func TestUnifiedDataSource_Integration(t *testing.T) {
@@ -136,7 +136,7 @@ func TestUnifiedDataSource_Integration(t *testing.T) {
 		}
 
 		// Store in cache (simulating SSE data population)
-		middleware.CompleteItineraryCache.Set(sessionID, testCompleteData, time.Hour)
+		cache.CompleteItineraryCache.Set(sessionID, testCompleteData, time.Hour)
 
 		// Test Activities Handler
 		t.Run("activities handler should filter activities from unified data", func(t *testing.T) {
@@ -280,7 +280,7 @@ func TestUnifiedDataSource_DatabaseFallback(t *testing.T) {
 		require.NoError(t, err)
 
 		// Clear cache to force database lookup
-		middleware.CompleteItineraryCache.Delete(sessionID.String())
+		cache.CompleteItineraryCache.Delete(sessionID.String())
 
 		// Test activities handler with database fallback
 		w := httptest.NewRecorder()
@@ -322,10 +322,10 @@ func TestUnifiedDataSource_LegacyCacheFallback(t *testing.T) {
 		}
 
 		// Store in legacy cache only
-		middleware.ItineraryCache.Set(sessionID, legacyData, time.Hour)
+		cache.ItineraryCache.Set(sessionID, legacyData, time.Hour)
 
 		// Ensure complete cache is empty
-		middleware.CompleteItineraryCache.Delete(sessionID)
+		cache.CompleteItineraryCache.Delete(sessionID)
 
 		// Test activities handler with legacy cache fallback
 		w := httptest.NewRecorder()
@@ -336,7 +336,7 @@ func TestUnifiedDataSource_LegacyCacheFallback(t *testing.T) {
 		assert.NotNil(t, component)
 
 		// Clean up
-		middleware.ItineraryCache.Delete(sessionID)
+		cache.ItineraryCache.Delete(sessionID)
 	})
 }
 
@@ -382,7 +382,7 @@ func TestUnifiedDataSource_CacheConsistency(t *testing.T) {
 		}
 
 		// Store in complete cache
-		middleware.CompleteItineraryCache.Set(sessionID, testCompleteData, time.Hour)
+		cache.CompleteItineraryCache.Set(sessionID, testCompleteData, time.Hour)
 
 		// Test that all common access the same city data
 		handlers := []struct {
@@ -466,7 +466,7 @@ func TestUnifiedDataSource_ErrorScenarios(t *testing.T) {
 			PointsOfInterest: nil,                      // Nil POIs
 		}
 
-		middleware.CompleteItineraryCache.Set(sessionID, corruptedData, time.Hour)
+		cache.CompleteItineraryCache.Set(sessionID, corruptedData, time.Hour)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)

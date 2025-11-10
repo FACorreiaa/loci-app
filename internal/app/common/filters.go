@@ -8,8 +8,8 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/FACorreiaa/go-templui/internal/app/domain/results"
-	"github.com/FACorreiaa/go-templui/internal/app/middleware"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
+	"github.com/FACorreiaa/go-templui/internal/pkg/cache"
 )
 
 type FilterHandlers struct {
@@ -37,7 +37,7 @@ func (h *FilterHandlers) HandleFilterRestaurants(c *gin.Context) {
 		zap.String("rating", ratingStr))
 
 	// Get restaurants from cache
-	restaurantsData, found := middleware.RestaurantsCache.Get(cacheKey)
+	restaurantsData, found := cache.RestaurantsCache.Get(cacheKey)
 	if !found {
 		h.logger.Warn("No restaurants found in cache for filtering", zap.String("cacheKey", cacheKey))
 		c.HTML(200, "", results.EmptyFilterResults("restaurants"))
@@ -70,7 +70,7 @@ func (h *FilterHandlers) HandleFilterHotels(c *gin.Context) {
 		zap.String("rating", ratingStr))
 
 	// Get hotels from cache
-	hotelsData, found := middleware.HotelsCache.Get(cacheKey)
+	hotelsData, found := cache.HotelsCache.Get(cacheKey)
 	if !found {
 		h.logger.Warn("No hotels found in cache for filtering", zap.String("cacheKey", cacheKey))
 		c.HTML(200, "", results.EmptyFilterResults("hotels"))
@@ -103,7 +103,7 @@ func (h *FilterHandlers) HandleFilterActivities(c *gin.Context) {
 		zap.String("rating", ratingStr))
 
 	// Get activities from cache
-	activitiesData, found := middleware.ActivitiesCache.Get(cacheKey)
+	activitiesData, found := cache.ActivitiesCache.Get(cacheKey)
 	if !found {
 		h.logger.Warn("No activities found in cache for filtering", zap.String("cacheKey", cacheKey))
 		c.HTML(200, "", results.EmptyFilterResults("activities"))
@@ -135,7 +135,7 @@ func (h *FilterHandlers) HandleFilterItinerary(c *gin.Context) {
 		zap.String("rating", ratingStr))
 
 	// Get complete itinerary from cache
-	completeData, found := middleware.CompleteItineraryCache.Get(cacheKey)
+	completeData, found := cache.CompleteItineraryCache.Get(cacheKey)
 	if !found {
 		h.logger.Warn("No itinerary found in cache for filtering", zap.String("cacheKey", cacheKey))
 		c.HTML(200, "", results.EmptyFilterResults("itinerary"))
@@ -162,22 +162,22 @@ func (h *FilterHandlers) HandleClearFilters(c *gin.Context) {
 
 	switch domain {
 	case "restaurants":
-		if restaurantsData, found := middleware.RestaurantsCache.Get(cacheKey); found {
+		if restaurantsData, found := cache.RestaurantsCache.Get(cacheKey); found {
 			c.HTML(200, "", results.RestaurantsList(restaurantsData))
 			return
 		}
 	case "hotels":
-		if hotelsData, found := middleware.HotelsCache.Get(cacheKey); found {
+		if hotelsData, found := cache.HotelsCache.Get(cacheKey); found {
 			c.HTML(200, "", results.HotelsList(hotelsData))
 			return
 		}
 	case "activities":
-		if activitiesData, found := middleware.ActivitiesCache.Get(cacheKey); found {
+		if activitiesData, found := cache.ActivitiesCache.Get(cacheKey); found {
 			c.HTML(200, "", results.ActivitiesList(activitiesData))
 			return
 		}
 	case "itinerary":
-		if completeData, found := middleware.CompleteItineraryCache.Get(cacheKey); found {
+		if completeData, found := cache.CompleteItineraryCache.Get(cacheKey); found {
 			c.HTML(200, "", results.POIsList(completeData.PointsOfInterest))
 			return
 		}

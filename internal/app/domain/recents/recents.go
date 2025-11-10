@@ -27,15 +27,15 @@ func NewRecentsHandlers(recentsService Service, logger *zap.Logger) *RecentsHand
 
 // HandleRecentsPage renders the recents page with user's recent interactions
 func (h *RecentsHandlers) HandleRecentsPage(c *gin.Context) {
-	userID := middleware.GetUserIDFromContext(c)
-	if userID == "" {
-		c.Redirect(http.StatusSeeOther, "/auth/login")
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/login")
 		return
 	}
 
-	userUUID, err := uuid.Parse(userID)
+	userUUID, err := uuid.Parse(user.ID)
 	if err != nil {
-		h.logger.Error("Invalid user ID", zap.String("user_id", userID), zap.Error(err))
+		h.logger.Error("Invalid user ID", zap.String("user_id", user.ID), zap.Error(err))
 		c.HTML(http.StatusBadRequest, "", RecentsPage(nil, models.RecentInteractionsFilter{}))
 		return
 	}
@@ -59,7 +59,7 @@ func (h *RecentsHandlers) HandleRecentsPage(c *gin.Context) {
 	}
 
 	h.logger.Info("Fetching recent interactions",
-		zap.String("user_id", userID),
+		zap.String("user_id", user.ID),
 		zap.Int("page", page),
 		zap.Int("limit", limit),
 		zap.String("sort_by", sortBy),
@@ -70,18 +70,15 @@ func (h *RecentsHandlers) HandleRecentsPage(c *gin.Context) {
 	// Get recent interactions from service
 	response, err := h.recentsService.GetUserRecentInteractions(c.Request.Context(), userUUID, page, limit, filterOptions)
 	if err != nil {
-		h.logger.Error("Failed to get recent interactions", zap.String("user_id", userID), zap.Error(err))
+		h.logger.Error("Failed to get recent interactions", zap.String("user_id", user.ID), zap.Error(err))
 		c.HTML(http.StatusInternalServerError, "", RecentsPage(nil, *filterOptions))
 		return
 	}
 
 	h.logger.Info("Successfully retrieved recent interactions",
-		zap.String("user_id", userID),
+		zap.String("user_id", user.ID),
 		zap.Int("total_cities", response.Total),
 		zap.Int("cities_returned", len(response.Cities)))
-
-	// Get user from context for layout
-	user := getUserFromContext(c)
 
 	c.HTML(http.StatusOK, "", pages.LayoutPage(models.LayoutTempl{
 		Title:   "Recent Activity - Loci",
@@ -96,14 +93,4 @@ func (h *RecentsHandlers) HandleRecentsPage(c *gin.Context) {
 		ActiveNav: "Recents",
 		User:      user,
 	}))
-}
-
-// Helper function to get user from context
-func getUserFromContext(c *gin.Context) *models.User {
-	user := common.GetUserFromContext(c)
-	if user != nil {
-		return nil
-	}
-	return user
-
 }

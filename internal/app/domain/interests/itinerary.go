@@ -16,9 +16,10 @@ import (
 
 	"github.com/FACorreiaa/go-templui/internal/app/domain/itinerary"
 	results2 "github.com/FACorreiaa/go-templui/internal/app/domain/results"
-	middleware2 "github.com/FACorreiaa/go-templui/internal/app/middleware"
+	"github.com/FACorreiaa/go-templui/internal/app/middleware"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"github.com/FACorreiaa/go-templui/internal/app/services"
+	"github.com/FACorreiaa/go-templui/internal/pkg/cache"
 )
 
 // ChatRepository defines the minimal interface needed from chat repository
@@ -298,7 +299,13 @@ func renderChatMessage(message models.ChatMessage, isUser bool) string {
 
 // HandleItineraryPage handles the main itinerary page logic
 func (h *ItineraryHandlers) HandleItineraryPage(c *gin.Context) templ.Component {
-	userID := middleware2.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return nil
+	}
+
+	userID := user.ID
 	query := c.Query("q")
 	sessionIDParam := c.Query("sessionId")
 
@@ -318,7 +325,13 @@ func (h *ItineraryHandlers) HandleItineraryPage(c *gin.Context) templ.Component 
 
 // HandleItineraryPageSSE handles the itinerary page with SSE support
 func (h *ItineraryHandlers) HandleItineraryPageSSE(c *gin.Context) templ.Component {
-	userID := middleware2.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return nil
+	}
+
+	userID := user.ID
 	query := c.Query("q")
 	sessionIDParam := c.Query("sessionId")
 	cacheKey := c.Query("cacheKey")
@@ -342,7 +355,7 @@ func (h *ItineraryHandlers) loadItineraryBySession(sessionIDParam string) templ.
 	h.logger.Info("Attempting to load itinerary from cache", zap.String("sessionID", sessionIDParam))
 
 	// Try complete cache first
-	if completeData, found := middleware2.CompleteItineraryCache.Get(sessionIDParam); found {
+	if completeData, found := cache.CompleteItineraryCache.Get(sessionIDParam); found {
 		jsonData, err := json.MarshalIndent(completeData, "", "  ")
 		if err != nil {
 			h.logger.Error("Failed to marshal completeData to JSON", zap.Error(err))
@@ -366,7 +379,7 @@ func (h *ItineraryHandlers) loadItineraryBySession(sessionIDParam string) templ.
 	}
 
 	// Try legacy cache
-	if itineraryData, found := middleware2.ItineraryCache.Get(sessionIDParam); found {
+	if itineraryData, found := cache.ItineraryCache.Get(sessionIDParam); found {
 		h.logger.Info("Legacy itinerary found in cache. Rendering results.",
 			zap.Int("personalizedPOIs", len(itineraryData.PointsOfInterest)))
 
@@ -389,7 +402,7 @@ func (h *ItineraryHandlers) loadItineraryBySessionSSE(sessionIDParam string, cac
 
 	// Try complete cache first with cacheKey (for reusable cache hits)
 	if cacheKey != "" {
-		if completeData, found := middleware2.CompleteItineraryCache.Get(cacheKey); found {
+		if completeData, found := cache.CompleteItineraryCache.Get(cacheKey); found {
 			h.logger.Info("Complete itinerary found in cache. Rendering SSE results with data.",
 				zap.String("city", completeData.GeneralCityData.City),
 				zap.Int("generalPOIs", len(completeData.PointsOfInterest)),
@@ -464,7 +477,7 @@ func (h *ItineraryHandlers) HandleItinerarySSE(c *gin.Context) {
 // monitorItineraryUpdates monitors for itinerary updates and sends SSE events
 func (h *ItineraryHandlers) monitorItineraryUpdates(sessionID string, updateChan chan<- models.ItinerarySSEEvent) {
 	// Check for cached data first
-	if completeData, found := middleware2.CompleteItineraryCache.Get(sessionID); found {
+	if completeData, found := cache.CompleteItineraryCache.Get(sessionID); found {
 		h.logger.Info("Complete data found in cache, sending completion immediately",
 			zap.String("sessionId", sessionID))
 
@@ -500,7 +513,7 @@ func (h *ItineraryHandlers) monitorItineraryUpdates(sessionID string, updateChan
 	}
 
 	// Legacy cache check
-	if itineraryData, found := middleware2.ItineraryCache.Get(sessionID); found {
+	if itineraryData, found := cache.ItineraryCache.Get(sessionID); found {
 		h.logger.Info("Legacy data found in cache, sending completion immediately",
 			zap.String("sessionId", sessionID))
 
@@ -524,7 +537,7 @@ func (h *ItineraryHandlers) monitorItineraryUpdates(sessionID string, updateChan
 		select {
 		case <-ticker.C:
 			// Check cache again
-			if completeData, found := middleware2.CompleteItineraryCache.Get(sessionID); found {
+			if completeData, found := cache.CompleteItineraryCache.Get(sessionID); found {
 				h.logger.Info("Complete data appeared in cache",
 					zap.String("sessionId", sessionID))
 
@@ -540,7 +553,7 @@ func (h *ItineraryHandlers) monitorItineraryUpdates(sessionID string, updateChan
 				return
 			}
 
-			if itineraryData, found := middleware2.ItineraryCache.Get(sessionID); found {
+			if itineraryData, found := cache.ItineraryCache.Get(sessionID); found {
 				h.logger.Info("Legacy data appeared in cache",
 					zap.String("sessionId", sessionID))
 

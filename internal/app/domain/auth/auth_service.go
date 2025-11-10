@@ -15,6 +15,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/FACorreiaa/go-templui/internal/app/middleware"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"github.com/FACorreiaa/go-templui/internal/pkg/config"
 )
@@ -385,8 +386,8 @@ func NewDummySubsRepo() models.SubscriptionRepository { return &dummySubsRepo{} 
 // --- Token and utility methods implementation ---
 
 func (s *AuthServiceImpl) GenerateToken(userID, email, username string) (string, error) {
-	jwtService := NewJWTService()
-	jwtCfg := JWTConfig{
+	jwtService := middleware.NewJWTService()
+	jwtCfg := middleware.JWTConfig{
 		SecretKey:       s.getSecretKey(),
 		TokenExpiration: s.getAccessTTL(),
 		Logger:          s.logger,
@@ -396,8 +397,8 @@ func (s *AuthServiceImpl) GenerateToken(userID, email, username string) (string,
 }
 
 func (s *AuthServiceImpl) GenerateTokenWithExpiration(userID, email, username string, expiration time.Duration) (string, error) {
-	jwtService := NewJWTService()
-	jwtCfg := JWTConfig{
+	jwtService := middleware.NewJWTService()
+	jwtCfg := middleware.JWTConfig{
 		SecretKey:       s.getSecretKey(),
 		TokenExpiration: expiration,
 		Logger:          s.logger,
@@ -407,8 +408,8 @@ func (s *AuthServiceImpl) GenerateTokenWithExpiration(userID, email, username st
 }
 
 func (s *AuthServiceImpl) ValidateToken(tokenString string) (*jwt.MapClaims, error) {
-	jwtService := NewJWTService()
-	jwtCfg := JWTConfig{
+	jwtService := middleware.NewJWTService()
+	jwtCfg := middleware.JWTConfig{
 		SecretKey:       s.getSecretKey(),
 		TokenExpiration: s.getAccessTTL(),
 		Logger:          s.logger,
@@ -434,11 +435,11 @@ func (s *AuthServiceImpl) ValidateToken(tokenString string) (*jwt.MapClaims, err
 }
 
 func (s *AuthServiceImpl) HashPassword(password string) (string, error) {
-	jwtService := NewJWTService()
+	jwtService := middleware.NewJWTService()
 	return jwtService.HashPassword(password)
 }
 
 func (s *AuthServiceImpl) CheckPassword(hashedPassword, password string) bool {
-	jwtService := NewJWTService()
+	jwtService := middleware.NewJWTService()
 	return jwtService.CheckPassword(hashedPassword, password)
 }

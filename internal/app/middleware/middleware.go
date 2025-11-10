@@ -9,7 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/FACorreiaa/go-templui/internal/app/domain/auth"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 )
 
@@ -65,8 +64,8 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		// Create JWT service and validate token
-		jwtService := auth.NewJWTService()
-		config := auth.JWTConfig{
+		jwtService := NewJWTService()
+		config := JWTConfig{
 			SecretKey:       jwtSecret,
 			TokenExpiration: time.Hour * 24,
 			Logger:          nil, // Logger will be injected elsewhere
@@ -173,8 +172,8 @@ func OptionalAuthMiddleware() gin.HandlerFunc {
 		}
 
 		// Create JWT service and validate token
-		jwtService := auth.NewJWTService()
-		config := auth.JWTConfig{
+		jwtService := NewJWTService()
+		config := JWTConfig{
 			SecretKey:       jwtSecret,
 			TokenExpiration: time.Hour * 24,
 			Logger:          nil, // Logger will be injected elsewhere
@@ -200,16 +199,6 @@ func OptionalAuthMiddleware() gin.HandlerFunc {
 
 		c.Next()
 	}
-}
-
-// GetUserIDFromContext extracts just the user ID from context
-func GetUserIDFromContext(c *gin.Context) string {
-	if userID, exists := c.Get("user_id"); exists {
-		if idStr, ok := userID.(string); ok {
-			return idStr
-		}
-	}
-	return "anonymous"
 }
 
 // CreateContextWithUser creates a context.Context with user information for LLM services

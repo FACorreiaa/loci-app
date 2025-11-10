@@ -82,7 +82,7 @@ func (h *DiscoverHandlers) ShowDiscoverPage(c *gin.Context) {
 		h.Logger.Error("Failed to get featured collections", zap.Error(err))
 	}
 
-	user := common.GetUserFromContext(c)
+	user := middleware.GetUserFromContext(c)
 
 	if user != nil {
 		userUUID, err := uuid.Parse(user.ID)
@@ -97,7 +97,7 @@ func (h *DiscoverHandlers) ShowDiscoverPage(c *gin.Context) {
 	}
 
 	content := DiscoverPage(recentDiscoveries, trending, featured)
-	h.RenderPage(c, "Discover - Loci", "Discover", content)
+	h.RenderPage(c, "Discover - Loci", "Discover", content, user)
 }
 func (h *DiscoverHandlers) ShowDetail(c *gin.Context) templ.Component {
 	sessionID := c.Param("sessionId")
@@ -225,15 +225,20 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 	ctx := c.Request.Context()
 	query := strings.TrimSpace(c.PostForm("query"))
 	location := strings.TrimSpace(c.PostForm("location"))
-	user := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 
 	h.logger.Info("Discovery search requested",
 		zap.String("query", query),
 		zap.String("location", location),
-		zap.String("user", user),
+		zap.String("user", user.Email),
 		zap.String("ip", c.ClientIP()),
 	)
-	h.logger.Info("User from context in Search", zap.String("user", user))
+	h.logger.Info("User from context in Search", zap.String("user", userIDStr))
 
 	if query == "" {
 		h.logger.Warn("Empty search query")
@@ -256,8 +261,8 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 
 	// Get user ID for logging
 	userUUID := uuid.Nil
-	if user != "" && user != "anonymous" {
-		if parsedUserID, err := uuid.Parse(user); err == nil {
+	if userIDStr != "" {
+		if parsedUserID, err := uuid.Parse(userIDStr); err == nil {
 			userUUID = parsedUserID
 		}
 	}
@@ -362,7 +367,7 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 		zap.String("query", query),
 		zap.String("location", location),
 		zap.Int("results_count", len(searchResponse.Results)),
-		zap.String("user", user),
+		zap.String("user", userIDStr),
 	)
 
 	// Convert handler DiscoverResult to models.POIDetailedInfo for database storage
@@ -421,8 +426,8 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 	}
 
 	// Save discover search as chat session for authenticated users
-	if user != "" && user != "anonymous" {
-		userID, err := uuid.Parse(user)
+	if userIDStr != "" {
+		userID, err := uuid.Parse(userIDStr)
 		if err == nil {
 			sessionID := uuid.New()
 			now := time.Now()
@@ -475,7 +480,7 @@ func (h *DiscoverHandlers) Search(c *gin.Context) {
 					zap.String("location", location))
 			}
 		} else {
-			h.logger.Error("Failed to parse user ID from context", zap.Any("error", err), zap.String("user", user))
+			h.logger.Error("Failed to parse user ID from context", zap.Any("error", err), zap.String("user", userIDStr))
 		}
 	} else {
 		h.logger.Info("User is anonymous, not saving session")
@@ -511,11 +516,16 @@ func (h *DiscoverHandlers) GetRecentDiscoveries(c *gin.Context) {
 
 func (h *DiscoverHandlers) GetCategory(c *gin.Context) {
 	category := c.Param("category")
-	user := middleware.GetUserIDFromContext(c)
+	user := middleware.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+	userIDStr := user.ID
 
 	h.logger.Info("Category search requested",
 		zap.String("category", category),
-		zap.String("user", user),
+		zap.String("user", userIDStr),
 		zap.String("ip", c.ClientIP()),
 	)
 
@@ -525,7 +535,7 @@ func (h *DiscoverHandlers) GetCategory(c *gin.Context) {
 	h.logger.Info("Category search completed",
 		zap.String("category", category),
 		zap.Int("results_count", len(results)),
-		zap.String("user", user),
+		zap.String("user", userIDStr),
 	)
 
 	// Return category results HTML

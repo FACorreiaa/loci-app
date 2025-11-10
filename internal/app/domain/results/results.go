@@ -8,8 +8,9 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	middleware2 "github.com/FACorreiaa/go-templui/internal/app/middleware"
+	m "github.com/FACorreiaa/go-templui/internal/app/middleware"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
+	"github.com/FACorreiaa/go-templui/internal/pkg/cache"
 	"github.com/FACorreiaa/go-templui/internal/pkg/config"
 )
 
@@ -31,9 +32,15 @@ func NewResultsHandlers(logger *zap.Logger) *ResultsHandlers {
 
 // HandleRestaurantSearch processes restaurant search requests and returns results
 func (h *ResultsHandlers) HandleRestaurantSearch(c *gin.Context) {
+	user := m.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+
 	h.logger.Info("Restaurant search request received",
 		zap.String("ip", c.ClientIP()),
-		zap.String("user", middleware2.GetUserIDFromContext(c)),
+		zap.String("user", user.ID),
 	)
 
 	query := c.PostForm("query")
@@ -58,14 +65,13 @@ func (h *ResultsHandlers) HandleRestaurantSearch(c *gin.Context) {
 	sessionID := uuid.New().String()
 
 	// Cache the results for later access via direct route
-	middleware2.RestaurantsCache.Set(sessionID, restaurants)
+	cache.RestaurantsCache.Set(sessionID, restaurants)
 
 	h.logger.Info("Cached restaurant results",
 		zap.String("sessionID", sessionID),
 		zap.Int("count", len(restaurants)))
 
-	// Get user favorites (if authenticated)
-	userID := middleware2.GetUserIDFromContext(c)
+	userID := user.ID
 
 	fmt.Printf("User ID: %s\n", userID)
 	favorites := []string{}
@@ -87,9 +93,15 @@ func (h *ResultsHandlers) HandleRestaurantSearch(c *gin.Context) {
 
 // HandleActivitySearch processes activity search requests and returns results
 func (h *ResultsHandlers) HandleActivitySearch(c *gin.Context) {
+	user := m.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+
 	h.logger.Info("Activity search request received",
 		zap.String("ip", c.ClientIP()),
-		zap.String("user", middleware2.GetUserIDFromContext(c)),
+		zap.String("user", user.ID),
 	)
 
 	query := c.PostForm("query")
@@ -114,7 +126,7 @@ func (h *ResultsHandlers) HandleActivitySearch(c *gin.Context) {
 	sessionID := uuid.New().String()
 
 	// Cache the results for later access via direct route
-	middleware2.ActivitiesCache.Set(sessionID, activities)
+	cache.ActivitiesCache.Set(sessionID, activities)
 
 	h.logger.Info("Cached activity results",
 		zap.String("sessionID", sessionID),
@@ -138,9 +150,15 @@ func (h *ResultsHandlers) HandleActivitySearch(c *gin.Context) {
 
 // HandleHotelSearch processes hotel search requests and returns results
 func (h *ResultsHandlers) HandleHotelSearch(c *gin.Context) {
+	user := m.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+
 	h.logger.Info("Hotel search request received",
 		zap.String("ip", c.ClientIP()),
-		zap.String("user", middleware2.GetUserIDFromContext(c)),
+		zap.String("user", user.ID),
 	)
 
 	query := c.PostForm("query")
@@ -165,7 +183,7 @@ func (h *ResultsHandlers) HandleHotelSearch(c *gin.Context) {
 	sessionID := uuid.New().String()
 
 	// Cache the results for later access via direct route
-	middleware2.HotelsCache.Set(sessionID, hotels)
+	cache.HotelsCache.Set(sessionID, hotels)
 
 	h.logger.Info("Cached hotel results",
 		zap.String("sessionID", sessionID),
@@ -194,9 +212,15 @@ func (h *ResultsHandlers) HandleHotelSearch(c *gin.Context) {
 
 // HandleItinerarySearch processes itinerary requests and returns results
 func (h *ResultsHandlers) HandleItinerarySearch(c *gin.Context) {
+	user := m.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+
 	h.logger.Info("Itinerary search request received",
 		zap.String("ip", c.ClientIP()),
-		zap.String("user", middleware2.GetUserIDFromContext(c)),
+		zap.String("user", user.ID),
 	)
 
 	query := c.PostForm("query")
@@ -335,9 +359,15 @@ func (h *ResultsHandlers) fetchItineraryResults(query, city, intent string) (mod
 
 // HandleItineraryStreamSearch serves the streaming itinerary results page
 func (h *ResultsHandlers) HandleItineraryStreamSearch(c *gin.Context) {
+	user := m.GetUserFromContext(c)
+	if user == nil {
+		c.Redirect(http.StatusFound, "/auth/signin")
+		return
+	}
+
 	h.logger.Info("Itinerary stream search request received",
 		zap.String("ip", c.ClientIP()),
-		zap.String("user", middleware2.GetUserIDFromContext(c)),
+		zap.String("user", user.ID),
 	)
 
 	sessionID := c.Query("session_id")
