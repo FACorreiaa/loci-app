@@ -12,6 +12,14 @@ import (
 
 templ DiscoverPage(recentDiscoveries []models.ChatSession, trending []models.TrendingDiscovery, featured []models.FeaturedCollection) {
 	<div
+		x-data="{
+                					searchQuery: '',
+                					searching: false,
+                					fillSearch(name) {
+                                      this.searchQuery = name;
+                                      this.$refs.searchInput.focus();
+                                    }
+                				}"
 		class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900"
 	>
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
@@ -35,7 +43,6 @@ templ DiscoverPage(recentDiscoveries []models.ChatSession, trending []models.Tre
 						hx-target="#discover-results"
 						hx-on::after-request="if(event.detail.successful) { htmx.ajax('GET', '/discover/recent', {target:'#recent-discoveries-section', swap:'innerHTML'}); }"
 						class="relative"
-						x-data="{ searching: false }"
 						@htmx:before-request="searching = true"
 						@htmx:after-request="searching = false"
 					>
@@ -51,7 +58,7 @@ templ DiscoverPage(recentDiscoveries []models.ChatSession, trending []models.Tre
 									Attributes: templ.Attributes{
 										"x-bind:disabled": "searching",
 										"x-model":         "searchQuery",
-										"x-ref":           "search",
+										"x-ref":           "searchInput",
 									},
 								})
 							</div>
@@ -172,7 +179,7 @@ templ CategoryCard(name string, emoji string, category string) {
 		Type:  "button",
 		Class: "category-card-button p-2 bg-card rounded-lg border hover:shadow-md hover:border-blue-300 transition-all group text-center h-full w-full",
 		Attributes: templ.Attributes{
-			"@click": fmt.Sprintf("actions.fillSearch('%s')", name),
+			"@click": "fillSearch('" + name + "')",
 		},
 	}) {
 		<span class="block text-xl mb-1 group-hover:scale-110 transition-transform">{ emoji }</span>

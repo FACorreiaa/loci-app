@@ -50,7 +50,7 @@ lint: ## Runs linter for .go files
 
 # Run templ generation in watch mode
 templ:
-	templ generate --watch --proxy="http://localhost:8090" --open-browser=false
+	templ fmt . && templ generate --watch --proxy="http://localhost:8090" --open-browser=false
 
 t-fmt:
 	templ fmt .
