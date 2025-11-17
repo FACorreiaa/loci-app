@@ -2,7 +2,6 @@ package restaurants
 
 import (
 	"context"
-	"strings"
 
 	"go.uber.org/zap"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	"github.com/FACorreiaa/go-templui/internal/app/common"
 	llmchat "github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
 	results2 "github.com/FACorreiaa/go-templui/internal/app/domain/results"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
@@ -159,7 +159,7 @@ func (h *RestaurantsHandlers) loadRestaurantsFromDatabase(sessionIDParam string)
 		zap.Int("totalPOIs", len(completeData.PointsOfInterest)))
 
 	// Filter POIs for restaurants and render (IDENTICAL to itinerary results pattern)
-	restaurantPOIs := filterRestaurants(completeData.PointsOfInterest)
+	restaurantPOIs := common.FilterPOIsForRestaurants(completeData.PointsOfInterest)
 	return results2.RestaurantsResults(
 		completeData.GeneralCityData,
 		restaurantPOIs,
@@ -185,102 +185,6 @@ func (h *RestaurantsHandlers) HandleRestaurantsPageSSE(c *gin.Context) templ.Com
 
 	// Load restaurants data for session with SSE support
 	return h.loadRestaurantsBySession(sessionIDParam, cacheKey)
-}
-
-// filterRestaurants filters POIs to show only dining-related categories
-func filterRestaurants(allPOIs []models.POIDetailedInfo) []models.RestaurantDetailedInfo {
-	var restaurantPOIs []models.RestaurantDetailedInfo
-	restaurantCategories := map[string]bool{
-		"restaurant": true,
-		"dining":     true,
-		"food":       true,
-		"cafe":       true,
-		"coffee":     true,
-		"bar":        true,
-		"pub":        true,
-		"bistro":     true,
-		"brasserie":  true,
-		"pizzeria":   true,
-		"bakery":     true,
-		"market":     true,
-		"foodcourt":  true,
-		"fastfood":   true,
-		"takeaway":   true,
-	}
-
-	for _, poi := range allPOIs {
-		if restaurantCategories[strings.ToLower(poi.Category)] {
-			restaurantPOIs = append(restaurantPOIs, convertPOIToRestaurant(poi))
-		}
-	}
-
-	return restaurantPOIs
-}
-
-// convertPOIToRestaurant converts a POIDetailedInfo to RestaurantDetailedInfo
-func convertPOIToRestaurant(poi models.POIDetailedInfo) models.RestaurantDetailedInfo {
-	var address *string
-	if poi.Address != "" {
-		address = &poi.Address
-	}
-
-	var website *string
-	if poi.Website != "" {
-		website = &poi.Website
-	}
-
-	var phoneNumber *string
-	if poi.PhoneNumber != "" {
-		phoneNumber = &poi.PhoneNumber
-	}
-
-	var priceLevel *string
-	if poi.PriceLevel != "" {
-		priceLevel = &poi.PriceLevel
-	}
-
-	var cuisineType *string
-	if poi.CuisineType != "" {
-		cuisineType = &poi.CuisineType
-	}
-
-	var openingHours *string
-	if len(poi.OpeningHours) > 0 {
-		// Convert map to string representation
-		var hoursBuilder strings.Builder
-		for day, hours := range poi.OpeningHours {
-			if hoursBuilder.Len() > 0 {
-				hoursBuilder.WriteString(", ")
-			}
-			hoursBuilder.WriteString(day)
-			hoursBuilder.WriteString(": ")
-			hoursBuilder.WriteString(hours)
-		}
-		if hoursBuilder.Len() > 0 {
-			hoursStr := hoursBuilder.String()
-			openingHours = &hoursStr
-		}
-	}
-
-	return models.RestaurantDetailedInfo{
-		ID:               poi.ID,
-		City:             poi.City,
-		Name:             poi.Name,
-		Latitude:         poi.Latitude,
-		Longitude:        poi.Longitude,
-		Category:         poi.Category,
-		Description:      poi.Description,
-		Address:          address,
-		Website:          website,
-		PhoneNumber:      phoneNumber,
-		OpeningHours:     openingHours,
-		PriceLevel:       priceLevel,
-		CuisineType:      cuisineType,
-		Tags:             poi.Tags,
-		Images:           poi.Images,
-		Rating:           poi.Rating,
-		LlmInteractionID: poi.LlmInteractionID,
-	}
 }
 
 // loadCityDataFromDatabase loads city data from database by sessionID

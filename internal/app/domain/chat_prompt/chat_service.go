@@ -153,6 +153,33 @@ func NewLlmInteractiontService(interestRepo interests.Repository,
 	return service
 }
 
+func normalizePreferenceSignature(primary, fallback string) string {
+	normalized := strings.TrimSpace(primary)
+	if normalized == "" {
+		normalized = strings.TrimSpace(fallback)
+	}
+	if normalized == "" {
+		return "default-preferences"
+	}
+	normalized = strings.Join(strings.Fields(normalized), " ")
+	return strings.ToLower(normalized)
+}
+
+func (l *ServiceImpl) buildCacheKey(cityName string, domain models.DomainType, primaryPreferences, fallback string) string {
+	if l == nil {
+		return ""
+	}
+	cityComponent := strings.ToLower(strings.TrimSpace(cityName))
+	preferenceSignature := normalizePreferenceSignature(primaryPreferences, fallback)
+
+	builder := cache2.NewCacheKeyBuilder(l.logger).
+		AddCity(cityComponent).
+		AddDomain(string(domain)).
+		AddPreferences(preferenceSignature)
+
+	return builder.BuildOrDefault()
+}
+
 // getPersonalizedPOIWithSemanticContext creates an enhanced prompt with semantic POI context
 func (l *ServiceImpl) getPersonalizedPOIWithSemanticContext(interestNames []string, cityName, tagsPromptPart, userPrefs string, semanticPOIs []models.POIDetailedInfo) string {
 	prompt := fmt.Sprintf(`
@@ -305,6 +332,34 @@ func (l *ServiceImpl) HandleCityData(ctx context.Context, cityData models.Genera
 	} else {
 		cityID = c.ID
 	}
+	return cityID, nil
+}
+
+func (l *ServiceImpl) ensureCityRecord(ctx context.Context, cityName string) (uuid.UUID, error) {
+	cityName = strings.TrimSpace(cityName)
+	if cityName == "" {
+		return uuid.Nil, fmt.Errorf("city name is required to ensure record exists")
+	}
+
+	if city, err := l.cityRepo.FindCityByNameAndCountry(ctx, cityName, ""); err == nil && city != nil {
+		return city.ID, nil
+	} else if err != nil {
+		l.logger.Warn("Failed to lookup city before ensuring record", zap.String("city", cityName), zap.Error(err))
+	}
+
+	cityDetail := models.CityDetail{
+		Name:    cityName,
+		Country: "Unknown",
+	}
+
+	cityID, err := l.cityRepo.SaveCity(ctx, cityDetail)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to create placeholder city record: %w", err)
+	}
+
+	l.logger.Info("Created placeholder city entry for chat context",
+		zap.String("city", cityName),
+		zap.String("city_id", cityID.String()))
 	return cityID, nil
 }
 
@@ -1256,7 +1311,14 @@ func (l *ServiceImpl) generateSemanticPOIRecommendations(ctx context.Context, us
 
 	// If hybrid search failed or no location available, use semantic-only search
 	if len(pois) == 0 {
-		semanticPOIs, err := l.poiRepo.FindSimilarPOIsByCity(ctx, queryEmbedding, cityID, 10)
+		var semanticPOIs []models.POIDetailedInfo
+		var err error
+		if cityID != uuid.Nil {
+			semanticPOIs, err = l.poiRepo.FindSimilarPOIsByCity(ctx, queryEmbedding, cityID, 10)
+		} else {
+			l.logger.Warn("City context missing for semantic search, falling back to global POI recommendations")
+			semanticPOIs, err = l.poiRepo.FindSimilarPOIs(ctx, queryEmbedding, 10)
+		}
 		if err != nil {
 			l.logger.Error("Failed to find similar POIs", zap.Any("error", err))
 			span.RecordError(err)
@@ -1573,22 +1635,47 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 	l.sendEvent(ctx, eventCh, models.StreamEvent{Type: "session_validated", Data: map[string]string{"status": "active"}}, 3)
 
 	// --- 2. Fetch City ID ---
-	cityData, err := l.cityRepo.FindCityByNameAndCountry(ctx, session.SessionContext.CityName, "")
-	if err != nil || cityData == nil {
-		// If the city is not found, try a fuzzy match
-		cityData, err = l.cityRepo.FindCityByFuzzyName(ctx, session.SessionContext.CityName)
+	cityID := uuid.Nil
+	cityName := strings.TrimSpace(session.SessionContext.CityName)
+	if cityName != "" {
+		cityData, err := l.cityRepo.FindCityByNameAndCountry(ctx, cityName, "")
 		if err != nil || cityData == nil {
-			if err == nil {
-				err = fmt.Errorf("city '%s' not found for session %s %w", session.SessionContext.CityName, sessionID, err)
-			} else {
-				err = fmt.Errorf("failed to find city '%s' for session %s: %w", session.SessionContext.CityName, sessionID, err)
+			// If the city is not found, try a fuzzy match
+			cityData, err = l.cityRepo.FindCityByFuzzyName(ctx, cityName)
+			if err != nil || cityData == nil {
+				l.logger.Warn("City context missing for session, continuing without DB match",
+					zap.String("sessionID", sessionID.String()),
+					zap.String("city", cityName),
+					zap.Error(err))
+				l.sendEvent(ctx, eventCh, models.StreamEvent{
+					Type: models.EventTypeProgress,
+					Data: map[string]interface{}{
+						"status":  "context_warning",
+						"message": fmt.Sprintf("City '%s' is not in our database yet, continuing with itinerary context only.", cityName),
+					},
+				}, 3)
 			}
-			l.sendEvent(ctx, eventCh, models.StreamEvent{Type: models.EventTypeError, Error: err.Error(), IsFinal: true}, 3)
-			return err
 		}
+		if cityData != nil {
+			cityID = cityData.ID
+			l.sendEvent(ctx, eventCh, models.StreamEvent{Type: models.EventTypeProgress, Data: map[string]interface{}{"status": "context_loaded", "city_id": cityID.String()}}, 3)
+		} else {
+			if ensuredCityID, ensureErr := l.ensureCityRecord(ctx, cityName); ensureErr == nil {
+				cityID = ensuredCityID
+				l.sendEvent(ctx, eventCh, models.StreamEvent{
+					Type: models.EventTypeProgress,
+					Data: map[string]interface{}{"status": "context_loaded", "city_id": cityID.String(), "source": "placeholder"}},
+					3)
+			} else {
+				l.logger.Warn("Failed to ensure placeholder city record",
+					zap.String("sessionID", sessionID.String()),
+					zap.String("city", cityName),
+					zap.Error(ensureErr))
+			}
+		}
+	} else {
+		l.logger.Warn("Session context missing city name; skipping DB lookup", zap.String("sessionID", sessionID.String()))
 	}
-	cityID := cityData.ID
-	l.sendEvent(ctx, eventCh, models.StreamEvent{Type: models.EventTypeProgress, Data: map[string]interface{}{"status": "context_loaded", "city_id": cityID.String()}}, 3)
 
 	// --- 3. Add User Message to History ---
 	userMessage := models.ConversationMessage{
@@ -1645,12 +1732,13 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 	case models.IntentAddPOI:
 		l.sendEvent(ctx, eventCh, models.StreamEvent{Type: models.EventTypeProgress, Data: "Processing: Adding Point of Interest with semantic enhancement..."}, 3)
 		var genErr error
-		finalResponseMessage, genErr = l.handleSemanticAddPOIStreamed(ctx, message, session, semanticPOIs, userLocation, cityID, eventCh)
+		var added bool
+		finalResponseMessage, added, genErr = l.handleSemanticAddPOIStreamed(ctx, message, session, semanticPOIs, userLocation, cityID, eventCh)
 		if genErr != nil {
 			finalResponseMessage = "I had trouble understanding your request. Could you please specify which POI you'd like to add?"
 			assistantMessageType = models.TypeError
 		} else {
-			itineraryModifiedByThisTurn = true
+			itineraryModifiedByThisTurn = added
 		}
 
 	case models.IntentRemovePOI:
@@ -1671,7 +1759,7 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 			newPOIName := matches[2]
 			for i, p := range session.CurrentItinerary.AIItineraryResponse.PointsOfInterest {
 				if strings.Contains(strings.ToLower(p.Name), oldPOI) {
-					newPOI, err := l.generatePOIDataStream(ctx, newPOIName, session.SessionContext.CityName, userLocation, session.UserID, cityID, eventCh)
+					newPOI, err := l.generatePOIDataStream(ctx, newPOIName, session.SessionContext.CityName, userLocation, session.UserID, session.ProfileID, cityID, session.ID, eventCh)
 					if err != nil {
 						finalResponseMessage = fmt.Sprintf("Could not replace %s with %s due to an error: %v", oldPOI, newPOIName, err)
 						assistantMessageType = models.TypeError
@@ -1766,15 +1854,26 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 	}
 
 	// --- 7. Send Final Itinerary and Completion Event ---
-	l.sendEvent(ctx, eventCh, models.StreamEvent{
-		Type:      models.EventTypeItinerary,
-		Data:      session.CurrentItinerary,
-		Message:   finalResponseMessage,
-		Timestamp: time.Now(),
-	}, 3)
+	if itineraryModifiedByThisTurn {
+		l.sendEvent(ctx, eventCh, models.StreamEvent{
+			Type:      models.EventTypeItinerary,
+			Data:      session.CurrentItinerary,
+			Message:   finalResponseMessage,
+			Timestamp: time.Now(),
+		}, 3)
+	} else {
+		l.sendEvent(ctx, eventCh, models.StreamEvent{
+			Type:      models.EventTypeMessage,
+			Message:   finalResponseMessage,
+			Timestamp: time.Now(),
+		}, 3)
+	}
 
 	// Cache the itinerary data for immediate access
-	if session.CurrentItinerary != nil && session.CurrentItinerary.AIItineraryResponse.ItineraryName != "" {
+	if itineraryModifiedByThisTurn && session.CurrentItinerary != nil && session.CurrentItinerary.AIItineraryResponse.ItineraryName != "" {
+		if session.CurrentItinerary.GeneralCityData.City == "" {
+			session.CurrentItinerary.GeneralCityData.City = session.SessionContext.CityName
+		}
 		l.logger.Info("Caching itinerary data",
 			zap.String("sessionID", sessionID.String()),
 			zap.String("itineraryName", session.CurrentItinerary.AIItineraryResponse.ItineraryName),
@@ -1956,8 +2055,10 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 
 // generatePOIDataStream queries the LLM for POI details and streams updates
 func (l *ServiceImpl) generatePOIDataStream(
-	ctx context.Context, poiName, cityName string,
-	userLocation *models.UserLocation, userID, cityID uuid.UUID,
+	ctx context.Context,
+	poiName, cityName string,
+	userLocation *models.UserLocation,
+	userID, profileID, cityID, sessionID uuid.UUID,
 	eventCh chan<- models.StreamEvent,
 ) (models.POIDetailedInfo, error) {
 	ctx, span := otel.Tracer("LlmInteractionService").Start(ctx, "generatePOIDataStream",
@@ -1969,10 +2070,13 @@ func (l *ServiceImpl) generatePOIDataStream(
 	startTime := time.Now()
 
 	// Prepare logging configuration
-	sessionID := uuid.New() // Generate a session ID for this POI generation
+	logSessionID := sessionID
+	if logSessionID == uuid.Nil {
+		logSessionID = uuid.New()
+	}
 	logConfig := LoggingConfig{
 		UserID:      userID,
-		SessionID:   sessionID,
+		SessionID:   logSessionID,
 		Intent:      "add_poi",
 		Prompt:      prompt,
 		CityName:    cityName,
@@ -2010,12 +2114,6 @@ func (l *ServiceImpl) generatePOIDataStream(
 	var responseTextBuilder strings.Builder
 	for chunk := range l.streamProcessor.TextPartIterator(ctx, iter, eventCh, fmt.Sprintf("POI '%s'", poiName)) {
 		responseTextBuilder.WriteString(chunk)
-		l.sendEvent(ctx, eventCh, models.StreamEvent{
-			Type:      "poi_detail_chunk",
-			Data:      map[string]string{"poi_name": poiName, "chunk": chunk},
-			Timestamp: time.Now(),
-			EventID:   uuid.New().String(),
-		}, 3)
 	}
 
 	if ctx.Err() != nil {
@@ -2052,19 +2150,58 @@ func (l *ServiceImpl) generatePOIDataStream(
 		return models.POIDetailedInfo{Name: poiName, DescriptionPOI: "Details not found."}, fmt.Errorf("empty response for POI details '%s'", poiName)
 	}
 
-	// Note: We still need llmInteractionID for backward compatibility with SaveSinglePOI
-	// The new logger saves to llm_interactions table, but we need the ID for poi_detailed table
-	llmInteractionID := uuid.New() // Generate a new ID to link POI to this LLM interaction
+	// Persist interaction to obtain an ID for downstream POI saves
+	interaction := models.LlmInteraction{
+		SessionID:    sessionID,
+		UserID:       userID,
+		ProfileID:    profileID,
+		CityName:     cityName,
+		Prompt:       prompt,
+		ResponseText: fullText,
+		ModelUsed:    "gemini-2.0-flash",
+		Provider:     "google",
+		Intent:       "add_poi",
+		Temperature:  config.Temperature,
+		IsStreaming:  true,
+		LatencyMs:    int(time.Since(startTime).Milliseconds()),
+		Timestamp:    startTime,
+	}
+	llmInteractionID, err := l.llmInteractionRepo.SaveInteraction(ctx, interaction)
+	if err != nil {
+		l.logger.Warn("Failed to record LLM interaction for POI generation", zap.Any("error", err))
+		span.RecordError(err)
+		l.sendEvent(ctx, eventCh, models.StreamEvent{
+			Type:      models.EventTypeError,
+			Error:     fmt.Sprintf("Could not record AI interaction for '%s': %v", poiName, err),
+			Timestamp: time.Now(),
+			EventID:   uuid.New().String(),
+		}, 3)
+		return models.POIDetailedInfo{}, fmt.Errorf("failed to record LLM interaction: %w", err)
+	}
 
 	// Parse response
+	lowerPoiName := strings.ToLower(poiName)
 	cleanJSON := cleanJSONResponse(fullText)
 	var poiData models.POIDetailedInfo
 	if err := json.Unmarshal([]byte(cleanJSON), &poiData); err != nil || poiData.Name == "" {
 		l.logger.Warn("Invalid POI data from LLM", zap.String("response", fullText), zap.Any("error", err))
+		l.sendEvent(ctx, eventCh, models.StreamEvent{
+			Type:      models.EventTypeMessage,
+			Message:   fmt.Sprintf("I could not retrieve structured details for %s, so I am adding it with minimal information.", poiName),
+			Timestamp: time.Now(),
+			EventID:   uuid.New().String(),
+		}, 3)
+		defaultCategory := "Attraction"
+		if strings.Contains(lowerPoiName, "hotel") {
+			defaultCategory = "Hotel"
+		} else if strings.Contains(lowerPoiName, "restaurant") || strings.Contains(lowerPoiName, "cafe") {
+			defaultCategory = "Restaurant"
+		}
+
 		poiData = models.POIDetailedInfo{
 			ID:             uuid.New(),
 			Name:           poiName,
-			Category:       "Attraction",
+			Category:       defaultCategory,
 			DescriptionPOI: fmt.Sprintf("Added %s based on user request, but detailed data not available.", poiName),
 		}
 	}
@@ -2073,6 +2210,7 @@ func (l *ServiceImpl) generatePOIDataStream(
 	}
 	poiData.LlmInteractionID = llmInteractionID
 	poiData.City = cityName
+	poiData.CityID = cityID
 
 	// Save POI to database
 	dbPoiID, err := l.llmInteractionRepo.SaveSinglePOI(ctx, poiData, userID, cityID, llmInteractionID)
@@ -2133,7 +2271,7 @@ func (l *ServiceImpl) saveCityInteraction(ctx context.Context, interaction model
 }
 
 // handleSemanticAddPOIStreamed handles adding POIs with semantic search enhancement and streaming updates
-func (l *ServiceImpl) handleSemanticAddPOIStreamed(ctx context.Context, message string, session *models.ChatSession, semanticPOIs []models.POIDetailedInfo, userLocation *models.UserLocation, cityID uuid.UUID, eventCh chan<- models.StreamEvent) (string, error) {
+func (l *ServiceImpl) handleSemanticAddPOIStreamed(ctx context.Context, message string, session *models.ChatSession, semanticPOIs []models.POIDetailedInfo, userLocation *models.UserLocation, cityID uuid.UUID, eventCh chan<- models.StreamEvent) (string, bool, error) {
 	ctx, span := otel.Tracer("LlmInteractionService").Start(ctx, "handleSemanticAddPOIStreamed")
 	defer span.End()
 
@@ -2196,7 +2334,7 @@ func (l *ServiceImpl) handleSemanticAddPOIStreamed(ctx context.Context, message 
 				l.updateCacheAfterModification(ctx, session)
 
 				return fmt.Sprintf("Great! I found %s which matches what you're looking for. I've added it to your itinerary. %s",
-					semanticPOI.Name, semanticPOI.DescriptionPOI), nil
+					semanticPOI.Name, semanticPOI.DescriptionPOI), true, nil
 			}
 		}
 
@@ -2228,7 +2366,7 @@ func (l *ServiceImpl) handleSemanticAddPOIStreamed(ctx context.Context, message 
 					}
 				}
 				return names
-			}(), ", ")), nil
+			}(), ", ")), false, nil
 	}
 
 	// Fallback to traditional POI name extraction and generation
@@ -2239,13 +2377,13 @@ func (l *ServiceImpl) handleSemanticAddPOIStreamed(ctx context.Context, message 
 
 	poiName := extractPOIName(message)
 	if poiName == "" {
-		return "I'd be happy to add a POI to your itinerary! Could you please specify which place you'd like to add?", nil
+		return "I'd be happy to add a POI to your itinerary! Could you please specify which place you'd like to add?", false, nil
 	}
 
 	// Check if already exists
 	for _, p := range session.CurrentItinerary.AIItineraryResponse.PointsOfInterest {
 		if strings.EqualFold(p.Name, poiName) {
-			return fmt.Sprintf("%s is already in your itinerary.", poiName), nil
+			return fmt.Sprintf("%s is already in your itinerary.", poiName), false, nil
 		}
 	}
 
@@ -2258,11 +2396,11 @@ func (l *ServiceImpl) handleSemanticAddPOIStreamed(ctx context.Context, message 
 		},
 	}, 3)
 
-	newPOI, err := l.generatePOIDataStream(ctx, poiName, session.SessionContext.CityName, userLocation, session.UserID, cityID, eventCh)
+	newPOI, err := l.generatePOIDataStream(ctx, poiName, session.SessionContext.CityName, userLocation, session.UserID, session.ProfileID, cityID, session.ID, eventCh)
 	if err != nil {
 		l.logger.Error("Failed to generate POI data for streaming", zap.Any("error", err))
 		span.RecordError(err)
-		return "", fmt.Errorf("failed to generate POI data: %w", err)
+		return "", false, fmt.Errorf("failed to generate POI data: %w", err)
 	}
 
 	session.CurrentItinerary.AIItineraryResponse.PointsOfInterest = append(
@@ -2277,7 +2415,7 @@ func (l *ServiceImpl) handleSemanticAddPOIStreamed(ctx context.Context, message 
 		},
 	}, 3)
 
-	return fmt.Sprintf("I've added %s to your itinerary.", poiName), nil
+	return fmt.Sprintf("I've added %s to your itinerary.", poiName), true, nil
 }
 
 // ProcessUnifiedChatMessageStream handles unified chat with optimized streaming based on Google GenAI patterns
@@ -2357,24 +2495,26 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 		return fmt.Errorf("failed to create session: %w", err)
 	}
 
-	// Generate cache key based on session parameters
-	//var cacheKey string
-	cacheKeyData := map[string]interface{}{
-		"user_id":     userID.String(),
-		"profile_id":  profileID.String(),
-		"city":        cityName,
-		"message":     cleanedMessage,
-		"domain":      string(domain),
-		"preferences": basePreferences,
+	cacheKey := l.buildCacheKey(cityName, domain, basePreferences, cleanedMessage)
+	if cacheKey == "" {
+		l.logger.Warn("Cache key generation returned empty result; falling back to message hash",
+			zap.String("city", cityName),
+			zap.String("domain", string(domain)))
+		cacheKeyBytes := []byte(fmt.Sprintf("fallback_%s_%s", cleanedMessage, cityName))
+		hash := md5.Sum(cacheKeyBytes)
+		cacheKey = hex.EncodeToString(hash[:])
 	}
-	cacheKeyBytes, err := json.Marshal(cacheKeyData)
-	if err != nil {
-		l.logger.Error("Failed to marshal cache key data", zap.Any("error", err))
-		// Use a fallback cache key
-		cacheKeyBytes = []byte(fmt.Sprintf("fallback_%s_%s", cleanedMessage, cityName))
+	span.SetAttributes(attribute.String("cache.key", cacheKey))
+
+	// Attempt to serve from cache before hitting the LLM
+	if served, err := l.serveFromCacheIfAvailable(ctx, eventCh, cacheKey, cityName, domain, sessionID); err != nil {
+		span.RecordError(err)
+		return err
+	} else if served {
+		span.AddEvent("cache.served", trace.WithAttributes(attribute.String("cache.key", cacheKey)))
+		span.SetStatus(codes.Ok, "Served from cache")
+		return nil
 	}
-	hash := md5.Sum(cacheKeyBytes)
-	cacheKey := hex.EncodeToString(hash[:])
 
 	// Step 5: Fan-in Fan-out Setup
 	var wg sync.WaitGroup
@@ -2488,23 +2628,7 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 	go func() {
 		wg.Wait()             // Wait for all workers to complete
 		if ctx.Err() == nil { // Only send completion event if context is still active
-			// Determine route type based on domain
-			var routeType string
-			var baseURL string
-			switch domain {
-			case models.DomainAccommodation:
-				routeType = "hotels"
-				baseURL = "/hotels"
-			case models.DomainDining:
-				routeType = "restaurants"
-				baseURL = "/restaurants"
-			case models.DomainActivities:
-				routeType = "activities"
-				baseURL = "/activities"
-			default:
-				routeType = "itinerary"
-				baseURL = "/itinerary"
-			}
+			routeType, baseURL := routeInfoForDomain(domain)
 
 			// Cache itinerary data if this was an itinerary request
 			//if routeType == "itinerary" {
@@ -2576,14 +2700,22 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 			}
 		}
 
-		// If we don't have a cityID from the response, try to get it from the database
+		// If we don't have a cityID from the response, try to get it from the database or create a placeholder
 		if cityID == uuid.Nil {
 			if existingCity, err := l.cityRepo.FindCityByNameAndCountry(asyncCtx, cityName, ""); err == nil && existingCity != nil {
 				cityID = existingCity.ID
 			} else {
-				l.logger.Warn("Could not find or save city data, skipping POI processing",
-					zap.String("city", cityName))
-				return
+				if ensuredCityID, ensureErr := l.ensureCityRecord(asyncCtx, cityName); ensureErr == nil {
+					cityID = ensuredCityID
+					l.logger.Info("Created placeholder city record during unified stream processing",
+						zap.String("city", cityName),
+						zap.String("city_id", cityID.String()))
+				} else {
+					l.logger.Warn("Could not find or ensure city data, skipping POI processing",
+						zap.String("city", cityName),
+						zap.Error(ensureErr))
+					return
+				}
 			}
 		}
 
@@ -2668,27 +2800,20 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStreamFree(ctx context.Context, c
 		return fmt.Errorf("failed to create session: %w", err)
 	}
 
-	// Generate cache key based on session parameters
-	var cacheKey string
-	if domain == models.DomainItinerary {
-		// Use simpler cache key for itinerary requests (24h cache)
-		// For free users, use "free" as userID placeholder
-		cacheKey = generateItineraryCacheKey(cityName, string(domain), uuid.Nil)
-	} else {
-		// Use complex cache key for other domains
-		cacheKeyData := map[string]interface{}{
-			"city":    cityName,
-			"message": cleanedMessage,
-			"domain":  string(domain),
-		}
-		cacheKeyBytes, err := json.Marshal(cacheKeyData)
-		if err != nil {
-			l.logger.Error("Failed to marshal cache key data", zap.Any("error", err))
-			// Use a fallback cache key
-			cacheKeyBytes = []byte(fmt.Sprintf("fallback_%s_%s", cleanedMessage, cityName))
-		}
+	cacheKey := l.buildCacheKey(cityName, domain, "", cleanedMessage)
+	if cacheKey == "" {
+		cacheKeyBytes := []byte(fmt.Sprintf("fallback_%s_%s", cleanedMessage, cityName))
 		hash := md5.Sum(cacheKeyBytes)
 		cacheKey = hex.EncodeToString(hash[:])
+	}
+
+	if served, err := l.serveFromCacheIfAvailable(ctx, eventCh, cacheKey, cityName, domain, sessionID); err != nil {
+		span.RecordError(err)
+		return err
+	} else if served {
+		span.AddEvent("cache.served", trace.WithAttributes(attribute.String("cache.key", cacheKey)))
+		span.SetStatus(codes.Ok, "Served from cache")
+		return nil
 	}
 
 	// Step 5: Fan-in Fan-out Setup
@@ -2781,23 +2906,7 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStreamFree(ctx context.Context, c
 	go func() {
 		wg.Wait()             // Wait for all workers to complete
 		if ctx.Err() == nil { // Only send completion event if context is still active
-			// Determine route type based on domain
-			var routeType string
-			var baseURL string
-			switch domain {
-			case models.DomainAccommodation:
-				routeType = "hotels"
-				baseURL = "/hotels"
-			case models.DomainDining:
-				routeType = "restaurants"
-				baseURL = "/restaurants"
-			case models.DomainActivities:
-				routeType = "activities"
-				baseURL = "/activities"
-			default:
-				routeType = "itinerary"
-				baseURL = "/itinerary"
-			}
+			routeType, baseURL := routeInfoForDomain(domain)
 
 			l.cacheResultsIfAvailable(ctx, sessionID, cacheKey, routeType, responses, &responsesMutex)
 			// Cache itinerary data if this was an itinerary request
@@ -2874,14 +2983,22 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStreamFree(ctx context.Context, c
 			}
 		}
 
-		// If we don't have a cityID from the response, try to get it from the database
+		// If we don't have a cityID from the response, try to get it from the database or ensure placeholder
 		if cityID == uuid.Nil {
 			if existingCity, err := l.cityRepo.FindCityByNameAndCountry(asyncCtx, cityName, ""); err == nil && existingCity != nil {
 				cityID = existingCity.ID
 			} else {
-				l.logger.Warn("Could not find or save city data, skipping POI processing",
-					zap.String("city", cityName))
-				return
+				if ensuredCityID, ensureErr := l.ensureCityRecord(asyncCtx, cityName); ensureErr == nil {
+					cityID = ensuredCityID
+					l.logger.Info("Created placeholder city record during free unified processing",
+						zap.String("city", cityName),
+						zap.String("city_id", cityID.String()))
+				} else {
+					l.logger.Warn("Could not find or ensure city data, skipping POI processing",
+						zap.String("city", cityName),
+						zap.Error(ensureErr))
+					return
+				}
 			}
 		}
 
@@ -3091,6 +3208,165 @@ func (l *ServiceImpl) streamWorkerWithResponseAndCache(ctx context.Context, prom
 }
 
 // cacheResultsIfAvailable caches result-specific data for restaurants, activities, and hotels
+func routeInfoForDomain(domain models.DomainType) (string, string) {
+	switch domain {
+	case models.DomainAccommodation:
+		return "hotels", "/hotels"
+	case models.DomainDining:
+		return "restaurants", "/restaurants"
+	case models.DomainActivities:
+		return "activities", "/activities"
+	default:
+		return "itinerary", "/itinerary"
+	}
+}
+
+func (l *ServiceImpl) serveFromCacheIfAvailable(ctx context.Context, eventCh chan<- models.StreamEvent, cacheKey, cityName string, domain models.DomainType, sessionID uuid.UUID) (bool, error) {
+	if cacheKey == "" {
+		return false, nil
+	}
+
+	type chunkPayload struct {
+		part  string
+		chunk string
+	}
+
+	payloads := make([]chunkPayload, 0, 3)
+	completeResponse, hasComplete := cache2.CompleteItineraryCache.Get(cacheKey)
+
+	// Always include city data when available
+	if hasComplete && completeResponse.GeneralCityData.City != "" {
+		if cityChunk, err := json.Marshal(completeResponse.GeneralCityData); err == nil {
+			payloads = append(payloads, chunkPayload{part: "city_data", chunk: string(cityChunk)})
+		} else {
+			l.logger.Warn("Failed to marshal cached city data", zap.Any("error", err))
+		}
+	}
+
+	addGeneralData := func() {
+		if hasComplete && len(completeResponse.PointsOfInterest) > 0 {
+			wrapper := struct {
+				PointsOfInterest []models.POIDetailedInfo `json:"points_of_interest"`
+			}{PointsOfInterest: completeResponse.PointsOfInterest}
+			if poiChunk, err := json.Marshal(wrapper); err == nil {
+				payloads = append(payloads, chunkPayload{part: "general_pois", chunk: string(poiChunk)})
+			} else {
+				l.logger.Warn("Failed to marshal cached general POIs", zap.Any("error", err))
+			}
+		}
+
+		if hasComplete && (completeResponse.AIItineraryResponse.ItineraryName != "" || len(completeResponse.AIItineraryResponse.PointsOfInterest) > 0) {
+			if itineraryChunk, err := json.Marshal(completeResponse.AIItineraryResponse); err == nil {
+				payloads = append(payloads, chunkPayload{part: "itinerary", chunk: string(itineraryChunk)})
+			} else {
+				l.logger.Warn("Failed to marshal cached itinerary", zap.Any("error", err))
+			}
+		}
+	}
+
+	var domainChunkAdded bool
+	switch domain {
+	case models.DomainItinerary, models.DomainGeneral:
+		addGeneralData()
+		domainChunkAdded = len(payloads) > 0
+	case models.DomainAccommodation:
+		if hotels, found := cache2.HotelsCache.Get(cacheKey); found && len(hotels) > 0 {
+			if hotelsChunk, err := json.Marshal(hotels); err == nil {
+				payloads = append(payloads, chunkPayload{part: "hotels", chunk: string(hotelsChunk)})
+				domainChunkAdded = true
+			} else {
+				l.logger.Warn("Failed to marshal cached hotels", zap.Any("error", err))
+			}
+		}
+	case models.DomainDining:
+		if restaurants, found := cache2.RestaurantsCache.Get(cacheKey); found && len(restaurants) > 0 {
+			if restaurantsChunk, err := json.Marshal(restaurants); err == nil {
+				payloads = append(payloads, chunkPayload{part: "restaurants", chunk: string(restaurantsChunk)})
+				domainChunkAdded = true
+			} else {
+				l.logger.Warn("Failed to marshal cached restaurants", zap.Any("error", err))
+			}
+		}
+	case models.DomainActivities:
+		if activities, found := cache2.ActivitiesCache.Get(cacheKey); found && len(activities) > 0 {
+			if activitiesChunk, err := json.Marshal(activities); err == nil {
+				payloads = append(payloads, chunkPayload{part: "activities", chunk: string(activitiesChunk)})
+				domainChunkAdded = true
+			} else {
+				l.logger.Warn("Failed to marshal cached activities", zap.Any("error", err))
+			}
+		}
+	default:
+		addGeneralData()
+		domainChunkAdded = len(payloads) > 0
+	}
+
+	if len(payloads) == 0 || (!domainChunkAdded && domain != models.DomainItinerary && domain != models.DomainGeneral) {
+		return false, nil
+	}
+
+	routeType, baseURL := routeInfoForDomain(domain)
+
+	l.logger.Info("Serving response from cache",
+		zap.String("cacheKey", cacheKey),
+		zap.String("domain", string(domain)),
+		zap.String("city", cityName))
+
+	l.sendEvent(ctx, eventCh, models.StreamEvent{
+		Type: models.EventTypeStart,
+		Data: map[string]interface{}{
+			"domain":     string(domain),
+			"city":       cityName,
+			"session_id": sessionID.String(),
+			"cache_key":  cacheKey,
+			"cache_hit":  true,
+		},
+	}, 3)
+
+	l.sendEvent(ctx, eventCh, models.StreamEvent{
+		Type: models.EventTypeProgress,
+		Data: map[string]interface{}{
+			"status":    "serving_cached_results",
+			"cache_key": cacheKey,
+		},
+	}, 3)
+
+	for _, payload := range payloads {
+		l.sendEvent(ctx, eventCh, models.StreamEvent{
+			Type: models.EventTypeChunk,
+			Data: map[string]interface{}{
+				"part":       payload.part,
+				"chunk":      payload.chunk,
+				"domain":     string(domain),
+				"cache_key":  cacheKey,
+				"cache_used": true,
+				"source":     "cache",
+			},
+		}, 3)
+	}
+
+	l.sendEvent(ctx, eventCh, models.StreamEvent{
+		Type: models.EventTypeComplete,
+		Data: map[string]interface{}{
+			"session_id": sessionID.String(),
+			"cache_hit":  true,
+		},
+		Navigation: &models.NavigationData{
+			URL:       fmt.Sprintf("%s?sessionId=%s&cityName=%s&domain=%s&cacheKey=%s", baseURL, sessionID.String(), url.QueryEscape(cityName), routeType, cacheKey),
+			RouteType: routeType,
+			QueryParams: map[string]string{
+				"sessionId": sessionID.String(),
+				"cityName":  cityName,
+				"domain":    routeType,
+				"cacheKey":  cacheKey,
+			},
+		},
+	}, 3)
+
+	close(eventCh)
+	return true, nil
+}
+
 func (l *ServiceImpl) cacheResultsIfAvailable(ctx context.Context, sessionID uuid.UUID, cacheKey string, routeType string, responses map[string]*strings.Builder, responsesMutex *sync.Mutex) {
 	responsesMutex.Lock()
 	defer responsesMutex.Unlock()

@@ -666,18 +666,13 @@ templ ItineraryResults(cityData models.GeneralCityData, generalPOIs []models.POI
 			</div>
 		</div>
 		<!-- Chat Panel for continuing conversation -->
-		<!-- DEBUG: SessionID = { sessionID } -->
-		if sessionID != "" {
-			@chat.ChatPanel(chat.ChatPanelProps{
-				SessionID:     sessionID,
-				CityName:      cityData.City,
-				Domain:        "itinerary",
-				Placeholder:   "Ask to modify your itinerary...",
-				ShowByDefault: false,
-			})
-		} else {
-			<!-- DEBUG: SessionID is empty! -->
-		}
+		@chat.ChatPanel(chat.ChatPanelProps{
+			SessionID:     sessionID,
+			CityName:      cityData.City,
+			Domain:        "itinerary",
+			Placeholder:   "Ask to modify your itinerary...",
+			ShowByDefault: false,
+		})
 	</div>
 	@components.LocationRequestBanner(true)
 	@components.FloatingLocationButton()

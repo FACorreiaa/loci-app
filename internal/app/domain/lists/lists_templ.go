@@ -224,7 +224,7 @@ func CreateListModal() templ.Component {
 			templ_7745c5c3_Var11 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<div class=\"fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4\" id=\"create-list-modal\"><!-- Modal container --><div class=\"bg-card rounded-lg max-w-lg w-full shadow-2xl animate-in fade-in zoom-in duration-200\"><!-- Header --><div class=\"flex items-center justify-between p-6 border-b border-border\"><div class=\"flex items-center gap-3\"><div class=\"w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center\"><svg class=\"w-5 h-5 text-white\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2\"></path></svg></div><h2 class=\"text-xl font-bold text-foreground\">Create New List</h2></div><button hx-get=\"/lists\" hx-target=\"body\" hx-swap=\"outerHTML\" class=\"p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-accent transition-colors\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M6 18L18 6M6 6l12 12\"></path></svg></button></div><!-- Form --><form hx-post=\"/lists/create\" hx-target=\"body\" hx-swap=\"outerHTML\" hx-indicator=\"#create-loading\" class=\"p-6 space-y-6\"><!-- List Name --><div><label for=\"list-name\" class=\"block text-sm font-medium text-foreground mb-2\">List Name <span class=\"text-red-500\">*</span></label> <input type=\"text\" id=\"list-name\" name=\"name\" required placeholder=\"e.g., Weekend in Paris\" class=\"w-full px-4 py-3 rounded-lg border border-border bg-background focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all placeholder-muted-foreground\"></div><!-- Description --><div><label for=\"list-description\" class=\"block text-sm font-medium text-foreground mb-2\">Description</label> <textarea id=\"list-description\" name=\"description\" rows=\"3\" placeholder=\"What's this list about? (optional)\" class=\"w-full px-4 py-3 rounded-lg border border-border bg-background focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all placeholder-muted-foreground resize-none\"></textarea></div><!-- Privacy --><div><label class=\"block text-sm font-medium text-foreground mb-2\">Privacy</label><div class=\"grid grid-cols-2 gap-3\"><label class=\"relative flex items-center p-4 border-2 border-border rounded-lg cursor-pointer hover:border-green-500 transition-colors\"><input type=\"radio\" name=\"is_public\" value=\"false\" checked class=\"sr-only peer\"><div class=\"flex items-center gap-3 w-full\"><div class=\"w-10 h-10 bg-gray-100 dark:bg-gray-800 peer-checked:bg-green-100 dark:peer-checked:bg-green-900/30 rounded-lg flex items-center justify-center transition-colors\"><svg class=\"w-5 h-5 text-gray-600 dark:text-gray-400 peer-checked:text-green-600 dark:peer-checked:text-green-400\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z\"></path></svg></div><div><p class=\"font-medium text-foreground\">Private</p><p class=\"text-xs text-muted-foreground\">Only you can see</p></div></div><div class=\"absolute top-3 right-3 w-5 h-5 rounded-full border-2 border-border peer-checked:border-green-500 peer-checked:bg-green-500 flex items-center justify-center\"><svg class=\"w-3 h-3 text-white hidden peer-checked:block\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"3\" d=\"M5 13l4 4L19 7\"></path></svg></div></label> <label class=\"relative flex items-center p-4 border-2 border-border rounded-lg cursor-pointer hover:border-green-500 transition-colors\"><input type=\"radio\" name=\"is_public\" value=\"true\" class=\"sr-only peer\"><div class=\"flex items-center gap-3 w-full\"><div class=\"w-10 h-10 bg-gray-100 dark:bg-gray-800 peer-checked:bg-green-100 dark:peer-checked:bg-green-900/30 rounded-lg flex items-center justify-center transition-colors\"><svg class=\"w-5 h-5 text-gray-600 dark:text-gray-400 peer-checked:text-green-600 dark:peer-checked:text-green-400\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z\"></path></svg></div><div><p class=\"font-medium text-foreground\">Public</p><p class=\"text-xs text-muted-foreground\">Anyone can view</p></div></div><div class=\"absolute top-3 right-3 w-5 h-5 rounded-full border-2 border-border peer-checked:border-green-500 peer-checked:bg-green-500 flex items-center justify-center\"><svg class=\"w-3 h-3 text-white hidden peer-checked:block\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"3\" d=\"M5 13l4 4L19 7\"></path></svg></div></label></div></div><!-- Buttons --><div class=\"flex items-center gap-3 pt-4\"><button type=\"button\" hx-get=\"/lists\" hx-target=\"body\" hx-swap=\"outerHTML\" class=\"flex-1 px-4 py-3 border border-border rounded-lg hover:bg-accent transition-colors font-medium text-foreground\">Cancel</button> <button type=\"submit\" class=\"flex-1 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all font-medium\"><span class=\"htmx-request:hidden flex items-center justify-center gap-2\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 4v16m8-8H4\"></path></svg> Create List</span> <span id=\"create-loading\" class=\"htmx-indicator inline-flex items-center justify-center gap-2\"><div class=\"w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin\"></div>Creating...</span></button></div></form></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<div class=\"fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4\" id=\"create-list-modal\"><!-- Modal container --><div class=\"bg-card rounded-lg max-w-lg w-full shadow-2xl animate-in fade-in zoom-in duration-200\"><!-- Header --><div class=\"flex items-center justify-between p-6 border-b border-border\"><div class=\"flex items-center gap-3\"><div class=\"w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center\"><svg class=\"w-5 h-5 text-white\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2\"></path></svg></div><h2 class=\"text-xl font-bold text-foreground\">Create New List</h2></div><button hx-get=\"/lists\" hx-target=\"body\" hx-swap=\"outerHTML\" class=\"p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-accent transition-colors\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M6 18L18 6M6 6l12 12\"></path></svg></button></div><!-- Form --><form hx-post=\"/lists/create\" hx-target=\"body\" hx-swap=\"outerHTML\" hx-indicator=\"#create-loading\" class=\"p-6 space-y-6\" x-data=\"{ creating: false }\" @htmx:before-request=\"creating = true\" @htmx:after-request=\"creating = false\"><!-- List Name --><div><label for=\"list-name\" class=\"block text-sm font-medium text-foreground mb-2\">List Name <span class=\"text-red-500\">*</span></label> <input type=\"text\" id=\"list-name\" name=\"name\" required placeholder=\"e.g., Weekend in Paris\" class=\"w-full px-4 py-3 rounded-lg border border-border bg-background focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all placeholder-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed\" x-bind:disabled=\"creating\"></div><!-- Description --><div><label for=\"list-description\" class=\"block text-sm font-medium text-foreground mb-2\">Description</label> <textarea id=\"list-description\" name=\"description\" rows=\"3\" placeholder=\"What's this list about? (optional)\" class=\"w-full px-4 py-3 rounded-lg border border-border bg-background focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all placeholder-muted-foreground resize-none disabled:opacity-50 disabled:cursor-not-allowed\" x-bind:disabled=\"creating\"></textarea></div><!-- Privacy --><div><label class=\"block text-sm font-medium text-foreground mb-2\">Privacy</label><div class=\"grid grid-cols-2 gap-3\"><label class=\"relative flex items-center p-4 border-2 border-border rounded-lg cursor-pointer hover:border-green-500 transition-colors\"><input type=\"radio\" name=\"is_public\" value=\"false\" checked class=\"sr-only peer\"><div class=\"flex items-center gap-3 w-full\"><div class=\"w-10 h-10 bg-gray-100 dark:bg-gray-800 peer-checked:bg-green-100 dark:peer-checked:bg-green-900/30 rounded-lg flex items-center justify-center transition-colors\"><svg class=\"w-5 h-5 text-gray-600 dark:text-gray-400 peer-checked:text-green-600 dark:peer-checked:text-green-400\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z\"></path></svg></div><div><p class=\"font-medium text-foreground\">Private</p><p class=\"text-xs text-muted-foreground\">Only you can see</p></div></div><div class=\"absolute top-3 right-3 w-5 h-5 rounded-full border-2 border-border peer-checked:border-green-500 peer-checked:bg-green-500 flex items-center justify-center\"><svg class=\"w-3 h-3 text-white hidden peer-checked:block\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"3\" d=\"M5 13l4 4L19 7\"></path></svg></div></label> <label class=\"relative flex items-center p-4 border-2 border-border rounded-lg cursor-pointer hover:border-green-500 transition-colors\"><input type=\"radio\" name=\"is_public\" value=\"true\" class=\"sr-only peer\"><div class=\"flex items-center gap-3 w-full\"><div class=\"w-10 h-10 bg-gray-100 dark:bg-gray-800 peer-checked:bg-green-100 dark:peer-checked:bg-green-900/30 rounded-lg flex items-center justify-center transition-colors\"><svg class=\"w-5 h-5 text-gray-600 dark:text-gray-400 peer-checked:text-green-600 dark:peer-checked:text-green-400\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z\"></path></svg></div><div><p class=\"font-medium text-foreground\">Public</p><p class=\"text-xs text-muted-foreground\">Anyone can view</p></div></div><div class=\"absolute top-3 right-3 w-5 h-5 rounded-full border-2 border-border peer-checked:border-green-500 peer-checked:bg-green-500 flex items-center justify-center\"><svg class=\"w-3 h-3 text-white hidden peer-checked:block\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"3\" d=\"M5 13l4 4L19 7\"></path></svg></div></label></div></div><!-- Buttons --><div class=\"flex items-center gap-3 pt-4\"><button type=\"button\" hx-get=\"/lists\" hx-target=\"body\" hx-swap=\"outerHTML\" class=\"flex-1 px-4 py-3 border border-border rounded-lg hover:bg-accent transition-colors font-medium text-foreground\">Cancel</button> <button type=\"submit\" class=\"flex-1 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed\" x-bind:disabled=\"creating\"><span x-show=\"!creating\" class=\"flex items-center justify-center gap-2\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 4v16m8-8H4\"></path></svg> Create List</span> <span x-show=\"creating\" class=\"inline-flex items-center justify-center gap-2\"><div class=\"w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin\"></div>Creating...</span></button></div></form></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -261,7 +261,7 @@ func AddToListModal(itemID, itemName, contentType string, userLists []models.Lis
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(itemName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 291, Col: 66}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 297, Col: 66}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
@@ -289,7 +289,7 @@ func AddToListModal(itemID, itemName, contentType string, userLists []models.Lis
 				var templ_7745c5c3_Var14 string
 				templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs("/lists/" + list.ID.String() + "/items")
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 333, Col: 57}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 339, Col: 57}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 				if templ_7745c5c3_Err != nil {
@@ -302,7 +302,7 @@ func AddToListModal(itemID, itemName, contentType string, userLists []models.Lis
 				var templ_7745c5c3_Var15 string
 				templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf(`{"item_id": "%s", "content_type": "%s"}`, itemID, contentType))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 334, Col: 93}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 340, Col: 93}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 				if templ_7745c5c3_Err != nil {
@@ -315,7 +315,7 @@ func AddToListModal(itemID, itemName, contentType string, userLists []models.Lis
 				var templ_7745c5c3_Var16 string
 				templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs("#loading-" + list.ID.String())
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 336, Col: 53}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 342, Col: 53}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 				if templ_7745c5c3_Err != nil {
@@ -328,7 +328,7 @@ func AddToListModal(itemID, itemName, contentType string, userLists []models.Lis
 				var templ_7745c5c3_Var17 string
 				templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(list.Name)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 348, Col: 71}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 354, Col: 71}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 				if templ_7745c5c3_Err != nil {
@@ -356,7 +356,7 @@ func AddToListModal(itemID, itemName, contentType string, userLists []models.Lis
 					var templ_7745c5c3_Var18 string
 					templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(list.Description)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 356, Col: 79}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 362, Col: 79}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 					if templ_7745c5c3_Err != nil {
@@ -374,7 +374,7 @@ func AddToListModal(itemID, itemName, contentType string, userLists []models.Lis
 				var templ_7745c5c3_Var19 string
 				templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs("loading-" + list.ID.String())
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 361, Col: 49}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 367, Col: 49}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 				if templ_7745c5c3_Err != nil {
@@ -427,7 +427,7 @@ func ListDetailPage(listWithItems *models.ListWithItems) templ.Component {
 		var templ_7745c5c3_Var21 string
 		templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(listWithItems.List.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 446, Col: 87}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 452, Col: 87}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 		if templ_7745c5c3_Err != nil {
@@ -445,7 +445,7 @@ func ListDetailPage(listWithItems *models.ListWithItems) templ.Component {
 			var templ_7745c5c3_Var22 string
 			templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(listWithItems.List.Description)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 448, Col: 72}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 454, Col: 72}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 			if templ_7745c5c3_Err != nil {
@@ -478,7 +478,7 @@ func ListDetailPage(listWithItems *models.ListWithItems) templ.Component {
 		var templ_7745c5c3_Var23 string
 		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs("/lists/" + listWithItems.List.ID.String() + "/edit")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 469, Col: 68}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 475, Col: 68}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 		if templ_7745c5c3_Err != nil {
@@ -491,7 +491,7 @@ func ListDetailPage(listWithItems *models.ListWithItems) templ.Component {
 		var templ_7745c5c3_Var24 string
 		templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs("/lists/" + listWithItems.List.ID.String() + "/delete")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 480, Col: 70}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 486, Col: 70}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 		if templ_7745c5c3_Err != nil {
@@ -504,7 +504,7 @@ func ListDetailPage(listWithItems *models.ListWithItems) templ.Component {
 		var templ_7745c5c3_Var25 string
 		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d items", len(listWithItems.Items)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 493, Col: 62}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 499, Col: 62}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 		if templ_7745c5c3_Err != nil {
@@ -517,7 +517,7 @@ func ListDetailPage(listWithItems *models.ListWithItems) templ.Component {
 		var templ_7745c5c3_Var26 string
 		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(listWithItems.List.CreatedAt.Format("Jan 2, 2006"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 494, Col: 71}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 500, Col: 71}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 		if templ_7745c5c3_Err != nil {
@@ -535,7 +535,7 @@ func ListDetailPage(listWithItems *models.ListWithItems) templ.Component {
 			var templ_7745c5c3_Var27 string
 			templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(listWithItems.List.UpdatedAt.Format("Jan 2, 2006"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 496, Col: 72}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 502, Col: 72}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 			if templ_7745c5c3_Err != nil {
@@ -639,7 +639,7 @@ func ListItemCard(item *models.ListItem) templ.Component {
 		var templ_7745c5c3_Var29 string
 		templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(string(item.ContentType))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 567, Col: 31}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 573, Col: 31}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 		if templ_7745c5c3_Err != nil {
@@ -652,7 +652,7 @@ func ListItemCard(item *models.ListItem) templ.Component {
 		var templ_7745c5c3_Var30 string
 		templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(item.ItemID.String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 575, Col: 38}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 581, Col: 38}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 		if templ_7745c5c3_Err != nil {
@@ -670,7 +670,7 @@ func ListItemCard(item *models.ListItem) templ.Component {
 			var templ_7745c5c3_Var31 string
 			templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(item.ItemAIDescription)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 579, Col: 32}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 585, Col: 32}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 			if templ_7745c5c3_Err != nil {
@@ -688,7 +688,7 @@ func ListItemCard(item *models.ListItem) templ.Component {
 		var templ_7745c5c3_Var32 string
 		templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(item.CreatedAt.Format("Jan 2, 2006"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 586, Col: 55}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 592, Col: 55}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 		if templ_7745c5c3_Err != nil {
@@ -706,7 +706,7 @@ func ListItemCard(item *models.ListItem) templ.Component {
 			var templ_7745c5c3_Var33 string
 			templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", item.Position))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 588, Col: 56}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 594, Col: 56}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 			if templ_7745c5c3_Err != nil {
@@ -724,7 +724,7 @@ func ListItemCard(item *models.ListItem) templ.Component {
 		var templ_7745c5c3_Var34 string
 		templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinStringErrs("/lists/" + item.ListID.String() + "/items/" + item.ItemID.String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 595, Col: 85}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 601, Col: 85}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var34))
 		if templ_7745c5c3_Err != nil {
@@ -767,7 +767,7 @@ func ListsPageWithData(lists []*models.List) templ.Component {
 		var templ_7745c5c3_Var36 string
 		templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", len(lists)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 654, Col: 90}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 660, Col: 90}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
 		if templ_7745c5c3_Err != nil {
@@ -780,7 +780,7 @@ func ListsPageWithData(lists []*models.List) templ.Component {
 		var templ_7745c5c3_Var37 string
 		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", calculateTotalItems(lists)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 666, Col: 56}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 672, Col: 56}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 		if templ_7745c5c3_Err != nil {
@@ -793,7 +793,7 @@ func ListsPageWithData(lists []*models.List) templ.Component {
 		var templ_7745c5c3_Var38 string
 		templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", countPublicLists(lists)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 680, Col: 53}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 686, Col: 53}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 		if templ_7745c5c3_Err != nil {
@@ -861,7 +861,7 @@ func UserListCard(list *models.List) templ.Component {
 		var templ_7745c5c3_Var40 templ.SafeURL
 		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/lists/" + list.ID.String()))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 726, Col: 54}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 732, Col: 54}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 		if templ_7745c5c3_Err != nil {
@@ -913,7 +913,7 @@ func UserListCard(list *models.List) templ.Component {
 		var templ_7745c5c3_Var43 string
 		templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(list.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 762, Col: 17}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 768, Col: 17}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
 		if templ_7745c5c3_Err != nil {
@@ -931,7 +931,7 @@ func UserListCard(list *models.List) templ.Component {
 			var templ_7745c5c3_Var44 string
 			templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(list.Description)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 766, Col: 25}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 772, Col: 25}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 			if templ_7745c5c3_Err != nil {
@@ -954,7 +954,7 @@ func UserListCard(list *models.List) templ.Component {
 		var templ_7745c5c3_Var45 string
 		templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", list.ItemCount))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 775, Col: 42}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 781, Col: 42}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
 		if templ_7745c5c3_Err != nil {
@@ -982,7 +982,7 @@ func UserListCard(list *models.List) templ.Component {
 		var templ_7745c5c3_Var46 string
 		templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(formatRelativeTime(list.UpdatedAt))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 782, Col: 56}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 788, Col: 56}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
 		if templ_7745c5c3_Err != nil {
@@ -1025,7 +1025,7 @@ func EditListModal(list *models.List) templ.Component {
 		var templ_7745c5c3_Var48 string
 		templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.JoinStringErrs("/lists/" + list.ID.String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 816, Col: 41}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 822, Col: 41}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var48))
 		if templ_7745c5c3_Err != nil {
@@ -1038,7 +1038,7 @@ func EditListModal(list *models.List) templ.Component {
 		var templ_7745c5c3_Var49 string
 		templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs(list.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 831, Col: 23}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 837, Col: 23}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
 		if templ_7745c5c3_Err != nil {
@@ -1051,7 +1051,7 @@ func EditListModal(list *models.List) templ.Component {
 		var templ_7745c5c3_Var50 string
 		templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.JoinStringErrs(list.Description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 845, Col: 24}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 851, Col: 24}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var50))
 		if templ_7745c5c3_Err != nil {
@@ -1114,7 +1114,7 @@ func DeleteListModal(list *models.List) templ.Component {
 		var templ_7745c5c3_Var52 string
 		templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.JoinStringErrs(list.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 922, Col: 57}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 928, Col: 57}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var52))
 		if templ_7745c5c3_Err != nil {
@@ -1132,7 +1132,7 @@ func DeleteListModal(list *models.List) templ.Component {
 			var templ_7745c5c3_Var53 string
 			templ_7745c5c3_Var53, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", list.ItemCount))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 926, Col: 60}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 932, Col: 60}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var53))
 			if templ_7745c5c3_Err != nil {
@@ -1170,7 +1170,7 @@ func DeleteListModal(list *models.List) templ.Component {
 		var templ_7745c5c3_Var54 string
 		templ_7745c5c3_Var54, templ_7745c5c3_Err = templ.JoinStringErrs("/lists/" + list.ID.String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 948, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 954, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var54))
 		if templ_7745c5c3_Err != nil {
@@ -1278,7 +1278,7 @@ func SavedListCard(list *models.List) templ.Component {
 		var templ_7745c5c3_Var57 string
 		templ_7745c5c3_Var57, templ_7745c5c3_Err = templ.JoinStringErrs("/lists/" + list.ID.String() + "/unsave")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 1034, Col: 57}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 1040, Col: 57}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var57))
 		if templ_7745c5c3_Err != nil {
@@ -1291,7 +1291,7 @@ func SavedListCard(list *models.List) templ.Component {
 		var templ_7745c5c3_Var58 templ.SafeURL
 		templ_7745c5c3_Var58, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/lists/" + list.ID.String()))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 1046, Col: 56}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 1052, Col: 56}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var58))
 		if templ_7745c5c3_Err != nil {
@@ -1304,7 +1304,7 @@ func SavedListCard(list *models.List) templ.Component {
 		var templ_7745c5c3_Var59 string
 		templ_7745c5c3_Var59, templ_7745c5c3_Err = templ.JoinStringErrs(list.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 1049, Col: 17}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 1055, Col: 17}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var59))
 		if templ_7745c5c3_Err != nil {
@@ -1322,7 +1322,7 @@ func SavedListCard(list *models.List) templ.Component {
 			var templ_7745c5c3_Var60 string
 			templ_7745c5c3_Var60, templ_7745c5c3_Err = templ.JoinStringErrs(list.Description)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 1053, Col: 25}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 1059, Col: 25}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var60))
 			if templ_7745c5c3_Err != nil {
@@ -1345,7 +1345,7 @@ func SavedListCard(list *models.List) templ.Component {
 		var templ_7745c5c3_Var61 string
 		templ_7745c5c3_Var61, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", list.ItemCount))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 1062, Col: 42}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 1068, Col: 42}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var61))
 		if templ_7745c5c3_Err != nil {
@@ -1373,7 +1373,7 @@ func SavedListCard(list *models.List) templ.Component {
 		var templ_7745c5c3_Var62 string
 		templ_7745c5c3_Var62, templ_7745c5c3_Err = templ.JoinStringErrs(formatRelativeTime(list.UpdatedAt))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 1069, Col: 54}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 1075, Col: 54}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var62))
 		if templ_7745c5c3_Err != nil {
@@ -1417,7 +1417,7 @@ func SaveListButton(listID uuid.UUID, isSaved bool) templ.Component {
 			var templ_7745c5c3_Var64 string
 			templ_7745c5c3_Var64, templ_7745c5c3_Err = templ.JoinStringErrs("/lists/" + listID.String() + "/unsave")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 1081, Col: 54}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 1087, Col: 54}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var64))
 			if templ_7745c5c3_Err != nil {
@@ -1435,7 +1435,7 @@ func SaveListButton(listID uuid.UUID, isSaved bool) templ.Component {
 			var templ_7745c5c3_Var65 string
 			templ_7745c5c3_Var65, templ_7745c5c3_Err = templ.JoinStringErrs("/lists/" + listID.String() + "/save")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 1092, Col: 50}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/lists/lists.templ`, Line: 1098, Col: 50}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var65))
 			if templ_7745c5c3_Err != nil {

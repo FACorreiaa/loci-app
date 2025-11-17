@@ -23,12 +23,12 @@ templ LayoutPage(l models.LayoutTempl) {
 			<link rel="stylesheet" href="/assets/css/output.css"/>
 			<link rel="preconnect" href="https://fonts.googleapis.com"/>
 			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-			<link rel="manifest" href="/static/manifest.json"/>
+			<link rel="manifest" href="/assets/static/manifest.json"/>
 			<meta name="theme-color" content="#2563eb"/>
-			<link rel="apple-touch-icon" href="/static/images/icons/icon-192x192.png"/>
-			<link rel="icon" type="image/png" sizes="144x144" href="/static/images/icons/icon-144x144.png"/>
-			<link rel="icon" type="image/png" sizes="192x192" href="/static/images/icons/icon-192x192.png"/>
-			<link rel="icon" type="image/png" sizes="512x512" href="/static/images/icons/icon-512x512.png"/>
+			<link rel="apple-touch-icon" href="/assets/static/images/icons/icon-192x192.svg"/>
+			<link rel="icon" type="image/svg+xml" sizes="144x144" href="/assets/static/images/icons/icon-144x144.svg"/>
+			<link rel="icon" type="image/svg+xml" sizes="192x192" href="/assets/static/images/icons/icon-192x192.svg"/>
+			<link rel="icon" type="image/svg+xml" sizes="512x512" href="/assets/static/images/icons/icon-512x512.svg"/>
 			<meta name="apple-mobile-web-app-capable" content="yes"/>
 			<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
 			<meta name="apple-mobile-web-app-title" content="Loci"/>
@@ -74,8 +74,8 @@ templ LayoutPage(l models.LayoutTempl) {
                             // it's really important to make sure that the app is fully loaded, since the service worker won't be loaded before that.
                             window.addEventListener("load", () => {
                               navigator.serviceWorker
-                                // this is the service worker's path, since we put it under /static earlier, and static is already registered as a file server.
-                                .register("/static/sw.js")
+                                // this is the service worker's path, since we put it under /assets/static earlier, and assets is already registered as a file server.
+                                .register("/assets/static/sw.js")
                                 .then((reg) => {
                                   console.log("Service Worker Registered", reg);
                                 })

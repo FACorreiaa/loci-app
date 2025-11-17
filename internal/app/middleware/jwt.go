@@ -23,7 +23,8 @@ type JWTConfig struct {
 
 // Claims represents the JWT claims
 type Claims struct {
-	UserID   string `json:"user_id"`
+	UserID   string `json:"user_id,omitempty"`
+	UID      string `json:"uid,omitempty"`
 	Email    string `json:"email,omitempty"`
 	Username string `json:"username,omitempty"`
 	jwt.RegisteredClaims
@@ -41,6 +42,7 @@ func (s *JWTService) GenerateToken(config JWTConfig, userID, email, username str
 	now := time.Now()
 	claims := Claims{
 		UserID:   userID,
+		UID:      userID,
 		Email:    email,
 		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -76,6 +78,11 @@ func (s *JWTService) ValidateToken(config JWTConfig, tokenString string) (*Claim
 
 	if !token.Valid {
 		return nil, fmt.Errorf("invalid token")
+	}
+
+	// Support tokens generated with legacy `uid` claim
+	if claims.UserID == "" && claims.UID != "" {
+		claims.UserID = claims.UID
 	}
 
 	return claims, nil

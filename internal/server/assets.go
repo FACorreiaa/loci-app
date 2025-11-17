@@ -4,8 +4,9 @@ import (
 	"io/fs"
 	"net/http"
 
-	"github.com/FACorreiaa/go-templui/assets"
 	"github.com/gin-gonic/gin"
+
+	"github.com/FACorreiaa/go-templui/assets"
 )
 
 // SetupAssets configures static asset serving for the Gin router

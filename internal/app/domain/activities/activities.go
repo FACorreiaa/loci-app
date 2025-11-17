@@ -2,13 +2,13 @@ package activities
 
 import (
 	"context"
-	"strings"
 
 	"github.com/a-h/templ"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/FACorreiaa/go-templui/internal/app/common"
 	llmchat "github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
 	results2 "github.com/FACorreiaa/go-templui/internal/app/domain/results"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
@@ -133,38 +133,11 @@ func (h *ActivitiesHandlers) loadActivitiesFromDatabase(sessionIDParam string) t
 		zap.Int("totalPOIs", len(completeData.PointsOfInterest)))
 
 	// Filter POIs for activities and render (IDENTICAL to itinerary results pattern)
-	activityPOIs := filterPOIsForActivities(completeData.PointsOfInterest)
+	activityPOIs := common.FilterPOIsForActivities(completeData.PointsOfInterest)
 	return results2.ActivitiesResults(
 		completeData.GeneralCityData,
 		activityPOIs,
 		true, true, 5, []string{}, sessionIDParam)
-}
-
-// filterPOIsForActivities filters POIs to show only activity-related categories
-func filterPOIsForActivities(allPOIs []models.POIDetailedInfo) []models.POIDetailedInfo {
-	var activityPOIs []models.POIDetailedInfo
-	activityCategories := map[string]bool{
-		"activity":      true,
-		"attraction":    true,
-		"entertainment": true,
-		"park":          true,
-		"museum":        true,
-		"gallery":       true,
-		"theater":       true,
-		"sports":        true,
-		"outdoor":       true,
-		"adventure":     true,
-		"cultural":      true,
-		"recreation":    true,
-	}
-
-	for _, poi := range allPOIs {
-		if activityCategories[strings.ToLower(poi.Category)] {
-			activityPOIs = append(activityPOIs, poi)
-		}
-	}
-
-	return activityPOIs
 }
 
 // HandleActivitiesPageSSE handles the activities page with SSE support

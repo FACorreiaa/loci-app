@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/FACorreiaa/go-templui/internal/app/common"
-	"github.com/FACorreiaa/go-templui/internal/app/domain/activities"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 )
 
@@ -67,7 +66,7 @@ func TestFilteringFunctions(t *testing.T) {
 	}
 
 	t.Run("filterPOIsForActivities should include only activity categories", func(t *testing.T) {
-		filtered := activities.filterPOIsForActivities(testPOIs)
+		filtered := common.FilterPOIsForActivities(testPOIs)
 
 		// Expected activity categories: museum, park, theater, gallery, sports, adventure, cultural, entertainment, outdoor, recreation
 		expectedCount := 10
@@ -97,7 +96,7 @@ func TestFilteringFunctions(t *testing.T) {
 	})
 
 	t.Run("filterPOIsForHotels should include only accommodation categories", func(t *testing.T) {
-		filtered := common.filterPOIsForHotels(testPOIs)
+		filtered := common.FilterPOIsForHotels(testPOIs)
 
 		// Expected hotel categories: hotel, hostel, resort, guesthouse, apartment, villa, motel, inn, b&b, accommodation, lodging, bnb
 		expectedCount := 12
@@ -127,7 +126,7 @@ func TestFilteringFunctions(t *testing.T) {
 	})
 
 	t.Run("filterPOIsForRestaurants should include only dining categories", func(t *testing.T) {
-		filtered := filterPOIsForRestaurants(testPOIs)
+		filtered := common.FilterPOIsForRestaurants(testPOIs)
 
 		// Expected restaurant categories: restaurant, cafe, coffee, bar, pub, bistro, brasserie, pizzeria, bakery, market, foodcourt, fastfood, takeaway, dining, food
 		expectedCount := 15
@@ -165,9 +164,9 @@ func TestFilteringFunctions(t *testing.T) {
 			{ID: uuid.New(), Name: "restaurant", Category: "Restaurant", Rating: 4.6},
 		}
 
-		activities := activities.filterPOIsForActivities(mixedCasePOIs)
-		hotels := common.filterPOIsForHotels(mixedCasePOIs)
-		restaurants := filterPOIsForRestaurants(mixedCasePOIs)
+		activities := common.FilterPOIsForActivities(mixedCasePOIs)
+		hotels := common.FilterPOIsForHotels(mixedCasePOIs)
+		restaurants := common.FilterPOIsForRestaurants(mixedCasePOIs)
 
 		assert.Len(t, activities, 1, "Should handle case insensitive museum category")
 		assert.Len(t, hotels, 1, "Should handle case insensitive hotel category")
@@ -177,9 +176,9 @@ func TestFilteringFunctions(t *testing.T) {
 	t.Run("filters should handle empty input", func(t *testing.T) {
 		emptyPOIs := []models.POIDetailedInfo{}
 
-		activities := activities.filterPOIsForActivities(emptyPOIs)
-		hotels := common.filterPOIsForHotels(emptyPOIs)
-		restaurants := filterPOIsForRestaurants(emptyPOIs)
+		activities := common.FilterPOIsForActivities(emptyPOIs)
+		hotels := common.FilterPOIsForHotels(emptyPOIs)
+		restaurants := common.FilterPOIsForRestaurants(emptyPOIs)
 
 		assert.Len(t, activities, 0)
 		assert.Len(t, hotels, 0)
@@ -187,9 +186,9 @@ func TestFilteringFunctions(t *testing.T) {
 	})
 
 	t.Run("filters should not overlap - unified data source integrity", func(t *testing.T) {
-		activities := activities.filterPOIsForActivities(testPOIs)
-		hotels := common.filterPOIsForHotels(testPOIs)
-		restaurants := filterPOIsForRestaurants(testPOIs)
+		activities := common.FilterPOIsForActivities(testPOIs)
+		hotels := common.FilterPOIsForHotels(testPOIs)
+		restaurants := common.FilterPOIsForRestaurants(testPOIs)
 
 		// Create sets of POI names from each filter
 		activityNames := extractPOINames(activities)
@@ -240,7 +239,7 @@ func TestConversionFunctions(t *testing.T) {
 			LlmInteractionID: uuid.New(),
 		}
 
-		hotel := common.convertPOIToHotel(poi)
+		hotel := common.ConvertPOIToHotel(poi)
 
 		// Test basic fields
 		assert.Equal(t, poi.ID, hotel.ID)
@@ -297,7 +296,7 @@ func TestConversionFunctions(t *testing.T) {
 			LlmInteractionID: uuid.New(),
 		}
 
-		restaurant := common.convertPOIToRestaurant(poi)
+		restaurant := common.ConvertPOIToRestaurant(poi)
 
 		// Test basic fields
 		assert.Equal(t, poi.ID, restaurant.ID)
@@ -342,8 +341,8 @@ func TestConversionFunctions(t *testing.T) {
 			// All optional fields are empty/nil
 		}
 
-		hotel := common.convertPOIToHotel(poi)
-		restaurant := common.convertPOIToRestaurant(poi)
+		hotel := common.ConvertPOIToHotel(poi)
+		restaurant := common.ConvertPOIToRestaurant(poi)
 
 		// Hotel conversion - all pointer fields should be nil
 		assert.Nil(t, hotel.PhoneNumber)
@@ -367,8 +366,8 @@ func TestConversionFunctions(t *testing.T) {
 			OpeningHours: map[string]string{}, // Empty map
 		}
 
-		hotel := common.convertPOIToHotel(poi)
-		restaurant := common.convertPOIToRestaurant(poi)
+		hotel := common.ConvertPOIToHotel(poi)
+		restaurant := common.ConvertPOIToRestaurant(poi)
 
 		assert.Nil(t, hotel.OpeningHours)
 		assert.Nil(t, restaurant.OpeningHours)

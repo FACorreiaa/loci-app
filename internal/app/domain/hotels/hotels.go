@@ -2,7 +2,6 @@ package hotels
 
 import (
 	"context"
-	"strings"
 
 	"go.uber.org/zap"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	"github.com/FACorreiaa/go-templui/internal/app/common"
 	llmchat "github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
 	results2 "github.com/FACorreiaa/go-templui/internal/app/domain/results"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
@@ -134,90 +134,11 @@ func (h *HotelsHandlers) loadHotelsFromDatabase(sessionIDParam string) templ.Com
 		zap.Int("totalPOIs", len(completeData.PointsOfInterest)))
 
 	// Filter POIs for hotels and render (IDENTICAL to itinerary results pattern)
-	hotelPOIs := filterPOIsForHotels(completeData.PointsOfInterest)
+	hotelPOIs := common.FilterPOIsForHotels(completeData.PointsOfInterest)
 	return results2.HotelsResults(
 		completeData.GeneralCityData,
 		hotelPOIs,
 		true, true, 5, []string{}, sessionIDParam)
-}
-
-// filterPOIsForHotels filters POIs to show only accommodation-related categories
-func filterPOIsForHotels(allPOIs []models.POIDetailedInfo) []models.HotelDetailedInfo {
-	var hotelPOIs []models.HotelDetailedInfo
-	hotelCategories := map[string]bool{
-		"hotel":         true,
-		"accommodation": true,
-		"lodging":       true,
-		"hostel":        true,
-		"resort":        true,
-		"guesthouse":    true,
-		"apartment":     true,
-		"villa":         true,
-		"motel":         true,
-		"inn":           true,
-		"b&b":           true,
-		"bnb":           true,
-	}
-
-	for _, poi := range allPOIs {
-		if hotelCategories[strings.ToLower(poi.Category)] {
-			hotelPOIs = append(hotelPOIs, convertPOIToHotel(poi))
-		}
-	}
-
-	return hotelPOIs
-}
-
-// convertPOIToHotel converts a POIDetailedInfo to HotelDetailedInfo
-func convertPOIToHotel(poi models.POIDetailedInfo) models.HotelDetailedInfo {
-	var phoneNumber *string
-	if poi.PhoneNumber != "" {
-		phoneNumber = &poi.PhoneNumber
-	}
-
-	var website *string
-	if poi.Website != "" {
-		website = &poi.Website
-	}
-
-	var priceRange *string
-	if poi.PriceRange != "" {
-		priceRange = &poi.PriceRange
-	}
-
-	var openingHours *string
-	if len(poi.OpeningHours) > 0 {
-		// Convert map to string representation
-		hoursStr := ""
-		for day, hours := range poi.OpeningHours {
-			if hoursStr != "" {
-				hoursStr += ", "
-			}
-			hoursStr += day + ": " + hours
-		}
-		if hoursStr != "" {
-			openingHours = &hoursStr
-		}
-	}
-
-	return models.HotelDetailedInfo{
-		ID:               poi.ID,
-		City:             poi.City,
-		Name:             poi.Name,
-		Latitude:         poi.Latitude,
-		Longitude:        poi.Longitude,
-		Category:         poi.Category,
-		Description:      poi.Description,
-		Address:          poi.Address,
-		PhoneNumber:      phoneNumber,
-		Website:          website,
-		OpeningHours:     openingHours,
-		PriceRange:       priceRange,
-		Rating:           poi.Rating,
-		Tags:             poi.Tags,
-		Images:           poi.Images,
-		LlmInteractionID: poi.LlmInteractionID,
-	}
 }
 
 // HandleHotelsPageSSE handles the hotels page with SSE support

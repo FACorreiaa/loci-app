@@ -114,15 +114,15 @@ func (h *AuthHandlers) LoginHandler(c *gin.Context) {
 
 	formErrors := SignInFormErrors{}
 	if email == "" {
-		formErrors.Email = "Email address is required."
+		formErrors.Email = MsgEmailRequired
 	} else {
 		_, err := mail.ParseAddress(email)
 		if err != nil {
-			formErrors.Email = "Please enter a valid email address."
+			formErrors.Email = MsgEmailInvalid
 		}
 	}
 	if password == "" {
-		formErrors.Password = "Password is required."
+		formErrors.Password = MsgPasswordRequired
 	}
 
 	if formErrors.Email != "" || formErrors.Password != "" {
@@ -136,15 +136,17 @@ func (h *AuthHandlers) LoginHandler(c *gin.Context) {
 
 	accessToken, refreshToken, err := h.authService.Login(c.Request.Context(), email, password)
 	if err != nil {
-		h.logger.Warn("Invalid login credentials", zap.String("email", email), zap.Error(err))
+		h.logger.Warn("invalid login credentials", zap.String("email", email), zap.Error(err))
 		formValues := SignInFormValues{Email: email}
-		formErrors.General = "Invalid email or password. Please try again."
+		formErrors.General = MsgLoginFailed
+		formErrors.Password = MsgPasswordInvalid
+		formErrors.Email = MsgEmailInvalid
 
 		switch {
 		case errors.Is(err, models.ErrUserNotFound), errors.Is(err, models.ErrInvalidPassword):
-			formErrors.General = "Invalid credentials. Please check your email and password."
+			formErrors.General = MsgInvalidCredentials
 		default:
-			formErrors.General = "An unexpected error occurred. Please try again."
+			formErrors.General = MsgUnexpectedError
 		}
 
 		component := SignInForm(formValues, formErrors)
@@ -220,7 +222,7 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		component := banner.Banner(banner.BannerProps{
 			Type:        banner.BannerError,
-			Message:     "All required fields must be filled",
+			Message:     MsgAllFieldsRequired,
 			Dismissable: true,
 			ID:          "signup-required",
 			AutoDismiss: 5,
@@ -236,8 +238,8 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		component := banner.Banner(banner.BannerProps{
 			Type:        banner.BannerError,
-			Message:     "Passwords do not match",
-			Description: "Please ensure both password fields are identical",
+			Message:     MsgPasswordMismatch,
+			Description: MsgPasswordMismatchDesc,
 			Dismissable: true,
 			ID:          "signup-password-mismatch",
 			AutoDismiss: 5,
@@ -257,8 +259,8 @@ func (h *AuthHandlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		component := banner.Banner(banner.BannerProps{
 			Type:        banner.BannerError,
-			Message:     "Registration failed",
-			Description: "Email may already be registered. Please try signing in or use a different email.",
+			Message:     MsgRegistrationFailed,
+			Description: MsgEmailAlreadyRegistered,
 			Dismissable: true,
 			ID:          "signup-failed",
 			AutoDismiss: 8,
@@ -325,7 +327,7 @@ func (h *AuthHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Requ
 	if currentPassword == "" || newPassword == "" || confirmNewPassword == "" {
 		w.Header().Set("HX-Retarget", "#change-password-form")
 		w.WriteHeader(http.StatusBadRequest)
-		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">All fields are required</div>`)); err != nil {
+		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">` + MsgAllFieldsRequired + `</div>`)); err != nil {
 			h.logger.Error("Failed to write response", zap.Error(err))
 		}
 		return
@@ -334,7 +336,7 @@ func (h *AuthHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Requ
 	if newPassword != confirmNewPassword {
 		w.Header().Set("HX-Retarget", "#change-password-form")
 		w.WriteHeader(http.StatusBadRequest)
-		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">New passwords do not match</div>`)); err != nil {
+		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">` + MsgNewPasswordMismatch + `</div>`)); err != nil {
 			h.logger.Error("Failed to write response", zap.Error(err))
 		}
 		return
@@ -352,7 +354,7 @@ func (h *AuthHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Requ
 
 	w.Header().Set("HX-Retarget", "#change-password-form")
 	w.WriteHeader(http.StatusOK)
-	if _, err := w.Write([]byte(`<div class="text-green-500 text-sm mb-4">Password changed successfully</div>`)); err != nil {
+	if _, err := w.Write([]byte(`<div class="text-green-500 text-sm mb-4">` + MsgPasswordChangeSuccess + `</div>`)); err != nil {
 		h.logger.Error("Failed to write response", zap.Error(err))
 	}
 }
@@ -398,7 +400,7 @@ func (h *AuthHandlers) ForgotPasswordHandler(w http.ResponseWriter, r *http.Requ
 	if email == "" {
 		w.Header().Set("HX-Retarget", "#forgot-password-form")
 		w.WriteHeader(http.StatusBadRequest)
-		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">Email is required</div>`)); err != nil {
+		if _, err := w.Write([]byte(`<div class="text-red-500 text-sm mb-4">` + MsgEmailRequiredForgot + `</div>`)); err != nil {
 			h.logger.Error("Failed to write response", zap.Error(err))
 		}
 		return
@@ -408,7 +410,7 @@ func (h *AuthHandlers) ForgotPasswordHandler(w http.ResponseWriter, r *http.Requ
 	h.logger.Info("Password reset requested", zap.String("email", email))
 	w.Header().Set("HX-Retarget", "#forgot-password-form")
 	w.WriteHeader(http.StatusOK)
-	if _, err := w.Write([]byte(`<div class="text-green-500 text-sm mb-4">If this email is registered, you will receive password reset instructions</div>`)); err != nil {
+	if _, err := w.Write([]byte(`<div class="text-green-500 text-sm mb-4">` + MsgPasswordResetSent + `</div>`)); err != nil {
 		h.logger.Error("Failed to write response", zap.Error(err))
 	}
 }
@@ -429,7 +431,7 @@ func (h *AuthHandlers) CheckUsernameHandler(w http.ResponseWriter, r *http.Reque
 	username := r.FormValue("username")
 	if username == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		if _, err := w.Write([]byte(`<span class="text-red-500 text-sm">Username is required</span>`)); err != nil {
+		if _, err := w.Write([]byte(`<span class="text-red-500 text-sm">` + MsgUsernameRequired + `</span>`)); err != nil {
 			h.logger.Error("Failed to write response", zap.Error(err))
 		}
 		return
@@ -438,7 +440,7 @@ func (h *AuthHandlers) CheckUsernameHandler(w http.ResponseWriter, r *http.Reque
 	// Simple validation for demo - in production, check against database
 	if len(username) < 3 {
 		w.WriteHeader(http.StatusBadRequest)
-		if _, err := w.Write([]byte(`<span class="text-red-500 text-sm">Username must be at least 3 characters</span>`)); err != nil {
+		if _, err := w.Write([]byte(`<span class="text-red-500 text-sm">` + MsgUsernameTooShort + `</span>`)); err != nil {
 			h.logger.Error("Failed to write response", zap.Error(err))
 		}
 		return
@@ -446,7 +448,7 @@ func (h *AuthHandlers) CheckUsernameHandler(w http.ResponseWriter, r *http.Reque
 
 	// For demo, assume username is available
 	w.WriteHeader(http.StatusOK)
-	if _, err := w.Write([]byte(`<span class="text-green-500 text-sm">Username is available</span>`)); err != nil {
+	if _, err := w.Write([]byte(`<span class="text-green-500 text-sm">` + MsgUsernameAvailable + `</span>`)); err != nil {
 		h.logger.Error("Failed to write response", zap.Error(err))
 	}
 }

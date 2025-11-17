@@ -9,7 +9,6 @@ import (
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 )
 
-// Mock Repository for testing
 type MockRepository struct{}
 
 func (m *MockRepository) GetLatestInteractionBySessionID(_ context.Context, sessionID uuid.UUID) (*models.LlmInteraction, error) {
@@ -98,7 +97,14 @@ func (m *MockRepository) SaveItineraryPOIs(_ context.Context, _ uuid.UUID, _ []m
 	return nil
 }
 
-// Mock LLM Service
+func (m *MockRepository) GetFeaturedCollections(_ context.Context, _ int) ([]models.FeaturedCollection, error) {
+	return []models.FeaturedCollection{}, nil
+}
+
+func (m *MockRepository) GetTrendingDiscoveries(_ context.Context, _ int) ([]models.TrendingDiscovery, error) {
+	return []models.TrendingDiscovery{}, nil
+}
+
 type MockLlmService struct{}
 
 func (m *MockLlmService) SaveItenerary(_ context.Context, _ uuid.UUID, _ models.BookmarkRequest) (uuid.UUID, error) {
@@ -140,7 +146,14 @@ func (m *MockLlmService) ProcessUnifiedChatMessageStreamFree(_ context.Context, 
 	return nil
 }
 
-// Mock Profile Service
+func (m *MockLlmService) GetFeaturedCollections(_ context.Context, _ int) ([]models.FeaturedCollection, error) {
+	return []models.FeaturedCollection{}, nil
+}
+
+func (m *MockLlmService) GetTrendingDiscoveries(_ context.Context, _ int) ([]models.TrendingDiscovery, error) {
+	return []models.TrendingDiscovery{}, nil
+}
+
 type MockProfileService struct{}
 
 func (m *MockProfileService) GetSearchProfiles(_ context.Context, _ uuid.UUID) ([]models.UserPreferenceProfileResponse, error) {

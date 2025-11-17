@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 
 	"github.com/FACorreiaa/go-templui/internal/app/common"
 )
@@ -30,7 +31,7 @@ func TestChatHandlers_SendMessage(t *testing.T) {
 		c.Set("user_id", "550e8400-e29b-41d4-a716-446655440000")
 		c.Next()
 	})
-	chatHandlers := NewChatHandlers(mockLlmService, mockProfileService, mockChatRepo)
+	chatHandlers := NewChatHandlers(mockLlmService, mockProfileService, mockChatRepo, zap.NewNop())
 	r.POST("/chat/message", chatHandlers.SendMessage)
 
 	t.Run("it returns a successful response with a valid message", func(t *testing.T) {
