@@ -608,6 +608,7 @@ func setupRouter(r *gin.Engine, h *AppHandlers, log *zap.Logger) {
 		htmxGroup.POST("/restaurants/search", h.Results.HandleRestaurantSearch)
 		htmxGroup.POST("/activities/search", h.Results.HandleActivitySearch)
 		htmxGroup.POST("/hotels/search", h.Results.HandleHotelSearch)
+		htmxGroup.GET("/hotels/updates/stream", h.Hotels.StreamHotelUpdates)
 		htmxGroup.POST("/itinerary/search", h.Results.HandleItinerarySearch)
 		htmxGroup.GET("/itinerary/stream/results", h.Results.HandleItinerarySearch)
 

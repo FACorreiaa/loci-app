@@ -3,6 +3,7 @@ package llmchat
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"go.uber.org/zap"
@@ -241,7 +242,7 @@ func parseHotelsFromResponse(responseText string, _ *zap.Logger) ([]models.Hotel
 		return nil, fmt.Errorf("empty hotels response text")
 	}
 
-	cleanedResponse := cleanJSONResponse(responseText)
+	cleanedResponse := NormalizeHotelJSONResponse(responseText)
 
 	// Try to parse as array of hotels
 	var hotels []models.HotelDetailedInfo
@@ -266,4 +267,36 @@ func parseHotelsFromResponse(responseText string, _ *zap.Logger) ([]models.Hotel
 	}
 
 	return nil, fmt.Errorf("failed to parse hotels response")
+}
+
+var (
+	hotelsSectionRegex    = regexp.MustCompile(`(?is)\[hotels\]\s*(\{.*?|\[.*?)(?:\n\s*\[[a-z_]+\]|$)`)
+	priceRangeNumberRegex = regexp.MustCompile(`("price_range"\s*:\s*)(-?\d+(?:\.\d+)?)(\s*[,}])`)
+)
+
+// NormalizeHotelJSONResponse cleans hotel responses (SSE chunks or cached data) so downstream parsers
+// can successfully unmarshal them even when the LLM emits numeric price ranges or `[hotels]` tags.
+func NormalizeHotelJSONResponse(responseText string) string {
+	cleaned := cleanJSONResponse(responseText)
+	if cleaned == "" {
+		return ""
+	}
+
+	section := extractHotelsSection(cleaned)
+	if section == "" {
+		return ""
+	}
+
+	normalized := priceRangeNumberRegex.ReplaceAllString(section, `$1"$2"$3`)
+	return strings.TrimSpace(normalized)
+}
+
+func extractHotelsSection(input string) string {
+	if input == "" {
+		return ""
+	}
+	if matches := hotelsSectionRegex.FindStringSubmatch(input); len(matches) > 1 {
+		return strings.TrimSpace(matches[1])
+	}
+	return strings.TrimSpace(input)
 }

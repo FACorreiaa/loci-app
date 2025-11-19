@@ -63,6 +63,7 @@ type LlmInteractiontService interface {
 		ctx context.Context,
 		sessionID uuid.UUID,
 		message string,
+		domainOverride string,
 		userLocation *models.UserLocation, // For distance sorting context
 		eventCh chan<- models.StreamEvent, // Channel to send events back
 	) error
@@ -1609,7 +1610,7 @@ func getPersonalizedPOI(interestNames []string, cityName, tagsPromptPart, userPr
 // ContinueSessionStreamed handles subsequent messages in an existing session and streams responses/updates.
 func (l *ServiceImpl) ContinueSessionStreamed(
 	ctx context.Context, sessionID uuid.UUID,
-	message string, userLocation *models.UserLocation,
+	message string, domainOverride string, userLocation *models.UserLocation,
 	eventCh chan<- models.StreamEvent, // Output channel for events
 ) error { // Only returns error for critical setup failures
 	ctx, span := otel.Tracer("LlmInteractionService").Start(ctx, "ContinueSessionStreamed", trace.WithAttributes(
@@ -1633,6 +1634,12 @@ func (l *ServiceImpl) ContinueSessionStreamed(
 		return err
 	}
 	l.sendEvent(ctx, eventCh, models.StreamEvent{Type: "session_validated", Data: map[string]string{"status": "active"}}, 3)
+
+	if domainOverride != "" {
+		if searchType := searchTypeFromDomainString(domainOverride); searchType != "" {
+			session.SearchType = searchType
+		}
+	}
 
 	// --- 2. Fetch City ID ---
 	cityID := uuid.Nil
@@ -2277,6 +2284,7 @@ func (l *ServiceImpl) handleSemanticAddPOIStreamed(ctx context.Context, message 
 
 	// Ensure the session has an initialized itinerary
 	l.ensureItineraryExists(session)
+	eventDomain := domainStringFromSearchType(session.SearchType)
 
 	// Try semantic matching first - look for POIs semantically similar to the user's request
 	if len(semanticPOIs) > 0 {
@@ -2298,32 +2306,32 @@ func (l *ServiceImpl) handleSemanticAddPOIStreamed(ctx context.Context, message 
 			}
 
 			if !alreadyExists {
+				if semanticPOI.ID == uuid.Nil {
+					semanticPOI.ID = uuid.New()
+				}
 				// Add semantic POI to itinerary first
 				session.CurrentItinerary.AIItineraryResponse.PointsOfInterest = append(
 					session.CurrentItinerary.AIItineraryResponse.PointsOfInterest, semanticPOI)
-				newIndex := len(session.CurrentItinerary.AIItineraryResponse.PointsOfInterest) - 1
+				newIndex := len(session.CurrentItinerary.AIItineraryResponse.PointsOfInterest)
 
-				// Render HTML fragment for the new POI
-				htmlFragment, renderErr := l.RenderItemHTML(ctx, "itinerary", semanticPOI, newIndex+1)
-				if renderErr != nil {
-					l.logger.Warn("Failed to render POI HTML", zap.Any("error", renderErr))
+				itemComponent, itemData := prepareDomainItem(semanticPOI, eventDomain, newIndex)
+				htmlFragment := ""
+				if itemComponent != nil {
+					if rendered, renderErr := l.RenderItemHTML(ctx, eventDomain, itemComponent, newIndex); renderErr == nil {
+						htmlFragment = rendered
+					} else {
+						l.logger.Warn("Failed to render POI HTML", zap.Any("error", renderErr))
+					}
 				}
 
 				// Send item_added event with HTML
 				l.sendEvent(ctx, eventCh, models.StreamEvent{
-					Type:   models.EventTypeItemAdded,
-					Domain: "itinerary",
-					ItemID: semanticPOI.ID.String(),
-					HTML:   htmlFragment,
-					ItemData: map[string]interface{}{
-						"name":        semanticPOI.Name,
-						"category":    semanticPOI.Category,
-						"latitude":    semanticPOI.Latitude,
-						"longitude":   semanticPOI.Longitude,
-						"description": semanticPOI.DescriptionPOI,
-						"index":       newIndex + 1,
-					},
-					Message: fmt.Sprintf("Added %s to your itinerary", semanticPOI.Name),
+					Type:     models.EventTypeItemAdded,
+					Domain:   eventDomain,
+					ItemID:   semanticPOI.ID.String(),
+					HTML:     htmlFragment,
+					ItemData: itemData,
+					Message:  fmt.Sprintf("Added %s", semanticPOI.Name),
 				}, 3)
 
 				l.logger.Info("Added semantic POI to streaming itinerary",
@@ -2403,8 +2411,31 @@ func (l *ServiceImpl) handleSemanticAddPOIStreamed(ctx context.Context, message 
 		return "", false, fmt.Errorf("failed to generate POI data: %w", err)
 	}
 
+	if newPOI.ID == uuid.Nil {
+		newPOI.ID = uuid.New()
+	}
 	session.CurrentItinerary.AIItineraryResponse.PointsOfInterest = append(
 		session.CurrentItinerary.AIItineraryResponse.PointsOfInterest, newPOI)
+	newIndex := len(session.CurrentItinerary.AIItineraryResponse.PointsOfInterest)
+
+	itemComponent, itemData := prepareDomainItem(newPOI, eventDomain, newIndex)
+	htmlFragment := ""
+	if itemComponent != nil {
+		if rendered, renderErr := l.RenderItemHTML(ctx, eventDomain, itemComponent, newIndex); renderErr == nil {
+			htmlFragment = rendered
+		} else {
+			l.logger.Warn("Failed to render POI HTML", zap.Any("error", renderErr))
+		}
+	}
+
+	l.sendEvent(ctx, eventCh, models.StreamEvent{
+		Type:     models.EventTypeItemAdded,
+		Domain:   eventDomain,
+		ItemID:   newPOI.ID.String(),
+		HTML:     htmlFragment,
+		ItemData: itemData,
+		Message:  fmt.Sprintf("Added %s", newPOI.Name),
+	}, 3)
 
 	l.sendEvent(ctx, eventCh, models.StreamEvent{
 		Type: "poi_added_successfully",
@@ -2471,12 +2502,15 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStream(ctx context.Context, userI
 	//var finalPois []models.POIDetailedInfo
 	sessionID := uuid.New()
 
+	searchType := searchTypeForDomain(domain)
+
 	// Initialize session
 	session := models.ChatSession{
-		ID:        sessionID,
-		UserID:    userID,
-		ProfileID: profileID,
-		CityName:  cityName,
+		ID:         sessionID,
+		UserID:     userID,
+		ProfileID:  profileID,
+		CityName:   cityName,
+		SearchType: searchType,
 		ConversationHistory: []models.ConversationMessage{
 			{Role: "user", Content: message, Timestamp: time.Now()},
 		},
@@ -2778,10 +2812,13 @@ func (l *ServiceImpl) ProcessUnifiedChatMessageStreamFree(ctx context.Context, c
 	// Step 4: Cache Integration - Generate cache key based on session parameters
 	sessionID := uuid.New()
 
+	searchType := searchTypeForDomain(domain)
+
 	// Initialize session
 	session := models.ChatSession{
-		ID:       sessionID,
-		CityName: cityName,
+		ID:         sessionID,
+		CityName:   cityName,
+		SearchType: searchType,
 		ConversationHistory: []models.ConversationMessage{
 			{Role: "user", Content: message, Timestamp: time.Now()},
 		},
@@ -3218,6 +3255,47 @@ func routeInfoForDomain(domain models.DomainType) (string, string) {
 		return "activities", "/activities"
 	default:
 		return "itinerary", "/itinerary"
+	}
+}
+
+func searchTypeForDomain(domain models.DomainType) models.SearchType {
+	switch domain {
+	case models.DomainAccommodation:
+		return models.SearchTypeHotel
+	case models.DomainDining:
+		return models.SearchTypeRestaurant
+	case models.DomainActivities:
+		return models.SearchTypeActivity
+	default:
+		return models.SearchTypeItinerary
+	}
+}
+
+func domainStringFromSearchType(searchType models.SearchType) string {
+	switch searchType {
+	case models.SearchTypeHotel:
+		return "hotels"
+	case models.SearchTypeRestaurant:
+		return "restaurants"
+	case models.SearchTypeActivity:
+		return "activities"
+	default:
+		return "itinerary"
+	}
+}
+
+func searchTypeFromDomainString(domain string) models.SearchType {
+	switch strings.ToLower(domain) {
+	case "hotels", "accommodation":
+		return models.SearchTypeHotel
+	case "restaurants", "dining":
+		return models.SearchTypeRestaurant
+	case "activities":
+		return models.SearchTypeActivity
+	case "itinerary", "general":
+		return models.SearchTypeItinerary
+	default:
+		return ""
 	}
 }
 

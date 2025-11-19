@@ -63,7 +63,7 @@ templ ChatPanel(props ChatPanelProps) {
 						<span class="sr-only">Close chat</span>
 					</button>
 				</div>
-				<div class="flex-1 flex flex-col" x-data="{ messages: [], message: '', isLoading: false }">
+				<div class="flex-1 flex flex-col" x-data={ fmt.Sprintf("chatPanelController('%s')", props.SessionID) }>
 					<!-- Messages Container -->
 					<div
 						id="chat-messages"
@@ -73,7 +73,11 @@ templ ChatPanel(props ChatPanelProps) {
 						<template x-for="msg in messages" :key="msg.id">
 							<div :class="msg.type === 'user' ? 'flex justify-end' : 'flex justify-start'">
 								<div
-									:class="msg.type === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'"
+									:class="msg.type === 'user'
+										? 'bg-blue-600 text-white'
+										: (msg.type === 'error'
+											? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-200'
+											: 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white')"
 									class="max-w-[80%] rounded-lg px-4 py-2 text-sm"
 								>
 									<p x-text="msg.content"></p>
@@ -91,17 +95,8 @@ templ ChatPanel(props ChatPanelProps) {
 								</div>
 							</div>
 						</div>
-						<!-- SSE Update Container -->
-						if props.SessionID != "" {
-							<div
-								id="sse-updates"
-								hx-ext="sse"
-								sse-connect={ fmt.Sprintf("/chat/continue/%s", props.SessionID) }
-								sse-swap="message"
-								hx-target="#chat-messages"
-								hx-swap="beforeend"
-							></div>
-						} else {
+						<!-- Session notice -->
+						if props.SessionID == "" {
 							<div class="rounded-lg border border-dashed border-gray-200 dark:border-gray-600 p-4 text-xs text-gray-500 dark:text-gray-300">
 								Start a new search to enable live updates and continue the conversation here.
 							</div>
@@ -109,33 +104,35 @@ templ ChatPanel(props ChatPanelProps) {
 					</div>
 					<!-- Input Area -->
 					if props.SessionID != "" {
+						<div id={ fmt.Sprintf("chat-stream-buffer-%s", props.SessionID) } class="hidden" aria-hidden="true"></div>
 						<div class="p-4 border-t border-gray-200 dark:border-gray-700">
 							<form
 								hx-post={ fmt.Sprintf("/chat/continue/%s", props.SessionID) }
 								hx-ext="sse"
-								hx-target="#chat-messages"
+								hx-target={ fmt.Sprintf("#chat-stream-buffer-%s", props.SessionID) }
 								hx-swap="beforeend"
 								@submit.prevent="
-									if (message.trim()) {
-										messages.push({
-											id: Date.now(),
-											type: 'user',
-											content: message,
-											timestamp: new Date()
-										});
-										isLoading = true;
-										$nextTick(() => {
-											const container = document.getElementById('chat-messages');
-											container.scrollTop = container.scrollHeight;
-										});
-									}
-								"
+								if (message.trim()) {
+									messages.push({
+										id: Date.now(),
+										type: 'user',
+										content: message,
+										timestamp: new Date()
+									});
+									isLoading = true;
+									$nextTick(() => {
+										const container = document.getElementById('chat-messages');
+										container.scrollTop = container.scrollHeight;
+									});
+								}
+							"
 								hx-on::after-request="
 									message = '';
 									isLoading = false;
 								"
 								class="flex gap-2"
 							>
+								<input type="hidden" name="domain" value={ props.Domain }/>
 								<input
 									type="text"
 									name="message"
@@ -190,6 +187,75 @@ templ ChatPanel(props ChatPanelProps) {
 		</div>
 		<!-- Auto-scroll script -->
 		<script>
+			function chatPanelController(sessionID) {
+				return {
+					sessionID: sessionID || '',
+					messages: [],
+					message: '',
+					isLoading: false,
+					init() {
+						if (!this.sessionID) {
+							return;
+						}
+						this._chatSSEHandler = (event) => {
+							const payload = event.detail && event.detail.data;
+							if (!payload) {
+								return;
+							}
+							let eventData;
+							try {
+								eventData = typeof payload === 'string' ? JSON.parse(payload) : payload;
+							} catch (error) {
+								return;
+							}
+							this.processStreamEvent(eventData);
+						};
+						document.addEventListener('htmx:sseMessage', this._chatSSEHandler);
+					},
+					processStreamEvent(eventData) {
+						if (!this.sessionID || !eventData || !eventData.type) {
+							return;
+						}
+						if (eventData.type === 'message' && eventData.message) {
+							this.addAssistantMessage(eventData.message, eventData.timestamp);
+							this.isLoading = false;
+							return;
+						}
+						if (eventData.type === 'itinerary' && eventData.message) {
+							this.addAssistantMessage(eventData.message, eventData.timestamp);
+							this.isLoading = false;
+							return;
+						}
+						if (eventData.type === 'error') {
+							const content = eventData.error || eventData.message || 'Something went wrong.';
+							this.addAssistantMessage(content, eventData.timestamp, 'error');
+							this.isLoading = false;
+							return;
+						}
+						if (eventData.type === 'complete') {
+							this.isLoading = false;
+						}
+					},
+					addAssistantMessage(content, timestamp, variant = 'assistant') {
+						if (!content) {
+							return;
+						}
+						this.messages.push({
+							id: Date.now() + Math.random(),
+							type: variant,
+							content,
+							timestamp: timestamp ? new Date(timestamp) : new Date(),
+						});
+						this.$nextTick(() => {
+							const container = document.getElementById('chat-messages');
+							if (container) {
+								container.scrollTop = container.scrollHeight;
+							}
+						});
+					},
+				};
+			}
+
 			document.addEventListener('htmx:sseMessage', function(event) {
 				const container = document.getElementById('chat-messages');
 				if (container) {

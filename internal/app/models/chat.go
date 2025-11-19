@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -301,6 +302,41 @@ type HotelDetailedInfo struct {
 	Images           []string  `json:"images"`
 	LlmInteractionID uuid.UUID `json:"llm_interaction_id"`
 	Err              error     `json:"-"` // Not serialized
+}
+
+func (h *HotelDetailedInfo) UnmarshalJSON(data []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if value, ok := raw["price_range"]; ok && value != nil {
+		switch v := value.(type) {
+		case string:
+			trimmed := strings.TrimSpace(v)
+			if trimmed == "" {
+				delete(raw, "price_range")
+			} else {
+				raw["price_range"] = trimmed
+			}
+		case float64:
+			raw["price_range"] = strconv.FormatFloat(v, 'f', -1, 64)
+		case json.Number:
+			raw["price_range"] = v.String()
+		default:
+			raw["price_range"] = fmt.Sprintf("%v", v)
+		}
+	}
+	normalized, err := json.Marshal(raw)
+	if err != nil {
+		return err
+	}
+	type alias HotelDetailedInfo
+	var aux alias
+	if err := json.Unmarshal(normalized, &aux); err != nil {
+		return err
+	}
+	*h = HotelDetailedInfo(aux)
+	return nil
 }
 
 type HotelPreferenceRequest struct {

@@ -1323,6 +1323,7 @@ func (h *ChatHandlers) ContinueChatSession(c *gin.Context) {
 	// Parse request body
 	var req struct {
 		Message      string               `json:"message" form:"message"`
+		Domain       string               `json:"domain" form:"domain"`
 		UserLocation *models.UserLocation `json:"user_location,omitempty" form:"user_location"`
 	}
 
@@ -1337,6 +1338,7 @@ func (h *ChatHandlers) ContinueChatSession(c *gin.Context) {
 	} else {
 		// Form-encoded for HTMX
 		req.Message = c.PostForm("message")
+		req.Domain = c.PostForm("domain")
 	}
 
 	if req.Message == "" {
@@ -1377,6 +1379,7 @@ func (h *ChatHandlers) ContinueChatSession(c *gin.Context) {
 			c.Request.Context(),
 			sessionID,
 			req.Message,
+			req.Domain,
 			req.UserLocation,
 			eventCh,
 		)
@@ -1418,6 +1421,10 @@ func (h *ChatHandlers) ContinueChatSession(c *gin.Context) {
 			fmt.Fprintf(c.Writer, "data: %s\n\n", eventData)
 			flusher.Flush()
 
+			if shouldForwardDomainUpdate(event) {
+				DomainUpdates.Publish(sessionID.String(), event)
+			}
+
 			if event.Type == models.EventTypeComplete || event.Type == models.EventTypeError {
 				h.logger.Info("Stream completed", zap.String("eventType", event.Type))
 				return
@@ -1428,5 +1435,17 @@ func (h *ChatHandlers) ContinueChatSession(c *gin.Context) {
 			h.logger.Info("Client disconnected from continue session stream")
 			return
 		}
+	}
+}
+
+func shouldForwardDomainUpdate(event models.StreamEvent) bool {
+	if event.Domain == "" {
+		return false
+	}
+	switch event.Type {
+	case models.EventTypeItemAdded, models.EventTypeItemRemoved, models.EventTypeItemUpdated:
+		return true
+	default:
+		return false
 	}
 }

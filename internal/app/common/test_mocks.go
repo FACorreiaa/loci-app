@@ -123,7 +123,7 @@ func (m *MockLlmService) GetPOIDetailedInfosResponse(_ context.Context, _ uuid.U
 	return &models.POIDetailedInfo{}, nil
 }
 
-func (m *MockLlmService) ContinueSessionStreamed(_ context.Context, _ uuid.UUID, _ string, _ *models.UserLocation, eventCh chan<- models.StreamEvent) error {
+func (m *MockLlmService) ContinueSessionStreamed(_ context.Context, _ uuid.UUID, _ string, _ string, _ *models.UserLocation, eventCh chan<- models.StreamEvent) error {
 	close(eventCh)
 	return nil
 }

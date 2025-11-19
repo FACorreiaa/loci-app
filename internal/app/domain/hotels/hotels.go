@@ -2,12 +2,14 @@ package hotels
 
 import (
 	"context"
-
-	"go.uber.org/zap"
+	"encoding/json"
+	"fmt"
+	"net/http"
 
 	"github.com/a-h/templ"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 
 	"github.com/FACorreiaa/go-templui/internal/app/common"
 	llmchat "github.com/FACorreiaa/go-templui/internal/app/domain/chat_prompt"
@@ -122,6 +124,9 @@ func (h *HotelsHandlers) loadHotelsFromDatabase(sessionIDParam string) templ.Com
 		h.logger.Warn("Could not parse complete data from stored response",
 			zap.String("sessionID", sessionIDParam),
 			zap.Error(err))
+		if fallback, ok := h.parseHotelsOnlyResponse(sessionIDParam, interaction); ok {
+			return fallback
+		}
 		// Return empty results instead of PageNotFound for parsing errors
 		emptyCityData := models.GeneralCityData{}
 		emptyHotels := []models.HotelDetailedInfo{}
@@ -162,6 +167,61 @@ func (h *HotelsHandlers) HandleHotelsPageSSE(c *gin.Context) templ.Component {
 	return h.loadHotelsBySession(sessionIDParam, cacheKey)
 }
 
+// StreamHotelUpdates streams domain mutations for hotels so HTMX can update independently from chat SSE.
+func (h *HotelsHandlers) StreamHotelUpdates(c *gin.Context) {
+	sessionID := c.Query("sessionId")
+	if sessionID == "" {
+		h.logger.Warn("Hotel updates stream requested without sessionId")
+		c.String(http.StatusBadRequest, "sessionId query parameter is required")
+		return
+	}
+
+	domain := c.DefaultQuery("domain", "hotels")
+	updateCh, cancel := llmchat.DomainUpdates.Subscribe(sessionID, domain)
+	defer cancel()
+
+	w := c.Writer
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("X-Accel-Buffering", "no")
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		h.logger.Warn("Response writer does not support flushing for hotel stream")
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	ctx := c.Request.Context()
+	h.logger.Info("Hotel updates stream connected",
+		zap.String("sessionID", sessionID),
+		zap.String("domain", domain))
+
+	for {
+		select {
+		case <-ctx.Done():
+			h.logger.Info("Hotel updates stream closed by client", zap.String("sessionID", sessionID))
+			return
+		case event, ok := <-updateCh:
+			if !ok {
+				h.logger.Info("Hotel updates channel closed", zap.String("sessionID", sessionID))
+				return
+			}
+
+			payload, err := json.Marshal(event)
+			if err != nil {
+				h.logger.Warn("Failed to marshal hotel update event", zap.Error(err))
+				continue
+			}
+
+			fmt.Fprintf(w, "event: %s\n", event.Type)
+			fmt.Fprintf(w, "data: %s\n\n", payload)
+			flusher.Flush()
+		}
+	}
+}
+
 // loadCityDataFromDatabase loads city data from database by sessionID
 func (h *HotelsHandlers) loadCityDataFromDatabase(sessionIDParam string) models.GeneralCityData {
 	sessionID, err := uuid.Parse(sessionIDParam)
@@ -194,4 +254,49 @@ func (h *HotelsHandlers) loadCityDataFromDatabase(sessionIDParam string) models.
 		zap.String("description", completeData.GeneralCityData.Description))
 
 	return completeData.GeneralCityData
+}
+
+func (h *HotelsHandlers) parseHotelsOnlyResponse(sessionID string, interaction *models.LlmInteraction) (templ.Component, bool) {
+	cleaned := llmchat.NormalizeHotelJSONResponse(interaction.ResponseText)
+	if cleaned == "" {
+		return nil, false
+	}
+
+	var hotelWrapper struct {
+		CityData    *models.GeneralCityData    `json:"general_city_data"`
+		CityDataAlt *models.GeneralCityData    `json:"city_data"`
+		Hotels      []models.HotelDetailedInfo `json:"hotels"`
+	}
+	var lastErr error
+	if err := json.Unmarshal([]byte(cleaned), &hotelWrapper); err == nil && len(hotelWrapper.Hotels) > 0 {
+		cityData := models.GeneralCityData{City: interaction.CityName}
+		if hotelWrapper.CityData != nil {
+			cityData = *hotelWrapper.CityData
+		} else if hotelWrapper.CityDataAlt != nil {
+			cityData = *hotelWrapper.CityDataAlt
+		}
+		h.logger.Info("Parsed hotels fallback response",
+			zap.String("sessionID", sessionID),
+			zap.Int("hotels", len(hotelWrapper.Hotels)))
+		return results2.HotelsResults(cityData, hotelWrapper.Hotels, true, true, 5, []string{}, sessionID), true
+	} else if err != nil {
+		lastErr = err
+	}
+
+	var hotelsOnly []models.HotelDetailedInfo
+	if err := json.Unmarshal([]byte(cleaned), &hotelsOnly); err == nil && len(hotelsOnly) > 0 {
+		h.logger.Info("Parsed hotels fallback array response",
+			zap.String("sessionID", sessionID),
+			zap.Int("hotels", len(hotelsOnly)))
+		return results2.HotelsResults(models.GeneralCityData{City: interaction.CityName}, hotelsOnly, true, true, 5, []string{}, sessionID), true
+	} else if err != nil {
+		lastErr = err
+	}
+
+	if lastErr != nil {
+		h.logger.Warn("Hotels fallback parse failed",
+			zap.String("sessionID", sessionID),
+			zap.Error(lastErr))
+	}
+	return nil, false
 }

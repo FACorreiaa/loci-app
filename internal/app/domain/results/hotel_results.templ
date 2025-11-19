@@ -9,6 +9,16 @@ import (
 
 templ HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetailedInfo, compact bool, showToggle bool, initialLimit int, favorites []string, sessionID string) {
 	<div class="min-h-screen bg-gray-50 dark:bg-gray-900 hotels-results" id="hotels-container" x-data="hotelsPage()">
+		if sessionID != "" {
+			<div
+				id="hotel-updates-stream"
+				class="hidden"
+				hx-ext="sse"
+				sse-connect={ fmt.Sprintf("/hotels/updates/stream?sessionId=%s&domain=hotels", sessionID) }
+				sse-swap="message"
+				hx-swap="none"
+			></div>
+		}
 		<!-- Mobile-First Enhanced Header -->
 		<div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
 			<div class="px-4 py-3 sm:px-6">
@@ -248,31 +258,37 @@ templ HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetail
 				sortBy: 'name',
 
 				init() {
-					// Set up SSE event listeners for dynamic hotel management
-					document.addEventListener('htmx:sseMessage', (event) => {
-						const sseEvent = event.detail;
-						let eventData;
-						try {
-							eventData = typeof sseEvent.data === 'string' ? JSON.parse(sseEvent.data) : sseEvent.data;
-						} catch (e) {
-							console.log('Non-JSON SSE event:', sseEvent);
-							return;
-						}
+					const updatesStream = document.getElementById('hotel-updates-stream');
+					if (updatesStream) {
+						updatesStream.addEventListener('htmx:sseMessage', (event) => {
+							const sseEvent = event.detail;
+							let eventData;
+							try {
+								eventData = typeof sseEvent.data === 'string' ? JSON.parse(sseEvent.data) : sseEvent.data;
+							} catch (e) {
+								console.log('Non-JSON SSE event:', sseEvent);
+								return;
+							}
 
-						console.log('SSE Event received (hotels):', eventData);
+							if (eventData.type === 'item_added' && eventData.domain === 'hotels') {
+								this.handleItemAdded(eventData);
+							}
+							if (eventData.type === 'item_removed' && eventData.domain === 'hotels') {
+								this.handleItemRemoved(eventData);
+							}
+							if (eventData.type === 'item_updated' && eventData.domain === 'hotels') {
+								this.handleItemUpdated(eventData);
+							}
+						});
 
-						if (eventData.type === 'item_added' && eventData.domain === 'hotels') {
-							this.handleItemAdded(eventData);
-						}
-						if (eventData.type === 'item_removed' && eventData.domain === 'hotels') {
-							this.handleItemRemoved(eventData);
-						}
-						if (eventData.type === 'item_updated' && eventData.domain === 'hotels') {
-							this.handleItemUpdated(eventData);
-						}
-					});
+						updatesStream.addEventListener('htmx:sseError', (evt) => {
+							console.warn('Hotel updates SSE error', evt);
+						});
 
-					console.log('Hotels SSE listeners initialized');
+						console.log('Hotels SSE listener connected');
+					} else {
+						console.log('Hotel updates stream not initialized (missing session ID)');
+					}
 				},
 
 				handleItemAdded(eventData) {
