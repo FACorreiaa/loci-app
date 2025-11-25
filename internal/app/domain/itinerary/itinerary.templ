@@ -211,14 +211,16 @@ templ ItineraryPage() {
 				</div>
 			</div>
 		</div>
-		<script>
-			function itineraryPage() {
-				return {
-					showChat: false,
-				};
-			}
-		</script>
-		<!-- Chat Panel for continuing conversation -->
+	</div>
+	<script>
+		function itineraryPage() {
+			return {
+				showChat: false,
+			};
+		}
+	</script>
+	<!-- Chat Panel for continuing conversation -->
+	<div x-data="{ showChat: false }">
 		@chat.ChatPanel(chat.ChatPanelProps{
 			SessionID:     "",
 			CityName:      "Travel Planning",
@@ -714,14 +716,16 @@ templ ItineraryPageWithQuery(query string) {
 				</div>
 			</div>
 		</div>
-		<script>
-			function itineraryPageWithQuery() {
-				return {
-					showChat: false,
-				};
-			}
-		</script>
-		<!-- Chat Panel for continuing conversation -->
+	</div>
+	<script>
+		function itineraryPageWithQuery() {
+			return {
+				showChat: false,
+			};
+		}
+	</script>
+	<!-- Chat Panel for continuing conversation -->
+	<div x-data="{ showChat: false }">
 		@chat.ChatPanel(chat.ChatPanelProps{
 			SessionID:     "",
 			CityName:      "Travel Planning",
