@@ -18,8 +18,10 @@ type BookmarksPageData struct {
 }
 
 templ BookmarksPage(data BookmarksPageData) {
-	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
+	<div class="relative min-h-screen bg-background text-foreground overflow-hidden">
+		<div class="absolute inset-0 hero-aurora pointer-events-none"></div>
+		<div class="absolute inset-0 grid-backdrop opacity-25 dark:opacity-5 pointer-events-none"></div>
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 relative">
 			<!-- Header -->
 			<div class="mb-8">
 				<div class="flex items-center justify-between mb-6">
@@ -30,8 +32,8 @@ templ BookmarksPage(data BookmarksPageData) {
 							</svg>
 						</div>
 						<div>
-							<h1 class="text-2xl font-bold text-foreground">Bookmarked Itineraries</h1>
-							<p class="text-muted-foreground">{ strconv.Itoa(data.Total) } saved travel plans</p>
+							<h1 class="text-2xl font-display font-semibold text-foreground">Bookmarked Itineraries</h1>
+							<p class="text-muted-foreground text-sm">{ strconv.Itoa(data.Total) } saved travel plans</p>
 						</div>
 					</div>
 				</div>
@@ -43,23 +45,23 @@ templ BookmarksPage(data BookmarksPageData) {
 							name="search"
 							value={ data.SearchText }
 							placeholder="Search bookmarks..."
-							class="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background"
+							class="w-full pl-10 pr-4 py-2 border border-border/70 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-background"
 						/>
 						<svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
 						</svg>
 					</div>
 					<div class="flex items-center gap-3">
-						<select name="sort_by" class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background text-sm">
+						<select name="sort_by" class="px-3 py-2 border border-border/70 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-sm">
 							<option value="bookmarked_at" selected?={ data.SortBy == "bookmarked_at" }>Recently Bookmarked</option>
 							<option value="title" selected?={ data.SortBy == "title" }>Title</option>
 							<option value="created_at" selected?={ data.SortBy == "created_at" }>Date Created</option>
 						</select>
-						<select name="sort_order" class="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background text-sm">
+						<select name="sort_order" class="px-3 py-2 border border-border/70 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-sm">
 							<option value="desc" selected?={ data.SortOrder == "desc" }>Descending</option>
 							<option value="asc" selected?={ data.SortOrder == "asc" }>Ascending</option>
 						</select>
-						<button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+						<button type="submit" class="px-4 py-2 text-white rounded-xl bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 shadow-lg shadow-blue-500/25 hover:-translate-y-0.5 transition-all">
 							Apply
 						</button>
 					</div>
@@ -116,7 +118,7 @@ templ BookmarksPage(data BookmarksPageData) {
 }
 
 templ BookmarkCard(itinerary models.SavedItinerary) {
-	<div class="bg-card rounded-xl shadow-sm border hover:shadow-md transition-shadow group">
+	<div class="glass-panel rounded-2xl border border-border/70 hover:border-primary hover:shadow-xl transition-shadow group">
 		<div class="p-6">
 			<div class="flex items-start justify-between mb-4">
 				<div class="flex-1">

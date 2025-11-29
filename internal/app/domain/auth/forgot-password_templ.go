@@ -8,6 +8,8 @@ package auth
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
+import card "github.com/FACorreiaa/go-templui/internal/app/components/card"
+
 func ForgotPassword() templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -29,7 +31,51 @@ func ForgotPassword() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900\"><div class=\"min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8\"><div class=\"w-full max-w-md space-y-6\"><!-- Logo --><div class=\"text-center\"><div class=\"mx-auto w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mb-4\"><span class=\"text-white font-bold text-xl\">L</span></div><h2 class=\"text-2xl font-bold text-foreground\">Reset your password</h2><p class=\"text-muted-foreground mt-2\">We'll send you a link to reset your password</p></div><!-- Forgot Password Form --><div class=\"bg-card rounded-xl shadow-lg border p-6\"><form hx-post=\"/auth/forgot-password\" hx-trigger=\"submit\" hx-target=\"#forgot-response\" x-data=\"{ sending: false }\" @htmx:before-request=\"sending = true\" @htmx:after-request=\"sending = false\"><div id=\"forgot-response\" class=\"mb-4\"></div><div class=\"space-y-4\"><div><label for=\"email\" class=\"block text-sm font-medium text-card-foreground mb-2\">Email address</label> <input type=\"email\" id=\"email\" name=\"email\" required class=\"w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background placeholder-muted-foreground transition-all disabled:opacity-50 disabled:cursor-not-allowed\" placeholder=\"Enter your email address\" x-bind:disabled=\"sending\"></div><button type=\"submit\" class=\"w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed\" x-bind:disabled=\"sending\"><span x-show=\"!sending\" class=\"flex items-center justify-center gap-2\">Send reset link</span> <span x-show=\"sending\" class=\"flex items-center justify-center gap-2\"><div class=\"w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin\"></div>Sending reset link...</span></button></div></form><!-- Help Text --><div class=\"mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800\"><div class=\"flex items-start gap-3\"><svg class=\"w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z\"></path></svg><div class=\"text-sm\"><p class=\"text-blue-800 dark:text-blue-300 font-medium\">Didn't receive the email?</p><p class=\"text-blue-700 dark:text-blue-400 mt-1\">Check your spam folder or try again with a different email address.</p></div></div></div></div><!-- Back to Sign In --><div class=\"text-center\"><span class=\"text-muted-foreground text-sm\">Remember your password? </span> <a href=\"/auth/signin\" class=\"text-blue-600 hover:text-blue-700 font-medium text-sm\">Back to sign in</a></div></div></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"min-h-screen bg-background text-foreground\"><div class=\"grid grid-cols-1 md:grid-cols-2 h-screen\"><div class=\"hidden md:flex flex-col items-center justify-center bg-gradient-to-br from-blue-600 to-purple-600 text-white p-12\"><div class=\"flex items-center justify-center w-24 h-24 bg-white/20 rounded-full mb-8\"><img src=\"/static/images/loci-minimal-L.svg\" alt=\"Loci Logo\" class=\"w-12 h-12\"></div><h1 class=\"text-4xl font-bold mb-4\">Forgot Your Password?</h1><p class=\"text-lg text-center text-blue-100 max-w-md\">No problem. We'll help you get back on track and exploring in no time.</p></div><div class=\"flex flex-col items-center justify-center p-6 md:p-12\"><div class=\"w-full max-w-md space-y-6\"><div class=\"text-center md:hidden\"><div class=\"mx-auto w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mb-4\"><span class=\"text-white font-bold text-xl\">L</span></div></div><div class=\"text-center\"><h2 class=\"text-3xl font-bold\">Reset Your Password</h2><p class=\"text-muted-foreground mt-2\">Enter your email to receive a reset link.</p></div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Var2 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+			if !templ_7745c5c3_IsBuffer {
+				defer func() {
+					templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+					if templ_7745c5c3_Err == nil {
+						templ_7745c5c3_Err = templ_7745c5c3_BufErr
+					}
+				}()
+			}
+			ctx = templ.InitializeContext(ctx)
+			templ_7745c5c3_Var3 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+				if !templ_7745c5c3_IsBuffer {
+					defer func() {
+						templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+						if templ_7745c5c3_Err == nil {
+							templ_7745c5c3_Err = templ_7745c5c3_BufErr
+						}
+					}()
+				}
+				ctx = templ.InitializeContext(ctx)
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<form hx-post=\"/auth/forgot-password\" hx-trigger=\"submit\" hx-target=\"#forgot-response\" x-data=\"{ sending: false }\" @htmx:before-request=\"sending = true\" @htmx:after-request=\"sending = false\"><div id=\"forgot-response\" class=\"mb-4\"></div><div class=\"space-y-4\"><div><label for=\"email\" class=\"block text-sm font-medium text-card-foreground mb-2\">Email address</label> <input type=\"email\" id=\"email\" name=\"email\" required class=\"w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-input placeholder-muted-foreground transition-all disabled:opacity-50 disabled:cursor-not-allowed\" placeholder=\"Enter your email address\" x-bind:disabled=\"sending\"></div><button type=\"submit\" class=\"w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed\" x-bind:disabled=\"sending\"><span x-show=\"!sending\" class=\"flex items-center justify-center gap-2\">Send reset link</span> <span x-show=\"sending\" class=\"flex items-center justify-center gap-2\"><div class=\"w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin\"></div>Sending reset link...</span></button></div></form><div class=\"mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800\"><div class=\"flex items-start gap-3\"><svg class=\"w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z\"></path></svg><div class=\"text-sm\"><p class=\"text-blue-800 dark:text-blue-300 font-medium\">Didn't receive the email?</p><p class=\"text-blue-700 dark:text-blue-400 mt-1\">Check your spam folder or try again.</p></div></div></div>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				return nil
+			})
+			templ_7745c5c3_Err = card.Content(card.ContentProps{Class: "space-y-6"}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var3), templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			return nil
+		})
+		templ_7745c5c3_Err = card.Card(card.Props{Class: "bg-card border-none shadow-xl"}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div class=\"text-center\"><span class=\"text-sm text-muted-foreground\">Remember your password? </span> <a href=\"/auth/signin\" class=\"text-blue-500 hover:text-blue-400 font-medium text-sm\">Back to Sign In</a></div></div></div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

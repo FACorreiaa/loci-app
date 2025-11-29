@@ -36,7 +36,7 @@ func HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetaile
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"min-h-screen bg-gray-50 dark:bg-gray-900 hotels-results\" id=\"hotels-container\" x-data=\"hotelsPage()\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"relative min-h-screen bg-background text-foreground overflow-hidden hotels-results\" id=\"hotels-container\" x-data=\"hotelsPage()\"><div class=\"absolute inset-0 hero-aurora pointer-events-none\"></div><div class=\"absolute inset-0 grid-backdrop opacity-20 dark:opacity-5 pointer-events-none\"></div><div class=\"absolute -left-20 top-10 w-72 h-72 bg-blue-500/10 blur-3xl rounded-full pointer-events-none\"></div><div class=\"absolute right-0 bottom-0 w-80 h-80 bg-purple-500/10 blur-3xl rounded-full pointer-events-none\"></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -48,7 +48,7 @@ func HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetaile
 			var templ_7745c5c3_Var2 string
 			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("/hotels/updates/stream?sessionId=%s&domain=hotels", sessionID))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 17, Col: 93}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 21, Col: 93}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 			if templ_7745c5c3_Err != nil {
@@ -59,7 +59,7 @@ func HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetaile
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<!-- Mobile-First Enhanced Header --><div class=\"bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30\"><div class=\"px-4 py-3 sm:px-6\"><!-- Main Header Content --><div class=\"flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between\"><div class=\"flex-1 min-w-0\"><div class=\"flex items-center gap-3\"><div class=\"w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center text-white text-xl flex-shrink-0\">🏨</div><div class=\"flex-1 min-w-0\"><h1 class=\"text-lg font-bold text-gray-900 dark:text-white sm:text-xl truncate\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<!-- Mobile-First Enhanced Header --><div class=\"bg-background/80 backdrop-blur-2xl border-b border-border/60 sticky top-0 z-30 shadow-[0_12px_40px_rgba(30,41,59,0.18)]\"><div class=\"px-4 py-3 sm:px-6\"><!-- Main Header Content --><div class=\"flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between\"><div class=\"flex-1 min-w-0\"><div class=\"flex items-center gap-3\"><div class=\"w-10 h-10 bg-gradient-to-br from-blue-600 via-blue-700 to-emerald-500 rounded-xl flex items-center justify-center text-white text-xl flex-shrink-0 shadow-lg shadow-blue-500/30\">🏨</div><div class=\"flex-1 min-w-0\"><h1 class=\"text-lg sm:text-xl font-display font-semibold text-foreground truncate\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -71,7 +71,7 @@ func HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetaile
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(cityData.City)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 35, Col: 35}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 39, Col: 35}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -88,14 +88,14 @@ func HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetaile
 			return templ_7745c5c3_Err
 		}
 		if cityData.City != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div class=\"flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 mt-1 mb-2\"><svg class=\"w-4 h-4 text-green-500\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z\"></path> <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 11a3 3 0 11-6 0 3 3 0 616 0z\"></path></svg> <span class=\"font-medium\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div class=\"flex items-center gap-2 text-sm text-muted-foreground mt-1 mb-2\"><svg class=\"w-4 h-4 text-primary\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z\"></path> <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 11a3 3 0 11-6 0 3 3 0 616 0z\"></path></svg> <span class=\"font-semibold text-foreground\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(cityData.City)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 47, Col: 51}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 51, Col: 69}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -104,7 +104,7 @@ func HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetaile
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(getHotelStateProvince(cityData.StateProvince))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 47, Col: 100}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 51, Col: 118}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -117,7 +117,7 @@ func HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetaile
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(cityData.Country)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 47, Col: 122}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 51, Col: 140}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
@@ -128,14 +128,14 @@ func HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetaile
 				return templ_7745c5c3_Err
 			}
 			if cityData.Population != "" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<span class=\"text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full\">Pop: ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<span class=\"text-xs bg-accent px-2 py-1 rounded-full\">Pop: ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var7 string
 				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(cityData.Population)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 50, Col: 38}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 54, Col: 38}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 				if templ_7745c5c3_Err != nil {
@@ -151,14 +151,14 @@ func HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetaile
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<div class=\"flex flex-wrap items-center gap-2 text-xs text-gray-600 dark:text-gray-300 mt-1\"><div class=\"flex items-center gap-1\"><svg class=\"w-3 h-3\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4\"></path></svg> <span>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<div class=\"flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-1\"><div class=\"flex items-center gap-1\"><svg class=\"w-3 h-3\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4\"></path></svg> <span>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", len(hotels)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 60, Col: 48}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 64, Col: 48}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -176,7 +176,7 @@ func HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetaile
 			var templ_7745c5c3_Var9 string
 			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", len(favorites)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 67, Col: 52}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 71, Col: 52}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {
@@ -187,7 +187,7 @@ func HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetaile
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</div></div></div></div><!-- Desktop Actions --><div class=\"hidden sm:flex items-center gap-2\"><button @click=\"showChat = true\" class=\"flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.013 8.013 0 01-7.93-6.94c-.42-.51-.92-.92-1.43-1.25-.63-.41-.63-1.33 0-1.74.51-.33 1.01-.74 1.43-1.25A8.013 8.013 0 0113 4c4.418 0 8 3.582 8 8z\"></path></svg> Find More Hotels</button> <button @click=\"shareResults()\" class=\"p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z\"></path></svg></button></div></div><!-- View Mode Toggle --><div class=\"mt-3 pt-3 border-t border-gray-200 dark:border-gray-700\"><div class=\"flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1\"><button @click=\"viewMode = 'list'\" :class=\"viewMode === 'list' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-300'\" class=\"flex-1 px-3 py-2 rounded text-sm font-medium transition-colors\"><div class=\"flex items-center justify-center gap-1\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4 6h16M4 10h16M4 14h16M4 18h16\"></path></svg> <span class=\"hidden sm:inline\">List</span></div></button> <button @click=\"viewMode = 'map'\" :class=\"viewMode === 'map' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-300'\" class=\"flex-1 px-3 py-2 rounded text-sm font-medium transition-colors\"><div class=\"flex items-center justify-center gap-1\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7\"></path></svg> <span class=\"hidden sm:inline\">Map</span></div></button> <button @click=\"viewMode = 'split'\" :class=\"viewMode === 'split' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-300'\" class=\"flex-1 px-3 py-2 rounded text-sm font-medium transition-colors\"><div class=\"flex items-center justify-center gap-1\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2\"></path></svg> <span class=\"hidden sm:inline\">Split</span></div></button> <button @click=\"viewMode = 'grid'\" :class=\"viewMode === 'grid' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-300'\" class=\"flex-1 px-3 py-2 rounded text-sm font-medium transition-colors\"><div class=\"flex items-center justify-center gap-1\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z\"></path></svg> <span class=\"hidden sm:inline\">Grid</span></div></button></div></div></div></div><!-- Main Content Area --><div class=\"flex-1 min-h-0\"><!-- Map Container (shown in map and split views) --><div x-show=\"viewMode === 'map' || viewMode === 'split'\" x-transition:enter=\"transition ease-out duration-300\" x-transition:enter-start=\"opacity-0\" x-transition:enter-end=\"opacity-100\" class=\"relative\"><div :class=\"viewMode === 'map' ? 'h-[calc(100vh-200px)] md:h-[600px]' : viewMode === 'split' ? 'h-[300px] md:h-[400px] lg:h-[500px]' : 'h-[400px]'\" class=\"w-full\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</div></div></div></div><!-- Desktop Actions --><div class=\"hidden sm:flex items-center gap-2\"><button @click=\"showChat = true\" class=\"flex items-center gap-2 px-4 py-2 text-white rounded-xl bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 shadow-lg shadow-blue-500/25 hover:-translate-y-0.5 transition-all text-sm font-medium\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.013 8.013 0 01-7.93-6.94c-.42-.51-.92-.92-1.43-1.25-.63-.41-.63-1.33 0-1.74.51-.33 1.01-.74 1.43-1.25A8.013 8.013 0 0113 4c4.418 0 8 3.582 8 8z\"></path></svg> Find More Hotels</button> <button @click=\"shareResults()\" class=\"p-2 text-muted-foreground hover:text-primary hover:border-primary border border-border/70 rounded-lg transition-all\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z\"></path></svg></button></div></div><!-- View Mode Toggle --><div class=\"mt-3 pt-3 border-t border-border/60\"><div class=\"flex bg-background/70 border border-border/60 rounded-lg p-1\"><button @click=\"viewMode = 'list'\" :class=\"viewMode === 'list' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-300'\" class=\"flex-1 px-3 py-2 rounded text-sm font-medium transition-colors\"><div class=\"flex items-center justify-center gap-1\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4 6h16M4 10h16M4 14h16M4 18h16\"></path></svg> <span class=\"hidden sm:inline\">List</span></div></button> <button @click=\"viewMode = 'map'\" :class=\"viewMode === 'map' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-300'\" class=\"flex-1 px-3 py-2 rounded text-sm font-medium transition-colors\"><div class=\"flex items-center justify-center gap-1\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7\"></path></svg> <span class=\"hidden sm:inline\">Map</span></div></button> <button @click=\"viewMode = 'split'\" :class=\"viewMode === 'split' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-300'\" class=\"flex-1 px-3 py-2 rounded text-sm font-medium transition-colors\"><div class=\"flex items-center justify-center gap-1\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2\"></path></svg> <span class=\"hidden sm:inline\">Split</span></div></button> <button @click=\"viewMode = 'grid'\" :class=\"viewMode === 'grid' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-300'\" class=\"flex-1 px-3 py-2 rounded text-sm font-medium transition-colors\"><div class=\"flex items-center justify-center gap-1\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z\"></path></svg> <span class=\"hidden sm:inline\">Grid</span></div></button></div></div></div></div><!-- Main Content Area --><div class=\"flex-1 min-h-0\"><!-- Map Container (shown in map and split views) --><div x-show=\"viewMode === 'map' || viewMode === 'split'\" x-transition:enter=\"transition ease-out duration-300\" x-transition:enter-start=\"opacity-0\" x-transition:enter-end=\"opacity-100\" class=\"relative\"><div :class=\"viewMode === 'map' ? 'h-[calc(100vh-200px)] md:h-[600px]' : viewMode === 'split' ? 'h-[300px] md:h-[400px] lg:h-[500px]' : 'h-[400px]'\" class=\"w-full\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -200,45 +200,45 @@ func HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetaile
 			return templ_7745c5c3_Err
 		}
 		if cityData.City != "" && cityData.Description != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<div class=\"bg-gradient-to-r from-green-50 to-emerald-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 mb-6 border border-green-100 dark:border-gray-600\"><div class=\"flex items-start gap-4\"><div class=\"w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center flex-shrink-0\"><svg class=\"w-6 h-6 text-white\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4\"></path></svg></div><div class=\"flex-1\"><h3 class=\"text-xl font-bold text-gray-900 dark:text-white mb-2\">About ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<div class=\"glass-panel border border-border/70 rounded-2xl p-6 mb-6\"><div class=\"flex items-start gap-4\"><div class=\"w-12 h-12 bg-gradient-to-br from-blue-600 via-blue-700 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 text-white shadow-lg shadow-blue-500/25\"><svg class=\"w-6 h-6 text-white\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4\"></path></svg></div><div class=\"flex-1\"><h3 class=\"text-xl font-display font-semibold text-foreground mb-2\">About ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(cityData.City)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 184, Col: 95}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 188, Col: 98}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</h3><p class=\"text-gray-700 dark:text-gray-300 leading-relaxed mb-4\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</h3><p class=\"text-muted-foreground leading-relaxed mb-4\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var11 string
 			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(cityData.Description)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 185, Col: 96}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 189, Col: 85}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</p><div class=\"grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</p><div class=\"grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm text-muted-foreground\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if cityData.Area != "" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<div class=\"flex items-center gap-2\"><svg class=\"w-4 h-4 text-green-500\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z\"></path></svg> <span class=\"text-gray-600 dark:text-gray-400\">Area: ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<div class=\"flex items-center gap-2\"><svg class=\"w-4 h-4 text-primary\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z\"></path></svg> <span>Area: ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var12 string
 				templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(cityData.Area)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 192, Col: 80}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 196, Col: 39}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 				if templ_7745c5c3_Err != nil {
@@ -250,14 +250,14 @@ func HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetaile
 				}
 			}
 			if cityData.Timezone != "" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<div class=\"flex items-center gap-2\"><svg class=\"w-4 h-4 text-green-500\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z\"></path></svg> <span class=\"text-gray-600 dark:text-gray-400\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<div class=\"flex items-center gap-2\"><svg class=\"w-4 h-4 text-primary\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z\"></path></svg> <span>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var13 string
 				templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(cityData.Timezone)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 200, Col: 78}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 204, Col: 37}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 				if templ_7745c5c3_Err != nil {
@@ -276,7 +276,7 @@ func HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetaile
 				var templ_7745c5c3_Var14 string
 				templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(cityData.Language)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 208, Col: 88}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 212, Col: 88}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 				if templ_7745c5c3_Err != nil {
@@ -295,7 +295,7 @@ func HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetaile
 				var templ_7745c5c3_Var15 string
 				templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(cityData.Population)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 216, Col: 92}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 220, Col: 92}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 				if templ_7745c5c3_Err != nil {
@@ -347,7 +347,7 @@ func HotelsResults(cityData models.GeneralCityData, hotels []models.HotelDetaile
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "</div><script>\n\t\tfunction hotelsPage() {\n\t\t\treturn {\n\t\t\t\tviewMode: 'list',\n\t\t\t\tshowChat: false,\n\t\t\t\tselectedHotel: null,\n\t\t\t\tsearchQuery: '',\n\t\t\t\tselectedCategory: '',\n\t\t\t\tsortBy: 'name',\n\n\t\t\t\tinit() {\n\t\t\t\t\tconst updatesStream = document.getElementById('hotel-updates-stream');\n\t\t\t\t\tif (updatesStream) {\n\t\t\t\t\t\tupdatesStream.addEventListener('htmx:sseMessage', (event) => {\n\t\t\t\t\t\t\tconst sseEvent = event.detail;\n\t\t\t\t\t\t\tlet eventData;\n\t\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\t\teventData = typeof sseEvent.data === 'string' ? JSON.parse(sseEvent.data) : sseEvent.data;\n\t\t\t\t\t\t\t} catch (e) {\n\t\t\t\t\t\t\t\tconsole.log('Non-JSON SSE event:', sseEvent);\n\t\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t\t}\n\n\t\t\t\t\t\t\tif (eventData.type === 'item_added' && eventData.domain === 'hotels') {\n\t\t\t\t\t\t\t\tthis.handleItemAdded(eventData);\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tif (eventData.type === 'item_removed' && eventData.domain === 'hotels') {\n\t\t\t\t\t\t\t\tthis.handleItemRemoved(eventData);\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tif (eventData.type === 'item_updated' && eventData.domain === 'hotels') {\n\t\t\t\t\t\t\t\tthis.handleItemUpdated(eventData);\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t});\n\n\t\t\t\t\t\tupdatesStream.addEventListener('htmx:sseError', (evt) => {\n\t\t\t\t\t\t\tconsole.warn('Hotel updates SSE error', evt);\n\t\t\t\t\t\t});\n\n\t\t\t\t\t\tconsole.log('Hotels SSE listener connected');\n\t\t\t\t\t} else {\n\t\t\t\t\t\tconsole.log('Hotel updates stream not initialized (missing session ID)');\n\t\t\t\t\t}\n\t\t\t\t},\n\n\t\t\t\thandleItemAdded(eventData) {\n\t\t\t\t\tconst listContainer = document.getElementById('hotels-list');\n\t\t\t\t\tconst gridContainer = document.getElementById('hotels-grid');\n\t\t\t\t\tif (!listContainer || !gridContainer) return;\n\n\t\t\t\t\tconst tempDiv = document.createElement('div');\n\t\t\t\t\ttempDiv.innerHTML = eventData.html;\n\t\t\t\t\tconst newElement = tempDiv.firstElementChild;\n\n\t\t\t\t\tif (newElement) {\n\t\t\t\t\t\tlistContainer.appendChild(newElement.cloneNode(true));\n\t\t\t\t\t\tgridContainer.appendChild(newElement.cloneNode(true));\n\t\t\t\t\t\tif (eventData.item_data && eventData.item_data.latitude && eventData.item_data.longitude) {\n\t\t\t\t\t\t\tthis.addMarkerToMap(eventData.item_data);\n\t\t\t\t\t\t}\n\t\t\t\t\t\tconsole.log('Hotel added successfully:', eventData.message);\n\t\t\t\t\t}\n\t\t\t\t},\n\n\t\t\t\thandleItemRemoved(eventData) {\n\t\t\t\t\tconst listElement = document.querySelector(`#hotels-list [id*=\"hotel-${eventData.item_id}\"]`);\n\t\t\t\t\tconst gridElement = document.querySelector(`#hotels-grid [id*=\"hotel-${eventData.item_id}\"]`);\n\t\t\t\t\tif (listElement) listElement.remove();\n\t\t\t\t\tif (gridElement) gridElement.remove();\n\t\t\t\t\tthis.removeMarkerFromMap(eventData.item_id);\n\t\t\t\t\tconsole.log('Hotel removed successfully:', eventData.message);\n\t\t\t\t},\n\n\t\t\t\thandleItemUpdated(eventData) {\n\t\t\t\t\tconst listElement = document.querySelector(`#hotels-list [id*=\"hotel-${eventData.item_id}\"]`);\n\t\t\t\t\tconst gridElement = document.querySelector(`#hotels-grid [id*=\"hotel-${eventData.item_id}\"]`);\n\t\t\t\t\tif (eventData.html) {\n\t\t\t\t\t\tconst tempDiv = document.createElement('div');\n\t\t\t\t\t\ttempDiv.innerHTML = eventData.html;\n\t\t\t\t\t\tconst newElement = tempDiv.firstElementChild;\n\t\t\t\t\t\tif (newElement) {\n\t\t\t\t\t\t\tif (listElement) listElement.replaceWith(newElement.cloneNode(true));\n\t\t\t\t\t\t\tif (gridElement) gridElement.replaceWith(newElement.cloneNode(true));\n\t\t\t\t\t\t\tif (eventData.item_data && eventData.item_data.latitude && eventData.item_data.longitude) {\n\t\t\t\t\t\t\t\tthis.removeMarkerFromMap(eventData.item_id);\n\t\t\t\t\t\t\t\tthis.addMarkerToMap(eventData.item_data);\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tconsole.log('Hotel updated successfully:', eventData.message);\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t},\n\n\t\t\t\taddMarkerToMap(itemData) {\n\t\t\t\t\tif (!window.map || !window.mapboxgl) return;\n\t\t\t\t\tconst { latitude, longitude, name, category, index } = itemData;\n\t\t\t\t\tif (!latitude || !longitude || (latitude === 0 && longitude === 0)) return;\n\n\t\t\t\t\tconst markerEl = document.createElement('div');\n\t\t\t\t\tmarkerEl.className = 'poi-marker';\n\t\t\t\t\tmarkerEl.style.cssText = `\n\t\t\t\t\t\twidth: 32px; height: 32px; background-color: white;\n\t\t\t\t\t\tborder: 3px solid #10b981; border-radius: 50%; cursor: pointer;\n\t\t\t\t\t\tbox-shadow: 0 2px 4px rgba(0,0,0,0.2); display: flex;\n\t\t\t\t\t\talign-items: center; justify-content: center; font-weight: bold;\n\t\t\t\t\t\tfont-size: 14px; color: #10b981;\n\t\t\t\t\t`;\n\t\t\t\t\tmarkerEl.textContent = index ? index.toString() : '●';\n\t\t\t\t\tmarkerEl.dataset.itemId = itemData.item_id || name;\n\n\t\t\t\t\tconst popup = new mapboxgl.Popup({ offset: 25, closeButton: true, closeOnClick: false }).setHTML(`\n\t\t\t\t\t\t<div class=\"p-2 max-w-xs\">\n\t\t\t\t\t\t\t<h3 class=\"font-medium text-gray-900 mb-1\">${name}</h3>\n\t\t\t\t\t\t\t<div class=\"flex items-center gap-1 text-xs text-gray-500\">\n\t\t\t\t\t\t\t\t<svg class=\"w-3 h-3\" fill=\"currentColor\" viewBox=\"0 0 20 20\">\n\t\t\t\t\t\t\t\t\t<path fill-rule=\"evenodd\" d=\"M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z\" clip-rule=\"evenodd\"></path>\n\t\t\t\t\t\t\t\t</svg>\n\t\t\t\t\t\t\t\t${category || 'Hotel'}\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t`);\n\n\t\t\t\t\tconst marker = new mapboxgl.Marker(markerEl)\n\t\t\t\t\t\t.setLngLat([longitude, latitude])\n\t\t\t\t\t\t.setPopup(popup)\n\t\t\t\t\t\t.addTo(window.map);\n\n\t\t\t\t\tif (!window.hotelMarkers) window.hotelMarkers = new Map();\n\t\t\t\t\twindow.hotelMarkers.set(itemData.item_id || name, marker);\n\t\t\t\t\tthis.recalculateMapBounds();\n\t\t\t\t\tconsole.log('Hotel marker added to map:', name);\n\t\t\t\t},\n\n\t\t\t\tremoveMarkerFromMap(itemId) {\n\t\t\t\t\tif (!window.hotelMarkers || !window.hotelMarkers.has(itemId)) return;\n\t\t\t\t\tconst marker = window.hotelMarkers.get(itemId);\n\t\t\t\t\tmarker.remove();\n\t\t\t\t\twindow.hotelMarkers.delete(itemId);\n\t\t\t\t\tthis.recalculateMapBounds();\n\t\t\t\t\tconsole.log('Hotel marker removed from map:', itemId);\n\t\t\t\t},\n\n\t\t\t\trecalculateMapBounds() {\n\t\t\t\t\tif (!window.map || !window.mapboxgl) return;\n\t\t\t\t\tconst markers = window.hotelMarkers ? Array.from(window.hotelMarkers.values()) : [];\n\t\t\t\t\tif (markers.length === 0) return;\n\n\t\t\t\t\tconst bounds = new mapboxgl.LngLatBounds();\n\t\t\t\t\tmarkers.forEach(marker => bounds.extend(marker.getLngLat()));\n\n\t\t\t\t\tconst padding = {\n\t\t\t\t\t\ttop: window.innerWidth < 640 ? 40 : 60,\n\t\t\t\t\t\tbottom: window.innerWidth < 640 ? 40 : 80,\n\t\t\t\t\t\tleft: window.innerWidth < 640 ? 20 : 60,\n\t\t\t\t\t\tright: window.innerWidth < 640 ? 20 : 60\n\t\t\t\t\t};\n\n\t\t\t\t\twindow.map.fitBounds(bounds, { padding: padding, maxZoom: 15, duration: 1000 });\n\t\t\t\t\tconsole.log('Map bounds recalculated for hotels');\n\t\t\t\t},\n\n\t\t\t\tsetViewMode(mode) {\n\t\t\t\t\tthis.viewMode = mode;\n\t\t\t\t},\n\n\t\t\t\tselectHotel(hotel) {\n\t\t\t\t\tthis.selectedHotel = hotel;\n\t\t\t\t},\n\n\t\t\t\tcloseModal() {\n\t\t\t\t\tthis.selectedHotel = null;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\n\t\t// Make function available globally\n\t\twindow.hotelsPage = hotelsPage;\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "</div><script>\n\t\tfunction hotelsPage() {\n\t\t\treturn {\n\t\t\t\tviewMode: 'list',\n\t\t\t\tshowChat: false,\n\t\t\t\tselectedHotel: null,\n\t\t\t\tsearchQuery: '',\n\t\t\t\tselectedCategory: '',\n\t\t\t\tsortBy: 'name',\n\n\t\t\t\tinit() {\n\t\t\t\t\t// Listen for chatPanelListUpdate events from ChatPanel component\n\t\t\t\t\tdocument.addEventListener('chatPanelListUpdate', (event) => {\n\t\t\t\t\t\tconst eventData = event.detail;\n\t\t\t\t\t\tif (eventData.domain !== 'hotels') return;\n\n\t\t\t\t\t\tconsole.log('Hotels: Received chatPanelListUpdate', eventData.type, eventData);\n\n\t\t\t\t\t\tif (eventData.type === 'item_added') {\n\t\t\t\t\t\t\tthis.handleItemAdded(eventData);\n\t\t\t\t\t\t}\n\t\t\t\t\t\tif (eventData.type === 'item_removed') {\n\t\t\t\t\t\t\tthis.handleItemRemoved(eventData);\n\t\t\t\t\t\t}\n\t\t\t\t\t\tif (eventData.type === 'item_updated') {\n\t\t\t\t\t\t\tthis.handleItemUpdated(eventData);\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\n\t\t\t\t\tconst updatesStream = document.getElementById('hotel-updates-stream');\n\t\t\t\t\tif (updatesStream) {\n\t\t\t\t\t\tupdatesStream.addEventListener('htmx:sseMessage', (event) => {\n\t\t\t\t\t\t\tconst sseEvent = event.detail;\n\t\t\t\t\t\t\tlet eventData;\n\t\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\t\teventData = typeof sseEvent.data === 'string' ? JSON.parse(sseEvent.data) : sseEvent.data;\n\t\t\t\t\t\t\t} catch (e) {\n\t\t\t\t\t\t\t\tconsole.log('Non-JSON SSE event:', sseEvent);\n\t\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t\t}\n\n\t\t\t\t\t\t\tif (eventData.type === 'item_added' && eventData.domain === 'hotels') {\n\t\t\t\t\t\t\t\tthis.handleItemAdded(eventData);\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tif (eventData.type === 'item_removed' && eventData.domain === 'hotels') {\n\t\t\t\t\t\t\t\tthis.handleItemRemoved(eventData);\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tif (eventData.type === 'item_updated' && eventData.domain === 'hotels') {\n\t\t\t\t\t\t\t\tthis.handleItemUpdated(eventData);\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t});\n\n\t\t\t\t\t\tupdatesStream.addEventListener('htmx:sseError', (evt) => {\n\t\t\t\t\t\t\tconsole.warn('Hotel updates SSE error', evt);\n\t\t\t\t\t\t});\n\n\t\t\t\t\t\tconsole.log('Hotels SSE listener connected');\n\t\t\t\t\t} else {\n\t\t\t\t\t\tconsole.log('Hotel updates stream not initialized (missing session ID)');\n\t\t\t\t\t}\n\t\t\t\t},\n\n\t\t\t\thandleItemAdded(eventData) {\n\t\t\t\t\tconst listContainer = document.getElementById('hotels-list');\n\t\t\t\t\tconst gridContainer = document.getElementById('hotels-grid');\n\t\t\t\t\tif (!listContainer || !gridContainer) return;\n\n\t\t\t\t\tconst tempDiv = document.createElement('div');\n\t\t\t\t\ttempDiv.innerHTML = eventData.html;\n\t\t\t\t\tconst newElement = tempDiv.firstElementChild;\n\n\t\t\t\t\tif (newElement) {\n\t\t\t\t\t\tlistContainer.appendChild(newElement.cloneNode(true));\n\t\t\t\t\t\tgridContainer.appendChild(newElement.cloneNode(true));\n\t\t\t\t\t\tif (eventData.item_data && eventData.item_data.latitude && eventData.item_data.longitude) {\n\t\t\t\t\t\t\tthis.addMarkerToMap(eventData.item_data);\n\t\t\t\t\t\t}\n\t\t\t\t\t\tconsole.log('Hotel added successfully:', eventData.message);\n\t\t\t\t\t}\n\t\t\t\t},\n\n\t\t\t\thandleItemRemoved(eventData) {\n\t\t\t\t\tconsole.log('handleItemRemoved called with:', eventData);\n\n\t\t\t\t\t// Try multiple selectors to find the element\n\t\t\t\t\tlet listElement = document.querySelector(`#hotels-list [data-item-id=\"${eventData.item_id}\"]`);\n\t\t\t\t\tlet gridElement = document.querySelector(`#hotels-grid [data-item-id=\"${eventData.item_id}\"]`);\n\n\t\t\t\t\t// Fallback: try by id containing the item_id\n\t\t\t\t\tif (!listElement) {\n\t\t\t\t\t\tlistElement = document.querySelector(`#hotels-list [id*=\"${eventData.item_id}\"]`);\n\t\t\t\t\t}\n\t\t\t\t\tif (!gridElement) {\n\t\t\t\t\t\tgridElement = document.querySelector(`#hotels-grid [id*=\"${eventData.item_id}\"]`);\n\t\t\t\t\t}\n\n\t\t\t\t\t// Fallback: try by poi name if item_data is available\n\t\t\t\t\tif (!listElement && eventData.item_data?.name) {\n\t\t\t\t\t\tlistElement = document.querySelector(`#hotels-list [data-poi-name=\"${eventData.item_data.name}\"]`);\n\t\t\t\t\t}\n\t\t\t\t\tif (!gridElement && eventData.item_data?.name) {\n\t\t\t\t\t\tgridElement = document.querySelector(`#hotels-grid [data-poi-name=\"${eventData.item_data.name}\"]`);\n\t\t\t\t\t}\n\n\t\t\t\t\tif (listElement) {\n\t\t\t\t\t\tlistElement.closest('.bg-white, .dark\\\\:bg-gray-800')?.remove() || listElement.remove();\n\t\t\t\t\t}\n\t\t\t\t\tif (gridElement) {\n\t\t\t\t\t\tgridElement.closest('.bg-white, .dark\\\\:bg-gray-800')?.remove() || gridElement.remove();\n\t\t\t\t\t}\n\t\t\t\t\tthis.removeMarkerFromMap(eventData.item_id);\n\t\t\t\t\tconsole.log('Hotel removed:', listElement ? 'list found' : 'list not found', gridElement ? 'grid found' : 'grid not found');\n\t\t\t\t},\n\n\t\t\t\thandleItemUpdated(eventData) {\n\t\t\t\t\tconst listElement = document.querySelector(`#hotels-list [id*=\"hotel-${eventData.item_id}\"]`);\n\t\t\t\t\tconst gridElement = document.querySelector(`#hotels-grid [id*=\"hotel-${eventData.item_id}\"]`);\n\t\t\t\t\tif (eventData.html) {\n\t\t\t\t\t\tconst tempDiv = document.createElement('div');\n\t\t\t\t\t\ttempDiv.innerHTML = eventData.html;\n\t\t\t\t\t\tconst newElement = tempDiv.firstElementChild;\n\t\t\t\t\t\tif (newElement) {\n\t\t\t\t\t\t\tif (listElement) listElement.replaceWith(newElement.cloneNode(true));\n\t\t\t\t\t\t\tif (gridElement) gridElement.replaceWith(newElement.cloneNode(true));\n\t\t\t\t\t\t\tif (eventData.item_data && eventData.item_data.latitude && eventData.item_data.longitude) {\n\t\t\t\t\t\t\t\tthis.removeMarkerFromMap(eventData.item_id);\n\t\t\t\t\t\t\t\tthis.addMarkerToMap(eventData.item_data);\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tconsole.log('Hotel updated successfully:', eventData.message);\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t},\n\n\t\t\t\taddMarkerToMap(itemData) {\n\t\t\t\t\tif (!window.map || !window.mapboxgl) return;\n\t\t\t\t\tconst { latitude, longitude, name, category, index } = itemData;\n\t\t\t\t\tif (!latitude || !longitude || (latitude === 0 && longitude === 0)) return;\n\n\t\t\t\t\tconst markerEl = document.createElement('div');\n\t\t\t\t\tmarkerEl.className = 'poi-marker';\n\t\t\t\t\tmarkerEl.style.cssText = `\n\t\t\t\t\t\twidth: 32px; height: 32px; background-color: white;\n\t\t\t\t\t\tborder: 3px solid #10b981; border-radius: 50%; cursor: pointer;\n\t\t\t\t\t\tbox-shadow: 0 2px 4px rgba(0,0,0,0.2); display: flex;\n\t\t\t\t\t\talign-items: center; justify-content: center; font-weight: bold;\n\t\t\t\t\t\tfont-size: 14px; color: #10b981;\n\t\t\t\t\t`;\n\t\t\t\t\tmarkerEl.textContent = index ? index.toString() : '●';\n\t\t\t\t\tmarkerEl.dataset.itemId = itemData.item_id || name;\n\n\t\t\t\t\tconst popup = new mapboxgl.Popup({ offset: 25, closeButton: true, closeOnClick: false }).setHTML(`\n\t\t\t\t\t\t<div class=\"p-2 max-w-xs\">\n\t\t\t\t\t\t\t<h3 class=\"font-medium text-gray-900 mb-1\">${name}</h3>\n\t\t\t\t\t\t\t<div class=\"flex items-center gap-1 text-xs text-gray-500\">\n\t\t\t\t\t\t\t\t<svg class=\"w-3 h-3\" fill=\"currentColor\" viewBox=\"0 0 20 20\">\n\t\t\t\t\t\t\t\t\t<path fill-rule=\"evenodd\" d=\"M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z\" clip-rule=\"evenodd\"></path>\n\t\t\t\t\t\t\t\t</svg>\n\t\t\t\t\t\t\t\t${category || 'Hotel'}\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t`);\n\n\t\t\t\t\tconst marker = new mapboxgl.Marker(markerEl)\n\t\t\t\t\t\t.setLngLat([longitude, latitude])\n\t\t\t\t\t\t.setPopup(popup)\n\t\t\t\t\t\t.addTo(window.map);\n\n\t\t\t\t\tif (!window.hotelMarkers) window.hotelMarkers = new Map();\n\t\t\t\t\twindow.hotelMarkers.set(itemData.item_id || name, marker);\n\t\t\t\t\tthis.recalculateMapBounds();\n\t\t\t\t\tconsole.log('Hotel marker added to map:', name);\n\t\t\t\t},\n\n\t\t\t\tremoveMarkerFromMap(itemId) {\n\t\t\t\t\tif (!window.hotelMarkers || !window.hotelMarkers.has(itemId)) return;\n\t\t\t\t\tconst marker = window.hotelMarkers.get(itemId);\n\t\t\t\t\tmarker.remove();\n\t\t\t\t\twindow.hotelMarkers.delete(itemId);\n\t\t\t\t\tthis.recalculateMapBounds();\n\t\t\t\t\tconsole.log('Hotel marker removed from map:', itemId);\n\t\t\t\t},\n\n\t\t\t\trecalculateMapBounds() {\n\t\t\t\t\tif (!window.map || !window.mapboxgl) return;\n\t\t\t\t\tconst markers = window.hotelMarkers ? Array.from(window.hotelMarkers.values()) : [];\n\t\t\t\t\tif (markers.length === 0) return;\n\n\t\t\t\t\tconst bounds = new mapboxgl.LngLatBounds();\n\t\t\t\t\tmarkers.forEach(marker => bounds.extend(marker.getLngLat()));\n\n\t\t\t\t\tconst padding = {\n\t\t\t\t\t\ttop: window.innerWidth < 640 ? 40 : 60,\n\t\t\t\t\t\tbottom: window.innerWidth < 640 ? 40 : 80,\n\t\t\t\t\t\tleft: window.innerWidth < 640 ? 20 : 60,\n\t\t\t\t\t\tright: window.innerWidth < 640 ? 20 : 60\n\t\t\t\t\t};\n\n\t\t\t\t\twindow.map.fitBounds(bounds, { padding: padding, maxZoom: 15, duration: 1000 });\n\t\t\t\t\tconsole.log('Map bounds recalculated for hotels');\n\t\t\t\t},\n\n\t\t\t\tsetViewMode(mode) {\n\t\t\t\t\tthis.viewMode = mode;\n\t\t\t\t},\n\n\t\t\t\tselectHotel(hotel) {\n\t\t\t\t\tthis.selectedHotel = hotel;\n\t\t\t\t},\n\n\t\t\t\tcloseModal() {\n\t\t\t\t\tthis.selectedHotel = null;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\n\t\t// Make function available globally\n\t\twindow.hotelsPage = hotelsPage;\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -377,27 +377,27 @@ func HotelListCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 			templ_7745c5c3_Var16 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "<div class=\"bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow relative\"><!-- Index Badge --><div class=\"absolute top-2 right-2 w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg z-10\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "<div class=\"glass-panel border border-border/70 rounded-2xl p-4 hover:border-primary hover:shadow-xl transition-shadow relative\"><!-- Index Badge --><div class=\"absolute top-2 right-2 w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg z-10\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var17 string
 		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", index))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 433, Col: 29}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 479, Col: 29}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "</div><div class=\"flex items-start justify-between mb-2 pr-10\"><div class=\"flex-1 min-w-0\"><h4 class=\"font-semibold text-gray-900 dark:text-white truncate\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "</div><div class=\"flex items-start justify-between mb-2 pr-10\"><div class=\"flex-1 min-w-0\"><h4 class=\"font-semibold text-card-foreground truncate\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var18 string
 		templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(hotel.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 438, Col: 17}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 484, Col: 17}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 		if templ_7745c5c3_Err != nil {
@@ -408,14 +408,14 @@ func HotelListCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if hotel.Category != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<p class=\"text-xs text-gray-500 dark:text-gray-400\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<p class=\"text-xs text-muted-foreground\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var19 string
 			templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(hotel.Category)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 442, Col: 22}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 488, Col: 22}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 			if templ_7745c5c3_Err != nil {
@@ -482,7 +482,7 @@ func HotelListCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 			var templ_7745c5c3_Var24 string
 			templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(formatHotelRating(hotel.Rating))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 453, Col: 40}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 499, Col: 40}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 			if templ_7745c5c3_Err != nil {
@@ -519,7 +519,7 @@ func HotelListCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 			var templ_7745c5c3_Var27 string
 			templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(*hotel.PriceRange)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 459, Col: 25}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 505, Col: 25}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 			if templ_7745c5c3_Err != nil {
@@ -530,20 +530,20 @@ func HotelListCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, "</div></div><p class=\"text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-3\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, "</div></div><p class=\"text-sm text-muted-foreground line-clamp-2 mb-3\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var28 string
 		templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(hotel.Description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 464, Col: 91}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 510, Col: 80}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "</p><!-- Metadata Footer --><div class=\"flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 flex-wrap mb-3\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "</p><!-- Metadata Footer --><div class=\"flex items-center gap-4 text-xs text-muted-foreground flex-wrap mb-3\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -555,7 +555,7 @@ func HotelListCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 			var templ_7745c5c3_Var29 string
 			templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(hotel.Address)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 472, Col: 43}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 518, Col: 43}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 			if templ_7745c5c3_Err != nil {
@@ -574,7 +574,7 @@ func HotelListCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 			var templ_7745c5c3_Var30 string
 			templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(*hotel.OpeningHours)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 480, Col: 49}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 526, Col: 49}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 			if templ_7745c5c3_Err != nil {
@@ -596,7 +596,7 @@ func HotelListCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 			}
 			for i, tag := range hotel.Tags {
 				if i < 4 {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 59, "<div class=\"flex items-center gap-1 text-xs bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-2 py-1 rounded\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 59, "<div class=\"flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded-full\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -611,7 +611,7 @@ func HotelListCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 					var templ_7745c5c3_Var31 string
 					templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(tag)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 491, Col: 18}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 537, Col: 18}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 					if templ_7745c5c3_Err != nil {
@@ -631,7 +631,7 @@ func HotelListCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 				var templ_7745c5c3_Var32 string
 				templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", len(hotel.Tags)-4))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 497, Col: 45}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 543, Col: 45}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 				if templ_7745c5c3_Err != nil {
@@ -647,7 +647,7 @@ func HotelListCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 65, "<!-- Actions --><div class=\"flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700\"><div class=\"flex items-center gap-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 65, "<!-- Actions --><div class=\"flex items-center justify-between pt-3 border-t border-border/60\"><div class=\"flex items-center gap-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -659,13 +659,13 @@ func HotelListCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 			var templ_7745c5c3_Var33 templ.SafeURL
 			templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(*hotel.Website))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 507, Col: 38}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 553, Col: 38}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 67, "\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-xs text-green-600 dark:text-green-400 hover:underline font-medium flex items-center gap-1\"><svg class=\"w-3 h-3\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9\"></path></svg> View Details</a> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 67, "\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-xs text-primary hover:underline font-medium flex items-center gap-1\"><svg class=\"w-3 h-3\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9\"></path></svg> View Details</a> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -678,7 +678,7 @@ func HotelListCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 			var templ_7745c5c3_Var34 templ.SafeURL
 			templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("tel:" + *hotel.PhoneNumber))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 520, Col: 51}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 566, Col: 51}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var34))
 			if templ_7745c5c3_Err != nil {
@@ -696,7 +696,7 @@ func HotelListCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 		var templ_7745c5c3_Var35 string
 		templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(hotel.ID.String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 534, Col: 37}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 580, Col: 37}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 		if templ_7745c5c3_Err != nil {
@@ -709,7 +709,7 @@ func HotelListCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 		var templ_7745c5c3_Var36 string
 		templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinStringErrs(hotel.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 536, Col: 32}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 582, Col: 32}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
 		if templ_7745c5c3_Err != nil {
@@ -722,7 +722,7 @@ func HotelListCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 		var templ_7745c5c3_Var37 string
 		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("hotel-favorite-%s", hotel.ID.String()))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 544, Col: 65}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 590, Col: 65}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 		if templ_7745c5c3_Err != nil {
@@ -766,27 +766,27 @@ func HotelGridCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 			templ_7745c5c3_Var38 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 75, "<div class=\"bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition-shadow relative\"><!-- Index Badge --><div class=\"absolute top-2 right-2 w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg z-10\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 75, "<div class=\"glass-panel border border-border/70 rounded-2xl overflow-hidden hover:border-primary hover:shadow-xl transition-shadow relative\"><!-- Index Badge --><div class=\"absolute top-2 right-2 w-8 h-8 bg-gradient-to-br from-blue-600 via-blue-700 to-purple-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg z-10\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var39 string
 		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", index))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 557, Col: 29}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 603, Col: 29}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 76, "</div><div class=\"p-4\"><div class=\"flex items-start justify-between mb-3 pr-10\"><h4 class=\"font-semibold text-gray-900 dark:text-white line-clamp-1\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 76, "</div><div class=\"p-4\"><div class=\"flex items-start justify-between mb-3 pr-10\"><h4 class=\"font-semibold text-card-foreground line-clamp-1\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var40 string
 		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(hotel.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 561, Col: 85}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 607, Col: 76}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 		if templ_7745c5c3_Err != nil {
@@ -797,14 +797,14 @@ func HotelGridCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if hotel.Rating > 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 78, "<div class=\"flex items-center gap-1 flex-shrink-0\"><svg class=\"w-4 h-4 text-yellow-400\" fill=\"currentColor\" viewBox=\"0 0 20 20\"><path d=\"M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z\"></path></svg> <span class=\"text-sm font-medium text-gray-700 dark:text-gray-300\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 78, "<div class=\"flex items-center gap-1 flex-shrink-0\"><svg class=\"w-4 h-4 text-yellow-400\" fill=\"currentColor\" viewBox=\"0 0 20 20\"><path d=\"M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z\"></path></svg> <span class=\"text-sm font-medium text-card-foreground\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var41 string
 			templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(formatHotelRating(hotel.Rating))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 567, Col: 106}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 613, Col: 94}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 			if templ_7745c5c3_Err != nil {
@@ -820,14 +820,14 @@ func HotelGridCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if hotel.Category != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 81, "<span class=\"inline-block px-2 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 rounded-full mb-2\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 81, "<span class=\"inline-block px-2 py-1 text-xs font-semibold bg-primary/10 text-primary rounded-full mb-2\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var42 string
 			templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(hotel.Category)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 573, Col: 21}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 619, Col: 21}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
 			if templ_7745c5c3_Err != nil {
@@ -838,14 +838,14 @@ func HotelGridCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 83, "<p class=\"text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-3\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 83, "<p class=\"text-sm text-muted-foreground line-clamp-2 mb-3\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var43 string
 		templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(hotel.Description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 576, Col: 92}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 622, Col: 81}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
 		if templ_7745c5c3_Err != nil {
@@ -881,7 +881,7 @@ func HotelGridCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 			var templ_7745c5c3_Var46 string
 			templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(*hotel.PriceRange)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 579, Col: 78}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 625, Col: 78}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
 			if templ_7745c5c3_Err != nil {
@@ -892,7 +892,7 @@ func HotelGridCard(hotel models.HotelDetailedInfo, index int) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 88, "<div class=\"flex gap-2\"><button class=\"text-green-600 hover:text-green-700 text-sm font-medium\">View Details</button></div></div></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 88, "<div class=\"flex gap-2\"><button class=\"text-primary hover:underline text-sm font-semibold\">View Details</button></div></div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1126,7 +1126,7 @@ func HotelFavoriteButton(hotelID string) templ.Component {
 		var templ_7745c5c3_Var50 string
 		templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.JoinStringErrs("/favorites/hotels/" + hotelID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 731, Col: 42}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/results/hotel_results.templ`, Line: 777, Col: 42}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var50))
 		if templ_7745c5c3_Err != nil {

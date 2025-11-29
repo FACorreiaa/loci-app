@@ -41,7 +41,13 @@ func Navbar(props Props) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		var templ_7745c5c3_Var2 = []any{utils.TwMerge("bg-background/80 backdrop-blur-md border-b border-border sticky top-0 z-50 transition-colors", props.Class)}
+		navClass := func(active bool) string {
+			if active {
+				return "px-3 py-2 rounded-full bg-primary/10 text-primary border border-primary/30 shadow-sm shadow-primary/20"
+			}
+			return "px-3 py-2 rounded-full text-muted-foreground hover:text-foreground border border-transparent hover:border-border/60 transition-colors"
+		}
+		var templ_7745c5c3_Var2 = []any{utils.TwMerge("sticky top-0 z-50 bg-background/80 backdrop-blur-2xl border-b border-border/60 shadow-[0_18px_80px_rgba(30,41,59,0.12)]", props.Class)}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var2...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -59,43 +65,21 @@ func Navbar(props Props) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\"><div class=\"px-4 sm:px-6 lg:px-8\"><div class=\"flex justify-between items-center h-14 sm:h-16\"><!-- Logo - Mobile First --><div class=\"flex items-center\"><a href=\"/\" class=\"flex items-center\"><div class=\"w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center\"><div class=\"w-full h-full bg-blue-600 text-white rounded flex items-center justify-center text-sm font-bold\">L</div></div><span class=\"ml-2 text-lg sm:text-xl font-bold text-foreground transition-colors\">Loci</span> ")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		if props.User != nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<span class=\"ml-1 sm:ml-2 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full font-medium\">AI</span>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</a></div><!-- Mobile Menu Button --><button class=\"md:hidden p-2\" onclick=\"toggleMobileMenu()\" id=\"mobile-menu-btn\"><svg id=\"menu-icon\" class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4 6h16M4 12h16M4 18h16\"></path></svg> <svg id=\"close-icon\" class=\"w-5 h-5 hidden\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M6 18L18 6M6 6l12 12\"></path></svg></button><!-- Desktop Navigation -->")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\"><div class=\"max-w-7xl mx-auto px-4 sm:px-6 lg:px-8\"><div class=\"flex justify-between items-center h-16 gap-4\"><!-- Logo + wordmark --><a href=\"/\" class=\"flex items-center gap-3 group\"><div class=\"relative\"><div class=\"absolute -inset-1 bg-gradient-to-tr from-blue-500/50 via-primary/50 to-purple-600/50 rounded-2xl blur-xl opacity-60 group-hover:opacity-80 transition\"></div><div class=\"relative size-10 rounded-xl bg-gradient-to-br from-blue-600 via-blue-700 to-purple-600 text-white flex items-center justify-center font-bold shadow-lg shadow-blue-500/25\">L</div></div><div class=\"leading-tight\"><div class=\"pill uppercase tracking-[0.18em] text-[10px]\">AI TRAVEL</div><div class=\"text-lg sm:text-xl font-display text-foreground\">Loci</div></div></a><!-- Mobile Menu Button --><button class=\"md:hidden p-2 rounded-lg border border-border/70 hover:border-primary hover:text-primary transition-colors\" onclick=\"toggleMobileMenu()\" id=\"mobile-menu-btn\"><svg id=\"menu-icon\" class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4 6h16M4 12h16M4 18h16\"></path></svg> <svg id=\"close-icon\" class=\"w-5 h-5 hidden\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M6 18L18 6M6 6l12 12\"></path></svg></button><!-- Desktop Navigation -->")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if props.User == nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<div class=\"hidden md:flex items-center space-x-6 lg:space-x-8\"><a href=\"/about\" class=\"text-muted-foreground hover:text-blue-600 font-medium transition-colors text-sm lg:text-base\">About</a> <a href=\"/features\" class=\"text-muted-foreground hover:text-blue-600 font-medium transition-colors text-sm lg:text-base\">Features</a> <a href=\"/pricing\" class=\"text-muted-foreground hover:text-blue-600 font-medium transition-colors text-sm lg:text-base\">Pricing</a></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div class=\"hidden md:flex items-center gap-2\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"hidden md:flex items-center space-x-1\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var4 = []any{utils.TwMerge(
-				"flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm",
-				utils.IfElse(
-					props.ActiveNav == "discover",
-					"bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300",
-					"text-muted-foreground hover:text-blue-600 hover:bg-accent",
-				),
-			)}
+			var templ_7745c5c3_Var4 = []any{navClass(props.ActiveNav == "about")}
 			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var4...)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<a href=\"/discover\" class=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<a href=\"/about\" class=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -108,23 +92,16 @@ func Navbar(props Props) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z\"></path> <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 11a3 3 0 11-6 0 3 3 0 016 0z\"></path></svg> Discover <span class=\"ml-1 bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 text-xs px-1.5 py-0.5 rounded-full font-medium\">Experimental</span></a> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\">About</a> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var6 = []any{utils.TwMerge(
-				"flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm",
-				utils.IfElse(
-					props.ActiveNav == "nearby",
-					"bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300",
-					"text-muted-foreground hover:text-blue-600 hover:bg-accent",
-				),
-			)}
+			var templ_7745c5c3_Var6 = []any{navClass(props.ActiveNav == "features")}
 			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var6...)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<a href=\"/nearby\" class=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<a href=\"/features\" class=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -137,23 +114,16 @@ func Navbar(props Props) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z\"></path> <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 11a3 3 0 11-6 0 3 3 0 016 0z\"></path></svg> Nearby</a> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\">Features</a> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var8 = []any{utils.TwMerge(
-				"flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm",
-				utils.IfElse(
-					props.ActiveNav == "recents",
-					"bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300",
-					"text-muted-foreground hover:text-blue-600 hover:bg-accent",
-				),
-			)}
+			var templ_7745c5c3_Var8 = []any{navClass(props.ActiveNav == "pricing")}
 			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var8...)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<a href=\"/recents\" class=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<a href=\"/pricing\" class=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -166,23 +136,21 @@ func Navbar(props Props) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z\"></path></svg> Recents</a> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\">Pricing</a></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var10 = []any{utils.TwMerge(
-				"flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm",
-				utils.IfElse(
-					props.ActiveNav == "chat",
-					"bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300",
-					"text-muted-foreground hover:text-blue-600 hover:bg-accent",
-				),
-			)}
+		} else {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<div class=\"hidden md:flex items-center gap-1\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var10 = []any{utils.TwMerge(navClass(props.ActiveNav == "discover"), "flex items-center gap-2 text-sm")}
 			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var10...)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<a href=\"/chat\" class=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<a href=\"/discover\" class=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -195,23 +163,16 @@ func Navbar(props Props) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z\"></path></svg> Chat</a> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z\"></path> <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 11a3 3 0 11-6 0 3 3 0 016 0z\"></path></svg> Discover <span class=\"ml-1 px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-200 text-[11px] font-semibold\">Beta</span></a> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var12 = []any{utils.TwMerge(
-				"flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm",
-				utils.IfElse(
-					props.ActiveNav == "favorites",
-					"bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300",
-					"text-muted-foreground hover:text-blue-600 hover:bg-accent",
-				),
-			)}
+			var templ_7745c5c3_Var12 = []any{utils.TwMerge(navClass(props.ActiveNav == "nearby"), "flex items-center gap-2 text-sm")}
 			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var12...)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<a href=\"/favorites\" class=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<a href=\"/nearby\" class=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -224,23 +185,16 @@ func Navbar(props Props) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\"><svg class=\"w-4 h-4 fill-current\" fill=\"currentColor\" viewBox=\"0 0 24 24\"><path d=\"M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z\"></path></svg> Favorites</a> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z\"></path> <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 11a3 3 0 11-6 0 3 3 0 016 0z\"></path></svg> Nearby</a> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var14 = []any{utils.TwMerge(
-				"flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm",
-				utils.IfElse(
-					props.ActiveNav == "bookmarks",
-					"bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300",
-					"text-muted-foreground hover:text-blue-600 hover:bg-accent",
-				),
-			)}
+			var templ_7745c5c3_Var14 = []any{utils.TwMerge(navClass(props.ActiveNav == "recents"), "flex items-center gap-2 text-sm")}
 			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var14...)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<a href=\"/bookmarks\" class=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<a href=\"/recents\" class=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -253,23 +207,16 @@ func Navbar(props Props) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z\"></path></svg> Bookmarks</a> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z\"></path></svg> Recents</a> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var16 = []any{utils.TwMerge(
-				"flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm",
-				utils.IfElse(
-					props.ActiveNav == "lists",
-					"bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300",
-					"text-muted-foreground hover:text-blue-600 hover:bg-accent",
-				),
-			)}
+			var templ_7745c5c3_Var16 = []any{utils.TwMerge(navClass(props.ActiveNav == "chat"), "flex items-center gap-2 text-sm")}
 			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var16...)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<a href=\"/lists\" class=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<a href=\"/chat\" class=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -282,23 +229,16 @@ func Navbar(props Props) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4 6h16M4 10h16M4 14h16M4 18h16\"></path></svg> Lists</a> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z\"></path></svg> Chat</a> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var18 = []any{utils.TwMerge(
-				"flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm",
-				utils.IfElse(
-					props.ActiveNav == "profile",
-					"bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300",
-					"text-muted-foreground hover:text-blue-600 hover:bg-accent",
-				),
-			)}
+			var templ_7745c5c3_Var18 = []any{utils.TwMerge(navClass(props.ActiveNav == "favorites"), "flex items-center gap-2 text-sm")}
 			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var18...)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<a href=\"/profile\" class=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<a href=\"/favorites\" class=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -311,167 +251,263 @@ func Navbar(props Props) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z\"></path></svg> Profile</a></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "\"><svg class=\"w-4 h-4 fill-current\" fill=\"currentColor\" viewBox=\"0 0 24 24\"><path d=\"M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z\"></path></svg> Favorites</a> ")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var20 = []any{utils.TwMerge(navClass(props.ActiveNav == "bookmarks"), "flex items-center gap-2 text-sm")}
+			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var20...)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<a href=\"/bookmarks\" class=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var21 string
+			templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var20).String())
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/navbar/navbar.templ`, Line: 1, Col: 0}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z\"></path></svg> Bookmarks</a> ")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var22 = []any{utils.TwMerge(navClass(props.ActiveNav == "lists"), "flex items-center gap-2 text-sm")}
+			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var22...)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<a href=\"/lists\" class=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var23 string
+			templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var22).String())
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/navbar/navbar.templ`, Line: 1, Col: 0}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4 6h16M4 10h16M4 14h16M4 18h16\"></path></svg> Lists</a> ")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var24 = []any{utils.TwMerge(navClass(props.ActiveNav == "profile"), "flex items-center gap-2 text-sm")}
+			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var24...)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<a href=\"/profile\" class=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var25 string
+			templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var24).String())
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/navbar/navbar.templ`, Line: 1, Col: 0}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z\"></path></svg> Profile</a></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<!-- Desktop User Menu or Auth Buttons -->")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "<!-- Desktop User Menu or Auth Buttons -->")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if props.User == nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "<div class=\"hidden md:flex items-center space-x-3 lg:space-x-4\"><!-- Theme toggle --><button id=\"theme-toggle\" class=\"p-2 rounded-md hover:bg-accent transition-colors\" onclick=\"toggleTheme()\" title=\"Toggle theme\"><svg id=\"sun-icon\" class=\"h-4 w-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"5\"></circle> <line x1=\"12\" y1=\"1\" x2=\"12\" y2=\"3\"></line> <line x1=\"12\" y1=\"21\" x2=\"12\" y2=\"23\"></line> <line x1=\"4.22\" y1=\"4.22\" x2=\"5.64\" y2=\"5.64\"></line> <line x1=\"18.36\" y1=\"18.36\" x2=\"19.78\" y2=\"19.78\"></line> <line x1=\"1\" y1=\"12\" x2=\"3\" y2=\"12\"></line> <line x1=\"21\" y1=\"12\" x2=\"23\" y2=\"12\"></line> <line x1=\"4.22\" y1=\"19.78\" x2=\"5.64\" y2=\"18.36\"></line> <line x1=\"18.36\" y1=\"5.64\" x2=\"19.78\" y2=\"4.22\"></line></svg> <svg id=\"moon-icon\" class=\"h-4 w-4 hidden\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z\"></path></svg></button> <a href=\"/auth/signin\"><button class=\"text-muted-foreground hover:text-foreground px-3 lg:px-4 py-2 text-sm lg:text-base font-medium transition-colors\">Log In</button></a> <a href=\"/auth/signup\"><button class=\"bg-blue-600 hover:bg-blue-700 text-white text-sm lg:text-base px-3 lg:px-4 py-2 rounded-lg font-medium transition-colors\">Get Started</button></a></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<div class=\"hidden md:flex items-center gap-3 lg:gap-4\"><button id=\"theme-toggle\" class=\"p-2 rounded-lg border border-border/70 hover:border-primary hover:text-primary transition-colors\" onclick=\"toggleTheme()\" title=\"Toggle theme\"><svg id=\"sun-icon\" class=\"h-4 w-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"5\"></circle> <line x1=\"12\" y1=\"1\" x2=\"12\" y2=\"3\"></line> <line x1=\"12\" y1=\"21\" x2=\"12\" y2=\"23\"></line> <line x1=\"4.22\" y1=\"4.22\" x2=\"5.64\" y2=\"5.64\"></line> <line x1=\"18.36\" y1=\"18.36\" x2=\"19.78\" y2=\"19.78\"></line> <line x1=\"1\" y1=\"12\" x2=\"3\" y2=\"12\"></line> <line x1=\"21\" y1=\"12\" x2=\"23\" y2=\"12\"></line> <line x1=\"4.22\" y1=\"19.78\" x2=\"5.64\" y2=\"18.36\"></line> <line x1=\"18.36\" y1=\"5.64\" x2=\"19.78\" y2=\"4.22\"></line></svg> <svg id=\"moon-icon\" class=\"h-4 w-4 hidden\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z\"></path></svg></button> <a href=\"/auth/signin\" class=\"text-sm lg:text-base font-medium text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg border border-transparent hover:border-border/60 transition-colors\">Log In</a> <a href=\"/auth/signup\" class=\"text-sm lg:text-base font-semibold px-3 lg:px-4 py-2 rounded-lg text-white bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 hover:shadow-lg hover:-translate-y-0.5 transition-all\">Get Started</a></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<div class=\"hidden md:flex items-center space-x-3 relative\" x-data=\"{ showUserMenu: false }\" @click.away=\"showUserMenu = false\"><!-- Theme toggle --><button id=\"theme-toggle\" class=\"p-2 rounded-md hover:bg-accent transition-colors\" onclick=\"toggleTheme()\" title=\"Toggle theme\"><svg id=\"sun-icon\" class=\"h-4 w-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"5\"></circle> <line x1=\"12\" y1=\"1\" x2=\"12\" y2=\"3\"></line> <line x1=\"12\" y1=\"21\" x2=\"12\" y2=\"23\"></line> <line x1=\"4.22\" y1=\"4.22\" x2=\"5.64\" y2=\"5.64\"></line> <line x1=\"18.36\" y1=\"18.36\" x2=\"19.78\" y2=\"19.78\"></line> <line x1=\"1\" y1=\"12\" x2=\"3\" y2=\"12\"></line> <line x1=\"21\" y1=\"12\" x2=\"23\" y2=\"12\"></line> <line x1=\"4.22\" y1=\"19.78\" x2=\"5.64\" y2=\"18.36\"></line> <line x1=\"18.36\" y1=\"5.64\" x2=\"19.78\" y2=\"4.22\"></line></svg> <svg id=\"moon-icon\" class=\"h-4 w-4 hidden\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z\"></path></svg></button> <button class=\"flex items-center gap-2 p-2\" @click=\"showUserMenu = !showUserMenu\"><div class=\"w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "<div class=\"hidden md:flex items-center gap-3 relative\" x-data=\"{ showUserMenu: false }\" @click.away=\"showUserMenu = false\"><button id=\"theme-toggle\" class=\"p-2 rounded-lg border border-border/70 hover:border-primary hover:text-primary transition-colors\" onclick=\"toggleTheme()\" title=\"Toggle theme\"><svg id=\"sun-icon\" class=\"h-4 w-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"5\"></circle> <line x1=\"12\" y1=\"1\" x2=\"12\" y2=\"3\"></line> <line x1=\"12\" y1=\"21\" x2=\"12\" y2=\"23\"></line> <line x1=\"4.22\" y1=\"4.22\" x2=\"5.64\" y2=\"5.64\"></line> <line x1=\"18.36\" y1=\"18.36\" x2=\"19.78\" y2=\"19.78\"></line> <line x1=\"1\" y1=\"12\" x2=\"3\" y2=\"12\"></line> <line x1=\"21\" y1=\"12\" x2=\"23\" y2=\"12\"></line> <line x1=\"4.22\" y1=\"19.78\" x2=\"5.64\" y2=\"18.36\"></line> <line x1=\"18.36\" y1=\"5.64\" x2=\"19.78\" y2=\"4.22\"></line></svg> <svg id=\"moon-icon\" class=\"h-4 w-4 hidden\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z\"></path></svg></button> <button class=\"flex items-center gap-2 px-2 py-1.5 rounded-full hover:bg-accent transition-colors\" @click=\"showUserMenu = !showUserMenu\"><div class=\"w-9 h-9 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md shadow-blue-500/30\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if props.User.Name != "" {
-				var templ_7745c5c3_Var20 string
-				templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(string(props.User.Name[0]))
+				var templ_7745c5c3_Var26 string
+				templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(string(props.User.Name[0]))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/navbar/navbar.templ`, Line: 266, Col: 37}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/navbar/navbar.templ`, Line: 175, Col: 37}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "U")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "U")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "</div><span class=\"text-sm font-medium text-muted-foreground\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</div><div class=\"text-left\"><span class=\"text-sm font-semibold text-foreground block leading-tight\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if props.User.Name != "" {
-				var templ_7745c5c3_Var21 string
-				templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(props.User.Name)
+				var templ_7745c5c3_Var27 string
+				templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(props.User.Name)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/navbar/navbar.templ`, Line: 273, Col: 26}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/navbar/navbar.templ`, Line: 183, Col: 27}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "User")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "User")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "</span></button><!-- User Dropdown Menu --><div x-show=\"showUserMenu\" x-cloak x-transition:enter=\"transition ease-out duration-100\" x-transition:enter-start=\"transform opacity-0 scale-95\" x-transition:enter-end=\"transform opacity-100 scale-100\" x-transition:leave=\"transition ease-in duration-75\" x-transition:leave-start=\"transform opacity-100 scale-100\" x-transition:leave-end=\"transform opacity-0 scale-95\" class=\"absolute top-full right-0 mt-2 w-48 bg-card rounded-lg shadow-lg border py-1 z-50\"><a href=\"/settings\" class=\"flex items-center gap-3 px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z\"></path> <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 12a3 3 0 11-6 0 3 3 0 016 0z\"></path></svg> Settings</a> <a href=\"/billing\" class=\"flex items-center gap-3 px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z\"></path></svg> Billing</a> <a href=\"/pricing\" class=\"flex items-center gap-3 px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z\"></path></svg> Plans</a><div x-data=\"{ loggingOut: false }\" @htmx:before-request=\"loggingOut = true\" @htmx:after-request=\"loggingOut = false\"><button hx-post=\"/auth/logout\" hx-trigger=\"click\" class=\"w-full flex items-center gap-3 px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed\" x-bind:disabled=\"loggingOut\"><span x-show=\"!loggingOut\" class=\"flex items-center gap-3\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1\"></path></svg> Sign Out</span> <span x-show=\"loggingOut\" class=\"flex items-center gap-3\"><div class=\"w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin\"></div>Signing out...</span></button></div></div></div>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "</div></div><!-- Mobile Menu - Full Screen Overlay --><div id=\"mobile-menu\" class=\"md:hidden fixed inset-0 z-50 bg-background hidden\"><div class=\"flex flex-col h-full\"><!-- Mobile Header --><div class=\"flex justify-between items-center px-4 py-4 border-b border-border\"><a href=\"/\" class=\"flex items-center\" onclick=\"closeMobileMenu()\"><div class=\"w-6 h-6 flex items-center justify-center\"><div class=\"w-full h-full bg-blue-600 text-white rounded flex items-center justify-center text-sm font-bold\">L</div></div><span class=\"ml-2 text-lg font-bold text-foreground\">Loci</span> ")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		if props.User != nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "<span class=\"ml-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 text-xs px-1.5 py-0.5 rounded-full font-medium\">AI</span>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "</a> <button class=\"p-2\" onclick=\"closeMobileMenu()\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M6 18L18 6M6 6l12 12\"></path></svg></button></div><!-- Mobile Navigation Links --><div class=\"flex-1 px-4 py-6 space-y-1\">")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		if props.User == nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "<a href=\"/about\" class=\"block px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-lg transition-colors\" onclick=\"closeMobileMenu()\">About</a> <a href=\"/features\" class=\"block px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-lg transition-colors\" onclick=\"closeMobileMenu()\">Features</a> <a href=\"/pricing\" class=\"block px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-lg transition-colors\" onclick=\"closeMobileMenu()\">Pricing</a>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "<a href=\"/discover\" class=\"flex items-center gap-3 px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-lg transition-colors\" onclick=\"closeMobileMenu()\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z\"></path> <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 11a3 3 0 11-6 0 3 3 0 016 0z\"></path></svg> Discover <span class=\"bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 text-xs px-1.5 py-0.5 rounded-full font-medium\">Experimental</span></a> <a href=\"/nearby\" class=\"flex items-center gap-3 px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-lg transition-colors\" onclick=\"closeMobileMenu()\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z\"></path> <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 11a3 3 0 11-6 0 3 3 0 016 0z\"></path></svg> Nearby</a> <a href=\"/recents\" class=\"flex items-center gap-3 px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-lg transition-colors\" onclick=\"closeMobileMenu()\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z\"></path></svg> Recents</a> <a href=\"/chat\" class=\"flex items-center gap-3 px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-lg transition-colors\" onclick=\"closeMobileMenu()\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z\"></path></svg> Chat</a> <a href=\"/favorites\" class=\"flex items-center gap-3 px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-lg transition-colors\" onclick=\"closeMobileMenu()\"><svg class=\"w-5 h-5 fill-current\" fill=\"currentColor\" viewBox=\"0 0 24 24\"><path d=\"M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z\"></path></svg> Favorites</a> <a href=\"/bookmarks\" class=\"flex items-center gap-3 px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-lg transition-colors\" onclick=\"closeMobileMenu()\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z\"></path></svg> Bookmarks</a> <a href=\"/lists\" class=\"flex items-center gap-3 px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-lg transition-colors\" onclick=\"closeMobileMenu()\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4 6h16M4 10h16M4 14h16M4 18h16\"></path></svg> Lists</a> <a href=\"/profile\" class=\"flex items-center gap-3 px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-lg transition-colors\" onclick=\"closeMobileMenu()\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z\"></path></svg> Profile</a>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "</div><!-- Mobile Action Buttons -->")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		if props.User == nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "<div class=\"px-4 py-6 space-y-3 border-t border-border\"><div class=\"flex justify-center mb-3\"><button id=\"mobile-theme-toggle\" class=\"p-2 rounded-md hover:bg-accent transition-colors\" onclick=\"toggleTheme()\"><svg id=\"mobile-sun-icon\" class=\"h-4 w-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"5\"></circle> <line x1=\"12\" y1=\"1\" x2=\"12\" y2=\"3\"></line> <line x1=\"12\" y1=\"21\" x2=\"12\" y2=\"23\"></line> <line x1=\"4.22\" y1=\"4.22\" x2=\"5.64\" y2=\"5.64\"></line> <line x1=\"18.36\" y1=\"18.36\" x2=\"19.78\" y2=\"19.78\"></line> <line x1=\"1\" y1=\"12\" x2=\"3\" y2=\"12\"></line> <line x1=\"21\" y1=\"12\" x2=\"23\" y2=\"12\"></line> <line x1=\"4.22\" y1=\"19.78\" x2=\"5.64\" y2=\"18.36\"></line> <line x1=\"18.36\" y1=\"5.64\" x2=\"19.78\" y2=\"4.22\"></line></svg> <svg id=\"mobile-moon-icon\" class=\"h-4 w-4 hidden\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z\"></path></svg></button></div><a href=\"/auth/signin\" class=\"block\" onclick=\"closeMobileMenu()\"><button class=\"w-full justify-center py-3 text-base border rounded-lg hover:bg-accent transition-colors\">Log In</button></a> <a href=\"/auth/signup\" class=\"block\" onclick=\"closeMobileMenu()\"><button class=\"w-full justify-center py-3 text-base bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors\">Get Started</button></a></div>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "<div class=\"px-4 py-6 space-y-3 border-t border-border\"><div class=\"flex items-center gap-3 px-4 py-3\"><div class=\"w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-lg font-bold\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "</span> <span class=\"text-[11px] text-muted-foreground leading-tight\">Active</span></div></button><!-- User Dropdown Menu --><div x-show=\"showUserMenu\" x-cloak x-transition:enter=\"transition ease-out duration-100\" x-transition:enter-start=\"transform opacity-0 scale-95\" x-transition:enter-end=\"transform opacity-100 scale-100\" x-transition:leave=\"transition ease-in duration-75\" x-transition:leave-start=\"transform opacity-100 scale-100\" x-transition:leave-end=\"transform opacity-0 scale-95\" class=\"absolute top-full right-0 mt-2 w-56 bg-card rounded-xl shadow-2xl border border-border/70 py-2 z-50 soft-shadow\"><div class=\"px-4 pb-2\"><div class=\"text-sm font-semibold text-foreground\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if props.User.Name != "" {
-				var templ_7745c5c3_Var22 string
-				templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(string(props.User.Name[0]))
+				var templ_7745c5c3_Var28 string
+				templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(props.User.Name)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/navbar/navbar.templ`, Line: 482, Col: 37}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/navbar/navbar.templ`, Line: 206, Col: 27}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "U")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "</div><div class=\"flex-1\"><div class=\"font-medium text-foreground\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			if props.User.Name != "" {
-				var templ_7745c5c3_Var23 string
-				templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(props.User.Name)
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/navbar/navbar.templ`, Line: 490, Col: 27}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "User")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "Loci Explorer")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "</div><div class=\"text-sm text-muted-foreground\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "</div><div class=\"text-xs text-muted-foreground\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if props.User.Email != "" {
-				var templ_7745c5c3_Var24 string
-				templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(props.User.Email)
+				var templ_7745c5c3_Var29 string
+				templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(props.User.Email)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/navbar/navbar.templ`, Line: 497, Col: 28}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/navbar/navbar.templ`, Line: 213, Col: 28}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "user@example.com")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "user@loci.app")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "</div></div><button id=\"mobile-theme-toggle-auth\" class=\"p-2 rounded-md hover:bg-accent transition-colors\" onclick=\"toggleTheme()\"><svg id=\"mobile-sun-icon-auth\" class=\"h-4 w-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"5\"></circle> <line x1=\"12\" y1=\"1\" x2=\"12\" y2=\"3\"></line> <line x1=\"12\" y1=\"21\" x2=\"12\" y2=\"23\"></line> <line x1=\"4.22\" y1=\"4.22\" x2=\"5.64\" y2=\"5.64\"></line> <line x1=\"18.36\" y1=\"18.36\" x2=\"19.78\" y2=\"19.78\"></line> <line x1=\"1\" y1=\"12\" x2=\"3\" y2=\"12\"></line> <line x1=\"21\" y1=\"12\" x2=\"23\" y2=\"12\"></line> <line x1=\"4.22\" y1=\"19.78\" x2=\"5.64\" y2=\"18.36\"></line> <line x1=\"18.36\" y1=\"5.64\" x2=\"19.78\" y2=\"4.22\"></line></svg> <svg id=\"mobile-moon-icon-auth\" class=\"h-4 w-4 hidden\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z\"></path></svg></button></div><a href=\"/settings\" class=\"block\" onclick=\"closeMobileMenu()\"><button class=\"w-full justify-center py-3 text-base border rounded-lg hover:bg-accent transition-colors\">Settings</button></a> <a href=\"/billing\" class=\"block\" onclick=\"closeMobileMenu()\"><button class=\"w-full justify-center py-3 text-base border rounded-lg hover:bg-accent transition-colors\">Billing</button></a> <a href=\"/pricing\" class=\"block\" onclick=\"closeMobileMenu()\"><button class=\"w-full justify-center py-3 text-base border rounded-lg hover:bg-accent transition-colors\">Plans</button></a><div x-data=\"{ loggingOut: false }\" @htmx:before-request=\"loggingOut = true\" @htmx:after-request=\"loggingOut = false\"><button hx-post=\"/auth/logout\" hx-trigger=\"click\" class=\"w-full justify-center py-3 text-base text-red-600 border border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed\" onclick=\"closeMobileMenu()\" x-bind:disabled=\"loggingOut\"><span x-show=\"!loggingOut\" class=\"flex items-center justify-center gap-2\">Sign Out</span> <span x-show=\"loggingOut\" class=\"flex items-center justify-center gap-2\"><div class=\"w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin\"></div>Signing out...</span></button></div></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "</div></div><div class=\"border-t border-border/70\"></div><a href=\"/settings\" class=\"flex items-center gap-3 px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z\"></path> <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 12a3 3 0 11-6 0 3 3 0 016 0z\"></path></svg> Settings</a> <a href=\"/billing\" class=\"flex items-center gap-3 px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z\"></path></svg> Billing</a> <a href=\"/pricing\" class=\"flex items-center gap-3 px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z\"></path></svg> Plans</a><div x-data=\"{ loggingOut: false }\" @htmx:before-request=\"loggingOut = true\" @htmx:after-request=\"loggingOut = false\"><button hx-post=\"/auth/logout\" hx-trigger=\"click\" class=\"w-full flex items-center gap-3 px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed\" x-bind:disabled=\"loggingOut\"><span x-show=\"!loggingOut\" class=\"flex items-center gap-3\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1\"></path></svg> Sign Out</span> <span x-show=\"loggingOut\" class=\"flex items-center gap-3\"><div class=\"w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin\"></div>Signing out...</span></button></div></div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "</div></div></nav><script>\n\t\tfunction toggleTheme() {\n\t\t\tconst html = document.documentElement;\n\t\t\tconst isDark = html.classList.contains('dark');\n\t\t\tconst sunIcons = document.querySelectorAll('#sun-icon, #mobile-sun-icon, #mobile-sun-icon-auth');\n\t\t\tconst moonIcons = document.querySelectorAll('#moon-icon, #mobile-moon-icon, #mobile-moon-icon-auth');\n\t\t\t\n\t\t\tif (isDark) {\n\t\t\t\thtml.classList.remove('dark');\n\t\t\t\tlocalStorage.setItem('theme', 'light');\n\t\t\t\tsunIcons.forEach(icon => icon.classList.remove('hidden'));\n\t\t\t\tmoonIcons.forEach(icon => icon.classList.add('hidden'));\n\t\t\t} else {\n\t\t\t\thtml.classList.add('dark');\n\t\t\t\tlocalStorage.setItem('theme', 'dark');\n\t\t\t\tsunIcons.forEach(icon => icon.classList.add('hidden'));\n\t\t\t\tmoonIcons.forEach(icon => icon.classList.remove('hidden'));\n\t\t\t}\n\t\t}\n\n\t\tfunction toggleMobileMenu() {\n\t\t\tconst menu = document.getElementById('mobile-menu');\n\t\t\tconst menuIcon = document.getElementById('menu-icon');\n\t\t\tconst closeIcon = document.getElementById('close-icon');\n\t\t\t\n\t\t\tif (menu.classList.contains('hidden')) {\n\t\t\t\tmenu.classList.remove('hidden');\n\t\t\t\tmenuIcon.classList.add('hidden');\n\t\t\t\tcloseIcon.classList.remove('hidden');\n\t\t\t} else {\n\t\t\t\tmenu.classList.add('hidden');\n\t\t\t\tmenuIcon.classList.remove('hidden');\n\t\t\t\tcloseIcon.classList.add('hidden');\n\t\t\t}\n\t\t}\n\n\t\tfunction closeMobileMenu() {\n\t\t\tconst menu = document.getElementById('mobile-menu');\n\t\t\tconst menuIcon = document.getElementById('menu-icon');\n\t\t\tconst closeIcon = document.getElementById('close-icon');\n\t\t\t\n\t\t\tmenu.classList.add('hidden');\n\t\t\tmenuIcon.classList.remove('hidden');\n\t\t\tcloseIcon.classList.add('hidden');\n\t\t}\n\n\t\t// Initialize theme icons on page load\n\t\tdocument.addEventListener('DOMContentLoaded', function() {\n\t\t\tconst isDark = document.documentElement.classList.contains('dark');\n\t\t\tconst sunIcons = document.querySelectorAll('#sun-icon, #mobile-sun-icon, #mobile-sun-icon-auth');\n\t\t\tconst moonIcons = document.querySelectorAll('#moon-icon, #mobile-moon-icon, #mobile-moon-icon-auth');\n\t\t\t\n\t\t\tif (isDark) {\n\t\t\t\tsunIcons.forEach(icon => icon.classList.add('hidden'));\n\t\t\t\tmoonIcons.forEach(icon => icon.classList.remove('hidden'));\n\t\t\t} else {\n\t\t\t\tsunIcons.forEach(icon => icon.classList.remove('hidden'));\n\t\t\t\tmoonIcons.forEach(icon => icon.classList.add('hidden'));\n\t\t\t}\n\t\t});\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</div></div><!-- Mobile Menu - Full Screen Overlay --><div id=\"mobile-menu\" class=\"md:hidden fixed inset-0 z-50 bg-background/95 backdrop-blur-2xl border-t border-border/60 hidden\"><div class=\"flex flex-col h-full\"><!-- Mobile Header --><div class=\"flex justify-between items-center px-4 py-4 border-b border-border/70\"><a href=\"/\" class=\"flex items-center gap-3\" onclick=\"closeMobileMenu()\"><div class=\"w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 via-blue-700 to-purple-600 text-white flex items-center justify-center font-bold\">L</div><div class=\"leading-tight\"><div class=\"pill text-[10px] uppercase\">AI TRAVEL</div><span class=\"text-lg font-display text-foreground\">Loci</span></div></a> <button class=\"p-2 rounded-lg border border-border/70\" onclick=\"closeMobileMenu()\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M6 18L18 6M6 6l12 12\"></path></svg></button></div><!-- Mobile Navigation Links --><div class=\"flex-1 px-4 py-6 space-y-1 overflow-y-auto\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if props.User == nil {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<a href=\"/about\" class=\"block px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-xl transition-colors border border-transparent hover:border-border/60\" onclick=\"closeMobileMenu()\">About</a> <a href=\"/features\" class=\"block px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-xl transition-colors border border-transparent hover:border-border/60\" onclick=\"closeMobileMenu()\">Features</a> <a href=\"/pricing\" class=\"block px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-xl transition-colors border border-transparent hover:border-border/60\" onclick=\"closeMobileMenu()\">Pricing</a>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "<a href=\"/discover\" class=\"flex items-center gap-3 px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-xl transition-colors border border-transparent hover:border-border/60\" onclick=\"closeMobileMenu()\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z\"></path> <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 11a3 3 0 11-6 0 3 3 0 016 0z\"></path></svg> Discover <span class=\"bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 text-xs px-1.5 py-0.5 rounded-full font-semibold\">Beta</span></a> <a href=\"/nearby\" class=\"flex items-center gap-3 px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-xl transition-colors border border-transparent hover:border-border/60\" onclick=\"closeMobileMenu()\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z\"></path> <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 11a3 3 0 11-6 0 3 3 0 016 0z\"></path></svg> Nearby</a> <a href=\"/recents\" class=\"flex items-center gap-3 px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-xl transition-colors border border-transparent hover:border-border/60\" onclick=\"closeMobileMenu()\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z\"></path></svg> Recents</a> <a href=\"/chat\" class=\"flex items-center gap-3 px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-xl transition-colors border border-transparent hover:border-border/60\" onclick=\"closeMobileMenu()\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z\"></path></svg> Chat</a> <a href=\"/favorites\" class=\"flex items-center gap-3 px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-xl transition-colors border border-transparent hover:border-border/60\" onclick=\"closeMobileMenu()\"><svg class=\"w-5 h-5 fill-current\" fill=\"currentColor\" viewBox=\"0 0 24 24\"><path d=\"M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z\"></path></svg> Favorites</a> <a href=\"/bookmarks\" class=\"flex items-center gap-3 px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-xl transition-colors border border-transparent hover:border-border/60\" onclick=\"closeMobileMenu()\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z\"></path></svg> Bookmarks</a> <a href=\"/lists\" class=\"flex items-center gap-3 px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-xl transition-colors border border-transparent hover:border-border/60\" onclick=\"closeMobileMenu()\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4 6h16M4 10h16M4 14h16M4 18h16\"></path></svg> Lists</a> <a href=\"/profile\" class=\"flex items-center gap-3 px-4 py-3 text-lg font-medium text-foreground hover:bg-accent rounded-xl transition-colors border border-transparent hover:border-border/60\" onclick=\"closeMobileMenu()\"><svg class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z\"></path></svg> Profile</a>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "</div><!-- Mobile Action Buttons -->")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if props.User == nil {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "<div class=\"px-4 py-6 space-y-3 border-t border-border/70 bg-card/70 backdrop-blur\"><div class=\"flex justify-center mb-3\"><button id=\"mobile-theme-toggle\" class=\"p-2 rounded-lg border border-border/70 hover:border-primary hover:text-primary transition-colors\" onclick=\"toggleTheme()\"><svg id=\"mobile-sun-icon\" class=\"h-4 w-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"5\"></circle> <line x1=\"12\" y1=\"1\" x2=\"12\" y2=\"3\"></line> <line x1=\"12\" y1=\"21\" x2=\"12\" y2=\"23\"></line> <line x1=\"4.22\" y1=\"4.22\" x2=\"5.64\" y2=\"5.64\"></line> <line x1=\"18.36\" y1=\"18.36\" x2=\"19.78\" y2=\"19.78\"></line> <line x1=\"1\" y1=\"12\" x2=\"3\" y2=\"12\"></line> <line x1=\"21\" y1=\"12\" x2=\"23\" y2=\"12\"></line> <line x1=\"4.22\" y1=\"19.78\" x2=\"5.64\" y2=\"18.36\"></line> <line x1=\"18.36\" y1=\"5.64\" x2=\"19.78\" y2=\"4.22\"></line></svg> <svg id=\"mobile-moon-icon\" class=\"h-4 w-4 hidden\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z\"></path></svg></button></div><a href=\"/auth/signin\" class=\"block\" onclick=\"closeMobileMenu()\"><button class=\"w-full justify-center py-3 text-base border border-border/70 rounded-xl hover:border-primary hover:text-primary transition-colors font-semibold\">Log In</button></a> <a href=\"/auth/signup\" class=\"block\" onclick=\"closeMobileMenu()\"><button class=\"w-full justify-center py-3 text-base text-white rounded-xl bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 hover:shadow-lg hover:-translate-y-0.5 transition-all font-semibold\">Get Started</button></a></div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "<div class=\"px-4 py-6 space-y-3 border-t border-border/70 bg-card/70 backdrop-blur\"><div class=\"flex items-center gap-3 px-4 py-3\"><div class=\"w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-lg font-bold\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			if props.User.Name != "" {
+				var templ_7745c5c3_Var30 string
+				templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(string(props.User.Name[0]))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/navbar/navbar.templ`, Line: 407, Col: 37}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			} else {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "U")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "</div><div class=\"flex-1\"><div class=\"font-medium text-foreground\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			if props.User.Name != "" {
+				var templ_7745c5c3_Var31 string
+				templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(props.User.Name)
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/navbar/navbar.templ`, Line: 415, Col: 27}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			} else {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "User")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "</div><div class=\"text-sm text-muted-foreground\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			if props.User.Email != "" {
+				var templ_7745c5c3_Var32 string
+				templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(props.User.Email)
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/navbar/navbar.templ`, Line: 422, Col: 28}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			} else {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, "user@example.com")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "</div></div><button id=\"mobile-theme-toggle-auth\" class=\"p-2 rounded-md hover:bg-accent transition-colors\" onclick=\"toggleTheme()\"><svg id=\"mobile-sun-icon-auth\" class=\"h-4 w-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"5\"></circle> <line x1=\"12\" y1=\"1\" x2=\"12\" y2=\"3\"></line> <line x1=\"12\" y1=\"21\" x2=\"12\" y2=\"23\"></line> <line x1=\"4.22\" y1=\"4.22\" x2=\"5.64\" y2=\"5.64\"></line> <line x1=\"18.36\" y1=\"18.36\" x2=\"19.78\" y2=\"19.78\"></line> <line x1=\"1\" y1=\"12\" x2=\"3\" y2=\"12\"></line> <line x1=\"21\" y1=\"12\" x2=\"23\" y2=\"12\"></line> <line x1=\"4.22\" y1=\"19.78\" x2=\"5.64\" y2=\"18.36\"></line> <line x1=\"18.36\" y1=\"5.64\" x2=\"19.78\" y2=\"4.22\"></line></svg> <svg id=\"mobile-moon-icon-auth\" class=\"h-4 w-4 hidden\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z\"></path></svg></button></div><a href=\"/settings\" class=\"block\" onclick=\"closeMobileMenu()\"><button class=\"w-full justify-center py-3 text-base border rounded-lg hover:bg-accent transition-colors\">Settings</button></a> <a href=\"/billing\" class=\"block\" onclick=\"closeMobileMenu()\"><button class=\"w-full justify-center py-3 text-base border border-border/70 rounded-xl hover:border-primary hover:text-primary transition-colors\">Billing</button></a> <a href=\"/pricing\" class=\"block\" onclick=\"closeMobileMenu()\"><button class=\"w-full justify-center py-3 text-base border border-border/70 rounded-xl hover:border-primary hover:text-primary transition-colors\">Plans</button></a><div x-data=\"{ loggingOut: false }\" @htmx:before-request=\"loggingOut = true\" @htmx:after-request=\"loggingOut = false\"><button hx-post=\"/auth/logout\" hx-trigger=\"click\" class=\"w-full justify-center py-3 text-base text-red-600 border border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed\" onclick=\"closeMobileMenu()\" x-bind:disabled=\"loggingOut\"><span x-show=\"!loggingOut\" class=\"flex items-center justify-center gap-2\">Sign Out</span> <span x-show=\"loggingOut\" class=\"flex items-center justify-center gap-2\"><div class=\"w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin\"></div>Signing out...</span></button></div></div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 50, "</div></div></nav><script>\n\t\tfunction toggleTheme() {\n\t\t\tconst html = document.documentElement;\n\t\t\tconst isDark = html.classList.contains('dark');\n\t\t\tconst sunIcons = document.querySelectorAll('#sun-icon, #mobile-sun-icon, #mobile-sun-icon-auth');\n\t\t\tconst moonIcons = document.querySelectorAll('#moon-icon, #mobile-moon-icon, #mobile-moon-icon-auth');\n\t\t\t\n\t\t\tif (isDark) {\n\t\t\t\thtml.classList.remove('dark');\n\t\t\t\tlocalStorage.setItem('theme', 'light');\n\t\t\t\tsunIcons.forEach(icon => icon.classList.remove('hidden'));\n\t\t\t\tmoonIcons.forEach(icon => icon.classList.add('hidden'));\n\t\t\t} else {\n\t\t\t\thtml.classList.add('dark');\n\t\t\t\tlocalStorage.setItem('theme', 'dark');\n\t\t\t\tsunIcons.forEach(icon => icon.classList.add('hidden'));\n\t\t\t\tmoonIcons.forEach(icon => icon.classList.remove('hidden'));\n\t\t\t}\n\t\t}\n\n\t\tfunction toggleMobileMenu() {\n\t\t\tconst menu = document.getElementById('mobile-menu');\n\t\t\tconst menuIcon = document.getElementById('menu-icon');\n\t\t\tconst closeIcon = document.getElementById('close-icon');\n\t\t\t\n\t\t\tif (menu.classList.contains('hidden')) {\n\t\t\t\tmenu.classList.remove('hidden');\n\t\t\t\tmenuIcon.classList.add('hidden');\n\t\t\t\tcloseIcon.classList.remove('hidden');\n\t\t\t} else {\n\t\t\t\tmenu.classList.add('hidden');\n\t\t\t\tmenuIcon.classList.remove('hidden');\n\t\t\t\tcloseIcon.classList.add('hidden');\n\t\t\t}\n\t\t}\n\n\t\tfunction closeMobileMenu() {\n\t\t\tconst menu = document.getElementById('mobile-menu');\n\t\t\tconst menuIcon = document.getElementById('menu-icon');\n\t\t\tconst closeIcon = document.getElementById('close-icon');\n\t\t\t\n\t\t\tmenu.classList.add('hidden');\n\t\t\tmenuIcon.classList.remove('hidden');\n\t\t\tcloseIcon.classList.add('hidden');\n\t\t}\n\n\t\t// Initialize theme icons on page load\n\t\tdocument.addEventListener('DOMContentLoaded', function() {\n\t\t\tconst isDark = document.documentElement.classList.contains('dark');\n\t\t\tconst sunIcons = document.querySelectorAll('#sun-icon, #mobile-sun-icon, #mobile-sun-icon-auth');\n\t\t\tconst moonIcons = document.querySelectorAll('#moon-icon, #mobile-moon-icon, #mobile-moon-icon-auth');\n\t\t\t\n\t\t\tif (isDark) {\n\t\t\t\tsunIcons.forEach(icon => icon.classList.add('hidden'));\n\t\t\t\tmoonIcons.forEach(icon => icon.classList.remove('hidden'));\n\t\t\t} else {\n\t\t\t\tsunIcons.forEach(icon => icon.classList.remove('hidden'));\n\t\t\t\tmoonIcons.forEach(icon => icon.classList.add('hidden'));\n\t\t\t}\n\t\t});\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

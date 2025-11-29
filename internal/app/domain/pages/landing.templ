@@ -1,142 +1,226 @@
 package pages
 
 templ PublicLandingPage() {
-	<div class="min-h-screen bg-gradient-to-b from-blue-50 via-purple-50 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 relative overflow-hidden">
-		<!-- Background gradient effects -->
-		<div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-100/20 via-transparent to-transparent pointer-events-none"></div>
+	<div class="relative min-h-screen bg-background text-foreground overflow-hidden">
+		<div class="absolute inset-0 hero-aurora pointer-events-none"></div>
+		<div class="absolute inset-0 grid-backdrop opacity-30 dark:opacity-5 pointer-events-none"></div>
+		<div class="absolute -left-32 top-24 w-80 h-80 bg-blue-500/10 blur-3xl rounded-full pointer-events-none"></div>
+		<div class="absolute right-0 bottom-0 w-96 h-96 bg-purple-500/10 blur-3xl rounded-full pointer-events-none"></div>
 		<div class="relative">
-			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 text-center">
-				<div class="space-y-8">
-					<div class="space-y-4">
-						<h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground leading-tight">
-							Discover Your Perfect
-							<span class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent block">
-								City Adventure
-							</span>
-						</h1>
-						<p class="max-w-2xl mx-auto text-xl text-muted-foreground leading-relaxed">
-							AI-powered recommendations that learn your preferences and adapt
-							to your time, location, and interests.
-						</p>
-					</div>
-					<!-- Main search interface -->
-					<div
-						class="max-w-2xl mx-auto mb-8"
-						x-data="{ searching: false }"
-						@htmx:before-request="searching = true"
-						@htmx:after-request="searching = false"
-					>
-						<div class="flex items-end gap-3 bg-card rounded-2xl p-4 shadow-lg border">
-							<div class="flex-1">
+			<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-20">
+				<div class="grid lg:grid-cols-12 gap-10 items-center">
+					<div class="lg:col-span-7 space-y-8">
+						<div class="flex items-center gap-3 flex-wrap">
+							<span class="pill">Context-aware</span>
+							<span class="pill">Map native</span>
+							<span class="pill">Realtime AI</span>
+						</div>
+						<div class="space-y-4">
+							<h1 class="text-4xl sm:text-5xl lg:text-6xl font-display font-semibold leading-tight">
+								Design the day you want with
+								<span class="bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 bg-clip-text text-transparent">
+									city intelligence
+								</span>
+								in your pocket.
+							</h1>
+							<p class="text-lg sm:text-xl text-muted-foreground max-w-2xl leading-relaxed">
+								Loci learns your taste, time, and location to compose itineraries that feel handcrafted.
+								Trade generic lists for adaptive routes, live context, and one-click bookings.
+							</p>
+							<div class="flex flex-wrap gap-3 text-sm text-muted-foreground">
+								<div class="flex items-center gap-2 px-3 py-2 rounded-full border border-border/70 bg-card/70">
+									<div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+									Live telemetry from 24 cities
+								</div>
+								<div class="flex items-center gap-2 px-3 py-2 rounded-full border border-border/70 bg-card/70">
+									<div class="w-2 h-2 rounded-full bg-blue-500"></div>
+									Privacy-safe, no ads
+								</div>
+							</div>
+						</div>
+						<div
+							class="glass-panel rounded-2xl p-5 border border-border/70 shadow-2xl space-y-4"
+							x-data="{ searching: false }"
+							@htmx:before-request="searching = true"
+							@htmx:after-request="searching = false"
+						>
+							<div class="flex items-center justify-between gap-4">
+								<div>
+									<p class="text-xs uppercase tracking-[0.2em] text-muted-foreground">Adaptive prompt</p>
+									<p class="text-sm text-muted-foreground">Describe the vibe. We stitch the route.</p>
+								</div>
+								<div class="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
+									<div class="w-6 h-6 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center text-primary font-semibold">∞</div>
+									<span>Unlimited drafts</span>
+								</div>
+							</div>
+							<div class="rounded-xl border border-border/60 bg-background/80 p-3 shadow-inner">
 								<textarea
 									id="search-input"
 									name="query"
-									placeholder="What would you like to discover? Try 'Hidden gems in Paris' or 'Best food markets in Italy'"
-									class="w-full h-12 px-0 py-0 border-none resize-none focus:outline-none focus:ring-0 bg-transparent placeholder-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-									rows="1"
+									placeholder="“Sunset rooftops near Lisbon, avoid crowds, end with jazz.”"
+									class="w-full h-14 px-0 py-0 border-none resize-none focus:outline-none focus:ring-0 bg-transparent placeholder-muted-foreground text-lg"
+									rows="2"
 									x-bind:disabled="searching"
 								></textarea>
-							</div>
-							<button
-								id="search-btn"
-								hx-post="/search"
-								hx-include="#search-input"
-								hx-target="#search-results"
-								class="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors flex items-center gap-2"
-								x-bind:disabled="searching"
-							>
-								<span x-show="!searching" class="flex items-center gap-2">
-									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-									</svg>
-									<span class="hidden sm:inline">Try Free</span>
-								</span>
-								<span x-show="searching" class="flex items-center gap-2">
-									<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-									<span class="hidden sm:inline">Searching...</span>
-								</span>
-							</button>
-						</div>
-						<div x-show="searching" class="max-w-4xl mx-auto mt-8 mb-12">
-							<div class="bg-card rounded-2xl p-6 shadow-xl border">
-								<div class="flex items-center gap-3 text-muted-foreground">
-									<div class="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-									<span>AI is analyzing your request and preparing your personalized recommendations...</span>
+								<div class="flex items-center justify-between mt-3 gap-3 flex-wrap">
+									<div class="flex items-center gap-2 text-xs text-muted-foreground">
+										<div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+										<span>Latency target: &lt; 3s</span>
+									</div>
+									<button
+										id="search-btn"
+										hx-post="/search"
+										hx-include="#search-input"
+										hx-target="#search-results"
+										class="inline-flex items-center gap-2 px-4 py-3 rounded-xl text-white bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 shadow-lg shadow-blue-500/20 hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+										x-bind:disabled="searching"
+									>
+										<span x-show="!searching" class="flex items-center gap-2">
+											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+											</svg>
+											Try it free
+										</span>
+										<span x-show="searching" class="flex items-center gap-2">
+											<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+											Crafting…
+										</span>
+									</button>
 								</div>
 							</div>
+							<div id="search-results"></div>
+							<div x-show="searching" class="flex items-center gap-3 text-sm text-muted-foreground">
+								<div class="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+								<span>AI is mapping your path to the city in real time.</span>
+							</div>
 						</div>
-						<div id="search-results"></div>
+						<div class="space-y-3">
+							<p class="text-sm font-medium text-muted-foreground">
+								Or jump-start with a curated prompt:
+							</p>
+							<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+								<button
+									onclick="document.getElementById('search-input').value='Hidden gems in Paris'; document.getElementById('search-btn').click()"
+									class="gradient-border rounded-2xl group text-left soft-shadow"
+								>
+									<div class="gradient-border-inner rounded-[0.72rem] p-4 flex items-start gap-3">
+										<span class="text-xl">🌟</span>
+										<div>
+											<h4 class="font-semibold text-card-foreground group-hover:text-primary transition-colors">
+												Hidden gems in Paris
+											</h4>
+											<p class="text-sm text-muted-foreground">Start with Marais courtyards and Left Bank ateliers.</p>
+										</div>
+									</div>
+								</button>
+								<button
+									onclick="document.getElementById('search-input').value='Best food markets in Italy'; document.getElementById('search-btn').click()"
+									class="gradient-border rounded-2xl group text-left soft-shadow"
+								>
+									<div class="gradient-border-inner rounded-[0.72rem] p-4 flex items-start gap-3">
+										<span class="text-xl">🍕</span>
+										<div>
+											<h4 class="font-semibold text-card-foreground group-hover:text-primary transition-colors">
+												Best food markets in Italy
+											</h4>
+											<p class="text-sm text-muted-foreground">Emilia produce runs with espresso detours.</p>
+										</div>
+									</div>
+								</button>
+								<button
+									onclick="document.getElementById('search-input').value='3-day cultural tour of Rome'; document.getElementById('search-btn').click()"
+									class="gradient-border rounded-2xl group text-left soft-shadow"
+								>
+									<div class="gradient-border-inner rounded-[0.72rem] p-4 flex items-start gap-3">
+										<span class="text-xl">🏛️</span>
+										<div>
+											<h4 class="font-semibold text-card-foreground group-hover:text-primary transition-colors">
+												3-day cultural tour of Rome
+											</h4>
+											<p class="text-sm text-muted-foreground">Layered history with daylight-optimized stops.</p>
+										</div>
+									</div>
+								</button>
+								<button
+									onclick="document.getElementById('search-input').value='Weekend nightlife in Barcelona'; document.getElementById('search-btn').click()"
+									class="gradient-border rounded-2xl group text-left soft-shadow"
+								>
+									<div class="gradient-border-inner rounded-[0.72rem] p-4 flex items-start gap-3">
+										<span class="text-xl">🌃</span>
+										<div>
+											<h4 class="font-semibold text-card-foreground group-hover:text-primary transition-colors">
+												Weekend nightlife in Barcelona
+											</h4>
+											<p class="text-sm text-muted-foreground">Late tapas, rooftops, and Mediterranean sunrise.</p>
+										</div>
+									</div>
+								</button>
+							</div>
+						</div>
 					</div>
-					<!-- Quick suggestion buttons -->
-					<div class="max-w-4xl mx-auto mt-12">
-						<p class="text-muted-foreground mb-6 font-medium">
-							Try these popular searches for free:
-						</p>
-						<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-							<button
-								onclick="document.getElementById('search-input').value='Hidden gems in Paris'; document.getElementById('search-btn').click()"
-								class="bg-card rounded-xl p-4 shadow-sm border hover:shadow-md hover:border-blue-300 transition-all group text-left"
-							>
-								<div class="flex items-start gap-3">
-									<span class="text-2xl">🌟</span>
+					<div class="lg:col-span-5 space-y-4">
+						<div class="glass-panel rounded-2xl border border-border/70 p-5 soft-shadow">
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-2">
+									<div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+									<span class="text-xs uppercase tracking-[0.22em] text-muted-foreground">Live route</span>
+								</div>
+								<span class="text-xs text-muted-foreground">Updated every minute</span>
+							</div>
+							<div class="mt-4 space-y-3">
+								<div class="flex items-center justify-between">
 									<div>
-										<h4 class="font-medium text-card-foreground group-hover:text-blue-600 transition-colors">
-											Hidden gems in Paris
-										</h4>
-										<p class="text-sm text-muted-foreground mt-1">
-											Try free AI recommendations
-										</p>
+										<p class="text-sm text-muted-foreground">Current city</p>
+										<p class="text-lg font-semibold">Barcelona Gothic → Barceloneta</p>
+									</div>
+									<span class="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">Low crowd</span>
+								</div>
+								<div class="space-y-2">
+									<div class="flex items-center gap-3">
+										<div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-semibold">1</div>
+										<div>
+											<p class="font-semibold">Vermut & pinchos</p>
+											<p class="text-xs text-muted-foreground">El Xampanyet · 0.4 km</p>
+										</div>
+									</div>
+									<div class="flex items-center gap-3">
+										<div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-semibold">2</div>
+										<div>
+											<p class="font-semibold">Seaside detour</p>
+											<p class="text-xs text-muted-foreground">Passeig de Colom · 0.8 km</p>
+										</div>
+									</div>
+									<div class="flex items-center gap-3">
+										<div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-semibold">3</div>
+										<div>
+											<p class="font-semibold">Jazz at sunset</p>
+											<p class="text-xs text-muted-foreground">El Born · 1.2 km</p>
+										</div>
 									</div>
 								</div>
-							</button>
-							<button
-								onclick="document.getElementById('search-input').value='Best food markets in Italy'; document.getElementById('search-btn').click()"
-								class="bg-card rounded-xl p-4 shadow-sm border hover:shadow-md hover:border-blue-300 transition-all group text-left"
-							>
-								<div class="flex items-start gap-3">
-									<span class="text-2xl">🍕</span>
-									<div>
-										<h4 class="font-medium text-card-foreground group-hover:text-blue-600 transition-colors">
-											Best food markets in Italy
-										</h4>
-										<p class="text-sm text-muted-foreground mt-1">
-											Try free AI recommendations
-										</p>
-									</div>
+								<div class="flex items-center justify-between pt-3 border-t border-border/70">
+									<div class="text-sm text-muted-foreground">Walkable · Weather aware</div>
+									<a href="/discover" class="text-sm font-semibold text-primary hover:underline">Open live map →</a>
 								</div>
-							</button>
-							<button
-								onclick="document.getElementById('search-input').value='3-day cultural tour of Rome'; document.getElementById('search-btn').click()"
-								class="bg-card rounded-xl p-4 shadow-sm border hover:shadow-md hover:border-blue-300 transition-all group text-left"
-							>
-								<div class="flex items-start gap-3">
-									<span class="text-2xl">🏛️</span>
-									<div>
-										<h4 class="font-medium text-card-foreground group-hover:text-blue-600 transition-colors">
-											3-day cultural tour of Rome
-										</h4>
-										<p class="text-sm text-muted-foreground mt-1">
-											Try free AI recommendations
-										</p>
-									</div>
+							</div>
+						</div>
+						<div class="rounded-2xl p-5 bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 text-white shadow-2xl">
+							<div class="flex items-center justify-between">
+								<p class="text-xs uppercase tracking-[0.3em] text-white/70">City pulse</p>
+								<span class="px-3 py-1 rounded-full bg-white/15 text-xs font-semibold">Trending</span>
+							</div>
+							<h3 class="text-2xl font-semibold mt-3">Crowd-safe gems updated hourly.</h3>
+							<p class="text-sm text-white/80 mt-2">
+								Loci checks foot traffic, time-of-day energy, and your pace preferences before suggesting a spot.
+							</p>
+							<div class="mt-4 flex items-center gap-3 text-sm">
+								<div class="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center">24/7</div>
+								<div class="space-y-1">
+									<p class="font-semibold">Resync every 15 minutes</p>
+									<p class="text-white/70">Dark-mode ready, offline friendly.</p>
 								</div>
-							</button>
-							<button
-								onclick="document.getElementById('search-input').value='Weekend nightlife in Barcelona'; document.getElementById('search-btn').click()"
-								class="bg-card rounded-xl p-4 shadow-sm border hover:shadow-md hover:border-blue-300 transition-all group text-left"
-							>
-								<div class="flex items-start gap-3">
-									<span class="text-2xl">🌃</span>
-									<div>
-										<h4 class="font-medium text-card-foreground group-hover:text-blue-600 transition-colors">
-											Weekend nightlife in Barcelona
-										</h4>
-										<p class="text-sm text-muted-foreground mt-1">
-											Try free AI recommendations
-										</p>
-									</div>
-								</div>
-							</button>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -150,26 +234,28 @@ templ PublicLandingPage() {
 }
 
 templ RealTimeStats() {
-	<section class="py-16 px-4 sm:px-6 lg:px-8">
-		<div class="max-w-6xl mx-auto">
-			<div class="bg-card rounded-2xl p-8 shadow-lg border text-center">
-				<div class="inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-4 py-2 rounded-full text-sm font-medium mb-6">
-					<div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-					This month on Loci
+	<section class="relative py-16 px-4 sm:px-6 lg:px-8">
+		<div class="absolute inset-0 grid-backdrop opacity-20 dark:opacity-5 pointer-events-none"></div>
+		<div class="relative max-w-6xl mx-auto">
+			<div class="mb-6 flex items-center gap-2">
+				<div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+				<p class="text-xs uppercase tracking-[0.25em] text-muted-foreground">This month on Loci</p>
+			</div>
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+				<div class="glass-panel rounded-2xl p-6 border border-border/70">
+					<p class="text-sm text-muted-foreground">Users registered</p>
+					<p class="text-3xl font-display font-semibold mt-2">69,420</p>
+					<p class="text-xs text-muted-foreground mt-1">+12% vs last month</p>
 				</div>
-				<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-					<div class="space-y-2">
-						<div class="text-3xl sm:text-4xl font-bold text-card-foreground">69,420</div>
-						<div class="text-muted-foreground">Users registered</div>
-					</div>
-					<div class="space-y-2">
-						<div class="text-3xl sm:text-4xl font-bold text-card-foreground">12,109</div>
-						<div class="text-muted-foreground">Personalized Itineraries Saved</div>
-					</div>
-					<div class="space-y-2">
-						<div class="text-3xl sm:text-4xl font-bold text-card-foreground">41,004</div>
-						<div class="text-muted-foreground">Unique Points of Interest</div>
-					</div>
+				<div class="glass-panel rounded-2xl p-6 border border-border/70">
+					<p class="text-sm text-muted-foreground">Personalized itineraries saved</p>
+					<p class="text-3xl font-display font-semibold mt-2">12,109</p>
+					<p class="text-xs text-muted-foreground mt-1">Completion rate 94%</p>
+				</div>
+				<div class="glass-panel rounded-2xl p-6 border border-border/70">
+					<p class="text-sm text-muted-foreground">Unique points of interest</p>
+					<p class="text-3xl font-display font-semibold mt-2">41,004</p>
+					<p class="text-xs text-muted-foreground mt-1">Continuously curated</p>
 				</div>
 			</div>
 		</div>
@@ -178,63 +264,49 @@ templ RealTimeStats() {
 
 templ ContentGrid() {
 	<section class="py-16 px-4 sm:px-6 lg:px-8 bg-muted/30">
-		<div class="max-w-7xl mx-auto">
-			<div class="text-center mb-12">
-				<h2 class="text-3xl font-bold text-card-foreground mb-4">
-					Discover Amazing Places
+		<div class="max-w-7xl mx-auto space-y-10">
+			<div class="text-center space-y-3">
+				<p class="text-xs uppercase tracking-[0.28em] text-muted-foreground">What Loci curates</p>
+				<h2 class="text-3xl sm:text-4xl font-display font-semibold text-card-foreground">
+					Signals-first travel discovery
 				</h2>
-				<p class="text-xl text-muted-foreground">
-					See what our AI has discovered for travelers like you.
+				<p class="text-lg text-muted-foreground max-w-2xl mx-auto">
+					We blend editorial taste with live telemetry to pick the next best move, not just the highest-rated place.
 				</p>
 			</div>
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-				<div class="bg-card rounded-xl overflow-hidden shadow-lg border hover:shadow-xl transition-shadow">
-					<div class="p-6">
-						<div class="flex items-center gap-3 mb-4">
-							<span class="text-4xl">🗺️</span>
-							<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-								New Itinerary
-							</span>
-						</div>
-						<h3 class="text-xl font-semibold text-card-foreground mb-2">
-							New in Paris: Hidden Gems
-						</h3>
-						<p class="text-muted-foreground">
-							Our AI has uncovered 15 new unique spots in Le Marais, from artisan shops to quiet courtyards.
-						</p>
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+				<div class="glass-panel rounded-2xl p-6 border border-border/70 h-full flex flex-col justify-between">
+					<div class="flex items-center gap-3 mb-4">
+						<span class="text-3xl">🗺️</span>
+						<span class="px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary">New itinerary</span>
 					</div>
+					<div class="space-y-2">
+						<h3 class="text-xl font-semibold text-card-foreground">Hidden Paris loops</h3>
+						<p class="text-muted-foreground">15 spots stitched to avoid tour buses and hit golden-hour corners.</p>
+					</div>
+					<a href="/discover" class="mt-4 text-sm font-semibold text-primary hover:underline">Preview in Discover →</a>
 				</div>
-				<div class="bg-card rounded-xl overflow-hidden shadow-lg border hover:shadow-xl transition-shadow">
-					<div class="p-6">
-						<div class="flex items-center gap-3 mb-4">
-							<span class="text-4xl">🤖</span>
-							<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
-								AI-Powered
-							</span>
-						</div>
-						<h3 class="text-xl font-semibold text-card-foreground mb-2">
-							AI-Curated: A Foodie's Weekend in Lisbon
-						</h3>
-						<p class="text-muted-foreground">
-							From classic Pastéis de Nata to modern seafood, let our AI guide your taste buds through Lisbon's best.
-						</p>
+				<div class="glass-panel rounded-2xl p-6 border border-border/70 h-full flex flex-col justify-between">
+					<div class="flex items-center gap-3 mb-4">
+						<span class="text-3xl">🤖</span>
+						<span class="px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-100">AI powered</span>
 					</div>
+					<div class="space-y-2">
+						<h3 class="text-xl font-semibold text-card-foreground">Food-forward Lisbon weekend</h3>
+						<p class="text-muted-foreground">Classic pastéis plus modern seafood, paced for long walks and sunsets.</p>
+					</div>
+					<a href="/chat" class="mt-4 text-sm font-semibold text-primary hover:underline">Chat for a remix →</a>
 				</div>
-				<div class="bg-card rounded-xl overflow-hidden shadow-lg border hover:shadow-xl transition-shadow">
-					<div class="p-6">
-						<div class="flex items-center gap-3 mb-4">
-							<span class="text-4xl">⭐️</span>
-							<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-								Top Rated
-							</span>
-						</div>
-						<h3 class="text-xl font-semibold text-card-foreground mb-2">
-							User Favorite: The Ancient Rome Route
-						</h3>
-						<p class="text-muted-foreground">
-							Explore the Colosseum, Forum, and Palatine Hill with a personalized route optimized for a 4-hour window.
-						</p>
+				<div class="glass-panel rounded-2xl p-6 border border-border/70 h-full flex flex-col justify-between">
+					<div class="flex items-center gap-3 mb-4">
+						<span class="text-3xl">⭐️</span>
+						<span class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-100">Traveler favorite</span>
 					</div>
+					<div class="space-y-2">
+						<h3 class="text-xl font-semibold text-card-foreground">Ancient Rome in four hours</h3>
+						<p class="text-muted-foreground">Colosseum, Forum, Palatine Hill sequenced for daylight and crowds.</p>
+					</div>
+					<a href="/itinerary" class="mt-4 text-sm font-semibold text-primary hover:underline">Save to your list →</a>
 				</div>
 			</div>
 		</div>
@@ -244,34 +316,38 @@ templ ContentGrid() {
 templ MobileAppAnnouncement() {
 	<section class="py-12 px-4 sm:px-6 lg:px-8">
 		<div class="max-w-4xl mx-auto">
-			<div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-center text-white">
-				<div class="space-y-6">
+			<div class="rounded-2xl p-8 bg-gradient-to-r from-blue-600 via-blue-700 to-purple-700 text-white shadow-2xl overflow-hidden relative">
+				<div class="absolute inset-0 bg-white/5 backdrop-blur-md pointer-events-none"></div>
+				<div class="relative space-y-6">
 					<div class="space-y-2">
-						<h3 class="text-2xl font-bold">Take Loci With You</h3>
-						<p class="text-blue-100">
-							Install our PWA for the best mobile experience and offline access to your saved places.
+						<p class="text-xs uppercase tracking-[0.35em] text-white/70">Mobile-first</p>
+						<h3 class="text-2xl font-semibold">Take Loci with you offline.</h3>
+						<p class="text-white/80">
+							Install the PWA for the best mobile experience, live caching, and offline access to saved routes.
 						</p>
 					</div>
 					<button
 						id="pwa-install-btn"
-						class="bg-white/20 hover:bg-white/30 border border-white/30 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+						class="inline-flex items-center justify-center gap-2 bg-white/15 hover:bg-white/25 border border-white/30 text-white px-6 py-3 rounded-xl font-medium transition-colors"
 						style="display: none;"
 					>
 						Install App
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16"></path>
+						</svg>
 					</button>
 				</div>
 			</div>
 		</div>
 	</section>
 	<script>
-		// PWA install functionality
 		let deferredPrompt;
 		const installBtn = document.getElementById('pwa-install-btn');
 
 		window.addEventListener('beforeinstallprompt', (e) => {
 			e.preventDefault();
 			deferredPrompt = e;
-			installBtn.style.display = 'block';
+			installBtn.style.display = 'inline-flex';
 		});
 
 		installBtn?.addEventListener('click', () => {
@@ -287,34 +363,33 @@ templ MobileAppAnnouncement() {
 }
 
 templ CTA() {
-	<section class="py-20 px-4 sm:px-6 lg:px-8 bg-card border-t">
-		<div class="max-w-4xl mx-auto text-center">
-			<div class="space-y-8">
-				<div class="space-y-4">
-					<h2 class="text-3xl sm:text-4xl font-bold text-card-foreground">
-						Ready to Discover Something Amazing?
-					</h2>
-					<p class="text-xl text-muted-foreground">
-						Join thousands of travelers discovering hidden gems with AI-powered recommendations.
-					</p>
-				</div>
-				<div class="flex flex-col sm:flex-row gap-4 justify-center">
-					<a
-						href="/auth/signup"
-						class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-colors inline-flex items-center justify-center"
-					>
-						Get Started Free
-						<svg class="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-						</svg>
-					</a>
-					<a
-						href="/about"
-						class="border hover:bg-accent text-foreground px-8 py-3 rounded-lg font-medium transition-colors inline-flex items-center justify-center"
-					>
-						Learn More
-					</a>
-				</div>
+	<section class="py-20 px-4 sm:px-6 lg:px-8 bg-card/80 border-t border-border/70">
+		<div class="max-w-4xl mx-auto text-center space-y-8">
+			<div class="space-y-3">
+				<p class="text-xs uppercase tracking-[0.35em] text-muted-foreground">Just start</p>
+				<h2 class="text-3xl sm:text-4xl font-display font-semibold text-card-foreground">
+					Discover a better way to move through cities.
+				</h2>
+				<p class="text-lg text-muted-foreground">
+					Join thousands of travelers getting bespoke, context-aware itineraries with zero guesswork.
+				</p>
+			</div>
+			<div class="flex flex-col sm:flex-row gap-4 justify-center">
+				<a
+					href="/auth/signup"
+					class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold shadow-lg shadow-blue-500/25 hover:-translate-y-0.5 transition-all"
+				>
+					Get Started Free
+					<svg class="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+					</svg>
+				</a>
+				<a
+					href="/about"
+					class="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-xl border border-border/70 bg-background/70 text-foreground font-semibold hover:border-primary hover:text-primary transition-colors"
+				>
+					Learn More
+				</a>
 			</div>
 		</div>
 	</section>

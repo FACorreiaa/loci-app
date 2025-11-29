@@ -2,67 +2,304 @@ package results
 
 import (
 	"fmt"
+	llmChat "github.com/FACorreiaa/go-templui/internal/app/components/chat"
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"strings"
 )
 
-templ RestaurantResults(restaurants []models.RestaurantDetailedInfo, compact bool, showToggle bool, initialLimit int, favorites []string, isLoadingFavorites bool) {
-	<div class="restaurant-results">
-		<div class="space-y-3" id="restaurant-list">
-			for i, restaurant := range restaurants {
-				if !showToggle || i < initialLimit {
-					@RestaurantCard(restaurant, compact, contains(favorites, restaurant.ID.String()), isLoadingFavorites)
-				} else {
-					<div class="restaurant-card hidden">
-						@RestaurantCard(restaurant, compact, contains(favorites, restaurant.ID.String()), isLoadingFavorites)
+templ RestaurantResults(restaurants []models.RestaurantDetailedInfo, compact bool, showToggle bool, initialLimit int, favorites []string, isLoadingFavorites bool, cityName string, sessionID string) {
+	<div class="restaurant-results relative min-h-screen bg-background text-foreground overflow-hidden" id="restaurants-container" x-data="restaurantsPage()">
+		<div class="absolute inset-0 hero-aurora pointer-events-none"></div>
+		<div class="absolute inset-0 grid-backdrop opacity-20 dark:opacity-5 pointer-events-none"></div>
+		<div class="absolute -left-10 top-16 w-64 h-64 bg-amber-400/10 blur-3xl rounded-full pointer-events-none"></div>
+		<div class="absolute right-0 bottom-0 w-72 h-72 bg-rose-500/10 blur-3xl rounded-full pointer-events-none"></div>
+		<!-- SSE Stream for updates -->
+		if sessionID != "" {
+			<div
+				id="restaurant-updates-stream"
+				class="hidden"
+				hx-ext="sse"
+				sse-connect={ fmt.Sprintf("/restaurants/updates/stream?sessionId=%s&domain=restaurants", sessionID) }
+				sse-swap="message"
+				hx-swap="none"
+			></div>
+		}
+		<div class="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 relative">
+			<!-- Header -->
+			<div class="bg-background/80 backdrop-blur-2xl border border-border/60 rounded-2xl p-5 shadow-[0_12px_40px_rgba(30,41,59,0.12)] relative overflow-hidden">
+				<div class="absolute inset-x-6 -top-12 h-28 bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-rose-500/20 blur-3xl rounded-full pointer-events-none"></div>
+				<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between relative">
+					<div class="flex items-start gap-3">
+						<div class="w-12 h-12 bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 rounded-xl flex items-center justify-center text-white text-xl flex-shrink-0 shadow-lg shadow-orange-500/25">
+							🍽️
+						</div>
+						<div class="space-y-1">
+							<h1 class="text-xl font-display font-semibold text-foreground">
+								if cityName != "" {
+									Restaurants in { cityName }
+								} else {
+									Restaurants
+								}
+							</h1>
+							<div class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+								<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white/60 dark:bg-white/5 border border-border/60 shadow-sm">
+									<svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M4 12h16M4 17h16"></path>
+									</svg>
+									{ fmt.Sprintf("%d restaurants", len(restaurants)) }
+								</span>
+								if len(favorites) > 0 {
+									<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/30">
+										<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+											<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+										</svg>
+										{ fmt.Sprintf("%d favorites", len(favorites)) }
+									</span>
+								}
+								if cityName != "" {
+									<span class="inline-flex items-center gap-1 text-foreground px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30">
+										<svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+										</svg>
+										{ cityName }
+									</span>
+								}
+							</div>
+						</div>
 					</div>
+					<div class="flex flex-wrap gap-2">
+						<button
+							@click="showChat = true"
+							class="flex items-center gap-2 px-4 py-2 text-white rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 shadow-lg shadow-orange-500/25 hover:-translate-y-0.5 transition-all text-sm font-medium"
+						>
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.013 8.013 0 01-7.93-6.94c-.42-.51-.92-.92-1.43-1.25-.63-.41-.63-1.33 0-1.74.51-.33 1.01-.74 1.43-1.25A8.013 8.013 0 0113 4c4.418 0 8 3.582 8 8z"></path>
+							</svg>
+							Find more restaurants
+						</button>
+						<button
+							onclick="shareRestaurantsPage()"
+							class="p-2 text-muted-foreground hover:text-primary hover:border-primary border border-border/70 rounded-lg transition-all bg-background/80"
+						>
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
+							</svg>
+						</button>
+					</div>
+				</div>
+			</div>
+			<!-- Results -->
+			<div class="space-y-3" id="restaurant-list">
+				for i, restaurant := range restaurants {
+					if !showToggle || i < initialLimit {
+						@RestaurantCard(restaurant, compact, contains(favorites, restaurant.ID.String()), isLoadingFavorites)
+					} else {
+						<div class="restaurant-card hidden">
+							@RestaurantCard(restaurant, compact, contains(favorites, restaurant.ID.String()), isLoadingFavorites)
+						</div>
+					}
 				}
+			</div>
+			if showToggle && len(restaurants) > initialLimit {
+				<div class="text-center pt-2">
+					<button
+						id="toggle-restaurants-btn"
+						class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white shadow-lg shadow-orange-500/20 hover:-translate-y-0.5 transition-all"
+						onclick="toggleRestaurants()"
+					>
+						<i class="fas fa-chevron-down"></i>
+						<span id="toggle-text">Show { fmt.Sprintf("%d", len(restaurants) - initialLimit) } more restaurants</span>
+					</button>
+				</div>
+			}
+			<!-- Chat Panel for continuing conversation -->
+			if sessionID != "" {
+				@llmChat.ChatPanel(llmChat.ChatPanelProps{
+					SessionID:     sessionID,
+					CityName:      cityName,
+					Domain:        "restaurants",
+					Placeholder:   "Ask to add more restaurants...",
+					ShowByDefault: false,
+				})
 			}
 		</div>
-		if showToggle && len(restaurants) > initialLimit {
-			<div class="text-center mt-4">
-				<button
-					id="toggle-restaurants-btn"
-					class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-					onclick="toggleRestaurants()"
-				>
-					<i class="fas fa-chevron-down mr-2"></i>
-					<span id="toggle-text">Show { fmt.Sprintf("%d", len(restaurants) - initialLimit) } more restaurants</span>
-				</button>
-			</div>
-		}
 	</div>
 	<script>
-		let restaurantsExpanded = false;
-		
-		function toggleRestaurants() {
-			const hiddenRestaurants = document.querySelectorAll('.restaurant-card.hidden');
-			const btn = document.getElementById('toggle-restaurants-btn');
-			const toggleText = document.getElementById('toggle-text');
-			const chevron = btn.querySelector('i');
-			
-			if (!restaurantsExpanded) {
-				hiddenRestaurants.forEach(card => card.classList.remove('hidden'));
-				toggleText.textContent = 'Show fewer restaurants';
-				chevron.classList.remove('fa-chevron-down');
-				chevron.classList.add('fa-chevron-up');
-				restaurantsExpanded = true;
+		function restaurantsPage() {
+			return {
+				showChat: false,
+				restaurantsExpanded: false,
+
+				init() {
+					// Listen for chatPanelListUpdate events from ChatPanel component
+					document.addEventListener('chatPanelListUpdate', (event) => {
+						const eventData = event.detail;
+						if (eventData.domain !== 'restaurants') return;
+
+						console.log('Restaurants: Received chatPanelListUpdate', eventData.type, eventData);
+
+						if (eventData.type === 'item_added') {
+							this.handleItemAdded(eventData);
+						}
+						if (eventData.type === 'item_removed') {
+							this.handleItemRemoved(eventData);
+						}
+						if (eventData.type === 'item_updated') {
+							this.handleItemUpdated(eventData);
+						}
+					});
+
+					const updatesStream = document.getElementById('restaurant-updates-stream');
+					if (updatesStream) {
+						updatesStream.addEventListener('htmx:sseMessage', (event) => {
+							const sseEvent = event.detail;
+							let eventData;
+							try {
+								eventData = typeof sseEvent.data === 'string' ? JSON.parse(sseEvent.data) : sseEvent.data;
+							} catch (e) {
+								console.log('Non-JSON SSE event:', sseEvent);
+								return;
+							}
+
+							if (eventData.type === 'item_added' && eventData.domain === 'restaurants') {
+								this.handleItemAdded(eventData);
+							}
+							if (eventData.type === 'item_removed' && eventData.domain === 'restaurants') {
+								this.handleItemRemoved(eventData);
+							}
+							if (eventData.type === 'item_updated' && eventData.domain === 'restaurants') {
+								this.handleItemUpdated(eventData);
+							}
+						});
+
+						updatesStream.addEventListener('htmx:sseError', (evt) => {
+							console.warn('Restaurant updates SSE error', evt);
+						});
+
+						console.log('Restaurants SSE listener connected');
+					} else {
+						console.log('Restaurant updates stream not initialized (missing session ID)');
+					}
+				},
+
+				handleItemAdded(eventData) {
+					const listContainer = document.getElementById('restaurant-list');
+					if (!listContainer) return;
+
+					const tempDiv = document.createElement('div');
+					tempDiv.innerHTML = eventData.html;
+					const newElement = tempDiv.firstElementChild;
+
+					if (newElement) {
+						listContainer.appendChild(newElement.cloneNode(true));
+						console.log('Restaurant added successfully:', eventData.message);
+					}
+				},
+
+				handleItemRemoved(eventData) {
+					console.log('handleItemRemoved called with:', eventData);
+
+					// Try multiple selectors to find the element
+					let element = document.querySelector(`#restaurant-list [data-item-id="${eventData.item_id}"]`);
+
+					// Fallback: try by id containing the item_id
+					if (!element) {
+						element = document.querySelector(`#restaurant-list [id*="${eventData.item_id}"]`);
+					}
+
+					// Fallback: try by poi name if item_data is available
+					if (!element && eventData.item_data?.name) {
+						element = document.querySelector(`#restaurant-list [data-poi-name="${eventData.item_data.name}"]`);
+					}
+
+					// Fallback: try to find by restaurant name in the card text
+					if (!element && eventData.item_data?.name) {
+						const cards = document.querySelectorAll('#restaurant-list .restaurant-card');
+						for (const card of cards) {
+							const nameEl = card.querySelector('h3');
+							if (nameEl && nameEl.textContent.trim() === eventData.item_data.name) {
+								element = card;
+								break;
+							}
+						}
+					}
+
+					if (element) {
+						// Remove the card or its parent wrapper
+						element.closest('.restaurant-card')?.remove() || element.remove();
+						console.log('Restaurant removed successfully');
+					} else {
+						console.log('Restaurant element not found for removal');
+					}
+				},
+
+				handleItemUpdated(eventData) {
+					const element = document.querySelector(`#restaurant-list [data-item-id="${eventData.item_id}"]`);
+					if (eventData.html && element) {
+						const tempDiv = document.createElement('div');
+						tempDiv.innerHTML = eventData.html;
+						const newElement = tempDiv.firstElementChild;
+						if (newElement) {
+							element.closest('.restaurant-card')?.replaceWith(newElement) || element.replaceWith(newElement);
+							console.log('Restaurant updated successfully:', eventData.message);
+						}
+					}
+				},
+
+				toggleRestaurants() {
+					const hiddenRestaurants = document.querySelectorAll('.restaurant-card.hidden');
+					const btn = document.getElementById('toggle-restaurants-btn');
+					const toggleText = document.getElementById('toggle-text');
+					const chevron = btn?.querySelector('i');
+
+					if (!this.restaurantsExpanded) {
+						hiddenRestaurants.forEach(card => card.classList.remove('hidden'));
+						if (toggleText) toggleText.textContent = 'Show fewer restaurants';
+						if (chevron) {
+							chevron.classList.remove('fa-chevron-down');
+							chevron.classList.add('fa-chevron-up');
+						}
+						this.restaurantsExpanded = true;
+					} else {
+						hiddenRestaurants.forEach(card => card.classList.add('hidden'));
+						if (toggleText) toggleText.textContent = `Show ${hiddenRestaurants.length} more restaurants`;
+						if (chevron) {
+							chevron.classList.remove('fa-chevron-up');
+							chevron.classList.add('fa-chevron-down');
+						}
+						this.restaurantsExpanded = false;
+					}
+				}
+			};
+		}
+
+		// Make function available globally
+		window.restaurantsPage = restaurantsPage;
+
+		function shareRestaurantsPage() {
+			const shareData = {
+				title: 'Restaurant picks',
+				text: 'Check out these restaurant ideas',
+				url: window.location.href,
+			};
+
+			if (navigator.share) {
+				navigator.share(shareData).catch(() => {});
 			} else {
-				hiddenRestaurants.forEach(card => card.classList.add('hidden'));
-				toggleText.textContent = `Show ${hiddenRestaurants.length} more restaurants`;
-				chevron.classList.remove('fa-chevron-up');
-				chevron.classList.add('fa-chevron-down');
-				restaurantsExpanded = false;
+				navigator.clipboard.writeText(shareData.url).then(() => {
+					showNotification('Link copied to clipboard!', 'success');
+				}).catch(() => {});
 			}
 		}
-		
+
 		function toggleRestaurantFavorite(restaurantId) {
 			htmx.ajax('POST', `/favorites/restaurants/${restaurantId}`, {
 				target: `#favorite-btn-${restaurantId}`,
 				swap: 'outerHTML'
 			});
 		}
-		
+
 		function shareRestaurant(restaurantId) {
 			if (navigator.share) {
 				navigator.share({
@@ -78,10 +315,14 @@ templ RestaurantResults(restaurants []models.RestaurantDetailedInfo, compact boo
 }
 
 templ RestaurantCard(restaurant models.RestaurantDetailedInfo, compact bool, isFavorite bool, isLoadingFavorites bool) {
-	<div class="restaurant-card bg-card rounded-xl shadow-sm border p-4 hover:shadow-md transition-all duration-300">
-		<div class="flex items-start gap-4">
+	<div
+		class="restaurant-card glass-panel rounded-2xl border border-border/70 p-5 hover:shadow-[0_20px_60px_rgba(0,0,0,0.12)] transition-all duration-300 soft-shadow"
+		data-item-id={ restaurant.ID.String() }
+		data-poi-name={ restaurant.Name }
+	>
+		<div class="flex items-start gap-5">
 			<div class="flex-shrink-0">
-				<div class="w-16 h-16 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center">
+				<div class="w-16 h-16 bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/25">
 					<span class="text-white text-2xl">{ getCuisineEmoji(restaurant.CuisineType) }</span>
 				</div>
 			</div>
@@ -89,15 +330,15 @@ templ RestaurantCard(restaurant models.RestaurantDetailedInfo, compact bool, isF
 				<div class="flex items-start justify-between mb-2">
 					<div class="flex-1">
 						<h3
-							class="font-semibold text-xl text-foreground mb-1 cursor-pointer hover:text-primary transition-colors"
+							class="font-semibold text-xl text-foreground mb-1 cursor-pointer hover:text-primary transition-colors font-display"
 							onclick="showRestaurantDetails('{ restaurant.ID.String() }')"
 						>
 							{ restaurant.Name }
 						</h3>
 						if restaurant.CuisineType != nil && *restaurant.CuisineType != "" {
-							<p class="text-sm text-orange-600 dark:text-orange-400 font-medium mb-1">
+							<div class="inline-flex items-center px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold border border-amber-500/30 mb-1">
 								{ *restaurant.CuisineType }
-							</p>
+							</div>
 						}
 						if restaurant.Address != nil && *restaurant.Address != "" {
 							<p class="text-sm text-muted-foreground flex items-center mb-1">
@@ -123,8 +364,8 @@ templ RestaurantCard(restaurant models.RestaurantDetailedInfo, compact bool, isF
 							if !isLoadingFavorites {
 								<button
 									id={ fmt.Sprintf("favorite-btn-%s", restaurant.ID.String()) }
-									class={ "p-2 rounded-full hover:bg-accent transition-colors", 
-										templ.KV("text-red-500", isFavorite), templ.KV("text-muted-foreground", !isFavorite) }
+									class={ "p-2 rounded-full hover:bg-rose-500/10 transition-colors border border-transparent", 
+										templ.KV("text-rose-500 bg-rose-500/10 border-rose-500/40", isFavorite), templ.KV("text-muted-foreground", !isFavorite) }
 									onclick="toggleRestaurantFavorite('{ restaurant.ID.String() }')"
 									if isFavorite {
 										title="Remove from favorites"
@@ -150,13 +391,13 @@ templ RestaurantCard(restaurant models.RestaurantDetailedInfo, compact bool, isF
 					</div>
 				</div>
 				if !compact && restaurant.Description != "" {
-					<p class="text-sm text-muted-foreground mb-4 line-clamp-3">
+					<p class="text-sm text-muted-foreground mb-4 line-clamp-3 leading-relaxed">
 						{ restaurant.Description }
 					</p>
 				}
 				<div class="flex flex-wrap gap-2 mb-4">
 					for _, tag := range restaurant.Tags {
-						<span class="px-2 py-1 bg-accent text-accent-foreground text-xs rounded-full">
+						<span class="px-3 py-1 bg-white/60 dark:bg-white/5 border border-border/60 text-muted-foreground text-xs rounded-full">
 							{ tag }
 						</span>
 					}
@@ -165,7 +406,7 @@ templ RestaurantCard(restaurant models.RestaurantDetailedInfo, compact bool, isF
 					<div class="flex items-center gap-4">
 						if restaurant.PriceLevel != nil && *restaurant.PriceLevel != "" {
 							<div class="flex items-center gap-1">
-								<i class="fas fa-euro-sign text-muted-foreground"></i>
+								<i class="fas fa-euro-sign text-amber-500"></i>
 								<span class={ "text-sm font-medium", getPriceColor(*restaurant.PriceLevel) }>
 									{ *restaurant.PriceLevel }
 								</span>
@@ -182,7 +423,7 @@ templ RestaurantCard(restaurant models.RestaurantDetailedInfo, compact bool, isF
 					</div>
 					<div class="flex gap-2">
 						<button
-							class="add-to-list-btn px-3 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm hover:bg-secondary/80 transition-colors"
+							class="add-to-list-btn px-3 py-2 rounded-lg text-sm font-medium border border-border/70 bg-background/80 hover:border-primary/60 hover:text-primary transition-all"
 							data-item-id="{ restaurant.ID.String() }"
 							data-content-type="restaurant"
 							data-item-name="{ restaurant.Name }"
@@ -195,7 +436,7 @@ templ RestaurantCard(restaurant models.RestaurantDetailedInfo, compact bool, isF
 								href="{ *restaurant.Website }"
 								target="_blank"
 								rel="noopener noreferrer"
-								class="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors"
+								class="px-3 py-2 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white rounded-lg text-sm hover:-translate-y-0.5 transition-all shadow-md shadow-orange-500/20"
 							>
 								<i class="fas fa-external-link-alt mr-1"></i>
 								Website
@@ -211,27 +452,27 @@ templ RestaurantCard(restaurant models.RestaurantDetailedInfo, compact bool, isF
 // Utility functions
 func getRatingColor(rating float64) string {
 	if rating >= 4.5 {
-		return "text-green-600"
+		return "text-emerald-500"
 	} else if rating >= 4.0 {
-		return "text-blue-600"
+		return "text-blue-500"
 	} else if rating >= 3.5 {
-		return "text-yellow-600"
+		return "text-amber-500"
 	}
-	return "text-gray-600"
+	return "text-muted-foreground"
 }
 
 func getPriceColor(priceRange string) string {
 	switch strings.ToLower(priceRange) {
 	case "€", "$", "budget":
-		return "text-green-600"
+		return "text-emerald-500"
 	case "€€", "$$", "moderate":
-		return "text-blue-600"
+		return "text-blue-500"
 	case "€€€", "$$$", "upscale":
-		return "text-orange-600"
+		return "text-orange-500"
 	case "€€€€", "$$$$", "luxury":
-		return "text-purple-600"
+		return "text-purple-500"
 	default:
-		return "text-gray-600"
+		return "text-muted-foreground"
 	}
 }
 

@@ -133,14 +133,14 @@ func FavoritesPage(data FavoritesPageData) templ.Component {
 			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<div class=\"min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900\"><div class=\"max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16\"><!-- Header --><div class=\"mb-8\"><div class=\"flex items-center justify-between mb-6\"><div class=\"flex items-center gap-3\"><div class=\"w-10 h-10 bg-gradient-to-r from-red-500 to-pink-500 rounded-lg flex items-center justify-center\"><svg class=\"w-6 h-6 text-white fill-current\" fill=\"currentColor\" viewBox=\"0 0 24 24\"><path d=\"M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z\"></path></svg></div><div><h1 class=\"text-2xl font-bold text-foreground\">Your Favorites</h1><p class=\"text-muted-foreground\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<div class=\"relative min-h-screen bg-background text-foreground overflow-hidden\"><div class=\"absolute inset-0 hero-aurora pointer-events-none\"></div><div class=\"absolute inset-0 grid-backdrop opacity-25 dark:opacity-5 pointer-events-none\"></div><div class=\"max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 relative\"><!-- Header --><div class=\"mb-8\"><div class=\"flex items-center justify-between mb-6\"><div class=\"flex items-center gap-3\"><div class=\"relative\"><div class=\"absolute -inset-1 bg-gradient-to-r from-red-500/60 via-pink-500/60 to-purple-500/60 blur-md opacity-80\"></div><div class=\"relative w-10 h-10 bg-gradient-to-br from-red-500 via-pink-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/30\"><svg class=\"w-6 h-6 text-white fill-current\" fill=\"currentColor\" viewBox=\"0 0 24 24\"><path d=\"M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z\"></path></svg></div></div><div><h1 class=\"text-2xl font-display font-semibold text-foreground\">Your Favorites</h1><p class=\"text-muted-foreground text-sm\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(data.Total))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 65, Col: 66}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 70, Col: 74}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -153,13 +153,13 @@ func FavoritesPage(data FavoritesPageData) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(data.SearchText)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 75, Col: 32}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 80, Col: 32}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\" placeholder=\"Search favorites...\" class=\"pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background\"> <svg class=\"w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z\"></path></svg></div><!-- Category Filter --><select name=\"category\" class=\"px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background\" onchange=\"this.form.submit()\"><option value=\"\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\" placeholder=\"Search favorites...\" class=\"pl-10 pr-4 py-2 border border-border/70 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-background\"> <svg class=\"w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z\"></path></svg></div><!-- Category Filter --><select name=\"category\" class=\"px-4 py-2 border border-border/70 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-background\" onchange=\"this.form.submit()\"><option value=\"\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -219,7 +219,7 @@ func FavoritesPage(data FavoritesPageData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, ">Museums</option></select><!-- Sort By --><select name=\"sort_by\" class=\"px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background\" onchange=\"this.form.submit()\"><option value=\"added_at\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, ">Museums</option></select><!-- Sort By --><select name=\"sort_by\" class=\"px-4 py-2 border border-border/70 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-background\" onchange=\"this.form.submit()\"><option value=\"added_at\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -256,7 +256,7 @@ func FavoritesPage(data FavoritesPageData) templ.Component {
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(data.SortOrder)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 99, Col: 68}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 104, Col: 68}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -269,13 +269,13 @@ func FavoritesPage(data FavoritesPageData) templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(data.Page))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 100, Col: 71}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 105, Col: 71}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "\"> <button type=\"submit\" class=\"px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700\">Search</button></form></div></div></div><!-- Favorites Grid -->")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "\"> <button type=\"submit\" class=\"px-4 py-2 text-white rounded-xl bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 shadow-lg shadow-blue-500/25 hover:-translate-y-0.5 transition-all\">Search</button></form></div></div></div><!-- Favorites Grid -->")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -312,27 +312,27 @@ func FavoritesPage(data FavoritesPageData) templ.Component {
 					var templ_7745c5c3_Var10 templ.SafeURL
 					templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(fmt.Sprintf("/favorites?page=%d&search=%s&category=%s&sort_by=%s&sort_order=%s", data.Page-1, data.SearchText, data.Category, data.SortBy, data.SortOrder)))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 128, Col: 180}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 133, Col: 180}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "\" class=\"px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800\">Previous</a> ")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "\" class=\"px-4 py-2 border border-border/70 rounded-xl hover:border-primary hover:bg-accent/70 transition-colors\">Previous</a> ")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				}
 				for i := 1; i <= data.TotalPages; i++ {
 					if i == data.Page {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "<span class=\"px-4 py-2 bg-blue-600 text-white rounded-lg\">")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "<span class=\"px-4 py-2 bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white rounded-xl shadow-md shadow-blue-500/25\">")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var11 string
 						templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(i))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 136, Col: 83}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 141, Col: 158}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 						if templ_7745c5c3_Err != nil {
@@ -350,20 +350,20 @@ func FavoritesPage(data FavoritesPageData) templ.Component {
 						var templ_7745c5c3_Var12 templ.SafeURL
 						templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(fmt.Sprintf("/favorites?page=%d&search=%s&category=%s&sort_by=%s&sort_order=%s", i, data.SearchText, data.Category, data.SortBy, data.SortOrder)))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 139, Col: 171}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 144, Col: 171}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "\" class=\"px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800\">")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "\" class=\"px-4 py-2 border border-border/70 rounded-xl hover:border-primary hover:bg-accent/70 transition-colors\">")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var13 string
 						templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(i))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 142, Col: 26}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 147, Col: 26}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 						if templ_7745c5c3_Err != nil {
@@ -383,13 +383,13 @@ func FavoritesPage(data FavoritesPageData) templ.Component {
 					var templ_7745c5c3_Var14 templ.SafeURL
 					templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(fmt.Sprintf("/favorites?page=%d&search=%s&category=%s&sort_by=%s&sort_order=%s", data.Page+1, data.SearchText, data.Category, data.SortBy, data.SortOrder)))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 148, Col: 180}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 153, Col: 180}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "\" class=\"px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800\">Next</a>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "\" class=\"px-4 py-2 border border-border/70 rounded-xl hover:border-primary hover:bg-accent/70 transition-colors\">Next</a>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -429,14 +429,14 @@ func FavoriteCardFromPOI(poi models.POIDetailedInfo) templ.Component {
 			templ_7745c5c3_Var15 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "<div class=\"bg-card rounded-xl shadow-sm border hover:shadow-md transition-shadow group cursor-pointer\"><div class=\"p-6\"><div class=\"flex items-start justify-between mb-4\"><div class=\"flex items-center gap-3\"><div class=\"w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center text-white font-bold\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "<div class=\"glass-panel rounded-2xl border border-border/70 hover:border-primary hover:shadow-xl transition-shadow group cursor-pointer\"><div class=\"p-6\"><div class=\"flex items-start justify-between mb-4\"><div class=\"flex items-center gap-3\"><div class=\"w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md shadow-blue-500/25\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var16 string
 		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(poi.Category[:1])
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 167, Col: 24}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 172, Col: 24}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 		if templ_7745c5c3_Err != nil {
@@ -446,7 +446,7 @@ func FavoriteCardFromPOI(poi models.POIDetailedInfo) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var17 = []any{"inline-flex items-center px-3 py-1 rounded-full text-sm font-medium",
+		var templ_7745c5c3_Var17 = []any{"inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold",
 			templ.KV("bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300", poi.Category == "restaurant"),
 			templ.KV("bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300", poi.Category == "activity"),
 			templ.KV("bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300", poi.Category == "hotel"),
@@ -476,7 +476,7 @@ func FavoriteCardFromPOI(poi models.POIDetailedInfo) templ.Component {
 		var templ_7745c5c3_Var19 string
 		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(poi.Category)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 177, Col: 20}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 182, Col: 20}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 		if templ_7745c5c3_Err != nil {
@@ -489,7 +489,7 @@ func FavoriteCardFromPOI(poi models.POIDetailedInfo) templ.Component {
 		var templ_7745c5c3_Var20 string
 		templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs("/favorites/" + poi.ID.String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 181, Col: 48}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 186, Col: 48}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 		if templ_7745c5c3_Err != nil {
@@ -502,7 +502,7 @@ func FavoriteCardFromPOI(poi models.POIDetailedInfo) templ.Component {
 		var templ_7745c5c3_Var21 string
 		templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(poi.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 194, Col: 15}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 199, Col: 15}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 		if templ_7745c5c3_Err != nil {
@@ -515,7 +515,7 @@ func FavoriteCardFromPOI(poi models.POIDetailedInfo) templ.Component {
 		var templ_7745c5c3_Var22 string
 		templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(poi.Address)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 201, Col: 18}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 206, Col: 18}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 		if templ_7745c5c3_Err != nil {
@@ -533,7 +533,7 @@ func FavoriteCardFromPOI(poi models.POIDetailedInfo) templ.Component {
 			var templ_7745c5c3_Var23 string
 			templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.1f", poi.Rating))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 208, Col: 73}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 213, Col: 73}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 			if templ_7745c5c3_Err != nil {
@@ -552,7 +552,7 @@ func FavoriteCardFromPOI(poi models.POIDetailedInfo) templ.Component {
 			var templ_7745c5c3_Var24 string
 			templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(poi.DescriptionPOI)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 213, Col: 26}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 218, Col: 26}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 			if templ_7745c5c3_Err != nil {
@@ -570,7 +570,7 @@ func FavoriteCardFromPOI(poi models.POIDetailedInfo) templ.Component {
 		var templ_7745c5c3_Var25 templ.SafeURL
 		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/poi/" + poi.ID.String()))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 218, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 223, Col: 50}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 		if templ_7745c5c3_Err != nil {
@@ -588,7 +588,7 @@ func FavoriteCardFromPOI(poi models.POIDetailedInfo) templ.Component {
 			var templ_7745c5c3_Var26 templ.SafeURL
 			templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(poi.Website))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 222, Col: 37}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/favorites/favorites.templ`, Line: 227, Col: 37}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 			if templ_7745c5c3_Err != nil {

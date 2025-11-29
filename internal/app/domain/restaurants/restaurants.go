@@ -15,7 +15,6 @@ import (
 	"github.com/FACorreiaa/go-templui/internal/app/models"
 	"github.com/FACorreiaa/go-templui/internal/app/services"
 	"github.com/FACorreiaa/go-templui/internal/pkg/cache"
-	"github.com/FACorreiaa/go-templui/internal/pkg/debugger"
 )
 
 type RestaurantsHandlers struct {
@@ -141,17 +140,7 @@ func (h *RestaurantsHandlers) loadRestaurantsFromDatabase(sessionIDParam string)
 		return results2.RestaurantsResults(emptyCityData, emptyRestaurants, true, true, 5, []string{}, sessionIDParam)
 	}
 
-	debugger.DebugCompleteItinerary(h.logger, completeData, sessionIDParam)
-
-	// Print JSON data for debugging
-	//jsonData, err := json.MarshalIndent(completeData, "", "  ")
-	//if err != nil {
-	//	h.logger.Error("Failed to marshal completeData to JSON", zap.Error(err))
-	//} else {
-	//	if err := os.WriteFile("complete_restaurant.json", jsonData, 0644); err != nil {
-	//		h.logger.Error("Failed to write JSON to file", zap.Error(err))
-	//	}
-	//}
+	//debugger.DebugCompleteItinerary(h.logger, completeData, sessionIDParam)
 
 	h.logger.Info("Successfully loaded complete data from database for restaurants",
 		zap.String("sessionID", sessionIDParam),

@@ -1,11 +1,13 @@
 package restaurants
 
 templ RestaurantsPage() {
-	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+	<div class="relative min-h-screen bg-background text-foreground overflow-hidden">
+		<div class="absolute inset-0 hero-aurora pointer-events-none"></div>
+		<div class="absolute inset-0 grid-backdrop opacity-25 dark:opacity-5 pointer-events-none"></div>
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 relative">
 			<!-- Header -->
 			<div class="text-center mb-8">
-				<h1 class="text-3xl lg:text-4xl font-bold text-foreground mb-4">
+				<h1 class="text-3xl lg:text-4xl font-display font-semibold text-foreground mb-4">
 					Restaurants & Dining
 				</h1>
 				<p class="text-lg text-muted-foreground max-w-3xl mx-auto">
@@ -14,7 +16,7 @@ templ RestaurantsPage() {
 			</div>
 			<!-- Personalized Query Banner (shown when coming from discover) -->
 			<div id="discover-banner" class="hidden mb-6">
-				<div class="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 border">
+				<div class="glass-panel rounded-2xl p-6 border border-border/70">
 					<div class="flex items-center gap-4">
 						<div class="text-4xl">🍽️</div>
 						<div class="flex-1">
@@ -31,14 +33,14 @@ templ RestaurantsPage() {
 				</div>
 			</div>
 			<!-- Search and Filter Section -->
-			<div class="bg-card rounded-xl shadow-sm border p-6 mb-8">
+			<div class="glass-panel rounded-2xl border border-border/70 p-6 mb-8 soft-shadow">
 				<div class="flex flex-col lg:flex-row gap-4 items-center justify-between mb-4">
 					<div class="flex-1 w-full lg:max-w-md">
 						<div class="relative">
 							<input
 								type="text"
 								placeholder="Search restaurants, cuisine, or dishes..."
-								class="w-full pl-10 pr-4 py-3 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+								class="w-full pl-10 pr-4 py-3 border border-border/70 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-background"
 								hx-post="/restaurants/search"
 								hx-trigger="keyup changed delay:300ms"
 								hx-target="#restaurants-results"
@@ -50,7 +52,7 @@ templ RestaurantsPage() {
 						</div>
 					</div>
 					<div class="flex flex-wrap gap-3">
-						<select name="cuisine" class="px-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-primary">
+						<select name="cuisine" class="px-4 py-2 border border-border/70 rounded-xl focus:ring-2 focus:ring-primary bg-background">
 							<option value="">All Cuisines</option>
 							<option value="portuguese">Portuguese</option>
 							<option value="seafood">Seafood</option>
@@ -58,7 +60,7 @@ templ RestaurantsPage() {
 							<option value="vegetarian">Vegetarian</option>
 							<option value="fine-dining">Fine Dining</option>
 						</select>
-						<select name="price" class="px-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-primary">
+						<select name="price" class="px-4 py-2 border border-border/70 rounded-xl focus:ring-2 focus:ring-primary bg-background">
 							<option value="">Any Price</option>
 							<option value="budget">€ (Budget)</option>
 							<option value="moderate">€€ (Moderate)</option>
@@ -83,8 +85,8 @@ templ RestaurantsPage() {
 				</div>
 			</div>
 			<!-- Featured Section -->
-			<div class="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950 rounded-xl p-6 mb-8">
-				<h2 class="text-2xl font-bold text-foreground mb-4">🏆 Today's Featured Restaurants</h2>
+			<div class="rounded-2xl p-6 mb-8 bg-gradient-to-r from-orange-500/10 via-red-500/10 to-amber-400/10 border border-border/70">
+				<h2 class="text-2xl font-display font-semibold text-foreground mb-4">🏆 Today's Featured Restaurants</h2>
 				<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 					@FeaturedRestaurantCard("Ramiro", "Traditional Seafood", "Famous for its prawns and percebes, this iconic Lisbon restaurant has been serving exceptional seafood since 1956.", "4.9", "€€€")
 					@FeaturedRestaurantCard("Taberna do Real Fado", "Traditional Portuguese", "Authentic Portuguese cuisine with live Fado performances in an intimate historic setting.", "4.8", "€€€")

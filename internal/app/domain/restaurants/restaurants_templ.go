@@ -29,7 +29,7 @@ func RestaurantsPage() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900\"><div class=\"max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8\"><!-- Header --><div class=\"text-center mb-8\"><h1 class=\"text-3xl lg:text-4xl font-bold text-foreground mb-4\">Restaurants & Dining</h1><p class=\"text-lg text-muted-foreground max-w-3xl mx-auto\">Discover exceptional dining experiences from traditional Portuguese cuisine to international flavors</p></div><!-- Personalized Query Banner (shown when coming from discover) --><div id=\"discover-banner\" class=\"hidden mb-6\"><div class=\"bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 border\"><div class=\"flex items-center gap-4\"><div class=\"text-4xl\">🍽️</div><div class=\"flex-1\"><h3 class=\"font-semibold text-card-foreground mb-1\">AI-Powered Dining Recommendations</h3><p class=\"text-sm text-muted-foreground\" id=\"discover-query\"></p><div class=\"mt-3\"><div class=\"flex items-center gap-2 text-blue-600\"><div class=\"w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin\"></div><span class=\"text-sm font-medium\">Loading personalized restaurant recommendations...</span></div></div></div></div></div></div><!-- Search and Filter Section --><div class=\"bg-card rounded-xl shadow-sm border p-6 mb-8\"><div class=\"flex flex-col lg:flex-row gap-4 items-center justify-between mb-4\"><div class=\"flex-1 w-full lg:max-w-md\"><div class=\"relative\"><input type=\"text\" placeholder=\"Search restaurants, cuisine, or dishes...\" class=\"w-full pl-10 pr-4 py-3 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent\" hx-post=\"/restaurants/search\" hx-trigger=\"keyup changed delay:300ms\" hx-target=\"#restaurants-results\" hx-include=\"[name='filters']\"> <svg class=\"absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z\"></path></svg></div></div><div class=\"flex flex-wrap gap-3\"><select name=\"cuisine\" class=\"px-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-primary\"><option value=\"\">All Cuisines</option> <option value=\"portuguese\">Portuguese</option> <option value=\"seafood\">Seafood</option> <option value=\"international\">International</option> <option value=\"vegetarian\">Vegetarian</option> <option value=\"fine-dining\">Fine Dining</option></select> <select name=\"price\" class=\"px-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-primary\"><option value=\"\">Any Price</option> <option value=\"budget\">€ (Budget)</option> <option value=\"moderate\">€€ (Moderate)</option> <option value=\"upscale\">€€€ (Fine Dining)</option> <option value=\"luxury\">€€€€ (Luxury)</option></select></div></div><div class=\"flex flex-wrap gap-2\"><button class=\"px-4 py-2 bg-accent text-accent-foreground rounded-full text-sm hover:bg-accent/80 transition-colors\">Open Now</button> <button class=\"px-4 py-2 bg-accent text-accent-foreground rounded-full text-sm hover:bg-accent/80 transition-colors\">Outdoor Seating</button> <button class=\"px-4 py-2 bg-accent text-accent-foreground rounded-full text-sm hover:bg-accent/80 transition-colors\">Reservations Available</button> <button class=\"px-4 py-2 bg-accent text-accent-foreground rounded-full text-sm hover:bg-accent/80 transition-colors\">Vegetarian Options</button></div></div><!-- Featured Section --><div class=\"bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950 rounded-xl p-6 mb-8\"><h2 class=\"text-2xl font-bold text-foreground mb-4\">🏆 Today's Featured Restaurants</h2><div class=\"grid grid-cols-1 lg:grid-cols-2 gap-6\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"relative min-h-screen bg-background text-foreground overflow-hidden\"><div class=\"absolute inset-0 hero-aurora pointer-events-none\"></div><div class=\"absolute inset-0 grid-backdrop opacity-25 dark:opacity-5 pointer-events-none\"></div><div class=\"max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 relative\"><!-- Header --><div class=\"text-center mb-8\"><h1 class=\"text-3xl lg:text-4xl font-display font-semibold text-foreground mb-4\">Restaurants & Dining</h1><p class=\"text-lg text-muted-foreground max-w-3xl mx-auto\">Discover exceptional dining experiences from traditional Portuguese cuisine to international flavors</p></div><!-- Personalized Query Banner (shown when coming from discover) --><div id=\"discover-banner\" class=\"hidden mb-6\"><div class=\"glass-panel rounded-2xl p-6 border border-border/70\"><div class=\"flex items-center gap-4\"><div class=\"text-4xl\">🍽️</div><div class=\"flex-1\"><h3 class=\"font-semibold text-card-foreground mb-1\">AI-Powered Dining Recommendations</h3><p class=\"text-sm text-muted-foreground\" id=\"discover-query\"></p><div class=\"mt-3\"><div class=\"flex items-center gap-2 text-blue-600\"><div class=\"w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin\"></div><span class=\"text-sm font-medium\">Loading personalized restaurant recommendations...</span></div></div></div></div></div></div><!-- Search and Filter Section --><div class=\"glass-panel rounded-2xl border border-border/70 p-6 mb-8 soft-shadow\"><div class=\"flex flex-col lg:flex-row gap-4 items-center justify-between mb-4\"><div class=\"flex-1 w-full lg:max-w-md\"><div class=\"relative\"><input type=\"text\" placeholder=\"Search restaurants, cuisine, or dishes...\" class=\"w-full pl-10 pr-4 py-3 border border-border/70 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-background\" hx-post=\"/restaurants/search\" hx-trigger=\"keyup changed delay:300ms\" hx-target=\"#restaurants-results\" hx-include=\"[name='filters']\"> <svg class=\"absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z\"></path></svg></div></div><div class=\"flex flex-wrap gap-3\"><select name=\"cuisine\" class=\"px-4 py-2 border border-border/70 rounded-xl focus:ring-2 focus:ring-primary bg-background\"><option value=\"\">All Cuisines</option> <option value=\"portuguese\">Portuguese</option> <option value=\"seafood\">Seafood</option> <option value=\"international\">International</option> <option value=\"vegetarian\">Vegetarian</option> <option value=\"fine-dining\">Fine Dining</option></select> <select name=\"price\" class=\"px-4 py-2 border border-border/70 rounded-xl focus:ring-2 focus:ring-primary bg-background\"><option value=\"\">Any Price</option> <option value=\"budget\">€ (Budget)</option> <option value=\"moderate\">€€ (Moderate)</option> <option value=\"upscale\">€€€ (Fine Dining)</option> <option value=\"luxury\">€€€€ (Luxury)</option></select></div></div><div class=\"flex flex-wrap gap-2\"><button class=\"px-4 py-2 bg-accent text-accent-foreground rounded-full text-sm hover:bg-accent/80 transition-colors\">Open Now</button> <button class=\"px-4 py-2 bg-accent text-accent-foreground rounded-full text-sm hover:bg-accent/80 transition-colors\">Outdoor Seating</button> <button class=\"px-4 py-2 bg-accent text-accent-foreground rounded-full text-sm hover:bg-accent/80 transition-colors\">Reservations Available</button> <button class=\"px-4 py-2 bg-accent text-accent-foreground rounded-full text-sm hover:bg-accent/80 transition-colors\">Vegetarian Options</button></div></div><!-- Featured Section --><div class=\"rounded-2xl p-6 mb-8 bg-gradient-to-r from-orange-500/10 via-red-500/10 to-amber-400/10 border border-border/70\"><h2 class=\"text-2xl font-display font-semibold text-foreground mb-4\">🏆 Today's Featured Restaurants</h2><div class=\"grid grid-cols-1 lg:grid-cols-2 gap-6\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -134,7 +134,7 @@ func FeaturedRestaurantCard(name, cuisine, description, rating, price string) te
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 196, Col: 61}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 198, Col: 61}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -147,7 +147,7 @@ func FeaturedRestaurantCard(name, cuisine, description, rating, price string) te
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(rating)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 201, Col: 40}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 203, Col: 40}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -160,7 +160,7 @@ func FeaturedRestaurantCard(name, cuisine, description, rating, price string) te
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(cuisine)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 204, Col: 86}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 206, Col: 86}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -173,7 +173,7 @@ func FeaturedRestaurantCard(name, cuisine, description, rating, price string) te
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 205, Col: 63}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 207, Col: 63}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -186,7 +186,7 @@ func FeaturedRestaurantCard(name, cuisine, description, rating, price string) te
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(price)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 207, Col: 64}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 209, Col: 64}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -228,7 +228,7 @@ func RestaurantCard(id, name, cuisine, description, rating, price, tags string) 
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(cuisine)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 223, Col: 14}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 225, Col: 14}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -241,7 +241,7 @@ func RestaurantCard(id, name, cuisine, description, rating, price, tags string) 
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs("/favorites/add/" + id)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 228, Col: 37}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 230, Col: 37}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -254,7 +254,7 @@ func RestaurantCard(id, name, cuisine, description, rating, price, tags string) 
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 243, Col: 11}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 245, Col: 11}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
@@ -267,7 +267,7 @@ func RestaurantCard(id, name, cuisine, description, rating, price, tags string) 
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(rating)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 249, Col: 39}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 251, Col: 39}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
@@ -280,7 +280,7 @@ func RestaurantCard(id, name, cuisine, description, rating, price, tags string) 
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 253, Col: 17}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 255, Col: 17}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
@@ -293,7 +293,7 @@ func RestaurantCard(id, name, cuisine, description, rating, price, tags string) 
 		var templ_7745c5c3_Var15 string
 		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(price)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 269, Col: 13}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 271, Col: 13}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {
@@ -306,7 +306,7 @@ func RestaurantCard(id, name, cuisine, description, rating, price, tags string) 
 		var templ_7745c5c3_Var16 string
 		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs("/restaurants/" + name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 282, Col: 37}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 284, Col: 37}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 		if templ_7745c5c3_Err != nil {
@@ -349,7 +349,7 @@ func RestaurantsPageWithQuery(query string) templ.Component {
 		var templ_7745c5c3_Var18 string
 		templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(query)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 304, Col: 79}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 306, Col: 79}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 		if templ_7745c5c3_Err != nil {
@@ -362,7 +362,7 @@ func RestaurantsPageWithQuery(query string) templ.Component {
 		var templ_7745c5c3_Var19 string
 		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(query)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 314, Col: 79}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 316, Col: 79}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 		if templ_7745c5c3_Err != nil {
@@ -375,7 +375,7 @@ func RestaurantsPageWithQuery(query string) templ.Component {
 		var templ_7745c5c3_Var20 string
 		templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs("{\"query\":\"" + query + "\", \"city\":\"\"}")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 331, Col: 60}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/restaurants/restaurants.templ`, Line: 333, Col: 60}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 		if templ_7745c5c3_Err != nil {

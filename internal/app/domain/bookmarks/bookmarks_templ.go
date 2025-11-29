@@ -46,14 +46,14 @@ func BookmarksPage(data BookmarksPageData) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900\"><div class=\"max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16\"><!-- Header --><div class=\"mb-8\"><div class=\"flex items-center justify-between mb-6\"><div class=\"flex items-center gap-3\"><div class=\"w-10 h-10 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-lg flex items-center justify-center\"><svg class=\"w-6 h-6 text-white\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z\"></path></svg></div><div><h1 class=\"text-2xl font-bold text-foreground\">Bookmarked Itineraries</h1><p class=\"text-muted-foreground\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"relative min-h-screen bg-background text-foreground overflow-hidden\"><div class=\"absolute inset-0 hero-aurora pointer-events-none\"></div><div class=\"absolute inset-0 grid-backdrop opacity-25 dark:opacity-5 pointer-events-none\"></div><div class=\"max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 relative\"><!-- Header --><div class=\"mb-8\"><div class=\"flex items-center justify-between mb-6\"><div class=\"flex items-center gap-3\"><div class=\"w-10 h-10 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-lg flex items-center justify-center\"><svg class=\"w-6 h-6 text-white\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z\"></path></svg></div><div><h1 class=\"text-2xl font-display font-semibold text-foreground\">Bookmarked Itineraries</h1><p class=\"text-muted-foreground text-sm\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(data.Total))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 34, Col: 66}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 36, Col: 74}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -66,13 +66,13 @@ func BookmarksPage(data BookmarksPageData) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(data.SearchText)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 44, Col: 30}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 46, Col: 30}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\" placeholder=\"Search bookmarks...\" class=\"w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background\"> <svg class=\"w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z\"></path></svg></div><div class=\"flex items-center gap-3\"><select name=\"sort_by\" class=\"px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background text-sm\"><option value=\"bookmarked_at\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\" placeholder=\"Search bookmarks...\" class=\"w-full pl-10 pr-4 py-2 border border-border/70 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-background\"> <svg class=\"w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z\"></path></svg></div><div class=\"flex items-center gap-3\"><select name=\"sort_by\" class=\"px-3 py-2 border border-border/70 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-sm\"><option value=\"bookmarked_at\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -102,7 +102,7 @@ func BookmarksPage(data BookmarksPageData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, ">Date Created</option></select> <select name=\"sort_order\" class=\"px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background text-sm\"><option value=\"desc\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, ">Date Created</option></select> <select name=\"sort_order\" class=\"px-3 py-2 border border-border/70 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-sm\"><option value=\"desc\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -122,7 +122,7 @@ func BookmarksPage(data BookmarksPageData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, ">Ascending</option></select> <button type=\"submit\" class=\"px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors\">Apply</button></div></form></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, ">Ascending</option></select> <button type=\"submit\" class=\"px-4 py-2 text-white rounded-xl bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 shadow-lg shadow-blue-500/25 hover:-translate-y-0.5 transition-all\">Apply</button></div></form></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -159,7 +159,7 @@ func BookmarksPage(data BookmarksPageData) templ.Component {
 					var templ_7745c5c3_Var4 templ.SafeURL
 					templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(fmt.Sprintf("/bookmarks?page=%d&search=%s&sort_by=%s&sort_order=%s", data.Page-1, data.SearchText, data.SortBy, data.SortOrder)))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 94, Col: 153}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 96, Col: 153}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 					if templ_7745c5c3_Err != nil {
@@ -177,7 +177,7 @@ func BookmarksPage(data BookmarksPageData) templ.Component {
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(data.Page))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 101, Col: 37}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 103, Col: 37}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
@@ -190,7 +190,7 @@ func BookmarksPage(data BookmarksPageData) templ.Component {
 				var templ_7745c5c3_Var6 string
 				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(data.TotalPages))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 101, Col: 74}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 103, Col: 74}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 				if templ_7745c5c3_Err != nil {
@@ -208,7 +208,7 @@ func BookmarksPage(data BookmarksPageData) templ.Component {
 					var templ_7745c5c3_Var7 templ.SafeURL
 					templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(fmt.Sprintf("/bookmarks?page=%d&search=%s&sort_by=%s&sort_order=%s", data.Page+1, data.SearchText, data.SortBy, data.SortOrder)))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 105, Col: 153}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 107, Col: 153}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 					if templ_7745c5c3_Err != nil {
@@ -254,14 +254,14 @@ func BookmarkCard(itinerary models.SavedItinerary) templ.Component {
 			templ_7745c5c3_Var8 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "<div class=\"bg-card rounded-xl shadow-sm border hover:shadow-md transition-shadow group\"><div class=\"p-6\"><div class=\"flex items-start justify-between mb-4\"><div class=\"flex-1\"><h3 class=\"font-semibold text-card-foreground group-hover:text-blue-600 transition-colors mb-2\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "<div class=\"glass-panel rounded-2xl border border-border/70 hover:border-primary hover:shadow-xl transition-shadow group\"><div class=\"p-6\"><div class=\"flex items-start justify-between mb-4\"><div class=\"flex-1\"><h3 class=\"font-semibold text-card-foreground group-hover:text-blue-600 transition-colors mb-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(itinerary.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 124, Col: 23}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 126, Col: 23}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -279,7 +279,7 @@ func BookmarkCard(itinerary models.SavedItinerary) templ.Component {
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(itinerary.CityName)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 132, Col: 27}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 134, Col: 27}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -297,7 +297,7 @@ func BookmarkCard(itinerary models.SavedItinerary) templ.Component {
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs("/bookmarks/" + itinerary.ID.String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 137, Col: 54}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 139, Col: 54}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -315,7 +315,7 @@ func BookmarkCard(itinerary models.SavedItinerary) templ.Component {
 			var templ_7745c5c3_Var12 string
 			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(*itinerary.Description)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 150, Col: 29}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 152, Col: 29}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 			if templ_7745c5c3_Err != nil {
@@ -338,7 +338,7 @@ func BookmarkCard(itinerary models.SavedItinerary) templ.Component {
 			var templ_7745c5c3_Var13 string
 			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(*itinerary.EstimatedDurationDays))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 159, Col: 60}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 161, Col: 60}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 			if templ_7745c5c3_Err != nil {
@@ -382,7 +382,7 @@ func BookmarkCard(itinerary models.SavedItinerary) templ.Component {
 				var templ_7745c5c3_Var14 string
 				templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(tag)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 179, Col: 12}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 181, Col: 12}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 				if templ_7745c5c3_Err != nil {
@@ -405,7 +405,7 @@ func BookmarkCard(itinerary models.SavedItinerary) templ.Component {
 		var templ_7745c5c3_Var15 templ.SafeURL
 		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/itineraries/" + itinerary.ID.String()))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 185, Col: 64}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 187, Col: 64}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {
@@ -423,7 +423,7 @@ func BookmarkCard(itinerary models.SavedItinerary) templ.Component {
 			var templ_7745c5c3_Var16 string
 			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(itinerary.BookmarkedAt.Format("Jan 2, 2006"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 190, Col: 63}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/domain/bookmarks/bookmarks.templ`, Line: 192, Col: 63}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 			if templ_7745c5c3_Err != nil {

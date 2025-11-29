@@ -88,6 +88,8 @@ func (h *ResultsHandlers) HandleRestaurantSearch(c *gin.Context) {
 		5,         // initialLimit
 		favorites, // favorites
 		isLoadingFavorites,
+		city,      // cityName
+		sessionID, // sessionID for chat panel
 	))
 }
 

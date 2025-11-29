@@ -8,205 +8,219 @@ import (
 )
 
 templ ItineraryPage() {
-	<div class="h-full flex" x-data="itineraryPage()">
-		<!-- Left Panel - Chat/Text Content -->
-		<div class="w-1/2 flex flex-col bg-white">
-			<!-- Header -->
-			<div class="p-6 border-b border-gray-200 bg-gray-50">
-				<div class="flex items-center justify-between mb-4">
-					<h1 class="text-2xl font-bold text-gray-900">Travel Planner</h1>
-					<div class="flex items-center space-x-2">
-						<button
-							id="new-itinerary-btn"
-							class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
-						>
-							<i class="fas fa-plus mr-2"></i>
-							New Plan
-						</button>
-					</div>
-				</div>
-				<!-- Location Input -->
-				<div class="relative mb-4">
-					<input
-						type="text"
-						id="destination-input"
-						placeholder="Where do you want to go? (e.g., Paris, France)"
-						class="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-						hx-post="/itinerary/destination"
-						hx-trigger="input changed delay:500ms, keyup[keyCode==13]"
-						hx-target="#destination-suggestions"
-						hx-include="this"
-					/>
-					<i class="fas fa-map-marker-alt absolute left-3 top-3.5 text-gray-400"></i>
-				</div>
-				<!-- Destination Suggestions -->
-				<div id="destination-suggestions" class="mb-4"></div>
-				<!-- Travel Preferences -->
-				<div class="grid grid-cols-3 gap-4">
-					<div>
-						<label class="block text-sm font-medium text-gray-700 mb-1">Duration</label>
-						<select
-							id="trip-duration"
-							name="duration"
-							class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-						>
-							<option value="1">1 Day</option>
-							<option value="3">3 Days</option>
-							<option value="5" selected>5 Days</option>
-							<option value="7">1 Week</option>
-							<option value="14">2 Weeks</option>
-						</select>
-					</div>
-					<div>
-						<label class="block text-sm font-medium text-gray-700 mb-1">Budget</label>
-						<select
-							id="trip-budget"
-							name="budget"
-							class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-						>
-							<option value="budget">Budget</option>
-							<option value="moderate" selected>Moderate</option>
-							<option value="luxury">Luxury</option>
-						</select>
-					</div>
-					<div>
-						<label class="block text-sm font-medium text-gray-700 mb-1">Style</label>
-						<select
-							id="trip-style"
-							name="style"
-							class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-						>
-							<option value="cultural">Cultural</option>
-							<option value="adventure">Adventure</option>
-							<option value="relaxation" selected>Relaxation</option>
-							<option value="foodie">Foodie</option>
-							<option value="nightlife">Nightlife</option>
-						</select>
-					</div>
-				</div>
-			</div>
-			<!-- Chat Interface -->
-			<div class="flex-1 flex flex-col">
-				<!-- Chat Messages -->
-				<div id="chat-messages" class="flex-1 overflow-y-auto p-6 space-y-4">
-					@ItineraryWelcomeMessage()
-				</div>
-				<!-- Chat Input -->
-				<div class="border-t border-gray-200 p-4 bg-gray-50">
-					<form
-						id="chat-form"
-						hx-post="/itinerary/chat"
-						hx-target="#chat-messages"
-						hx-swap="beforeend"
-						hx-include="#destination-input, #trip-duration, #trip-budget, #trip-style"
-					>
-						<div class="flex items-center space-x-3">
-							<div class="flex-1 relative">
-								<textarea
-									name="message"
-									id="chat-input"
-									placeholder="Ask me anything about your trip... (e.g., 'Add a romantic restaurant for dinner')"
-									class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-									rows="1"
-									style="min-height: 44px;"
-								></textarea>
+	<div class="relative min-h-screen bg-background text-foreground overflow-hidden" x-data="itineraryPage()">
+		<div class="absolute inset-0 hero-aurora pointer-events-none"></div>
+		<div class="absolute inset-0 grid-backdrop opacity-25 dark:opacity-5 pointer-events-none"></div>
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+				<!-- Left Panel - Chat/Text Content -->
+				<div class="glass-panel rounded-2xl border border-border/70 soft-shadow flex flex-col min-h-[75vh]">
+					<!-- Header -->
+					<div class="p-6 border-b border-border/60">
+						<div class="flex items-center justify-between mb-4">
+							<div>
+								<p class="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">Planner</p>
+								<h1 class="text-2xl font-display font-semibold">Travel Workspace</h1>
+							</div>
+							<div class="flex items-center space-x-2">
 								<button
-									type="submit"
-									class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors"
+									@click="showChat = true"
+									class="px-4 py-2 rounded-xl border border-border/70 hover:border-primary hover:text-primary transition-colors text-sm"
 								>
-									<i class="fas fa-paper-plane"></i>
+									<i class="fas fa-comments mr-2"></i>
+									Continue
+								</button>
+								<button
+									id="new-itinerary-btn"
+									class="px-4 py-2 rounded-xl text-white bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 shadow-lg shadow-blue-500/20 hover:-translate-y-0.5 transition-all text-sm"
+								>
+									<i class="fas fa-plus mr-2"></i>
+									New Plan
 								</button>
 							</div>
 						</div>
-					</form>
-					<!-- Quick Actions -->
-					<div class="flex flex-wrap gap-2 mt-3">
-						<button class="quick-action-btn" data-message="Create a 3-day itinerary">
-							<i class="fas fa-route mr-1"></i>
-							3-Day Plan
-						</button>
-						<button class="quick-action-btn" data-message="Find the best restaurants">
-							<i class="fas fa-utensils mr-1"></i>
-							Restaurants
-						</button>
-						<button class="quick-action-btn" data-message="Show me popular attractions">
-							<i class="fas fa-camera mr-1"></i>
-							Attractions
-						</button>
-						<button class="quick-action-btn" data-message="Recommend hotels">
-							<i class="fas fa-bed mr-1"></i>
-							Hotels
-						</button>
+						<!-- Location Input -->
+						<div class="relative mb-4">
+							<input
+								type="text"
+								id="destination-input"
+								placeholder="Where do you want to go? (e.g., Paris, France)"
+								class="w-full px-4 py-3 pl-10 border border-border/70 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-background"
+								hx-post="/itinerary/destination"
+								hx-trigger="input changed delay:500ms, keyup[keyCode==13]"
+								hx-target="#destination-suggestions"
+								hx-include="this"
+							/>
+							<i class="fas fa-map-marker-alt absolute left-3 top-3.5 text-muted-foreground"></i>
+						</div>
+						<!-- Destination Suggestions -->
+						<div id="destination-suggestions" class="mb-4"></div>
+						<!-- Travel Preferences -->
+						<div class="grid grid-cols-3 gap-4">
+							<div>
+								<label class="block text-sm font-medium text-muted-foreground mb-1">Duration</label>
+								<select
+									id="trip-duration"
+									name="duration"
+									class="w-full border border-border/70 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary bg-background"
+								>
+									<option value="1">1 Day</option>
+									<option value="3">3 Days</option>
+									<option value="5" selected>5 Days</option>
+									<option value="7">1 Week</option>
+									<option value="14">2 Weeks</option>
+								</select>
+							</div>
+							<div>
+								<label class="block text-sm font-medium text-muted-foreground mb-1">Budget</label>
+								<select
+									id="trip-budget"
+									name="budget"
+									class="w-full border border-border/70 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary bg-background"
+								>
+									<option value="budget">Budget</option>
+									<option value="moderate" selected>Moderate</option>
+									<option value="luxury">Luxury</option>
+								</select>
+							</div>
+							<div>
+								<label class="block text-sm font-medium text-muted-foreground mb-1">Style</label>
+								<select
+									id="trip-style"
+									name="style"
+									class="w-full border border-border/70 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary bg-background"
+								>
+									<option value="cultural">Cultural</option>
+									<option value="adventure">Adventure</option>
+									<option value="relaxation" selected>Relaxation</option>
+									<option value="foodie">Foodie</option>
+									<option value="nightlife">Nightlife</option>
+								</select>
+							</div>
+						</div>
+					</div>
+					<!-- Chat Interface -->
+					<div class="flex-1 flex flex-col">
+						<!-- Chat Messages -->
+						<div id="chat-messages" class="flex-1 overflow-y-auto p-6 space-y-4">
+							@ItineraryWelcomeMessage()
+						</div>
+						<!-- Chat Input -->
+						<div class="border-t border-border/60 p-4 bg-background/70">
+							<form
+								id="chat-form"
+								hx-post="/itinerary/chat"
+								hx-target="#chat-messages"
+								hx-swap="beforeend"
+								hx-include="#destination-input, #trip-duration, #trip-budget, #trip-style"
+							>
+								<div class="flex items-center space-x-3">
+									<div class="flex-1 relative">
+										<textarea
+											name="message"
+											id="chat-input"
+											placeholder="Ask me anything about your trip... (e.g., 'Add a romantic restaurant for dinner')"
+											class="w-full px-4 py-3 pr-12 border border-border/70 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-background resize-none"
+											rows="1"
+											style="min-height: 44px;"
+										></textarea>
+										<button
+											type="submit"
+											class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white p-2 rounded-lg shadow-md shadow-blue-500/20 hover:-translate-y-0.5 transition-all"
+										>
+											<i class="fas fa-paper-plane"></i>
+										</button>
+									</div>
+								</div>
+							</form>
+							<!-- Quick Actions -->
+							<div class="flex flex-wrap gap-2 mt-3">
+								<button class="quick-action-btn" data-message="Create a 3-day itinerary">
+									<i class="fas fa-route mr-1"></i>
+									3-Day Plan
+								</button>
+								<button class="quick-action-btn" data-message="Find the best restaurants">
+									<i class="fas fa-utensils mr-1"></i>
+									Restaurants
+								</button>
+								<button class="quick-action-btn" data-message="Show me popular attractions">
+									<i class="fas fa-camera mr-1"></i>
+									Attractions
+								</button>
+								<button class="quick-action-btn" data-message="Recommend hotels">
+									<i class="fas fa-bed mr-1"></i>
+									Hotels
+								</button>
+							</div>
+						</div>
 					</div>
 				</div>
-			</div>
-		</div>
-		<!-- Right Panel - Map -->
-		<div class="w-1/2 bg-gray-100">
-			<div class="h-full flex flex-col">
-				<!-- Map Header -->
-				<div class="p-4 bg-white border-b border-gray-200">
-					<div class="flex items-center justify-between">
-						<h2 class="font-semibold text-gray-900">Map View</h2>
+				<!-- Right Panel - Map -->
+				<div class="glass-panel rounded-2xl border border-border/70 soft-shadow flex flex-col min-h-[75vh]">
+					<!-- Map Header -->
+					<div class="p-4 border-b border-border/60 flex items-center justify-between">
+						<div>
+							<p class="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">Live map</p>
+							<h2 class="font-display font-semibold text-lg">Route canvas</h2>
+						</div>
 						<div class="flex items-center space-x-2">
 							<button
 								id="map-layer-toggle"
-								class="bg-gray-100 text-gray-700 px-3 py-1 rounded-md text-sm hover:bg-gray-200 transition-colors"
+								class="px-3 py-1.5 rounded-lg border border-border/70 hover:border-primary hover:text-primary text-sm transition-colors"
 							>
 								<i class="fas fa-layer-group mr-1"></i>
 								Layers
 							</button>
 							<button
 								id="map-center-btn"
-								class="bg-gray-100 text-gray-700 px-3 py-1 rounded-md text-sm hover:bg-gray-200 transition-colors"
+								class="px-3 py-1.5 rounded-lg border border-border/70 hover:border-primary hover:text-primary text-sm transition-colors"
 							>
 								<i class="fas fa-crosshairs mr-1"></i>
 								Center
 							</button>
 						</div>
 					</div>
-				</div>
-				<!-- Map Container -->
-				<div class="flex-1 relative">
-					@mapcomponents.MapboxContainer("itinerary-map", "100%")
-					<!-- Map Controls -->
-					<div class="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-2 space-y-2">
-						<button
-							class="map-control-btn active"
-							data-layer="attractions"
-							title="Show Attractions"
-						>
-							<i class="fas fa-camera"></i>
-						</button>
-						<button
-							class="map-control-btn"
-							data-layer="restaurants"
-							title="Show Restaurants"
-						>
-							<i class="fas fa-utensils"></i>
-						</button>
-						<button
-							class="map-control-btn"
-							data-layer="hotels"
-							title="Show Hotels"
-						>
-							<i class="fas fa-bed"></i>
-						</button>
-						<button
-							class="map-control-btn"
-							data-layer="transport"
-							title="Show Transport"
-						>
-							<i class="fas fa-subway"></i>
-						</button>
+					<!-- Map Container -->
+					<div class="flex-1 relative">
+						@mapcomponents.MapboxContainer("itinerary-map", "100%")
+						<!-- Map Controls -->
+						<div class="absolute top-4 right-4 bg-card/90 rounded-xl shadow-xl p-2 space-y-2 border border-border/70">
+							<button
+								class="map-control-btn active"
+								data-layer="attractions"
+								title="Show Attractions"
+							>
+								<i class="fas fa-camera"></i>
+							</button>
+							<button
+								class="map-control-btn"
+								data-layer="restaurants"
+								title="Show Restaurants"
+							>
+								<i class="fas fa-utensils"></i>
+							</button>
+							<button
+								class="map-control-btn"
+								data-layer="hotels"
+								title="Show Hotels"
+							>
+								<i class="fas fa-bed"></i>
+							</button>
+							<button
+								class="map-control-btn"
+								data-layer="transport"
+								title="Show Transport"
+							>
+								<i class="fas fa-subway"></i>
+							</button>
+						</div>
 					</div>
-				</div>
-				<!-- Current Itinerary Results -->
-				<div class="bg-white border-t border-gray-200 p-4">
-					<h3 class="font-semibold text-gray-900 mb-3">Your Itinerary</h3>
-					<div id="itinerary-summary" class="space-y-2">
-						<!-- Results will be loaded here via HTMX/SSE based on user query -->
-						@ItineraryEmptyState()
+					<!-- Current Itinerary Results -->
+					<div class="border-t border-border/60 p-4 bg-background/80 rounded-b-2xl">
+						<h3 class="font-display font-semibold text-card-foreground mb-3">Your Itinerary</h3>
+						<div id="itinerary-summary" class="space-y-2">
+							@ItineraryEmptyState()
+						</div>
 					</div>
 				</div>
 			</div>
@@ -216,19 +230,155 @@ templ ItineraryPage() {
 		function itineraryPage() {
 			return {
 				showChat: false,
+				sessionID: '',
+
+				init() {
+					// Listen for chatPanelListUpdate events from ChatPanel component
+					document.addEventListener('chatPanelListUpdate', (event) => {
+						const eventData = event.detail;
+						if (eventData.domain !== 'itinerary') return;
+
+						console.log('Itinerary: Received chatPanelListUpdate', eventData.type, eventData);
+
+						if (eventData.type === 'item_added') {
+							this.handleItemAdded(eventData);
+						}
+						if (eventData.type === 'item_removed') {
+							this.handleItemRemoved(eventData);
+						}
+						if (eventData.type === 'item_updated') {
+							this.handleItemUpdated(eventData);
+						}
+					});
+
+					// Listen for SSE events from chat continuation
+					document.addEventListener('htmx:sseMessage', (event) => {
+						const sseEvent = event.detail;
+						let eventData;
+						try {
+							eventData = typeof sseEvent.data === 'string' ? JSON.parse(sseEvent.data) : sseEvent.data;
+						} catch (e) {
+							console.log('Non-JSON SSE event:', sseEvent);
+							return;
+						}
+
+						// Handle item_added events to update the itinerary summary
+						if (eventData.type === 'item_added' && eventData.html) {
+							this.handleItemAdded(eventData);
+						}
+
+						// Handle complete event to update session ID
+						if (eventData.type === 'complete' && eventData.navigation && eventData.navigation.query_params) {
+							const newSessionID = eventData.navigation.query_params.sessionId;
+							if (newSessionID && newSessionID !== this.sessionID) {
+								this.sessionID = newSessionID;
+								console.log('Session ID updated:', this.sessionID);
+							}
+						}
+					});
+				},
+
+				handleItemAdded(eventData) {
+					const summaryContainer = document.getElementById('itinerary-summary');
+					if (!summaryContainer) return;
+
+					// Remove empty state if present
+					const emptyState = summaryContainer.querySelector('[data-testid="empty-state"]');
+					if (emptyState) {
+						emptyState.remove();
+					}
+
+					// Create temporary div to parse HTML
+					const tempDiv = document.createElement('div');
+					tempDiv.innerHTML = eventData.html;
+					const newElement = tempDiv.firstElementChild;
+
+					if (newElement) {
+						summaryContainer.appendChild(newElement);
+						console.log('Item added to itinerary:', eventData.message);
+
+						// Add marker to map if coordinates are available
+						if (eventData.item_data && eventData.item_data.latitude && eventData.item_data.longitude) {
+							this.addMarkerToMap(eventData.item_data);
+						}
+					}
+				},
+
+				handleItemRemoved(eventData) {
+					console.log('handleItemRemoved called with:', eventData);
+					const summaryContainer = document.getElementById('itinerary-summary');
+					if (!summaryContainer) return;
+
+					// Try multiple selectors to find the element
+					let element = summaryContainer.querySelector(`[data-item-id="${eventData.item_id}"]`);
+
+					// Fallback: try by id containing the item_id
+					if (!element) {
+						element = summaryContainer.querySelector(`[id*="${eventData.item_id}"]`);
+					}
+
+					// Fallback: try by poi name if item_data is available
+					if (!element && eventData.item_data?.name) {
+						element = summaryContainer.querySelector(`[data-poi-name="${eventData.item_data.name}"]`);
+					}
+
+					if (element) {
+						element.closest('.bg-white, .dark\\:bg-gray-800, .border')?.remove() || element.remove();
+						console.log('Item removed from itinerary:', eventData.message);
+					} else {
+						console.log('Item not found in itinerary for removal');
+					}
+
+					// Check if container is empty and show empty state
+					const remainingItems = summaryContainer.querySelectorAll('[data-item-id], [data-poi-name]');
+					if (remainingItems.length === 0) {
+						summaryContainer.innerHTML = `
+							<div class="text-center py-6 text-muted-foreground space-y-1" data-testid="empty-state">
+								<i class="fas fa-map-marked-alt text-2xl mb-2 text-primary"></i>
+								<p class="text-sm font-medium">Your itinerary will appear here</p>
+								<p class="text-xs">Start chatting to build your trip!</p>
+							</div>
+						`;
+					}
+				},
+
+				handleItemUpdated(eventData) {
+					const summaryContainer = document.getElementById('itinerary-summary');
+					if (!summaryContainer || !eventData.html) return;
+
+					const element = summaryContainer.querySelector(`[data-item-id="${eventData.item_id}"]`);
+					if (element) {
+						const tempDiv = document.createElement('div');
+						tempDiv.innerHTML = eventData.html;
+						const newElement = tempDiv.firstElementChild;
+						if (newElement) {
+							element.replaceWith(newElement);
+							console.log('Item updated in itinerary:', eventData.message);
+						}
+					}
+				},
+
+				addMarkerToMap(itemData) {
+					const { latitude, longitude, name, category } = itemData;
+					if (!latitude || !longitude || (latitude === 0 && longitude === 0)) return;
+
+					console.log('Adding marker to map:', name, latitude, longitude);
+					// Map marker logic will be handled by the existing map functions
+					setTimeout(() => {
+						loadItineraryMarkers();
+					}, 100);
+				}
 			};
 		}
 	</script>
 	<!-- Chat Panel for continuing conversation -->
-	<div x-data="{ showChat: false }">
-		@chat.ChatPanel(chat.ChatPanelProps{
-			SessionID:     "",
-			CityName:      "Travel Planning",
-			Domain:        "itinerary",
-			Placeholder:   "Ask about your travel plans...",
-			ShowByDefault: false,
-		})
-	</div>
+	@chat.ChatPanel(chat.ChatPanelProps{
+		SessionID:     "",
+		CityName:      "Travel Planning",
+		Domain:        "itinerary",
+		Placeholder:   "Ask about your travel plans...",
+		ShowByDefault: false,
+	})
 	<style>
 		.quick-action-btn {
 			background: white;
@@ -427,15 +577,15 @@ templ ItineraryPage() {
 
 templ ItineraryWelcomeMessage() {
 	<div class="flex items-start space-x-3">
-		<div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+		<div class="w-8 h-8 bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-md shadow-blue-500/30">
 			<i class="fas fa-robot text-white text-sm"></i>
 		</div>
-		<div class="bg-gray-100 rounded-lg p-4 max-w-md">
-			<p class="text-gray-800">
+		<div class="bg-card/80 border border-border/70 rounded-xl p-4 max-w-md">
+			<p class="text-foreground">
 				Hi! I'm your travel planning assistant. I can help you create amazing itineraries, 
 				find the best places to visit, restaurants to try, and hotels to stay at.
 			</p>
-			<p class="text-gray-800 mt-2">
+			<p class="text-foreground mt-2">
 				To get started, tell me where you'd like to go and I'll create a personalized itinerary for you!
 			</p>
 		</div>
@@ -446,7 +596,7 @@ templ ItineraryChatMessage(message models.ChatMessage, isUser bool) {
 	<div class={ "flex items-start space-x-3", templ.KV("flex-row-reverse space-x-reverse", isUser) }>
 		<div
 			class={ "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0", 
-				templ.KV("bg-blue-600", !isUser), templ.KV("bg-gray-600", isUser) }
+				templ.KV("bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 shadow-md shadow-blue-500/30", !isUser), templ.KV("bg-foreground", isUser) }
 		>
 			if isUser {
 				<i class="fas fa-user text-white text-sm"></i>
@@ -456,7 +606,7 @@ templ ItineraryChatMessage(message models.ChatMessage, isUser bool) {
 		</div>
 		<div
 			class={ "rounded-lg p-4 max-w-md", 
-				templ.KV("bg-gray-100", !isUser), templ.KV("bg-blue-600 text-white", isUser) }
+				templ.KV("bg-card/80 border border-border/70", !isUser), templ.KV("bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white shadow-md shadow-blue-500/30", isUser) }
 		>
 			<p class={ templ.KV("text-gray-800", !isUser) }>
 				{ message.Content }
@@ -464,7 +614,7 @@ templ ItineraryChatMessage(message models.ChatMessage, isUser bool) {
 			if message.Timestamp != "" {
 				<p
 					class={ "text-xs mt-2", 
-						templ.KV("text-gray-500", !isUser), templ.KV("text-blue-100", isUser) }
+						templ.KV("text-muted-foreground", !isUser), templ.KV("text-blue-100", isUser) }
 				>
 					{ message.Timestamp }
 				</p>
@@ -475,11 +625,11 @@ templ ItineraryChatMessage(message models.ChatMessage, isUser bool) {
 
 templ ItineraryPOICard(poi models.NearbyPOI) {
 	<div
-		class="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 transition-colors cursor-pointer"
+		class="glass-panel rounded-xl p-3 border border-border/70 hover:border-primary transition-colors cursor-pointer"
 		onclick="addToItinerary('{poi.ID}')"
 	>
 		<div class="flex items-center space-x-3">
-			<div class="w-12 h-12 bg-gray-200 rounded-lg flex-shrink-0">
+			<div class="w-12 h-12 bg-primary/10 rounded-lg flex-shrink-0 overflow-hidden">
 				if poi.ImageURL != "" {
 					<img src={ poi.ImageURL } alt={ poi.Name } class="w-full h-full object-cover rounded-lg"/>
 				} else {
@@ -489,18 +639,18 @@ templ ItineraryPOICard(poi models.NearbyPOI) {
 				}
 			</div>
 			<div class="flex-1 min-w-0">
-				<h4 class="font-medium text-gray-900 truncate">{ poi.Name }</h4>
-				<p class="text-sm text-gray-600">{ poi.Category }</p>
+				<h4 class="font-semibold text-card-foreground truncate">{ poi.Name }</h4>
+				<p class="text-sm text-muted-foreground">{ poi.Category }</p>
 				<div class="flex items-center mt-1">
 					<div class="flex items-center">
 						for i := 0; i < int(poi.Rating); i++ {
 							<i class="fas fa-star text-yellow-400 text-xs"></i>
 						}
 					</div>
-					<span class="ml-1 text-xs text-gray-500">({ poi.Rating })</span>
+					<span class="ml-1 text-xs text-muted-foreground">({ poi.Rating })</span>
 				</div>
 			</div>
-			<button class="bg-blue-600 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-700 transition-colors">
+			<button class="text-xs px-3 py-1 rounded-lg bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white shadow-md shadow-blue-500/20 hover:-translate-y-0.5 transition-all">
 				<i class="fas fa-plus mr-1"></i>
 				Add
 			</button>
@@ -517,6 +667,13 @@ templ ItineraryPageWithQuery(query string) {
 				<div class="flex items-center justify-between mb-4">
 					<h1 class="text-2xl font-bold text-gray-900">Travel Planner</h1>
 					<div class="flex items-center space-x-2">
+						<button
+							@click="showChat = true"
+							class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm"
+						>
+							<i class="fas fa-comments mr-2"></i>
+							Continue Planning
+						</button>
 						<button
 							id="new-itinerary-btn"
 							class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
@@ -721,19 +878,155 @@ templ ItineraryPageWithQuery(query string) {
 		function itineraryPageWithQuery() {
 			return {
 				showChat: false,
+				sessionID: '',
+
+				init() {
+					// Listen for chatPanelListUpdate events from ChatPanel component
+					document.addEventListener('chatPanelListUpdate', (event) => {
+						const eventData = event.detail;
+						if (eventData.domain !== 'itinerary') return;
+
+						console.log('Itinerary: Received chatPanelListUpdate', eventData.type, eventData);
+
+						if (eventData.type === 'item_added') {
+							this.handleItemAdded(eventData);
+						}
+						if (eventData.type === 'item_removed') {
+							this.handleItemRemoved(eventData);
+						}
+						if (eventData.type === 'item_updated') {
+							this.handleItemUpdated(eventData);
+						}
+					});
+
+					// Listen for SSE events from chat continuation
+					document.addEventListener('htmx:sseMessage', (event) => {
+						const sseEvent = event.detail;
+						let eventData;
+						try {
+							eventData = typeof sseEvent.data === 'string' ? JSON.parse(sseEvent.data) : sseEvent.data;
+						} catch (e) {
+							console.log('Non-JSON SSE event:', sseEvent);
+							return;
+						}
+
+						// Handle item_added events to update the itinerary summary
+						if (eventData.type === 'item_added' && eventData.html) {
+							this.handleItemAdded(eventData);
+						}
+
+						// Handle complete event to update session ID
+						if (eventData.type === 'complete' && eventData.navigation && eventData.navigation.query_params) {
+							const newSessionID = eventData.navigation.query_params.sessionId;
+							if (newSessionID && newSessionID !== this.sessionID) {
+								this.sessionID = newSessionID;
+								console.log('Session ID updated:', this.sessionID);
+							}
+						}
+					});
+				},
+
+				handleItemAdded(eventData) {
+					const summaryContainer = document.getElementById('itinerary-summary');
+					if (!summaryContainer) return;
+
+					// Remove empty state if present
+					const emptyState = summaryContainer.querySelector('[data-testid="empty-state"]');
+					if (emptyState) {
+						emptyState.remove();
+					}
+
+					// Create temporary div to parse HTML
+					const tempDiv = document.createElement('div');
+					tempDiv.innerHTML = eventData.html;
+					const newElement = tempDiv.firstElementChild;
+
+					if (newElement) {
+						summaryContainer.appendChild(newElement);
+						console.log('Item added to itinerary:', eventData.message);
+
+						// Add marker to map if coordinates are available
+						if (eventData.item_data && eventData.item_data.latitude && eventData.item_data.longitude) {
+							this.addMarkerToMap(eventData.item_data);
+						}
+					}
+				},
+
+				handleItemRemoved(eventData) {
+					console.log('handleItemRemoved called with:', eventData);
+					const summaryContainer = document.getElementById('itinerary-summary');
+					if (!summaryContainer) return;
+
+					// Try multiple selectors to find the element
+					let element = summaryContainer.querySelector(`[data-item-id="${eventData.item_id}"]`);
+
+					// Fallback: try by id containing the item_id
+					if (!element) {
+						element = summaryContainer.querySelector(`[id*="${eventData.item_id}"]`);
+					}
+
+					// Fallback: try by poi name if item_data is available
+					if (!element && eventData.item_data?.name) {
+						element = summaryContainer.querySelector(`[data-poi-name="${eventData.item_data.name}"]`);
+					}
+
+					if (element) {
+						element.closest('.bg-white, .dark\\:bg-gray-800, .border')?.remove() || element.remove();
+						console.log('Item removed from itinerary:', eventData.message);
+					} else {
+						console.log('Item not found in itinerary for removal');
+					}
+
+					// Check if container is empty and show empty state
+					const remainingItems = summaryContainer.querySelectorAll('[data-item-id], [data-poi-name]');
+					if (remainingItems.length === 0) {
+						summaryContainer.innerHTML = `
+							<div class="text-center py-6 text-muted-foreground space-y-1" data-testid="empty-state">
+								<i class="fas fa-map-marked-alt text-2xl mb-2 text-primary"></i>
+								<p class="text-sm font-medium">Your itinerary will appear here</p>
+								<p class="text-xs">Start chatting to build your trip!</p>
+							</div>
+						`;
+					}
+				},
+
+				handleItemUpdated(eventData) {
+					const summaryContainer = document.getElementById('itinerary-summary');
+					if (!summaryContainer || !eventData.html) return;
+
+					const element = summaryContainer.querySelector(`[data-item-id="${eventData.item_id}"]`);
+					if (element) {
+						const tempDiv = document.createElement('div');
+						tempDiv.innerHTML = eventData.html;
+						const newElement = tempDiv.firstElementChild;
+						if (newElement) {
+							element.replaceWith(newElement);
+							console.log('Item updated in itinerary:', eventData.message);
+						}
+					}
+				},
+
+				addMarkerToMap(itemData) {
+					const { latitude, longitude, name, category } = itemData;
+					if (!latitude || !longitude || (latitude === 0 && longitude === 0)) return;
+
+					console.log('Adding marker to map:', name, latitude, longitude);
+					// Map marker logic will be handled by the existing map functions
+					setTimeout(() => {
+						loadItineraryMarkers();
+					}, 100);
+				}
 			};
 		}
 	</script>
 	<!-- Chat Panel for continuing conversation -->
-	<div x-data="{ showChat: false }">
-		@chat.ChatPanel(chat.ChatPanelProps{
-			SessionID:     "",
-			CityName:      "Travel Planning",
-			Domain:        "itinerary",
-			Placeholder:   "Ask about your travel plans...",
-			ShowByDefault: false,
-		})
-	</div>
+	@chat.ChatPanel(chat.ChatPanelProps{
+		SessionID:     "",
+		CityName:      "Travel Planning",
+		Domain:        "itinerary",
+		Placeholder:   "Ask about your travel plans...",
+		ShowByDefault: false,
+	})
 	<style>
 		.quick-action-btn {
 			background: white;
@@ -998,9 +1291,9 @@ templ ItineraryInitialMessage(query string) {
 }
 
 templ ItineraryEmptyState() {
-	<div class="text-center py-6 text-gray-500">
-		<i class="fas fa-map-marked-alt text-2xl mb-2"></i>
-		<p class="text-sm">Your itinerary will appear here</p>
+	<div class="text-center py-6 text-muted-foreground space-y-1" data-testid="empty-state">
+		<i class="fas fa-map-marked-alt text-2xl mb-2 text-primary"></i>
+		<p class="text-sm font-medium">Your itinerary will appear here</p>
 		<p class="text-xs">Start chatting to build your trip!</p>
 	</div>
 }

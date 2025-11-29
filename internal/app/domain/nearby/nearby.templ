@@ -2,24 +2,29 @@ package nearby
 
 templ NearbyPage() {
 	<div
-		class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900"
+		class="relative min-h-screen bg-background text-foreground overflow-hidden"
 		x-data="nearbyApp()"
 		x-init="init()"
 	>
-		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
+		<div class="absolute inset-0 hero-aurora pointer-events-none"></div>
+		<div class="absolute inset-0 grid-backdrop opacity-25 dark:opacity-5 pointer-events-none"></div>
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 relative">
 			<!-- Header -->
 			<div class="mb-8">
 				<div class="flex items-center justify-between mb-6">
 					<div class="flex items-center gap-3">
-						<div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-							<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-							</svg>
+						<div class="relative">
+							<div class="absolute -inset-1 bg-gradient-to-r from-blue-500/60 via-primary/60 to-purple-600/60 blur-md opacity-80"></div>
+							<div class="relative w-10 h-10 bg-gradient-to-br from-blue-600 via-blue-700 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+								<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+								</svg>
+							</div>
 						</div>
 						<div>
-							<h1 class="text-2xl font-bold text-foreground">Nearby Places</h1>
-							<p class="text-muted-foreground">Discover amazing places as you move</p>
+							<h1 class="text-2xl font-display font-semibold text-foreground">Nearby Places</h1>
+							<p class="text-muted-foreground text-sm">Discover amazing places as you move</p>
 						</div>
 					</div>
 					<!-- Connection Status -->
@@ -38,14 +43,14 @@ templ NearbyPage() {
 				</div>
 			</div>
 			<!-- Controls -->
-			<div class="bg-card rounded-xl shadow-lg border p-6 mb-8">
+			<div class="glass-panel rounded-2xl border border-border/70 p-6 mb-8 soft-shadow">
 				<div class="flex flex-col md:flex-row gap-4 mb-4">
 					<!-- Live Tracking Toggle -->
 					<div class="flex items-center gap-3 flex-1">
 						<button
 							@click="toggleTracking"
 							:class="isTracking ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 hover:bg-gray-700'"
-							class="px-6 py-3 text-white rounded-lg transition-all font-medium shadow-md flex items-center gap-2"
+							class="px-6 py-3 text-white rounded-xl transition-all font-medium shadow-md flex items-center gap-2"
 						>
 							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
@@ -64,7 +69,7 @@ templ NearbyPage() {
 						<select
 							x-model="radius"
 							@change="refreshPOIs"
-							class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-background text-foreground"
+							class="w-full px-4 py-3 rounded-xl border border-border/70 focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
 						>
 							<option value="0.5">500m</option>
 							<option value="1">1 km</option>
@@ -77,7 +82,7 @@ templ NearbyPage() {
 					</div>
 				</div>
 				<!-- Current Location Display -->
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-background/70 border border-border/60 rounded-xl">
 					<div>
 						<span class="text-sm text-muted-foreground">Latitude:</span>
 						<span class="ml-2 font-mono text-sm" x-text="currentLat.toFixed(6)"></span>
@@ -109,7 +114,7 @@ templ NearbyPage() {
 					<h2 class="text-lg font-semibold text-foreground mb-4" x-text="`${pois.length} Places Nearby`"></h2>
 					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 						<template x-for="poi in pois" :key="poi.id">
-							<div class="bg-card rounded-xl shadow-sm border hover:shadow-md transition-shadow">
+							<div class="glass-panel rounded-2xl border border-border/70 hover:border-primary hover:shadow-xl transition-shadow">
 								<div class="p-6">
 									<div class="flex items-start justify-between mb-4">
 										<div class="flex items-center gap-3">

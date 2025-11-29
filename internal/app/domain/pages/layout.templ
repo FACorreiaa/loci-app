@@ -35,7 +35,7 @@ templ LayoutPage(l models.LayoutTempl) {
 			<meta name="mobile-web-app-capable" content="yes"/>
 			<meta name="application-name" content="Loci"/>
 			<link
-				href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+				href="https://fonts.googleapis.com/css2?family=Syne:wght@500;600;700&family=Spline+Sans:wght@400;500;600;700&display=swap"
 				rel="stylesheet"
 			/>
 			<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous"/>
@@ -63,7 +63,7 @@ templ LayoutPage(l models.LayoutTempl) {
 			@scripts.AddToListScript()
 			@styles.AnimationsCSS()
 		</head>
-		<body hx-boost="true" class="min-h-screen bg-background text-foreground font-inter antialiased">
+		<body hx-boost="true" class="min-h-screen bg-background text-foreground font-body antialiased">
 			<script type="module">
                           function registerServiceWorkers() {
                             // check if the browser supports service workers, otherwise abort.

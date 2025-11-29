@@ -73,118 +73,92 @@ func ChatPanel(props ChatPanelProps) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var4 string
-		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("chatPanelController('%s')", props.SessionID))
+		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("chatPanelController('%s', '%s')", props.SessionID, props.Domain))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/chat/chat_panel.templ`, Line: 66, Col: 104}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/chat/chat_panel.templ`, Line: 66, Col: 124}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><!-- Messages Container --><div id=\"chat-messages\" class=\"flex-1 overflow-y-auto p-4 space-y-3 min-h-[300px] max-h-[400px]\"><!-- Messages will be dynamically added here via HTMX SSE --><template x-for=\"msg in messages\" :key=\"msg.id\"><div :class=\"msg.type === 'user' ? 'flex justify-end' : 'flex justify-start'\"><div :class=\"msg.type === 'user'\n\t\t\t\t\t\t\t\t\t\t? 'bg-blue-600 text-white'\n\t\t\t\t\t\t\t\t\t\t: (msg.type === 'error'\n\t\t\t\t\t\t\t\t\t\t\t? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-200'\n\t\t\t\t\t\t\t\t\t\t\t: 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white')\" class=\"max-w-[80%] rounded-lg px-4 py-2 text-sm\"><p x-text=\"msg.content\"></p><span class=\"text-xs opacity-70\" x-text=\"new Date(msg.timestamp).toLocaleTimeString()\"></span></div></div></template><!-- Loading Indicator --><div x-show=\"isLoading\" class=\"flex justify-start\"><div class=\"bg-gray-100 dark:bg-gray-700 rounded-lg px-4 py-2\"><div class=\"flex gap-1\"><div class=\"w-2 h-2 bg-gray-400 rounded-full animate-bounce\" style=\"animation-delay: 0ms\"></div><div class=\"w-2 h-2 bg-gray-400 rounded-full animate-bounce\" style=\"animation-delay: 150ms\"></div><div class=\"w-2 h-2 bg-gray-400 rounded-full animate-bounce\" style=\"animation-delay: 300ms\"></div></div></div></div><!-- Session notice -->")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><!-- Messages Container --><div id=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var5 string
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("chat-panel-messages-%s", props.SessionID))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/chat/chat_panel.templ`, Line: 69, Col: 65}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" class=\"flex-1 overflow-y-auto p-4 space-y-3 min-h-[300px] max-h-[400px]\"><!-- Messages will be dynamically added here via HTMX SSE --><template x-for=\"msg in messages\" :key=\"msg.id\"><div :class=\"msg.type === 'user' ? 'flex justify-end' : 'flex justify-start'\"><div :class=\"msg.type === 'user'\n\t\t\t\t\t\t\t\t\t\t? 'bg-blue-600 text-white'\n\t\t\t\t\t\t\t\t\t\t: (msg.type === 'error'\n\t\t\t\t\t\t\t\t\t\t\t? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-200'\n\t\t\t\t\t\t\t\t\t\t\t: 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white')\" class=\"max-w-[80%] rounded-lg px-4 py-2 text-sm\"><p x-text=\"msg.content\"></p><span class=\"text-xs opacity-70\" x-text=\"new Date(msg.timestamp).toLocaleTimeString()\"></span></div></div></template><!-- Loading Indicator --><div x-show=\"isLoading\" class=\"flex justify-start\"><div class=\"bg-gray-100 dark:bg-gray-700 rounded-lg px-4 py-2\"><div class=\"flex gap-1\"><div class=\"w-2 h-2 bg-gray-400 rounded-full animate-bounce\" style=\"animation-delay: 0ms\"></div><div class=\"w-2 h-2 bg-gray-400 rounded-full animate-bounce\" style=\"animation-delay: 150ms\"></div><div class=\"w-2 h-2 bg-gray-400 rounded-full animate-bounce\" style=\"animation-delay: 300ms\"></div></div></div></div><!-- Session notice -->")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if props.SessionID == "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<div class=\"rounded-lg border border-dashed border-gray-200 dark:border-gray-600 p-4 text-xs text-gray-500 dark:text-gray-300\">Start a new search to enable live updates and continue the conversation here.</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"rounded-lg border border-dashed border-gray-200 dark:border-gray-600 p-4 text-xs text-gray-500 dark:text-gray-300\">Start a new search to enable live updates and continue the conversation here.</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</div><!-- Input Area -->")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</div><!-- Input Area -->")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if props.SessionID != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<div id=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var5 string
-			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("chat-stream-buffer-%s", props.SessionID))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/chat/chat_panel.templ`, Line: 107, Col: 69}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\" class=\"hidden\" aria-hidden=\"true\"></div><div class=\"p-4 border-t border-gray-200 dark:border-gray-700\"><form hx-post=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div id=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var6 string
-			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("/chat/continue/%s", props.SessionID))
+			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("chat-stream-buffer-%s", props.SessionID))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/chat/chat_panel.templ`, Line: 110, Col: 67}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/chat/chat_panel.templ`, Line: 107, Col: 69}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" hx-ext=\"sse\" hx-target=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" class=\"hidden\" aria-hidden=\"true\"></div><div class=\"p-4 border-t border-gray-200 dark:border-gray-700\"><div class=\"flex gap-2\"><input type=\"text\" x-model=\"message\" placeholder=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var7 string
-			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("#chat-stream-buffer-%s", props.SessionID))
+			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(props.Placeholder)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/chat/chat_panel.templ`, Line: 112, Col: 74}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/chat/chat_panel.templ`, Line: 113, Col: 40}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\" hx-swap=\"beforeend\" @submit.prevent=\"\n\t\t\t\t\t\t\t\tif (message.trim()) {\n\t\t\t\t\t\t\t\t\tmessages.push({\n\t\t\t\t\t\t\t\t\t\tid: Date.now(),\n\t\t\t\t\t\t\t\t\t\ttype: 'user',\n\t\t\t\t\t\t\t\t\t\tcontent: message,\n\t\t\t\t\t\t\t\t\t\ttimestamp: new Date()\n\t\t\t\t\t\t\t\t\t});\n\t\t\t\t\t\t\t\t\tisLoading = true;\n\t\t\t\t\t\t\t\t\t$nextTick(() => {\n\t\t\t\t\t\t\t\t\t\tconst container = document.getElementById('chat-messages');\n\t\t\t\t\t\t\t\t\t\tcontainer.scrollTop = container.scrollHeight;\n\t\t\t\t\t\t\t\t\t});\n\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\" hx-on::after-request=\"\n\t\t\t\t\t\t\t\t\tmessage = '';\n\t\t\t\t\t\t\t\t\tisLoading = false;\n\t\t\t\t\t\t\t\t\" class=\"flex gap-2\"><input type=\"hidden\" name=\"domain\" value=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\" class=\"flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm\" :disabled=\"isLoading\" @keydown.enter=\"if (!isLoading && message.trim()) submitMessage()\"> <button type=\"button\" @click=\"submitMessage()\" :disabled=\"!message.trim() || isLoading\" class=\"px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 19l9 2-9-18-9 18 9-2zm0 0v-8\"></path></svg> <span class=\"hidden sm:inline\">Send</span></button></div><!-- Quick Actions --><div class=\"mt-2 flex flex-wrap gap-2\"><button @click=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var8 string
-			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(props.Domain)
+			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("message = 'Add more %s similar to these'", props.Domain))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/chat/chat_panel.templ`, Line: 135, Col: 63}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/chat/chat_panel.templ`, Line: 133, Col: 87}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\"> <input type=\"text\" name=\"message\" x-model=\"message\" placeholder=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var9 string
-			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(props.Placeholder)
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/chat/chat_panel.templ`, Line: 140, Col: 40}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\" class=\"flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm\" required @keydown.enter=\"if (!$event.shiftKey) { $event.target.closest('form').requestSubmit(); }\"> <button type=\"submit\" :disabled=\"!message.trim() || isLoading\" class=\"px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 19l9 2-9-18-9 18 9-2zm0 0v-8\"></path></svg> <span class=\"hidden sm:inline\">Send</span></button></form><!-- Quick Actions --><div class=\"mt-2 flex flex-wrap gap-2\"><button @click=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var10 string
-			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("message = 'Add more %s similar to these'", props.Domain))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/app/components/chat/chat_panel.templ`, Line: 159, Col: 87}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\" class=\"text-xs px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full transition-colors\">✨ More like these</button> <button @click=\"message = 'Find budget-friendly options'\" class=\"text-xs px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full transition-colors\">💰 Budget options</button> <button @click=\"message = 'Show premium options'\" class=\"text-xs px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full transition-colors\">⭐ Premium</button></div></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\" class=\"text-xs px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full transition-colors\" :disabled=\"isLoading\">✨ More like these</button> <button @click=\"message = 'Find budget-friendly options'\" class=\"text-xs px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full transition-colors\" :disabled=\"isLoading\">💰 Budget options</button> <button @click=\"message = 'Show premium options'\" class=\"text-xs px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full transition-colors\" :disabled=\"isLoading\">⭐ Premium</button></div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<div class=\"p-4 border-t border-gray-200 dark:border-gray-700\"><p class=\"text-sm text-gray-600 dark:text-gray-300\">No active planning session yet. Run a search or open one of your results to chat with the planner.</p></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<div class=\"p-4 border-t border-gray-200 dark:border-gray-700\"><p class=\"text-sm text-gray-600 dark:text-gray-300\">No active planning session yet. Run a search or open one of your results to chat with the planner.</p></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</div></div></div><!-- Auto-scroll script --><script>\n\t\t\tfunction chatPanelController(sessionID) {\n\t\t\t\treturn {\n\t\t\t\t\tsessionID: sessionID || '',\n\t\t\t\t\tmessages: [],\n\t\t\t\t\tmessage: '',\n\t\t\t\t\tisLoading: false,\n\t\t\t\t\tinit() {\n\t\t\t\t\t\tif (!this.sessionID) {\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tthis._chatSSEHandler = (event) => {\n\t\t\t\t\t\t\tconst payload = event.detail && event.detail.data;\n\t\t\t\t\t\t\tif (!payload) {\n\t\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tlet eventData;\n\t\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\t\teventData = typeof payload === 'string' ? JSON.parse(payload) : payload;\n\t\t\t\t\t\t\t} catch (error) {\n\t\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tthis.processStreamEvent(eventData);\n\t\t\t\t\t\t};\n\t\t\t\t\t\tdocument.addEventListener('htmx:sseMessage', this._chatSSEHandler);\n\t\t\t\t\t},\n\t\t\t\t\tprocessStreamEvent(eventData) {\n\t\t\t\t\t\tif (!this.sessionID || !eventData || !eventData.type) {\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tif (eventData.type === 'message' && eventData.message) {\n\t\t\t\t\t\t\tthis.addAssistantMessage(eventData.message, eventData.timestamp);\n\t\t\t\t\t\t\tthis.isLoading = false;\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tif (eventData.type === 'itinerary' && eventData.message) {\n\t\t\t\t\t\t\tthis.addAssistantMessage(eventData.message, eventData.timestamp);\n\t\t\t\t\t\t\tthis.isLoading = false;\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tif (eventData.type === 'error') {\n\t\t\t\t\t\t\tconst content = eventData.error || eventData.message || 'Something went wrong.';\n\t\t\t\t\t\t\tthis.addAssistantMessage(content, eventData.timestamp, 'error');\n\t\t\t\t\t\t\tthis.isLoading = false;\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tif (eventData.type === 'complete') {\n\t\t\t\t\t\t\tthis.isLoading = false;\n\t\t\t\t\t\t}\n\t\t\t\t\t},\n\t\t\t\t\taddAssistantMessage(content, timestamp, variant = 'assistant') {\n\t\t\t\t\t\tif (!content) {\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tthis.messages.push({\n\t\t\t\t\t\t\tid: Date.now() + Math.random(),\n\t\t\t\t\t\t\ttype: variant,\n\t\t\t\t\t\t\tcontent,\n\t\t\t\t\t\t\ttimestamp: timestamp ? new Date(timestamp) : new Date(),\n\t\t\t\t\t\t});\n\t\t\t\t\t\tthis.$nextTick(() => {\n\t\t\t\t\t\t\tconst container = document.getElementById('chat-messages');\n\t\t\t\t\t\t\tif (container) {\n\t\t\t\t\t\t\t\tcontainer.scrollTop = container.scrollHeight;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t});\n\t\t\t\t\t},\n\t\t\t\t};\n\t\t\t}\n\n\t\t\tdocument.addEventListener('htmx:sseMessage', function(event) {\n\t\t\t\tconst container = document.getElementById('chat-messages');\n\t\t\t\tif (container) {\n\t\t\t\t\t// Auto-scroll to bottom when new message arrives\n\t\t\t\t\tsetTimeout(() => {\n\t\t\t\t\t\tcontainer.scrollTop = container.scrollHeight;\n\t\t\t\t\t}, 100);\n\t\t\t\t}\n\t\t\t});\n\t\t</script></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</div></div></div><!-- Chat Panel Controller Script --><script>\n\t\t\tfunction chatPanelController(sessionID, domain) {\n\t\t\t\treturn {\n\t\t\t\t\tsessionID: sessionID || '',\n\t\t\t\t\tdomain: domain || '',\n\t\t\t\t\tmessages: [],\n\t\t\t\t\tmessage: '',\n\t\t\t\t\tisLoading: false,\n\n\t\t\t\t\tinit() {\n\t\t\t\t\t\tif (!this.sessionID) {\n\t\t\t\t\t\t\tconsole.log('ChatPanel: No session ID provided');\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tconsole.log('ChatPanel: Initializing for session', this.sessionID, 'domain', this.domain);\n\t\t\t\t\t},\n\n\t\t\t\t\tdestroy() {\n\t\t\t\t\t\t// Cleanup if needed\n\t\t\t\t\t},\n\n\t\t\t\t\tasync submitMessage() {\n\t\t\t\t\t\tif (!this.message.trim() || this.isLoading) {\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\tconst messageText = this.message.trim();\n\n\t\t\t\t\t\t// Add user message to chat\n\t\t\t\t\t\tthis.messages.push({\n\t\t\t\t\t\t\tid: Date.now(),\n\t\t\t\t\t\t\ttype: 'user',\n\t\t\t\t\t\t\tcontent: messageText,\n\t\t\t\t\t\t\ttimestamp: new Date()\n\t\t\t\t\t\t});\n\n\t\t\t\t\t\tthis.isLoading = true;\n\t\t\t\t\t\tthis.message = '';\n\t\t\t\t\t\tthis.scrollToBottom();\n\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\t// Use fetch to POST and handle SSE response\n\t\t\t\t\t\t\tconst response = await fetch(`/chat/continue/${this.sessionID}`, {\n\t\t\t\t\t\t\t\tmethod: 'POST',\n\t\t\t\t\t\t\t\theaders: {\n\t\t\t\t\t\t\t\t\t'Content-Type': 'application/x-www-form-urlencoded',\n\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\tbody: new URLSearchParams({\n\t\t\t\t\t\t\t\t\tmessage: messageText,\n\t\t\t\t\t\t\t\t\tdomain: this.domain\n\t\t\t\t\t\t\t\t})\n\t\t\t\t\t\t\t});\n\n\t\t\t\t\t\t\tif (!response.ok) {\n\t\t\t\t\t\t\t\tthrow new Error(`HTTP error! status: ${response.status}`);\n\t\t\t\t\t\t\t}\n\n\t\t\t\t\t\t\t// Read the SSE stream\n\t\t\t\t\t\t\tconst reader = response.body.getReader();\n\t\t\t\t\t\t\tconst decoder = new TextDecoder();\n\t\t\t\t\t\t\tlet buffer = '';\n\n\t\t\t\t\t\t\twhile (true) {\n\t\t\t\t\t\t\t\tconst { done, value } = await reader.read();\n\t\t\t\t\t\t\t\tif (done) break;\n\n\t\t\t\t\t\t\t\tbuffer += decoder.decode(value, { stream: true });\n\t\t\t\t\t\t\t\tconst lines = buffer.split('\\n');\n\t\t\t\t\t\t\t\tbuffer = lines.pop() || '';\n\n\t\t\t\t\t\t\t\tfor (const line of lines) {\n\t\t\t\t\t\t\t\t\tif (line.startsWith('data: ')) {\n\t\t\t\t\t\t\t\t\t\tconst jsonStr = line.slice(6).trim();\n\t\t\t\t\t\t\t\t\t\tif (jsonStr) {\n\t\t\t\t\t\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\t\t\t\t\t\tconst eventData = JSON.parse(jsonStr);\n\t\t\t\t\t\t\t\t\t\t\t\tconsole.log('ChatPanel: SSE event', eventData.type, eventData);\n\t\t\t\t\t\t\t\t\t\t\t\tthis.processStreamEvent(eventData);\n\t\t\t\t\t\t\t\t\t\t\t} catch (e) {\n\t\t\t\t\t\t\t\t\t\t\t\tconsole.log('ChatPanel: Failed to parse SSE data', jsonStr);\n\t\t\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t} catch (error) {\n\t\t\t\t\t\t\tconsole.error('ChatPanel: Request failed', error);\n\t\t\t\t\t\t\tthis.addAssistantMessage('Sorry, something went wrong. Please try again.', new Date(), 'error');\n\t\t\t\t\t\t} finally {\n\t\t\t\t\t\t\tthis.isLoading = false;\n\t\t\t\t\t\t}\n\t\t\t\t\t},\n\n\t\t\t\t\tprocessStreamEvent(eventData) {\n\t\t\t\t\t\tif (!eventData || !eventData.type) {\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\t// Handle message events (LLM responses)\n\t\t\t\t\t\tif (eventData.type === 'message' && eventData.message) {\n\t\t\t\t\t\t\tthis.addAssistantMessage(eventData.message, eventData.timestamp);\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\t// Handle itinerary events (itinerary confirmations)\n\t\t\t\t\t\tif (eventData.type === 'itinerary' && eventData.message) {\n\t\t\t\t\t\t\tthis.addAssistantMessage(eventData.message, eventData.timestamp);\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\t// Handle item_added events - update list and show confirmation\n\t\t\t\t\t\tif (eventData.type === 'item_added') {\n\t\t\t\t\t\t\tif (eventData.message) {\n\t\t\t\t\t\t\t\tthis.addAssistantMessage(eventData.message, eventData.timestamp);\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t// Dispatch custom event for parent page to handle list update\n\t\t\t\t\t\t\tthis.dispatchListUpdate('item_added', eventData);\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\t// Handle item_removed events\n\t\t\t\t\t\tif (eventData.type === 'item_removed') {\n\t\t\t\t\t\t\tif (eventData.message) {\n\t\t\t\t\t\t\t\tthis.addAssistantMessage(eventData.message, eventData.timestamp);\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t// Dispatch custom event for parent page to handle list update\n\t\t\t\t\t\t\tthis.dispatchListUpdate('item_removed', eventData);\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\t// Handle item_updated events\n\t\t\t\t\t\tif (eventData.type === 'item_updated') {\n\t\t\t\t\t\t\tif (eventData.message) {\n\t\t\t\t\t\t\t\tthis.addAssistantMessage(eventData.message, eventData.timestamp);\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t// Dispatch custom event for parent page to handle list update\n\t\t\t\t\t\t\tthis.dispatchListUpdate('item_updated', eventData);\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\t// Handle error events\n\t\t\t\t\t\tif (eventData.type === 'error') {\n\t\t\t\t\t\t\tconst content = eventData.error || eventData.message || 'Something went wrong.';\n\t\t\t\t\t\t\tthis.addAssistantMessage(content, eventData.timestamp, 'error');\n\t\t\t\t\t\t\tthis.isLoading = false;\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\t// Handle complete event - stop loading\n\t\t\t\t\t\tif (eventData.type === 'complete') {\n\t\t\t\t\t\t\tconsole.log('ChatPanel: Stream completed');\n\t\t\t\t\t\t\tthis.isLoading = false;\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\t// Handle progress events (optional - can show status)\n\t\t\t\t\t\tif (eventData.type === 'progress') {\n\t\t\t\t\t\t\tconsole.log('ChatPanel: Progress', eventData.data);\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\t\t},\n\n\t\t\t\t\tdispatchListUpdate(type, eventData) {\n\t\t\t\t\t\t// Dispatch a custom event that the parent page can listen to\n\t\t\t\t\t\tconst customEvent = new CustomEvent('chatPanelListUpdate', {\n\t\t\t\t\t\t\tdetail: {\n\t\t\t\t\t\t\t\ttype: type,\n\t\t\t\t\t\t\t\tdomain: eventData.domain || this.domain,\n\t\t\t\t\t\t\t\thtml: eventData.html,\n\t\t\t\t\t\t\t\titem_id: eventData.item_id,\n\t\t\t\t\t\t\t\titem_data: eventData.item_data,\n\t\t\t\t\t\t\t\tmessage: eventData.message\n\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\tbubbles: true\n\t\t\t\t\t\t});\n\t\t\t\t\t\tdocument.dispatchEvent(customEvent);\n\t\t\t\t\t\tconsole.log('ChatPanel: Dispatched list update event', type, eventData.domain);\n\t\t\t\t\t},\n\n\t\t\t\t\taddAssistantMessage(content, timestamp, variant = 'assistant') {\n\t\t\t\t\t\tif (!content) {\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\tthis.messages.push({\n\t\t\t\t\t\t\tid: Date.now() + Math.random(),\n\t\t\t\t\t\t\ttype: variant,\n\t\t\t\t\t\t\tcontent: content,\n\t\t\t\t\t\t\ttimestamp: timestamp ? new Date(timestamp) : new Date(),\n\t\t\t\t\t\t});\n\n\t\t\t\t\t\tthis.scrollToBottom();\n\t\t\t\t\t},\n\n\t\t\t\t\tscrollToBottom() {\n\t\t\t\t\t\tthis.$nextTick(() => {\n\t\t\t\t\t\t\tconst container = document.getElementById(`chat-panel-messages-${this.sessionID}`);\n\t\t\t\t\t\t\tif (container) {\n\t\t\t\t\t\t\t\tcontainer.scrollTop = container.scrollHeight;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t});\n\t\t\t\t\t}\n\t\t\t\t};\n\t\t\t}\n\t\t</script></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

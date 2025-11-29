@@ -1,21 +1,23 @@
 package settings
 
 templ SettingsPage() {
-	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+	<div class="relative min-h-screen bg-background text-foreground overflow-hidden">
+		<div class="absolute inset-0 hero-aurora pointer-events-none"></div>
+		<div class="absolute inset-0 grid-backdrop opacity-25 dark:opacity-5 pointer-events-none"></div>
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative">
 			<!-- Header -->
 			<div class="mb-8">
-				<h1 class="text-3xl font-bold text-foreground mb-2">Account Settings</h1>
+				<h1 class="text-3xl font-display font-semibold text-foreground mb-2">Account Settings</h1>
 				<p class="text-muted-foreground">Manage your account preferences and personal information</p>
 			</div>
 			<div class="flex flex-col lg:flex-row gap-6" x-data="{ activeTab: 'account' }">
 				<!-- Mobile Tab Navigation -->
 				<div class="lg:hidden">
-					<div class="bg-card rounded-lg border p-2 mb-6">
+					<div class="glass-panel rounded-xl border border-border/70 p-2 mb-6">
 						<div class="flex overflow-x-auto space-x-1">
 							<button
 								@click="activeTab = 'account'"
-								:class="activeTab === 'account' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'"
+								:class="activeTab === 'account' ? 'bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent/70 border border-transparent hover:border-primary'"
 								class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap"
 							>
 								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -25,7 +27,7 @@ templ SettingsPage() {
 							</button>
 							<button
 								@click="activeTab = 'preferences'"
-								:class="activeTab === 'preferences' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'"
+								:class="activeTab === 'preferences' ? 'bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent/70 border border-transparent hover:border-primary'"
 								class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap"
 							>
 								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -35,7 +37,7 @@ templ SettingsPage() {
 							</button>
 							<button
 								@click="activeTab = 'privacy'"
-								:class="activeTab === 'privacy' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'"
+								:class="activeTab === 'privacy' ? 'bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent/70 border border-transparent hover:border-primary'"
 								class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap"
 							>
 								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -45,7 +47,7 @@ templ SettingsPage() {
 							</button>
 							<button
 								@click="activeTab = 'notifications'"
-								:class="activeTab === 'notifications' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'"
+								:class="activeTab === 'notifications' ? 'bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent/70 border border-transparent hover:border-primary'"
 								class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap"
 							>
 								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -58,11 +60,11 @@ templ SettingsPage() {
 				</div>
 				<!-- Desktop Sidebar Navigation -->
 				<div class="hidden lg:block w-64 flex-shrink-0">
-					<div class="bg-card rounded-lg border p-2 sticky top-8">
+					<div class="glass-panel rounded-xl border border-border/70 p-2 sticky top-8">
 						<nav class="space-y-1">
 							<button
 								@click="activeTab = 'account'"
-								:class="activeTab === 'account' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'"
+								:class="activeTab === 'account' ? 'bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent/70 border border-transparent hover:border-primary'"
 								class="w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-all duration-200 font-medium"
 							>
 								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -72,7 +74,7 @@ templ SettingsPage() {
 							</button>
 							<button
 								@click="activeTab = 'preferences'"
-								:class="activeTab === 'preferences' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'"
+								:class="activeTab === 'preferences' ? 'bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent/70 border border-transparent hover:border-primary'"
 								class="w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-all duration-200 font-medium"
 							>
 								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -82,7 +84,7 @@ templ SettingsPage() {
 							</button>
 							<button
 								@click="activeTab = 'privacy'"
-								:class="activeTab === 'privacy' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'"
+								:class="activeTab === 'privacy' ? 'bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent/70 border border-transparent hover:border-primary'"
 								class="w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-all duration-200 font-medium"
 							>
 								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -92,7 +94,7 @@ templ SettingsPage() {
 							</button>
 							<button
 								@click="activeTab = 'notifications'"
-								:class="activeTab === 'notifications' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent'"
+								:class="activeTab === 'notifications' ? 'bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white shadow-lg' : 'text-muted-foreground hover:bg-accent/70 border border-transparent hover:border-primary'"
 								class="w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-all duration-200 font-medium"
 							>
 								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -129,9 +131,9 @@ templ SettingsPage() {
 
 templ AccountSettingsContent() {
 	<div class="space-y-6">
-		<h2 class="text-2xl font-bold text-foreground">Account Settings</h2>
+		<h2 class="text-2xl font-display font-semibold text-foreground">Account Settings</h2>
 		<!-- Profile Picture -->
-		<div class="bg-card rounded-lg border p-6">
+		<div class="glass-panel rounded-2xl border border-border/70 p-6">
 			<div class="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
 				<div class="relative">
 					<div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
@@ -148,13 +150,13 @@ templ AccountSettingsContent() {
 					<h3 class="text-lg font-semibold text-foreground">Profile Photo</h3>
 					<p class="text-sm text-muted-foreground">Update your profile picture</p>
 					<div class="flex flex-col sm:flex-row gap-2 mt-2">
-						<button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-2 justify-center transition-colors">
+						<button class="px-4 py-2 text-white rounded-xl bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 hover:-translate-y-0.5 shadow-md shadow-blue-500/25 text-sm font-medium flex items-center gap-2 justify-center transition-all">
 							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
 							</svg>
 							Upload Photo
 						</button>
-						<button class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-muted-foreground rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium transition-colors">
+						<button class="px-4 py-2 bg-accent text-foreground/80 rounded-xl hover:bg-accent/70 text-sm font-medium transition-colors">
 							Remove Photo
 						</button>
 					</div>
@@ -162,7 +164,7 @@ templ AccountSettingsContent() {
 			</div>
 		</div>
 		<!-- Personal Information -->
-		<div class="bg-card rounded-lg border p-6">
+		<div class="glass-panel rounded-2xl border border-border/70 p-6">
 			<h3 class="text-lg font-semibold text-foreground mb-4">Personal Information</h3>
 			<form
 				hx-put="/settings/profile"
@@ -181,7 +183,7 @@ templ AccountSettingsContent() {
 							type="text"
 							name="first_name"
 							value="John"
-							class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+							class="w-full px-4 py-2 border border-border/70 rounded-xl bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
 							x-bind:disabled="updating"
 						/>
 					</div>
@@ -191,7 +193,7 @@ templ AccountSettingsContent() {
 							type="text"
 							name="last_name"
 							value="Doe"
-							class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+							class="w-full px-4 py-2 border border-border/70 rounded-xl bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
 							x-bind:disabled="updating"
 						/>
 					</div>
@@ -206,7 +208,7 @@ templ AccountSettingsContent() {
 							type="email"
 							name="email"
 							value="john.doe@example.com"
-							class="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+							class="w-full pl-10 pr-4 py-2 border border-border/70 rounded-xl bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
 							x-bind:disabled="updating"
 						/>
 					</div>
@@ -224,7 +226,7 @@ templ AccountSettingsContent() {
 								name="city"
 								value="New York"
 								placeholder="Enter your city"
-								class="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+								class="w-full pl-10 pr-4 py-2 border border-border/70 rounded-xl bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
 								x-bind:disabled="updating"
 							/>
 						</div>
@@ -236,7 +238,7 @@ templ AccountSettingsContent() {
 							name="country"
 							value="United States"
 							placeholder="Enter your country"
-							class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+							class="w-full px-4 py-2 border border-border/70 rounded-xl bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
 							x-bind:disabled="updating"
 						/>
 					</div>
@@ -247,14 +249,14 @@ templ AccountSettingsContent() {
 						name="bio"
 						rows="3"
 						placeholder="Tell us about your travel interests..."
-						class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+						class="w-full px-4 py-2 border border-border/70 rounded-xl bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
 						x-bind:disabled="updating"
 					>Travel enthusiast exploring hidden gems around the world.</textarea>
 				</div>
 				<div class="flex justify-end">
 					<button
 						type="submit"
-						class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+						class="px-6 py-2 text-white rounded-xl bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 hover:-translate-y-0.5 shadow-md shadow-blue-500/25 font-medium flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
 						x-bind:disabled="updating"
 					>
 						<span x-show="!updating" class="flex items-center gap-2">
@@ -327,12 +329,12 @@ templ TravelPreferencesContent() {
 		<!-- Profile Settings Form -->
 		<form @submit.prevent="saveProfile()" class="space-y-6">
 			<!-- Travel Interests -->
-			<div class="bg-card rounded-lg border p-6">
+			<div class="glass-panel rounded-2xl border border-border/70 p-6">
 				<h3 class="text-lg font-semibold text-foreground mb-4">Travel Interests</h3>
 				<p class="text-sm text-muted-foreground mb-4">Select the types of places and activities you're most interested in</p>
 				<div class="grid grid-cols-2 md:grid-cols-3 gap-3" x-show="interests.length > 0">
 					<template x-for="interest in interests" :key="interest.id">
-						<label class="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-accent transition-colors">
+						<label class="flex items-center gap-3 p-3 border border-border/70 rounded-xl cursor-pointer hover:border-primary hover:bg-accent/70 transition-colors">
 							<input type="checkbox" :value="interest.id" x-model="selectedInterests" class="w-4 h-4 text-blue-600 bg-background border-border rounded focus:ring-blue-500"/>
 							<span class="text-foreground font-medium" x-text="interest.name"></span>
 						</label>
@@ -343,12 +345,12 @@ templ TravelPreferencesContent() {
 				</div>
 			</div>
 			<!-- Tags to Avoid -->
-			<div class="bg-card rounded-lg border p-6">
+			<div class="glass-panel rounded-2xl border border-border/70 p-6">
 				<h3 class="text-lg font-semibold text-foreground mb-4">Tags to Avoid</h3>
 				<p class="text-sm text-muted-foreground mb-4">Select characteristics you'd prefer to avoid</p>
 				<div class="grid grid-cols-2 md:grid-cols-3 gap-3" x-show="tags.length > 0">
 					<template x-for="tag in tags" :key="tag.id">
-						<label class="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-accent transition-colors">
+						<label class="flex items-center gap-3 p-3 border border-border/70 rounded-xl cursor-pointer hover:border-primary hover:bg-accent/70 transition-colors">
 							<input type="checkbox" :value="tag.id" x-model="selectedTags" class="w-4 h-4 text-red-600 bg-background border-border rounded focus:ring-red-500"/>
 							<div class="flex-1">
 								<span class="text-foreground font-medium" x-text="tag.name"></span>
@@ -362,12 +364,12 @@ templ TravelPreferencesContent() {
 				</div>
 			</div>
 			<!-- Travel Style -->
-			<div class="bg-card rounded-lg border p-6">
+			<div class="glass-panel rounded-2xl border border-border/70 p-6">
 				<h3 class="text-lg font-semibold text-foreground mb-4">Travel Style</h3>
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div>
 						<label class="block text-sm font-medium text-foreground mb-2">Budget Level (0-4)</label>
-						<input x-model="profileData.budget_level" type="range" min="0" max="4" step="1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"/>
+						<input x-model="profileData.budget_level" type="range" min="0" max="4" step="1" class="w-full h-2 bg-accent rounded-lg appearance-none cursor-pointer"/>
 						<div class="flex justify-between text-xs text-muted-foreground mt-1">
 							<span>Budget</span>
 							<span>Mid-range</span>
@@ -376,11 +378,11 @@ templ TravelPreferencesContent() {
 					</div>
 					<div>
 						<label class="block text-sm font-medium text-foreground mb-2">Search Radius (km)</label>
-						<input x-model="profileData.search_radius_km" type="number" min="1" max="50" class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"/>
+						<input x-model="profileData.search_radius_km" type="number" min="1" max="50" class="w-full px-4 py-2 border border-border/70 rounded-xl bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"/>
 					</div>
 					<div>
 						<label class="block text-sm font-medium text-foreground mb-2">Preferred Time</label>
-						<select x-model="profileData.preferred_time" class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+						<select x-model="profileData.preferred_time" class="w-full px-4 py-2 border border-border/70 rounded-xl bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent">
 							<option value="any">Any time</option>
 							<option value="day">Daytime</option>
 							<option value="night">Evening/Night</option>
@@ -388,7 +390,7 @@ templ TravelPreferencesContent() {
 					</div>
 					<div>
 						<label class="block text-sm font-medium text-foreground mb-2">Travel Pace</label>
-						<select x-model="profileData.preferred_pace" class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+						<select x-model="profileData.preferred_pace" class="w-full px-4 py-2 border border-border/70 rounded-xl bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent">
 							<option value="any">Any pace</option>
 							<option value="relaxed">Relaxed</option>
 							<option value="moderate">Moderate</option>
@@ -397,7 +399,7 @@ templ TravelPreferencesContent() {
 					</div>
 					<div>
 						<label class="block text-sm font-medium text-foreground mb-2">Preferred Transport</label>
-						<select x-model="profileData.preferred_transport" class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+						<select x-model="profileData.preferred_transport" class="w-full px-4 py-2 border border-border/70 rounded-xl bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent">
 							<option value="any">Any transport</option>
 							<option value="walk">Walking</option>
 							<option value="public">Public transport</option>
@@ -407,33 +409,33 @@ templ TravelPreferencesContent() {
 				</div>
 			</div>
 			<!-- Accommodation Preferences -->
-			<div class="bg-card rounded-lg border p-6">
+			<div class="glass-panel rounded-2xl border border-border/70 p-6">
 				<h3 class="text-lg font-semibold text-foreground mb-4">Accommodation Preferences</h3>
 				<div class="space-y-4">
 					<div>
 						<label class="block text-sm font-medium text-foreground mb-2">Accommodation Types</label>
 						<div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+							<label class="flex items-center gap-2 p-2 border border-border/70 rounded cursor-pointer hover:border-primary hover:bg-accent/70">
 								<input type="checkbox" x-model="profileData.accommodation.types" value="hotel" class="text-blue-600"/>
 								<span class="text-sm">Hotel</span>
 							</label>
-							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+							<label class="flex items-center gap-2 p-2 border border-border/70 rounded cursor-pointer hover:border-primary hover:bg-accent/70">
 								<input type="checkbox" x-model="profileData.accommodation.types" value="apartment" class="text-blue-600"/>
 								<span class="text-sm">Apartment</span>
 							</label>
-							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+							<label class="flex items-center gap-2 p-2 border border-border/70 rounded cursor-pointer hover:border-primary hover:bg-accent/70">
 								<input type="checkbox" x-model="profileData.accommodation.types" value="hostel" class="text-blue-600"/>
 								<span class="text-sm">Hostel</span>
 							</label>
-							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+							<label class="flex items-center gap-2 p-2 border border-border/70 rounded cursor-pointer hover:border-primary hover:bg-accent/70">
 								<input type="checkbox" x-model="profileData.accommodation.types" value="resort" class="text-blue-600"/>
 								<span class="text-sm">Resort</span>
 							</label>
-							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+							<label class="flex items-center gap-2 p-2 border border-border/70 rounded cursor-pointer hover:border-primary hover:bg-accent/70">
 								<input type="checkbox" x-model="profileData.accommodation.types" value="bnb" class="text-blue-600"/>
 								<span class="text-sm">B&B</span>
 							</label>
-							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+							<label class="flex items-center gap-2 p-2 border border-border/70 rounded cursor-pointer hover:border-primary hover:bg-accent/70">
 								<input type="checkbox" x-model="profileData.accommodation.types" value="villa" class="text-blue-600"/>
 								<span class="text-sm">Villa</span>
 							</label>
@@ -443,52 +445,52 @@ templ TravelPreferencesContent() {
 						<div>
 							<label class="block text-sm font-medium text-foreground mb-2">Star Rating (Min - Max)</label>
 							<div class="flex gap-2 items-center">
-								<input x-model.number="profileData.accommodation.star_rating_min" type="number" min="1" max="5" class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"/>
+								<input x-model.number="profileData.accommodation.star_rating_min" type="number" min="1" max="5" class="w-full px-3 py-2 border border-border/70 rounded-xl bg-background text-foreground"/>
 								<span>to</span>
-								<input x-model.number="profileData.accommodation.star_rating_max" type="number" min="1" max="5" class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"/>
+								<input x-model.number="profileData.accommodation.star_rating_max" type="number" min="1" max="5" class="w-full px-3 py-2 border border-border/70 rounded-xl bg-background text-foreground"/>
 							</div>
 						</div>
 						<div>
 							<label class="block text-sm font-medium text-foreground mb-2">Price Range per Night ($)</label>
 							<div class="flex gap-2 items-center">
-								<input x-model.number="profileData.accommodation.price_min" type="number" min="0" placeholder="Min" class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"/>
+								<input x-model.number="profileData.accommodation.price_min" type="number" min="0" placeholder="Min" class="w-full px-3 py-2 border border-border/70 rounded-xl bg-background text-foreground"/>
 								<span>to</span>
-								<input x-model.number="profileData.accommodation.price_max" type="number" min="0" placeholder="Max" class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"/>
+								<input x-model.number="profileData.accommodation.price_max" type="number" min="0" placeholder="Max" class="w-full px-3 py-2 border border-border/70 rounded-xl bg-background text-foreground"/>
 							</div>
 						</div>
 					</div>
 					<div>
 						<label class="block text-sm font-medium text-foreground mb-2">Amenities</label>
 						<div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+							<label class="flex items-center gap-2 p-2 border border-border/70 rounded cursor-pointer hover:border-primary hover:bg-accent/70">
 								<input type="checkbox" x-model="profileData.accommodation.amenities" value="wifi" class="text-blue-600"/>
 								<span class="text-sm">WiFi</span>
 							</label>
-							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+							<label class="flex items-center gap-2 p-2 border border-border/70 rounded cursor-pointer hover:border-primary hover:bg-accent/70">
 								<input type="checkbox" x-model="profileData.accommodation.amenities" value="parking" class="text-blue-600"/>
 								<span class="text-sm">Parking</span>
 							</label>
-							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+							<label class="flex items-center gap-2 p-2 border border-border/70 rounded cursor-pointer hover:border-primary hover:bg-accent/70">
 								<input type="checkbox" x-model="profileData.accommodation.amenities" value="pool" class="text-blue-600"/>
 								<span class="text-sm">Pool</span>
 							</label>
-							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+							<label class="flex items-center gap-2 p-2 border border-border/70 rounded cursor-pointer hover:border-primary hover:bg-accent/70">
 								<input type="checkbox" x-model="profileData.accommodation.amenities" value="gym" class="text-blue-600"/>
 								<span class="text-sm">Gym</span>
 							</label>
-							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+							<label class="flex items-center gap-2 p-2 border border-border/70 rounded cursor-pointer hover:border-primary hover:bg-accent/70">
 								<input type="checkbox" x-model="profileData.accommodation.amenities" value="breakfast" class="text-blue-600"/>
 								<span class="text-sm">Breakfast</span>
 							</label>
-							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+							<label class="flex items-center gap-2 p-2 border border-border/70 rounded cursor-pointer hover:border-primary hover:bg-accent/70">
 								<input type="checkbox" x-model="profileData.accommodation.amenities" value="spa" class="text-blue-600"/>
 								<span class="text-sm">Spa</span>
 							</label>
-							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+							<label class="flex items-center gap-2 p-2 border border-border/70 rounded cursor-pointer hover:border-primary hover:bg-accent/70">
 								<input type="checkbox" x-model="profileData.accommodation.amenities" value="restaurant" class="text-blue-600"/>
 								<span class="text-sm">Restaurant</span>
 							</label>
-							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+							<label class="flex items-center gap-2 p-2 border border-border/70 rounded cursor-pointer hover:border-primary hover:bg-accent/70">
 								<input type="checkbox" x-model="profileData.accommodation.amenities" value="bar" class="text-blue-600"/>
 								<span class="text-sm">Bar</span>
 							</label>
@@ -497,7 +499,7 @@ templ TravelPreferencesContent() {
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
 							<label class="block text-sm font-medium text-foreground mb-2">Chain Preference</label>
-							<select x-model="profileData.accommodation.chain_preference" class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground">
+							<select x-model="profileData.accommodation.chain_preference" class="w-full px-4 py-2 border border-border/70 rounded-xl bg-background text-foreground">
 								<option value="any">Any</option>
 								<option value="chain_only">Chain Hotels Only</option>
 								<option value="independent_only">Independent Only</option>
@@ -507,7 +509,7 @@ templ TravelPreferencesContent() {
 						</div>
 						<div>
 							<label class="block text-sm font-medium text-foreground mb-2">Room Type</label>
-							<select x-model="profileData.accommodation.room_type" class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground">
+							<select x-model="profileData.accommodation.room_type" class="w-full px-4 py-2 border border-border/70 rounded-xl bg-background text-foreground">
 								<option value="single">Single</option>
 								<option value="double">Double</option>
 								<option value="twin">Twin</option>
@@ -731,13 +733,13 @@ templ TravelPreferencesContent() {
 				</div>
 			</div>
 			<!-- Itinerary Preferences -->
-			<div class="bg-card rounded-lg border p-6">
+			<div class="glass-panel rounded-2xl border border-border/70 p-6">
 				<h3 class="text-lg font-semibold text-foreground mb-4">Itinerary & Planning</h3>
 				<div class="space-y-4">
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
 							<label class="block text-sm font-medium text-foreground mb-2">Planning Style</label>
-							<select x-model="profileData.itinerary.planning_style" class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground">
+							<select x-model="profileData.itinerary.planning_style" class="w-full px-4 py-2 border border-border/70 rounded-xl bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent">
 								<option value="structured">Highly structured</option>
 								<option value="flexible">Flexible schedule</option>
 								<option value="spontaneous">Very spontaneous</option>
@@ -745,7 +747,7 @@ templ TravelPreferencesContent() {
 						</div>
 						<div>
 							<label class="block text-sm font-medium text-foreground mb-2">Time Flexibility</label>
-							<select x-model="profileData.itinerary.time_flexibility" class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground">
+							<select x-model="profileData.itinerary.time_flexibility" class="w-full px-4 py-2 border border-border/70 rounded-xl bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent">
 								<option value="strict">Strict schedule</option>
 								<option value="loose">Loose schedule</option>
 								<option value="very_flexible">Very flexible</option>
@@ -755,7 +757,7 @@ templ TravelPreferencesContent() {
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
 							<label class="block text-sm font-medium text-foreground mb-2">Morning vs Evening</label>
-							<select x-model="profileData.itinerary.morning_evening" class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground">
+							<select x-model="profileData.itinerary.morning_evening" class="w-full px-4 py-2 border border-border/70 rounded-xl bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent">
 								<option value="early_bird">Early bird (morning person)</option>
 								<option value="flexible">Flexible</option>
 								<option value="night_owl">Night owl (evening person)</option>
@@ -763,7 +765,7 @@ templ TravelPreferencesContent() {
 						</div>
 						<div>
 							<label class="block text-sm font-medium text-foreground mb-2">Adventure vs Relaxation</label>
-							<select x-model="profileData.itinerary.adventure_relaxation" class="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground">
+							<select x-model="profileData.itinerary.adventure_relaxation" class="w-full px-4 py-2 border border-border/70 rounded-xl bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent">
 								<option value="adventure">Adventure-focused</option>
 								<option value="balanced">Balanced</option>
 								<option value="relaxation">Relaxation-focused</option>
@@ -773,19 +775,19 @@ templ TravelPreferencesContent() {
 					<div>
 						<label class="block text-sm font-medium text-foreground mb-2">Preferred Seasons</label>
 						<div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+							<label class="flex items-center gap-2 p-2 border border-border/70 rounded cursor-pointer hover:border-primary hover:bg-accent/70">
 								<input type="checkbox" x-model="profileData.itinerary.seasons" value="spring" class="text-blue-600"/>
 								<span class="text-sm">Spring</span>
 							</label>
-							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+							<label class="flex items-center gap-2 p-2 border border-border/70 rounded cursor-pointer hover:border-primary hover:bg-accent/70">
 								<input type="checkbox" x-model="profileData.itinerary.seasons" value="summer" class="text-blue-600"/>
 								<span class="text-sm">Summer</span>
 							</label>
-							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+							<label class="flex items-center gap-2 p-2 border border-border/70 rounded cursor-pointer hover:border-primary hover:bg-accent/70">
 								<input type="checkbox" x-model="profileData.itinerary.seasons" value="fall" class="text-blue-600"/>
 								<span class="text-sm">Fall</span>
 							</label>
-							<label class="flex items-center gap-2 p-2 border border-border rounded cursor-pointer hover:bg-accent">
+							<label class="flex items-center gap-2 p-2 border border-border/70 rounded cursor-pointer hover:border-primary hover:bg-accent/70">
 								<input type="checkbox" x-model="profileData.itinerary.seasons" value="winter" class="text-blue-600"/>
 								<span class="text-sm">Winter</span>
 							</label>
@@ -800,7 +802,7 @@ templ TravelPreferencesContent() {
 				</div>
 			</div>
 			<!-- Preferences -->
-			<div class="bg-card rounded-lg border p-6">
+			<div class="glass-panel rounded-2xl border border-border/70 p-6">
 				<h3 class="text-lg font-semibold text-foreground mb-4">Preferences</h3>
 				<div class="space-y-3">
 					<label class="flex items-center gap-3">

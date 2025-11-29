@@ -63,10 +63,10 @@ templ ChatPanel(props ChatPanelProps) {
 						<span class="sr-only">Close chat</span>
 					</button>
 				</div>
-				<div class="flex-1 flex flex-col" x-data={ fmt.Sprintf("chatPanelController('%s')", props.SessionID) }>
+				<div class="flex-1 flex flex-col" x-data={ fmt.Sprintf("chatPanelController('%s', '%s')", props.SessionID, props.Domain) }>
 					<!-- Messages Container -->
 					<div
-						id="chat-messages"
+						id={ fmt.Sprintf("chat-panel-messages-%s", props.SessionID) }
 						class="flex-1 overflow-y-auto p-4 space-y-3 min-h-[300px] max-h-[400px]"
 					>
 						<!-- Messages will be dynamically added here via HTMX SSE -->
@@ -106,44 +106,18 @@ templ ChatPanel(props ChatPanelProps) {
 					if props.SessionID != "" {
 						<div id={ fmt.Sprintf("chat-stream-buffer-%s", props.SessionID) } class="hidden" aria-hidden="true"></div>
 						<div class="p-4 border-t border-gray-200 dark:border-gray-700">
-							<form
-								hx-post={ fmt.Sprintf("/chat/continue/%s", props.SessionID) }
-								hx-ext="sse"
-								hx-target={ fmt.Sprintf("#chat-stream-buffer-%s", props.SessionID) }
-								hx-swap="beforeend"
-								@submit.prevent="
-								if (message.trim()) {
-									messages.push({
-										id: Date.now(),
-										type: 'user',
-										content: message,
-										timestamp: new Date()
-									});
-									isLoading = true;
-									$nextTick(() => {
-										const container = document.getElementById('chat-messages');
-										container.scrollTop = container.scrollHeight;
-									});
-								}
-							"
-								hx-on::after-request="
-									message = '';
-									isLoading = false;
-								"
-								class="flex gap-2"
-							>
-								<input type="hidden" name="domain" value={ props.Domain }/>
+							<div class="flex gap-2">
 								<input
 									type="text"
-									name="message"
 									x-model="message"
 									placeholder={ props.Placeholder }
 									class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm"
-									required
-									@keydown.enter="if (!$event.shiftKey) { $event.target.closest('form').requestSubmit(); }"
+									:disabled="isLoading"
+									@keydown.enter="if (!isLoading && message.trim()) submitMessage()"
 								/>
 								<button
-									type="submit"
+									type="button"
+									@click="submitMessage()"
 									:disabled="!message.trim() || isLoading"
 									class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
 								>
@@ -152,24 +126,27 @@ templ ChatPanel(props ChatPanelProps) {
 									</svg>
 									<span class="hidden sm:inline">Send</span>
 								</button>
-							</form>
+							</div>
 							<!-- Quick Actions -->
 							<div class="mt-2 flex flex-wrap gap-2">
 								<button
 									@click={ fmt.Sprintf("message = 'Add more %s similar to these'", props.Domain) }
 									class="text-xs px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full transition-colors"
+									:disabled="isLoading"
 								>
 									✨ More like these
 								</button>
 								<button
 									@click="message = 'Find budget-friendly options'"
 									class="text-xs px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full transition-colors"
+									:disabled="isLoading"
 								>
 									💰 Budget options
 								</button>
 								<button
 									@click="message = 'Show premium options'"
 									class="text-xs px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full transition-colors"
+									:disabled="isLoading"
 								>
 									⭐ Premium
 								</button>
@@ -185,86 +162,211 @@ templ ChatPanel(props ChatPanelProps) {
 				</div>
 			</div>
 		</div>
-		<!-- Auto-scroll script -->
+		<!-- Chat Panel Controller Script -->
 		<script>
-			function chatPanelController(sessionID) {
+			function chatPanelController(sessionID, domain) {
 				return {
 					sessionID: sessionID || '',
+					domain: domain || '',
 					messages: [],
 					message: '',
 					isLoading: false,
+
 					init() {
 						if (!this.sessionID) {
+							console.log('ChatPanel: No session ID provided');
 							return;
 						}
-						this._chatSSEHandler = (event) => {
-							const payload = event.detail && event.detail.data;
-							if (!payload) {
-								return;
-							}
-							let eventData;
-							try {
-								eventData = typeof payload === 'string' ? JSON.parse(payload) : payload;
-							} catch (error) {
-								return;
-							}
-							this.processStreamEvent(eventData);
-						};
-						document.addEventListener('htmx:sseMessage', this._chatSSEHandler);
+						console.log('ChatPanel: Initializing for session', this.sessionID, 'domain', this.domain);
 					},
-					processStreamEvent(eventData) {
-						if (!this.sessionID || !eventData || !eventData.type) {
+
+					destroy() {
+						// Cleanup if needed
+					},
+
+					async submitMessage() {
+						if (!this.message.trim() || this.isLoading) {
 							return;
 						}
+
+						const messageText = this.message.trim();
+
+						// Add user message to chat
+						this.messages.push({
+							id: Date.now(),
+							type: 'user',
+							content: messageText,
+							timestamp: new Date()
+						});
+
+						this.isLoading = true;
+						this.message = '';
+						this.scrollToBottom();
+
+						try {
+							// Use fetch to POST and handle SSE response
+							const response = await fetch(`/chat/continue/${this.sessionID}`, {
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/x-www-form-urlencoded',
+								},
+								body: new URLSearchParams({
+									message: messageText,
+									domain: this.domain
+								})
+							});
+
+							if (!response.ok) {
+								throw new Error(`HTTP error! status: ${response.status}`);
+							}
+
+							// Read the SSE stream
+							const reader = response.body.getReader();
+							const decoder = new TextDecoder();
+							let buffer = '';
+
+							while (true) {
+								const { done, value } = await reader.read();
+								if (done) break;
+
+								buffer += decoder.decode(value, { stream: true });
+								const lines = buffer.split('\n');
+								buffer = lines.pop() || '';
+
+								for (const line of lines) {
+									if (line.startsWith('data: ')) {
+										const jsonStr = line.slice(6).trim();
+										if (jsonStr) {
+											try {
+												const eventData = JSON.parse(jsonStr);
+												console.log('ChatPanel: SSE event', eventData.type, eventData);
+												this.processStreamEvent(eventData);
+											} catch (e) {
+												console.log('ChatPanel: Failed to parse SSE data', jsonStr);
+											}
+										}
+									}
+								}
+							}
+						} catch (error) {
+							console.error('ChatPanel: Request failed', error);
+							this.addAssistantMessage('Sorry, something went wrong. Please try again.', new Date(), 'error');
+						} finally {
+							this.isLoading = false;
+						}
+					},
+
+					processStreamEvent(eventData) {
+						if (!eventData || !eventData.type) {
+							return;
+						}
+
+						// Handle message events (LLM responses)
 						if (eventData.type === 'message' && eventData.message) {
 							this.addAssistantMessage(eventData.message, eventData.timestamp);
-							this.isLoading = false;
 							return;
 						}
+
+						// Handle itinerary events (itinerary confirmations)
 						if (eventData.type === 'itinerary' && eventData.message) {
 							this.addAssistantMessage(eventData.message, eventData.timestamp);
-							this.isLoading = false;
 							return;
 						}
+
+						// Handle item_added events - update list and show confirmation
+						if (eventData.type === 'item_added') {
+							if (eventData.message) {
+								this.addAssistantMessage(eventData.message, eventData.timestamp);
+							}
+							// Dispatch custom event for parent page to handle list update
+							this.dispatchListUpdate('item_added', eventData);
+							return;
+						}
+
+						// Handle item_removed events
+						if (eventData.type === 'item_removed') {
+							if (eventData.message) {
+								this.addAssistantMessage(eventData.message, eventData.timestamp);
+							}
+							// Dispatch custom event for parent page to handle list update
+							this.dispatchListUpdate('item_removed', eventData);
+							return;
+						}
+
+						// Handle item_updated events
+						if (eventData.type === 'item_updated') {
+							if (eventData.message) {
+								this.addAssistantMessage(eventData.message, eventData.timestamp);
+							}
+							// Dispatch custom event for parent page to handle list update
+							this.dispatchListUpdate('item_updated', eventData);
+							return;
+						}
+
+						// Handle error events
 						if (eventData.type === 'error') {
 							const content = eventData.error || eventData.message || 'Something went wrong.';
 							this.addAssistantMessage(content, eventData.timestamp, 'error');
 							this.isLoading = false;
 							return;
 						}
+
+						// Handle complete event - stop loading
 						if (eventData.type === 'complete') {
+							console.log('ChatPanel: Stream completed');
 							this.isLoading = false;
+							return;
+						}
+
+						// Handle progress events (optional - can show status)
+						if (eventData.type === 'progress') {
+							console.log('ChatPanel: Progress', eventData.data);
+							return;
 						}
 					},
+
+					dispatchListUpdate(type, eventData) {
+						// Dispatch a custom event that the parent page can listen to
+						const customEvent = new CustomEvent('chatPanelListUpdate', {
+							detail: {
+								type: type,
+								domain: eventData.domain || this.domain,
+								html: eventData.html,
+								item_id: eventData.item_id,
+								item_data: eventData.item_data,
+								message: eventData.message
+							},
+							bubbles: true
+						});
+						document.dispatchEvent(customEvent);
+						console.log('ChatPanel: Dispatched list update event', type, eventData.domain);
+					},
+
 					addAssistantMessage(content, timestamp, variant = 'assistant') {
 						if (!content) {
 							return;
 						}
+
 						this.messages.push({
 							id: Date.now() + Math.random(),
 							type: variant,
-							content,
+							content: content,
 							timestamp: timestamp ? new Date(timestamp) : new Date(),
 						});
+
+						this.scrollToBottom();
+					},
+
+					scrollToBottom() {
 						this.$nextTick(() => {
-							const container = document.getElementById('chat-messages');
+							const container = document.getElementById(`chat-panel-messages-${this.sessionID}`);
 							if (container) {
 								container.scrollTop = container.scrollHeight;
 							}
 						});
-					},
+					}
 				};
 			}
-
-			document.addEventListener('htmx:sseMessage', function(event) {
-				const container = document.getElementById('chat-messages');
-				if (container) {
-					// Auto-scroll to bottom when new message arrives
-					setTimeout(() => {
-						container.scrollTop = container.scrollHeight;
-					}, 100);
-				}
-			});
 		</script>
 	</div>
 }

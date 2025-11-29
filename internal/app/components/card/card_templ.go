@@ -74,7 +74,7 @@ func Card(props ...Props) templ.Component {
 			p = props[0]
 		}
 		var templ_7745c5c3_Var2 = []any{utils.TwMerge(
-			"w-full rounded-lg border bg-card text-card-foreground shadow-xs",
+			"w-full rounded-2xl border border-border/70 bg-card/90 text-card-foreground shadow-[0_16px_45px_rgba(15,23,42,0.08)] transition-transform duration-200",
 			p.Class,
 		),
 		}
